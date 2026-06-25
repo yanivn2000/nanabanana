@@ -1,11 +1,28 @@
 """NanaBanana — trip planner. Stage 1: data explorer + OSM ingest."""
 import json
 import streamlit as st
+import folium
+from streamlit_folium import st_folium
 
 import db
 import pipeline_osm
 
 st.set_page_config(page_title="NanaBanana", page_icon="🍌", layout="wide")
+
+# Marker colour per category (folium named colours)
+CAT_COLOR = {
+    "nature": "green",
+    "museum": "blue",
+    "attraction": "red",
+    "sport": "orange",
+    "food": "purple",
+    "shopping": "pink",
+}
+CAT_LABEL_HE = {
+    "nature": "טבע", "museum": "מוזיאון", "attraction": "אטרקציה",
+    "sport": "ספורט", "food": "אוכל", "shopping": "קניות",
+    "tourism": "תיירות", "leisure": "פנאי", "historic": "היסטורי",
+}
 db.init_db()
 
 st.title("🍌 NanaBanana")
@@ -45,38 +62,81 @@ with tab_browse:
     conn = db.get_conn()
     total = conn.execute("SELECT count(*) FROM attractions").fetchone()[0]
     dests = conn.execute("SELECT count(*) FROM destinations").fetchone()[0]
+    with_site = conn.execute(
+        "SELECT count(*) FROM attractions WHERE website IS NOT NULL AND website!=''"
+    ).fetchone()[0]
 
     m1, m2, m3 = st.columns(3)
     m1.metric("אטרקציות", f"{total:,}")
     m2.metric("יעדים", dests)
-    with_site = conn.execute(
-        "SELECT count(*) FROM attractions WHERE website IS NOT NULL AND website!=''"
-    ).fetchone()[0]
     m3.metric("עם קישור לאתר", with_site)
 
+    # filters: city + category
+    city_rows = conn.execute(
+        "SELECT id, city, country FROM destinations ORDER BY city").fetchall()
+    city_opts = {f"{r['city']} ({r['country']})": r["id"] for r in city_rows}
     cats = [r[0] for r in conn.execute(
         "SELECT DISTINCT category FROM attractions WHERE category IS NOT NULL ORDER BY category")]
-    fcat = st.multiselect("סינון לפי קטגוריה", cats, default=cats)
+
+    fc1, fc2 = st.columns([1, 2])
+    with fc1:
+        fcity = st.selectbox("עיר", ["כל הערים"] + list(city_opts.keys()))
+    with fc2:
+        fcat = st.multiselect(
+            "קטגוריות", cats, default=cats,
+            format_func=lambda c: CAT_LABEL_HE.get(c, c))
 
     if fcat:
-        q = ("SELECT name_en, name_he, category, subcategory, website, "
+        where = [f"category IN ({','.join('?'*len(fcat))})"]
+        params = list(fcat)
+        if fcity != "כל הערים":
+            where.append("destination_id = ?")
+            params.append(city_opts[fcity])
+        q = ("SELECT name_en, name_he, lat, lng, category, subcategory, website, "
              "opening_hours, info_sources FROM attractions "
-             f"WHERE category IN ({','.join('?'*len(fcat))}) "
-             "ORDER BY family_score DESC, name_en LIMIT 300")
-        rows = conn.execute(q, fcat).fetchall()
-        st.write(f"מציג {len(rows)} אטרקציות")
+             f"WHERE {' AND '.join(where)} "
+             "ORDER BY family_score DESC, name_en LIMIT 500")
+        rows = conn.execute(q, params).fetchall()
+        mapped = [r for r in rows if r["lat"] and r["lng"]]
+
+        st.write(f"מציג {len(rows)} אטרקציות · {len(mapped)} על המפה")
+
+        # interactive map with colour-coded markers
+        if mapped:
+            clat = sum(r["lat"] for r in mapped) / len(mapped)
+            clng = sum(r["lng"] for r in mapped) / len(mapped)
+            fmap = folium.Map(location=[clat, clng], zoom_start=12, tiles="CartoDB positron")
+            for r in mapped:
+                srcs = json.loads(r["info_sources"]) if r["info_sources"] else []
+                name = r["name_he"] or r["name_en"]
+                links = ""
+                if r["website"]:
+                    links += f'<a href="{r["website"]}" target="_blank">אתר רשמי</a><br>'
+                for s in srcs:
+                    links += f'<a href="{s["url"]}" target="_blank">{s["title"]}</a><br>'
+                popup = folium.Popup(
+                    f"<b>{name}</b><br>{CAT_LABEL_HE.get(r['category'], r['category'])}"
+                    f"<br>{links}", max_width=260)
+                folium.CircleMarker(
+                    location=[r["lat"], r["lng"]], radius=6,
+                    color=CAT_COLOR.get(r["category"], "gray"),
+                    fill=True, fill_opacity=0.8,
+                    popup=popup, tooltip=name).add_to(fmap)
+            st_folium(fmap, width=None, height=480, returned_objects=[])
+
+        # list below the map
         table = []
         for r in rows:
             srcs = json.loads(r["info_sources"]) if r["info_sources"] else []
             table.append({
                 "שם": r["name_en"],
                 "עברית": r["name_he"] or "—",
-                "קטגוריה": r["category"],
+                "קטגוריה": CAT_LABEL_HE.get(r["category"], r["category"]),
                 "סוג": r["subcategory"] or "—",
                 "אתר": r["website"] or "",
                 "שעות": r["opening_hours"] or "—",
                 "מקורות": ", ".join(s["title"] for s in srcs) or "—",
             })
-        st.dataframe(table, use_container_width=True,
+        st.dataframe(table, width="stretch",
                      column_config={"אתר": st.column_config.LinkColumn("אתר")})
     conn.close()
