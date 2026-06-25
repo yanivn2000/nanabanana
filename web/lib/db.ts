@@ -73,6 +73,38 @@ export function topAttractions(destinationId: number, limit = 40): Attraction[] 
   return rows;
 }
 
+export function getDestination(id: number): Destination | null {
+  const d = db();
+  if (!d) return null;
+  return (
+    (d
+      .prepare(
+        `SELECT dest.id, dest.city, dest.country, dest.lat, dest.lng,
+                count(a.id) AS attraction_count
+         FROM destinations dest
+         LEFT JOIN attractions a ON a.destination_id = dest.id
+         WHERE dest.id = ? GROUP BY dest.id`
+      )
+      .get(id) as Destination | undefined) ?? null
+  );
+}
+
+export function attractionsForMap(destinationId: number, limit = 200): Attraction[] {
+  const d = db();
+  if (!d) return [];
+  return d
+    .prepare(
+      `SELECT id, name_he, name_en, lat, lng, category, subcategory,
+              indoor_outdoor, family_score, tips_he, website, duration_minutes
+       FROM attractions
+       WHERE destination_id = ? AND lat IS NOT NULL AND lng IS NOT NULL
+         AND (quality_keep = 1 OR quality_keep IS NULL)
+       ORDER BY COALESCE(family_score, 0) DESC, name_en
+       LIMIT ?`
+    )
+    .all(destinationId, limit) as Attraction[];
+}
+
 export function dataReady(): boolean {
   return db() !== null;
 }

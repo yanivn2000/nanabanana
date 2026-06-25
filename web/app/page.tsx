@@ -61,7 +61,8 @@ export default function Home() {
         ) : (
           <div className="flex flex-col gap-2.5">
             {destinations.map((d) => (
-              <div
+              <Link
+                href={`/destination/${d.id}`}
                 key={d.id}
                 className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)]"
               >
@@ -75,7 +76,7 @@ export default function Home() {
                   </p>
                 </div>
                 <ArrowLeft size={18} className="text-[var(--text-3)]" />
-              </div>
+              </Link>
             ))}
           </div>
         )}
