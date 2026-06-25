@@ -29,7 +29,13 @@ export type Attraction = {
   tips_he: string | null;
   website: string | null;
   duration_minutes: number | null;
+  image_url: string | null;
+  tagline_he: string | null;
 };
+
+const ATTR_COLS = `id, name_he, name_en, lat, lng, category, subcategory,
+  indoor_outdoor, family_score, tips_he, website, duration_minutes,
+  image_url, tagline_he`;
 
 export type Destination = {
   id: number;
@@ -60,8 +66,7 @@ export function topAttractions(destinationId: number, limit = 40): Attraction[] 
   // Prefer AI-kept, high-score attractions; fall back to any if none enriched yet.
   const rows = d
     .prepare(
-      `SELECT id, name_he, name_en, lat, lng, category, subcategory,
-              indoor_outdoor, family_score, tips_he, website, duration_minutes
+      `SELECT ${ATTR_COLS}
        FROM attractions
        WHERE destination_id = ?
          AND (quality_keep = 1 OR quality_keep IS NULL)
@@ -94,8 +99,7 @@ export function attractionsForMap(destinationId: number, limit = 200): Attractio
   if (!d) return [];
   return d
     .prepare(
-      `SELECT id, name_he, name_en, lat, lng, category, subcategory,
-              indoor_outdoor, family_score, tips_he, website, duration_minutes
+      `SELECT ${ATTR_COLS}
        FROM attractions
        WHERE destination_id = ? AND lat IS NOT NULL AND lng IS NOT NULL
          AND (quality_keep = 1 OR quality_keep IS NULL)

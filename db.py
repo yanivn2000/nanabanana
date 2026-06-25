@@ -78,6 +78,9 @@ CREATE INDEX IF NOT EXISTS idx_attr_cat ON attractions(category);
 MIGRATIONS = [
     ("attractions", "quality_keep", "INTEGER"),   # 1=worth visiting, 0=skip (AI-judged)
     ("attractions", "enriched_at", "TEXT"),        # when the AI enrichment ran
+    ("attractions", "image_url", "TEXT"),          # thumbnail from Wikipedia/Wikidata
+    ("attractions", "image_checked_at", "TEXT"),   # when we looked for an image
+    ("attractions", "tagline_he", "TEXT"),         # memorable one-liner (AI-generated)
 ]
 
 

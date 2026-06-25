@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import type { Attraction } from "@/lib/db";
 
-// Leaflet needs the browser — load the map only on the client.
 const AttractionsMap = dynamic(() => import("./AttractionsMap"), {
   ssr: false,
   loading: () => (
@@ -16,6 +15,7 @@ const AttractionsMap = dynamic(() => import("./AttractionsMap"), {
 export function MapClient(props: {
   attractions: Attraction[];
   center: [number, number];
+  selected: Attraction | null;
 }) {
   return <AttractionsMap {...props} />;
 }
