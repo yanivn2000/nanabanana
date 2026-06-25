@@ -2,3 +2,4 @@ streamlit>=1.40
 requests>=2.32
 folium>=0.17
 streamlit-folium>=0.22
+anthropic>=0.69

@@ -74,6 +74,19 @@ CREATE INDEX IF NOT EXISTS idx_attr_dest ON attractions(destination_id);
 CREATE INDEX IF NOT EXISTS idx_attr_cat ON attractions(category);
 """
 
+# Columns added after the initial schema shipped — applied idempotently on init.
+MIGRATIONS = [
+    ("attractions", "quality_keep", "INTEGER"),   # 1=worth visiting, 0=skip (AI-judged)
+    ("attractions", "enriched_at", "TEXT"),        # when the AI enrichment ran
+]
+
+
+def _apply_migrations(conn):
+    for table, col, coltype in MIGRATIONS:
+        cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if col not in cols:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {coltype}")
+
 
 def get_conn():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -85,6 +98,7 @@ def get_conn():
 def init_db():
     conn = get_conn()
     conn.executescript(SCHEMA)
+    _apply_migrations(conn)
     conn.commit()
     conn.close()
 

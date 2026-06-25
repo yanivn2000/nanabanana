@@ -6,6 +6,7 @@ from streamlit_folium import st_folium
 
 import db
 import pipeline_osm
+import enrich
 
 st.set_page_config(page_title="NanaBanana", page_icon="🍌", layout="wide")
 
@@ -39,7 +40,8 @@ SEED_CITIES = {
     "Tbilisi": ("Georgia", 41.7151, 44.8271),
 }
 
-tab_browse, tab_ingest = st.tabs(["🔍 דפדוף בנתונים", "⬇️ איסוף מ-OpenStreetMap"])
+tab_browse, tab_ingest, tab_enrich = st.tabs(
+    ["🔍 דפדוף בנתונים", "⬇️ איסוף מ-OpenStreetMap", "✨ העשרה עם Claude"])
 
 with tab_ingest:
     st.subheader("משיכת אטרקציות מ-OpenStreetMap")
@@ -57,6 +59,36 @@ with tab_ingest:
         with st.spinner(f"מושך אטרקציות מ-{city}..."):
             res = pipeline_osm.fetch_city(city, country, lat, lng, radius_km=radius)
         st.success(f"נמצאו {res['found']} · נוספו {res['inserted']} · כפילויות {res['skipped']}")
+
+with tab_enrich:
+    st.subheader("העשרה עם Claude — תרגום, ציון משפחתי, סינון איכות")
+    conn = db.get_conn()
+    pending = enrich.pending_count(conn)
+    enriched = conn.execute(
+        "SELECT count(*) FROM attractions WHERE enriched_at IS NOT NULL").fetchone()[0]
+    kept = conn.execute(
+        "SELECT count(*) FROM attractions WHERE quality_keep=1").fetchone()[0]
+    conn.close()
+
+    e1, e2, e3 = st.columns(3)
+    e1.metric("ממתינות להעשרה", f"{pending:,}")
+    e2.metric("הועשרו", f"{enriched:,}")
+    e3.metric("עברו סינון איכות", f"{kept:,}")
+
+    st.caption("Claude מתרגם לעברית, נותן ציון משפחתי וטיפ, ומסמן אטרקציות לא רלוונטיות (אנדרטאות, שלטים).")
+    api_key = st.text_input("Anthropic API key", type="password",
+                            help="המפתח לא נשמר — משמש רק להרצה הנוכחית")
+    limit = st.slider("כמה אטרקציות להעשיר בהרצה", 15, 150, 60, step=15)
+
+    if st.button("הרץ העשרה", type="primary", disabled=not api_key or pending == 0):
+        bar = st.progress(0.0, text="מעשיר...")
+        try:
+            done = enrich.enrich_pending(
+                api_key, limit=limit,
+                progress=lambda d, t: bar.progress(d / t, text=f"הועשרו {d}/{t}"))
+            st.success(f"הועשרו {done} אטרקציות")
+        except Exception as ex:
+            st.error(f"שגיאה: {ex}")
 
 with tab_browse:
     conn = db.get_conn()
@@ -78,13 +110,16 @@ with tab_browse:
     cats = [r[0] for r in conn.execute(
         "SELECT DISTINCT category FROM attractions WHERE category IS NOT NULL ORDER BY category")]
 
-    fc1, fc2 = st.columns([1, 2])
+    fc1, fc2, fc3 = st.columns([1, 2, 1])
     with fc1:
         fcity = st.selectbox("עיר", ["כל הערים"] + list(city_opts.keys()))
     with fc2:
         fcat = st.multiselect(
             "קטגוריות", cats, default=cats,
             format_func=lambda c: CAT_LABEL_HE.get(c, c))
+    with fc3:
+        quality_only = st.toggle("רק איכות גבוהה", value=True,
+                                 help="הצג רק אטרקציות ש-Claude סימן כשוות ביקור")
 
     if fcat:
         where = [f"category IN ({','.join('?'*len(fcat))})"]
@@ -92,8 +127,10 @@ with tab_browse:
         if fcity != "כל הערים":
             where.append("destination_id = ?")
             params.append(city_opts[fcity])
+        if quality_only:
+            where.append("quality_keep = 1")
         q = ("SELECT name_en, name_he, lat, lng, category, subcategory, website, "
-             "opening_hours, info_sources FROM attractions "
+             "opening_hours, info_sources, family_score, tips_he FROM attractions "
              f"WHERE {' AND '.join(where)} "
              "ORDER BY family_score DESC, name_en LIMIT 500")
         rows = conn.execute(q, params).fetchall()
@@ -114,9 +151,11 @@ with tab_browse:
                     links += f'<a href="{r["website"]}" target="_blank">אתר רשמי</a><br>'
                 for s in srcs:
                     links += f'<a href="{s["url"]}" target="_blank">{s["title"]}</a><br>'
+                score = f" · ציון {r['family_score']}/10" if r["family_score"] else ""
+                tip = f"<br><i>{r['tips_he']}</i>" if r["tips_he"] else ""
                 popup = folium.Popup(
                     f"<b>{name}</b><br>{CAT_LABEL_HE.get(r['category'], r['category'])}"
-                    f"<br>{links}", max_width=260)
+                    f"{score}{tip}<br>{links}", max_width=260)
                 folium.CircleMarker(
                     location=[r["lat"], r["lng"]], radius=6,
                     color=CAT_COLOR.get(r["category"], "gray"),
@@ -129,10 +168,11 @@ with tab_browse:
         for r in rows:
             srcs = json.loads(r["info_sources"]) if r["info_sources"] else []
             table.append({
-                "שם": r["name_en"],
                 "עברית": r["name_he"] or "—",
+                "שם": r["name_en"],
+                "ציון": r["family_score"] if r["family_score"] is not None else "—",
                 "קטגוריה": CAT_LABEL_HE.get(r["category"], r["category"]),
-                "סוג": r["subcategory"] or "—",
+                "טיפ": r["tips_he"] or "—",
                 "אתר": r["website"] or "",
                 "שעות": r["opening_hours"] or "—",
                 "מקורות": ", ".join(s["title"] for s in srcs) or "—",
