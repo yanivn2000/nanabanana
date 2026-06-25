@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f7f6f2;
+  --surface: #ffffff;
+  --surface-2: #f0eee8;
+  --text: #1a1a17;
+  --text-2: #6b6a63;
+  --text-3: #9a988f;
+  --border: rgba(26, 26, 23, 0.08);
+  --brand: #1d9e75;
+  --brand-ink: #0f6e56;
+  --brand-soft: #e1f5ee;
+  --amber: #ba7517;
+  --amber-soft: #faeeda;
+  --blue: #185fa5;
+  --blue-soft: #e6f1fb;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e0f0d;
+    --surface: #1a1c19;
+    --surface-2: #24271f;
+    --text: #f1f0ea;
+    --text-2: #a3a299;
+    --text-3: #6f6e66;
+    --border: rgba(255, 255, 255, 0.09);
+    --brand: #5dcaa5;
+    --brand-ink: #9fe1cb;
+    --brand-soft: #11352b;
+    --amber-soft: #2e2410;
+    --blue-soft: #0c2742;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.4);
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-border: var(--border);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-blue: var(--blue);
+  --color-blue-soft: var(--blue-soft);
+  --font-sans: var(--font-heebo), system-ui, sans-serif;
+  --radius-card: var(--radius);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* Animation is an enhancement only — content is fully visible without it. */
+@media (prefers-reduced-motion: no-preference) {
+  .rise { animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .rise-1 { animation-delay: 0.05s; }
+  .rise-2 { animation-delay: 0.1s; }
+  .rise-3 { animation-delay: 0.15s; }
+  .rise-4 { animation-delay: 0.2s; }
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }

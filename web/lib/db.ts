@@ -1,0 +1,78 @@
+import Database from "better-sqlite3";
+import path from "node:path";
+import fs from "node:fs";
+
+// The same SQLite file the Streamlit data tool fills. Override with NANABANANA_DB.
+const DB_PATH =
+  process.env.NANABANANA_DB ||
+  path.join(process.cwd(), "..", "data", "nanabanana.db");
+
+let _db: Database.Database | null = null;
+
+function db(): Database.Database | null {
+  if (_db) return _db;
+  if (!fs.existsSync(DB_PATH)) return null; // graceful: app still builds/runs
+  _db = new Database(DB_PATH, { readonly: true, fileMustExist: true });
+  return _db;
+}
+
+export type Attraction = {
+  id: number;
+  name_he: string | null;
+  name_en: string;
+  lat: number | null;
+  lng: number | null;
+  category: string;
+  subcategory: string | null;
+  indoor_outdoor: string | null;
+  family_score: number | null;
+  tips_he: string | null;
+  website: string | null;
+  duration_minutes: number | null;
+};
+
+export type Destination = {
+  id: number;
+  city: string;
+  country: string;
+  lat: number;
+  lng: number;
+  attraction_count: number;
+};
+
+export function listDestinations(): Destination[] {
+  const d = db();
+  if (!d) return [];
+  return d
+    .prepare(
+      `SELECT dest.id, dest.city, dest.country, dest.lat, dest.lng,
+              count(a.id) AS attraction_count
+       FROM destinations dest
+       LEFT JOIN attractions a ON a.destination_id = dest.id
+       GROUP BY dest.id ORDER BY attraction_count DESC`
+    )
+    .all() as Destination[];
+}
+
+export function topAttractions(destinationId: number, limit = 40): Attraction[] {
+  const d = db();
+  if (!d) return [];
+  // Prefer AI-kept, high-score attractions; fall back to any if none enriched yet.
+  const rows = d
+    .prepare(
+      `SELECT id, name_he, name_en, lat, lng, category, subcategory,
+              indoor_outdoor, family_score, tips_he, website, duration_minutes
+       FROM attractions
+       WHERE destination_id = ?
+         AND (quality_keep = 1 OR quality_keep IS NULL)
+       ORDER BY (quality_keep = 1) DESC,
+                COALESCE(family_score, 0) DESC, name_en
+       LIMIT ?`
+    )
+    .all(destinationId, limit) as Attraction[];
+  return rows;
+}
+
+export function dataReady(): boolean {
+  return db() !== null;
+}
