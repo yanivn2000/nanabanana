@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowUp, CloudRain, Baby, Clock } from "lucide-react";
+import { ArrowUp, CloudRain, Baby, Clock, Loader2 } from "lucide-react";
 
 const SUGGESTIONS = [
   { icon: CloudRain, text: "מחר גשם — תארגן מחדש" },
@@ -9,8 +9,21 @@ const SUGGESTIONS = [
   { icon: Clock, text: "יותר זמן חופשי" },
 ];
 
-export function AskBar() {
+export function AskBar({
+  onSend,
+  busy,
+}: {
+  onSend: (text: string) => void;
+  busy: boolean;
+}) {
   const [value, setValue] = useState("");
+
+  function submit() {
+    const t = value.trim();
+    if (!t || busy) return;
+    onSend(t);
+    setValue("");
+  }
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[440px] bg-gradient-to-t from-[var(--bg)] via-[var(--bg)] to-transparent px-5 pb-5 pt-8">
@@ -18,8 +31,9 @@ export function AskBar() {
         {SUGGESTIONS.map((s) => (
           <button
             key={s.text}
-            onClick={() => setValue(s.text)}
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[12px] text-[var(--text-2)]"
+            disabled={busy}
+            onClick={() => onSend(s.text)}
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[12px] text-[var(--text-2)] disabled:opacity-50"
           >
             <s.icon size={13} /> {s.text}
           </button>
@@ -30,15 +44,18 @@ export function AskBar() {
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="ספרו לי מה לשנות בטיול…"
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+          disabled={busy}
+          placeholder={busy ? "Claude מארגן מחדש…" : "ספרו לי מה לשנות בטיול…"}
           className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[var(--text-3)]"
         />
         <button
           aria-label="שלח"
-          disabled={!value.trim()}
+          onClick={submit}
+          disabled={!value.trim() || busy}
           className="grid size-9 place-items-center rounded-full bg-[var(--brand)] text-white transition disabled:opacity-40"
         >
-          <ArrowUp size={18} />
+          {busy ? <Loader2 size={18} className="animate-spin" /> : <ArrowUp size={18} />}
         </button>
       </div>
     </div>
