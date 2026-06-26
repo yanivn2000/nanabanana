@@ -78,15 +78,18 @@ def pending_count(conn):
 
 def enrich_batch(conn, client, rows, model):
     """Enrich a list of attraction rows; write results back. Returns # updated."""
+    # No thinking: this is structured extraction, json_schema enforces clean
+    # output. Thinking only wastes tokens and risks crowding out the text block.
     resp = client.messages.create(
         model=model,
-        max_tokens=8000,
+        max_tokens=12000,
         system=SYSTEM,
-        thinking={"type": "adaptive"},
         output_config={"format": {"type": "json_schema", "schema": OUTPUT_SCHEMA}},
         messages=[{"role": "user", "content": _build_prompt(rows)}],
     )
-    text = next(b.text for b in resp.content if b.type == "text")
+    text = next((b.text for b in resp.content if b.type == "text"), None)
+    if not text:
+        raise ValueError(f"no text block (stop_reason={resp.stop_reason})")
     items = json.loads(text)["items"]
 
     updated = 0
@@ -129,7 +132,11 @@ def enrich_pending(api_key, limit=60, progress=None, model=None):
     done = 0
     for i in range(0, total, BATCH_SIZE):
         batch = rows[i:i + BATCH_SIZE]
-        done += enrich_batch(conn, client, batch, model)
+        try:
+            done += enrich_batch(conn, client, batch, model)
+        except (ValueError, KeyError, json.JSONDecodeError) as e:
+            # Bad/empty model output for this batch — skip it, keep the run going.
+            print(f"  skip batch ({len(batch)}): {e}", flush=True)
         if progress:
             progress(done, total)
     conn.close()
