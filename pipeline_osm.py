@@ -112,10 +112,19 @@ def fetch_city(city, country, lat, lng, radius_km=15, sleep=1.0):
     conn.commit()
 
     query = _build_query(lat, lng, int(radius_km * 1000))
-    resp = requests.post(OVERPASS_URL, data={"data": query},
-                         headers=HEADERS, timeout=90)
-    resp.raise_for_status()
-    elements = resp.json().get("elements", [])
+    # Public Overpass rate-limits (429) and occasionally 504s — retry with backoff.
+    elements = []
+    for attempt in range(5):
+        resp = requests.post(OVERPASS_URL, data={"data": query},
+                             headers=HEADERS, timeout=120)
+        if resp.status_code in (429, 502, 503, 504):
+            time.sleep(30 * (attempt + 1))
+            continue
+        resp.raise_for_status()
+        elements = resp.json().get("elements", [])
+        break
+    else:
+        raise RuntimeError("Overpass unavailable after retries")
 
     inserted = skipped = 0
     for el in elements:
