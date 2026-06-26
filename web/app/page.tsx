@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { listDestinations } from "@/lib/db";
 import { SAMPLE_TRIP } from "@/lib/sample";
-import { MapPin, ArrowLeft, Plus, Sparkles } from "lucide-react";
+import { MapPin, ArrowLeft, Plus, Sparkles, Compass } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +49,21 @@ export default function Home() {
         <Plus size={18} /> טיול חדש
       </Link>
       </div>
+
+      {/* on-trip mode */}
+      <Link
+        href="/now"
+        className="rise rise-2 mt-3 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)]"
+      >
+        <div className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--brand-soft)] text-[var(--brand-ink)]">
+          <Compass size={20} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-medium">אני בטיול עכשיו</p>
+          <p className="text-[13px] text-[var(--text-2)]">מה קרוב אליי + ניווט</p>
+        </div>
+        <ArrowLeft size={18} className="text-[var(--text-3)]" />
+      </Link>
 
       {/* destinations from the real DB */}
       <section className="rise rise-3 mt-8">
