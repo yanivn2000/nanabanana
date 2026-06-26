@@ -24,9 +24,10 @@ _ITEM_SCHEMA = {
         "indoor_outdoor": {"type": "string", "enum": ["indoor", "outdoor", "both"]},
         "quality_keep": {"type": "boolean"},           # false = skip (junk/marker)
         "tips_he": {"type": "string"},
+        "tagline_he": {"type": "string"},              # memorable one-liner
     },
     "required": ["id", "name_he", "family_score", "min_age", "max_age",
-                 "indoor_outdoor", "quality_keep", "tips_he"],
+                 "indoor_outdoor", "quality_keep", "tips_he", "tagline_he"],
     "additionalProperties": False,
 }
 OUTPUT_SCHEMA = {
@@ -48,7 +49,10 @@ SYSTEM = (
     "practical Hebrew sentence (≤15 words) — when to go, what to know, or who "
     "it suits. family_score 1-10 reflects how much a typical Israeli family with "
     "kids would enjoy it. min_age/max_age = suitable age range (0 and 99 if all "
-    "ages)."
+    "ages). tagline_he is a SHORT memorable hook in Hebrew (<=6 words) that makes "
+    "the place recognizable instead of a foreign name — e.g. 'פארק המים הגדול "
+    "באוסטריה', 'הטירה מהאגדות', 'גן החיות עם הפנדות'. Use a superlative or vivid "
+    "image when it fits; never just repeat the category."
 )
 
 
@@ -89,30 +93,36 @@ def enrich_batch(conn, client, rows, model):
     for it in items:
         conn.execute(
             "UPDATE attractions SET name_he=?, family_score=?, min_age=?, "
-            "max_age=?, indoor_outdoor=?, quality_keep=?, tips_he=?, "
+            "max_age=?, indoor_outdoor=?, quality_keep=?, tips_he=?, tagline_he=?, "
             "enriched_at=datetime('now') WHERE id=?",
             (it["name_he"], it["family_score"], it["min_age"], it["max_age"],
              it["indoor_outdoor"], 1 if it["quality_keep"] else 0,
-             it["tips_he"], it["id"]),
+             it["tips_he"], it.get("tagline_he"), it["id"]),
         )
         updated += 1
     conn.commit()
     return updated
 
 
-def enrich_pending(api_key, limit=60, progress=None):
+def enrich_pending(api_key, limit=60, progress=None, model=None):
     """Enrich up to `limit` un-enriched attractions in batches.
 
+    Highest-value rows first (have a photo, then a wiki source, then higher
+    rough score) so a budget-limited run covers the best places first.
     `progress` is an optional callback(done, total). Returns total updated.
+    `model` overrides the DB model setting (e.g. a cheaper model for bulk).
     """
     db.init_db()
     conn = db.get_conn()
     client = anthropic.Anthropic(api_key=api_key)
-    model = db.get_model(conn)
+    model = model or db.get_model(conn)
 
     rows = conn.execute(
         "SELECT id, name_en, category, subcategory, website FROM attractions "
-        "WHERE enriched_at IS NULL ORDER BY id LIMIT ?", (limit,)
+        "WHERE enriched_at IS NULL "
+        "ORDER BY (image_url IS NOT NULL) DESC, "
+        "         (info_sources IS NOT NULL AND info_sources NOT IN ('','[]')) DESC, "
+        "         COALESCE(family_score, 0) DESC LIMIT ?", (limit,)
     ).fetchall()
 
     total = len(rows)
