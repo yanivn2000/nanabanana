@@ -61,8 +61,8 @@ export function TripView({ trip, city }: { trip: Trip; city?: string }) {
     call({ mode: "revise", current: itinerary, instruction }, "revise");
 
   return (
-    <main className="mx-auto max-w-[440px] pb-32">
-      <header className="rise bg-[var(--brand)] px-5 pb-7 pt-7 text-white">
+    <main className="mx-auto w-full max-w-[440px] pb-32 lg:max-w-2xl">
+      <header className="rise bg-[var(--brand)] px-5 pb-7 pt-7 text-white lg:px-8 lg:pt-9">
         <Link href="/" className="mb-4 flex items-center gap-1 text-[13px] text-[var(--brand-soft)]">
           <ChevronRight size={16} /> הטיולים שלי
         </Link>
@@ -90,7 +90,7 @@ export function TripView({ trip, city }: { trip: Trip; city?: string }) {
         </div>
       )}
 
-      <div className={`px-5 transition-opacity ${busy ? "opacity-50" : ""}`}>
+      <div className={`px-5 transition-opacity lg:px-8 ${busy ? "opacity-50" : ""}`}>
         {itinerary.days.map((day, di) => (
           <section key={di} className="mt-7">
             <div className="mb-3 flex items-center gap-2">

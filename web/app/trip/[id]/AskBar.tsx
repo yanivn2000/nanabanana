@@ -26,7 +26,7 @@ export function AskBar({
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[440px] bg-gradient-to-t from-[var(--bg)] via-[var(--bg)] to-transparent px-5 pb-5 pt-8">
+    <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[440px] bg-gradient-to-t from-[var(--bg)] via-[var(--bg)] to-transparent px-5 pb-5 pt-8 lg:max-w-2xl lg:px-8">
       <div className="mb-2.5 flex gap-2 overflow-x-auto pb-1">
         {SUGGESTIONS.map((s) => (
           <button

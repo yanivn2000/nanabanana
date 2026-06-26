@@ -9,7 +9,7 @@ export default function TripsPage() {
   const [p, , loaded] = useProfile();
 
   return (
-    <main className="mx-auto max-w-[440px] px-5 pb-28 pt-8">
+    <main className="mx-auto w-full max-w-[440px] px-5 pb-28 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
       <header className="rise mb-5">
         <h1 className="text-[26px] font-bold leading-tight">הטיולים שלי</h1>
         {loaded && (

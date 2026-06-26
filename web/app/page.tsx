@@ -9,22 +9,23 @@ export default function Home() {
   const destinations = listDestinations();
 
   return (
-    <main className="mx-auto max-w-[440px] px-5 pb-24 pt-8">
+    <main className="mx-auto w-full max-w-[440px] px-5 pb-24 pt-8 lg:max-w-6xl lg:px-8 lg:pb-12">
       {/* header */}
       <header className="rise mb-7 flex items-center justify-between">
         <div>
           <p className="text-sm text-[var(--text-2)]">ערב טוב, יניב 👋</p>
-          <h1 className="mt-0.5 text-[26px] font-bold leading-tight">לאן טסים?</h1>
+          <h1 className="mt-0.5 text-[26px] font-bold leading-tight lg:text-[34px]">לאן טסים?</h1>
         </div>
-        <div className="grid size-11 place-items-center rounded-full bg-[var(--brand-soft)] text-xl">
+        <div className="grid size-11 place-items-center rounded-full bg-[var(--brand-soft)] text-xl lg:hidden">
           🍌
         </div>
       </header>
 
+      <div className="lg:grid lg:grid-cols-3 lg:gap-4">
       {/* hero CTA */}
       <Link
         href="/trip/austria-family"
-        className="rise rise-1 block rounded-[var(--radius-card)] bg-[var(--brand)] p-5 text-white shadow-[var(--shadow)]"
+        className="rise rise-1 block rounded-[var(--radius-card)] bg-[var(--brand)] p-5 text-white shadow-[var(--shadow)] lg:col-span-2 lg:p-8"
       >
         <div className="flex items-center gap-2 text-[13px] text-[var(--brand-soft)]">
           <Sparkles size={15} /> ממשיכים מאיפה שעצרתם
@@ -43,10 +44,11 @@ export default function Home() {
       {/* new trip */}
       <Link
         href="/explore"
-        className="rise rise-2 mt-3 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-dashed border-[var(--border)] bg-[var(--surface)] py-4 text-[15px] font-medium text-[var(--text-2)]"
+        className="rise rise-2 mt-3 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-dashed border-[var(--border)] bg-[var(--surface)] py-4 text-[15px] font-medium text-[var(--text-2)] lg:mt-0 lg:flex-col lg:py-0"
       >
         <Plus size={18} /> טיול חדש
       </Link>
+      </div>
 
       {/* destinations from the real DB */}
       <section className="rise rise-3 mt-8">
@@ -62,7 +64,7 @@ export default function Home() {
             עדיין אין נתונים — הריצו איסוף בכלי הניהול.
           </div>
         ) : (
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-3 lg:gap-4">
             {destinations.map((d) => (
               <Link
                 href={`/destination/${d.id}`}

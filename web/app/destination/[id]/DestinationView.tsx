@@ -51,22 +51,23 @@ export function DestinationView({
   );
 
   return (
-    <main className="mx-auto max-w-[440px] pb-28">
-      <header className="rise bg-[var(--brand)] px-5 pb-6 pt-7 text-white">
-        <Link href="/" className="mb-4 flex items-center gap-1 text-[13px] text-[var(--brand-soft)]">
+    <main className="mx-auto w-full max-w-[440px] pb-28 lg:max-w-none lg:pb-0">
+      <header className="rise bg-[var(--brand)] px-5 pb-6 pt-7 text-white lg:px-8">
+        <Link href="/" className="mb-4 flex items-center gap-1 text-[13px] text-[var(--brand-soft)] lg:hidden">
           <ChevronRight size={16} /> בית
         </Link>
-        <h1 className="text-[27px] font-bold leading-tight">{dest.city}</h1>
+        <h1 className="text-[27px] font-bold leading-tight lg:text-[34px]">{dest.city}</h1>
         <p className="mt-1 text-sm text-[var(--brand-soft)]">
           {dest.country} · {dest.attraction_count.toLocaleString("he")} אטרקציות במאגר
         </p>
       </header>
 
-      <div className="sticky top-0 z-10 h-[260px] w-full overflow-hidden border-b border-[var(--border)]">
+      <div className="lg:flex lg:items-start">
+      <div className="sticky top-0 z-10 h-[260px] w-full overflow-hidden border-b border-[var(--border)] lg:order-2 lg:h-[calc(100dvh-57px)] lg:top-[57px] lg:flex-1 lg:border-b-0 lg:border-s">
         <MapClient attractions={filtered} center={[dest.lat, dest.lng]} selected={selected} />
       </div>
 
-      <section className="px-5">
+      <section className="px-5 lg:order-1 lg:w-[480px] lg:shrink-0 lg:px-8 lg:pb-16">
         <div className="mb-3 mt-5 flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 shadow-[var(--shadow)]">
           <Search size={18} className="text-[var(--text-3)]" />
           <input
@@ -167,6 +168,7 @@ export function DestinationView({
           })}
         </div>
       </section>
+      </div>
     </main>
   );
 }

@@ -57,7 +57,7 @@ export default function ProfilePage() {
   const delKid = (i: number) => save({ ...p, kids: p.kids.filter((_, idx) => idx !== i) });
 
   return (
-    <main className="mx-auto max-w-[440px] px-5 pb-28 pt-8">
+    <main className="mx-auto w-full max-w-[440px] px-5 pb-28 pt-8 lg:max-w-2xl lg:px-8 lg:pb-12">
       <header className="rise mb-6 flex items-center gap-3">
         <div className="grid size-11 place-items-center rounded-full bg-[var(--brand-soft)] text-[var(--brand-ink)]">
           <Users size={20} />

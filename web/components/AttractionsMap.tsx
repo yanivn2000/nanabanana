@@ -24,6 +24,12 @@ function Flyer({
   markers: React.RefObject<Map<number, LeafletCircleMarker>>;
 }) {
   const map = useMap();
+  // Defensive: recompute size after mount in case the container grew
+  // (mobile 260px → desktop full-height) before Leaflet measured it.
+  useEffect(() => {
+    const t = setTimeout(() => map.invalidateSize(), 200);
+    return () => clearTimeout(t);
+  }, [map]);
   useEffect(() => {
     if (!selected?.lat || !selected?.lng) return;
     map.flyTo([selected.lat, selected.lng], 15, { duration: 0.7 });

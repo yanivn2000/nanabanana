@@ -15,7 +15,7 @@ export function ExploreList({ destinations }: { destinations: Destination[] }) {
 
   return (
     <>
-      <div className="rise-1 mb-5 flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 shadow-[var(--shadow)]">
+      <div className="rise-1 mb-5 flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 shadow-[var(--shadow)] lg:max-w-md">
         <Search size={18} className="text-[var(--text-3)]" />
         <input
           value={q}
@@ -28,7 +28,7 @@ export function ExploreList({ destinations }: { destinations: Destination[] }) {
       {filtered.length === 0 ? (
         <p className="mt-8 text-center text-sm text-[var(--text-3)]">לא נמצאו יעדים.</p>
       ) : (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-3 lg:gap-4">
           {filtered.map((d) => (
             <Link
               key={d.id}

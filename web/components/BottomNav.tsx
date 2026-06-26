@@ -17,7 +17,7 @@ export function BottomNav() {
   if (pathname.startsWith("/trip/")) return null;
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[440px] border-t border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-lg">
+    <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[440px] border-t border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-lg lg:hidden">
       <div className="flex items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)] pt-2">
         {ITEMS.map(({ href, label, Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
