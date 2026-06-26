@@ -109,6 +109,21 @@ export function attractionsForMap(destinationId: number, limit = 200): Attractio
     .all(destinationId, limit) as Attraction[];
 }
 
+// Shared AI model setting (written by the Streamlit admin Settings tab).
+export function getModel(): string {
+  const fallback = process.env.NANABANANA_MODEL || "claude-opus-4-8";
+  const d = db();
+  if (!d) return fallback;
+  try {
+    const row = d.prepare("SELECT value FROM settings WHERE key='model'").get() as
+      | { value: string }
+      | undefined;
+    return row?.value || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export function dataReady(): boolean {
   return db() !== null;
 }

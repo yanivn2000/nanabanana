@@ -70,9 +70,35 @@ CREATE TABLE IF NOT EXISTS media (
     created_at TEXT DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_attr_dest ON attractions(destination_id);
 CREATE INDEX IF NOT EXISTS idx_attr_cat ON attractions(category);
 """
+
+# Default AI model, shared by both apps. Override via the admin Settings tab.
+DEFAULT_MODEL = "claude-opus-4-8"
+
+
+def get_setting(conn, key, default=None):
+    row = conn.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+    return row["value"] if row else default
+
+
+def set_setting(conn, key, value):
+    conn.execute(
+        "INSERT INTO settings (key, value) VALUES (?, ?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        (key, value),
+    )
+    conn.commit()
+
+
+def get_model(conn):
+    return get_setting(conn, "model", DEFAULT_MODEL)
 
 # Columns added after the initial schema shipped — applied idempotently on init.
 MIGRATIONS = [

@@ -41,8 +41,39 @@ SEED_CITIES = {
     "Tbilisi": ("Georgia", 41.7151, 44.8271),
 }
 
-tab_browse, tab_ingest, tab_enrich = st.tabs(
-    ["🔍 דפדוף בנתונים", "⬇️ איסוף מ-OpenStreetMap", "✨ העשרה עם Claude"])
+tab_browse, tab_ingest, tab_enrich, tab_settings = st.tabs(
+    ["🔍 דפדוף בנתונים", "⬇️ איסוף מ-OpenStreetMap", "✨ העשרה עם Claude", "⚙️ הגדרות"])
+
+# Available Claude models (id -> Hebrew label). Shared by both apps via DB.
+MODELS = {
+    "claude-opus-4-8": "Opus 4.8 — הכי חכם (מומלץ)",
+    "claude-opus-4-7": "Opus 4.7",
+    "claude-sonnet-4-6": "Sonnet 4.6 — מהיר וזול יותר",
+    "claude-haiku-4-5": "Haiku 4.5 — הכי זול ומהיר",
+    "claude-fable-5": "Fable 5 — הכי חזק (יקר)",
+}
+
+with tab_settings:
+    st.subheader("הגדרות AI")
+    _sconn = db.get_conn()
+    current_model = db.get_model(_sconn)
+    ids = list(MODELS.keys())
+    if current_model not in ids:
+        ids = [current_model] + ids
+    idx = ids.index(current_model)
+    chosen = st.selectbox(
+        "מודל הבינה (משפיע על האפליקציה ועל ההעשרה)",
+        ids, index=idx,
+        format_func=lambda m: MODELS.get(m, m))
+    st.caption(f"מודל נוכחי: `{current_model}`")
+    if chosen != current_model:
+        if st.button("שמור מודל", type="primary"):
+            db.set_setting(_sconn, "model", chosen)
+            st.success(f"נשמר: {MODELS.get(chosen, chosen)}. משפיע על שתי האפליקציות מיד.")
+            st.rerun()
+    _sconn.close()
+    st.divider()
+    st.caption("המודל נשמר במאגר המשותף — האפליקציה הצרכנית קוראת אותו בכל בקשה, ללא צורך בפריסה מחדש.")
 
 with tab_ingest:
     st.subheader("משיכת אטרקציות מ-OpenStreetMap")

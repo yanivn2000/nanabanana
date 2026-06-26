@@ -10,7 +10,6 @@ import anthropic
 
 import db
 
-MODEL = "claude-opus-4-8"
 BATCH_SIZE = 15
 
 # Structured-outputs schema: Claude must return one object per attraction.
@@ -73,10 +72,10 @@ def pending_count(conn):
     ).fetchone()[0]
 
 
-def enrich_batch(conn, client, rows):
+def enrich_batch(conn, client, rows, model):
     """Enrich a list of attraction rows; write results back. Returns # updated."""
     resp = client.messages.create(
-        model=MODEL,
+        model=model,
         max_tokens=8000,
         system=SYSTEM,
         thinking={"type": "adaptive"},
@@ -109,6 +108,7 @@ def enrich_pending(api_key, limit=60, progress=None):
     db.init_db()
     conn = db.get_conn()
     client = anthropic.Anthropic(api_key=api_key)
+    model = db.get_model(conn)
 
     rows = conn.execute(
         "SELECT id, name_en, category, subcategory, website FROM attractions "
@@ -119,7 +119,7 @@ def enrich_pending(api_key, limit=60, progress=None):
     done = 0
     for i in range(0, total, BATCH_SIZE):
         batch = rows[i:i + BATCH_SIZE]
-        done += enrich_batch(conn, client, batch)
+        done += enrich_batch(conn, client, batch, model)
         if progress:
             progress(done, total)
     conn.close()

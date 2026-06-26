@@ -1,9 +1,8 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
+import { getModel } from "./db";
 import type { Attraction } from "./db";
 import type { Itinerary } from "./trip-types";
-
-const MODEL = "claude-opus-4-8";
 
 export function aiConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
@@ -80,7 +79,7 @@ function attractionsBlock(attractions: Attraction[]): string {
 
 async function callClaude(userText: string): Promise<Itinerary> {
   const resp = await client().messages.create({
-    model: MODEL,
+    model: getModel(),
     max_tokens: 8000,
     system: SYSTEM,
     thinking: { type: "adaptive" },
