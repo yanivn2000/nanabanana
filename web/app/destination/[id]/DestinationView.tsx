@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ChevronRight, Star, Mountain, Landmark, Trees, Dumbbell,
-  UtensilsCrossed, ShoppingBag, MapPin, ExternalLink,
+  UtensilsCrossed, ShoppingBag, MapPin, ExternalLink, Search,
 } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
+import { descriptor } from "@/lib/labels";
 import type { Attraction, Destination } from "@/lib/db";
 
 const CAT: Record<string, { he: string; Icon: typeof Mountain; color: string; soft: string }> = {
@@ -29,9 +30,28 @@ export function DestinationView({
   attractions: Attraction[];
 }) {
   const [selected, setSelected] = useState<Attraction | null>(null);
+  const [query, setQuery] = useState("");
+  const [activeCat, setActiveCat] = useState<string | null>(null);
+
+  const cats = useMemo(
+    () => Array.from(new Set(attractions.map((a) => a.category))),
+    [attractions]
+  );
+  const filtered = useMemo(
+    () =>
+      attractions.filter((a) => {
+        if (activeCat && a.category !== activeCat) return false;
+        if (query) {
+          const hay = `${a.name_he ?? ""} ${a.name_en} ${descriptor(a)}`.toLowerCase();
+          if (!hay.includes(query.toLowerCase())) return false;
+        }
+        return true;
+      }),
+    [attractions, activeCat, query]
+  );
 
   return (
-    <main className="mx-auto max-w-[440px] pb-12">
+    <main className="mx-auto max-w-[440px] pb-28">
       <header className="rise bg-[var(--brand)] px-5 pb-6 pt-7 text-white">
         <Link href="/" className="mb-4 flex items-center gap-1 text-[13px] text-[var(--brand-soft)]">
           <ChevronRight size={16} /> בית
@@ -43,13 +63,54 @@ export function DestinationView({
       </header>
 
       <div className="sticky top-0 z-10 h-[260px] w-full overflow-hidden border-b border-[var(--border)]">
-        <MapClient attractions={attractions} center={[dest.lat, dest.lng]} selected={selected} />
+        <MapClient attractions={filtered} center={[dest.lat, dest.lng]} selected={selected} />
       </div>
 
       <section className="px-5">
-        <h2 className="mb-3 mt-6 text-[17px] font-bold">אטרקציות</h2>
+        <div className="mb-3 mt-5 flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 shadow-[var(--shadow)]">
+          <Search size={18} className="text-[var(--text-3)]" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="חפשו אטרקציה…"
+            className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[var(--text-3)]"
+          />
+        </div>
+
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+          <button
+            onClick={() => setActiveCat(null)}
+            className="shrink-0 rounded-full px-3.5 py-1.5 text-[13px] transition"
+            style={{
+              background: activeCat === null ? "var(--brand)" : "var(--surface)",
+              color: activeCat === null ? "#fff" : "var(--text-2)",
+              border: `1px solid ${activeCat === null ? "var(--brand)" : "var(--border)"}`,
+            }}
+          >
+            הכל
+          </button>
+          {cats.map((c) => {
+            const m = cat(c);
+            const on = activeCat === c;
+            return (
+              <button
+                key={c}
+                onClick={() => setActiveCat(on ? null : c)}
+                className="shrink-0 rounded-full px-3.5 py-1.5 text-[13px] transition"
+                style={{
+                  background: on ? "var(--brand)" : "var(--surface)",
+                  color: on ? "#fff" : "var(--text-2)",
+                  border: `1px solid ${on ? "var(--brand)" : "var(--border)"}`,
+                }}
+              >
+                {m.he}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="flex flex-col gap-2.5">
-          {attractions.map((a) => {
+          {filtered.map((a) => {
             const m = cat(a.category);
             const isSel = selected?.id === a.id;
             return (
@@ -87,7 +148,7 @@ export function DestinationView({
                     )}
                   </div>
                   <p className="mt-0.5 truncate text-[12.5px] text-[var(--text-2)]">
-                    {a.tagline_he || m.he}
+                    {descriptor(a)}
                   </p>
                   {a.website && (
                     <a

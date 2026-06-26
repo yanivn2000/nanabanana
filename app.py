@@ -7,6 +7,7 @@ from streamlit_folium import st_folium
 import db
 import pipeline_osm
 import enrich
+import pipeline_images
 
 st.set_page_config(page_title="NanaBanana", page_icon="🍌", layout="wide")
 
@@ -59,6 +60,26 @@ with tab_ingest:
         with st.spinner(f"מושך אטרקציות מ-{city}..."):
             res = pipeline_osm.fetch_city(city, country, lat, lng, radius_km=radius)
         st.success(f"נמצאו {res['found']} · נוספו {res['inserted']} · כפילויות {res['skipped']}")
+
+    st.divider()
+    st.subheader("משיכת תמונות מ-Wikipedia")
+    _iconn = db.get_conn()
+    img_pending = pipeline_images.pending_count(_iconn)
+    img_have = _iconn.execute(
+        "SELECT count(*) FROM attractions WHERE image_url IS NOT NULL").fetchone()[0]
+    _iconn.close()
+
+    ic1, ic2 = st.columns(2)
+    ic1.metric("ממתינות לבדיקת תמונה", f"{img_pending:,}")
+    ic2.metric("עם תמונה", f"{img_have:,}")
+    st.caption("מושך תמונה לכל אטרקציה שיש לה קישור Wikipedia/Wikidata. חינם, ללא מפתח.")
+    img_limit = st.slider("כמה לבדוק בהרצה", 20, 300, 100, step=20)
+    if st.button("משוך תמונות", type="primary", disabled=img_pending == 0):
+        ibar = st.progress(0.0, text="מושך תמונות...")
+        res = pipeline_images.fetch_images(
+            limit=img_limit,
+            progress=lambda d, t: ibar.progress(d / t, text=f"נבדקו {d}/{t}"))
+        st.success(f"נבדקו {res['checked']} · נמצאו {res['found']} תמונות")
 
 with tab_enrich:
     st.subheader("העשרה עם Claude — תרגום, ציון משפחתי, סינון איכות")
