@@ -1,0 +1,86 @@
+// Heuristic itinerary builder — a real day-by-day plan from DB attractions,
+// WITHOUT Claude. Used as a fallback until ANTHROPIC_API_KEY is configured;
+// the AI version (smart scheduling + real "why") replaces it when available.
+import type { Attraction } from "./db";
+import type { Itinerary, Stop, StopKind } from "./trip-types";
+import { descriptor } from "./labels";
+
+const KIND_FROM_CAT: Record<string, StopKind> = {
+  nature: "nature", museum: "culture", attraction: "culture",
+  sport: "nature", food: "food", shopping: "shopping",
+  historic: "culture", tourism: "culture", leisure: "nature",
+};
+const SLOT_TIMES = ["09:30", "11:30", "14:30", "16:30"];
+
+function kindOf(a: Attraction): StopKind {
+  return KIND_FROM_CAT[a.category] ?? "culture";
+}
+
+export function buildHeuristicItinerary(
+  city: string,
+  country: string,
+  days: number,
+  attractions: Attraction[]
+): Itinerary {
+  // Rank by family score, keep ones with coordinates, dedupe by name.
+  const seen = new Set<string>();
+  const pool = attractions
+    .filter((a) => a.lat && a.lng)
+    .filter((a) => {
+      const n = a.name_he || a.name_en;
+      if (seen.has(n)) return false;
+      seen.add(n);
+      return true;
+    })
+    .sort((a, b) => (b.family_score ?? 0) - (a.family_score ?? 0));
+
+  const perDay = 3;
+  const dayList = [];
+  let idx = 0;
+  for (let d = 0; d < days && idx < pool.length; d++) {
+    const picks = pool.slice(idx, idx + perDay);
+    idx += perDay;
+    if (picks.length === 0) break;
+
+    const stops: Stop[] = [];
+    picks.forEach((a, i) => {
+      // Insert a lunch slot mid-day.
+      if (i === 1) {
+        stops.push({
+          name: "הפסקת צהריים",
+          kind: "food",
+          time: "12:45",
+          duration: "שעה",
+          note: "מסעדה מקומית באזור",
+        });
+      }
+      stops.push({
+        name: a.name_he || a.name_en,
+        kind: kindOf(a),
+        time: SLOT_TIMES[Math.min(i, SLOT_TIMES.length - 1)],
+        duration: a.duration_minutes ? `${Math.round(a.duration_minutes / 60)} שעות` : "1.5 שעות",
+        score: a.family_score ?? undefined,
+        note: a.tips_he || descriptor(a),
+      });
+    });
+
+    const kinds = new Set(picks.map((a) => kindOf(a)));
+    const mix = kinds.has("nature") && kinds.has("culture")
+      ? "שילבנו טבע ותרבות"
+      : kinds.has("nature") ? "יום עם דגש על טבע" : "יום עם דגש על אטרקציות";
+
+    dayList.push({
+      label: `יום ${d + 1}`,
+      date: "",
+      base: city,
+      why: `${mix}, עם הפסקת צהריים באמצע. סידרנו לפי הדירוג המשפחתי הגבוה ב${city}. הוסיפו מפתח AI לתכנון חכם שמתחשב במרחקים ובפרופיל המשפחה.`,
+      stops,
+    });
+  }
+
+  return {
+    title: `${city} עם המשפחה`,
+    subtitle: `${days} ימים · ${country}`,
+    days: dayList,
+  };
+}

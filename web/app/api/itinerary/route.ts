@@ -5,6 +5,7 @@ import {
   generateItinerary,
   reviseItinerary,
 } from "@/lib/ai";
+import { buildHeuristicItinerary } from "@/lib/heuristic";
 import type { Itinerary } from "@/lib/trip-types";
 
 export const dynamic = "force-dynamic";
@@ -20,13 +21,6 @@ function resolveDestination(city?: string) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!aiConfigured()) {
-    return NextResponse.json(
-      { error: "AI not configured", code: "no_key" },
-      { status: 503 }
-    );
-  }
-
   let body: {
     mode: "generate" | "revise";
     city?: string;
@@ -47,6 +41,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "no destinations in DB" }, { status: 404 });
   }
   const attractions = topAttractions(dest.id, 50);
+
+  // Revise needs the model. Without a key, ask the user to add one.
+  if (body.mode === "revise" && !aiConfigured()) {
+    return NextResponse.json({ error: "AI not configured", code: "no_key" }, { status: 503 });
+  }
+
+  // Generate works without a key via the heuristic builder; AI upgrades it.
+  if (body.mode !== "revise" && !aiConfigured()) {
+    const itinerary = buildHeuristicItinerary(
+      dest.city, dest.country, body.days ?? 4, attractions
+    );
+    return NextResponse.json({ itinerary, engine: "heuristic" });
+  }
 
   try {
     let itinerary: Itinerary;

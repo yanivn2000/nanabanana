@@ -41,9 +41,12 @@ export default function Home() {
       </Link>
 
       {/* new trip */}
-      <button className="rise rise-2 mt-3 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-dashed border-[var(--border)] bg-[var(--surface)] py-4 text-[15px] font-medium text-[var(--text-2)]">
+      <Link
+        href="/explore"
+        className="rise rise-2 mt-3 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-dashed border-[var(--border)] bg-[var(--surface)] py-4 text-[15px] font-medium text-[var(--text-2)]"
+      >
         <Plus size={18} /> טיול חדש
-      </button>
+      </Link>
 
       {/* destinations from the real DB */}
       <section className="rise rise-3 mt-8">
