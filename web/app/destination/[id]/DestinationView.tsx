@@ -2,24 +2,24 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  ChevronRight, Star, Mountain, Landmark, Trees, Dumbbell,
-  UtensilsCrossed, ShoppingBag, MapPin, ExternalLink, Search,
-} from "lucide-react";
+import { ChevronRight, Star, Search } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
 import { descriptor } from "@/lib/labels";
 import type { Attraction, Destination } from "@/lib/db";
 
-const CAT: Record<string, { he: string; Icon: typeof Mountain; color: string; soft: string }> = {
-  nature: { he: "טבע", Icon: Trees, color: "var(--brand-ink)", soft: "var(--brand-soft)" },
-  museum: { he: "מוזיאון", Icon: Landmark, color: "var(--blue)", soft: "var(--blue-soft)" },
-  attraction: { he: "אטרקציה", Icon: Mountain, color: "var(--amber)", soft: "var(--amber-soft)" },
-  sport: { he: "ספורט", Icon: Dumbbell, color: "var(--amber)", soft: "var(--amber-soft)" },
-  food: { he: "אוכל", Icon: UtensilsCrossed, color: "var(--blue)", soft: "var(--blue-soft)" },
-  shopping: { he: "קניות", Icon: ShoppingBag, color: "var(--blue)", soft: "var(--blue-soft)" },
+const CAT_HE: Record<string, string> = {
+  nature: "טבע", museum: "מוזיאון", attraction: "אטרקציה", sport: "ספורט",
+  food: "אוכל", shopping: "קניות", tourism: "תיירות", leisure: "פנאי", historic: "היסטורי",
 };
-function cat(c: string) {
-  return CAT[c] ?? { he: c, Icon: MapPin, color: "var(--text-2)", soft: "var(--surface-2)" };
+const SEASON_HE: Record<string, string> = {
+  all: "כל השנה", spring: "אביב", summer: "קיץ", autumn: "סתיו", winter: "חורף",
+};
+const COST_HE = ["חינם", "₪", "₪₪", "₪₪₪"];
+
+function meta(a: Attraction): string {
+  const parts = [CAT_HE[a.category] ?? a.category];
+  if (a.best_season && SEASON_HE[a.best_season]) parts.push(SEASON_HE[a.best_season]);
+  return parts.join(" · ");
 }
 
 export function DestinationView({
@@ -50,124 +50,125 @@ export function DestinationView({
     [attractions, activeCat, query]
   );
 
+  const mustSee = useMemo(
+    () => attractions.filter((a) => a.must_see === 1 && a.image_url).slice(0, 12),
+    [attractions]
+  );
+
   return (
     <main className="mx-auto w-full max-w-[440px] pb-28 lg:max-w-none lg:pb-0">
-      <header className="rise bg-[var(--brand)] px-5 pb-6 pt-7 text-white lg:px-8">
-        <Link href="/" className="mb-4 flex items-center gap-1 text-[13px] text-[var(--brand-soft)] lg:hidden">
-          <ChevronRight size={16} /> בית
+      {/* editorial header */}
+      <header className="rise bg-[var(--surface)] px-5 pb-6 pt-8 lg:px-8">
+        <Link href="/" className="eyebrow mb-4 inline-flex items-center gap-1 lg:hidden">
+          <ChevronRight size={14} /> בית
         </Link>
-        <h1 className="text-[27px] font-bold leading-tight lg:text-[34px]">{dest.city}</h1>
-        <p className="mt-1 text-sm text-[var(--brand-soft)]">
-          {dest.country} · {dest.attraction_count.toLocaleString("he")} אטרקציות במאגר
+        <p className="eyebrow">יעד · {dest.country}</p>
+        <h1 className="serif mt-1.5 text-[36px] leading-none lg:text-[44px]">{dest.city}</h1>
+        <div className="rule mt-3"></div>
+        <p className="mt-3 text-[13px] text-[var(--text-2)]">
+          {dest.attraction_count.toLocaleString("he")} מקומות במאגר
         </p>
       </header>
 
-      <div className="lg:flex lg:items-start">
-      <div className="sticky top-0 z-10 h-[260px] w-full overflow-hidden border-b border-[var(--border)] lg:order-2 lg:h-[calc(100dvh-57px)] lg:top-[57px] lg:flex-1 lg:border-b-0 lg:border-s">
-        <MapClient attractions={filtered} center={[dest.lat, dest.lng]} selected={selected} />
-      </div>
-
-      <section className="px-5 lg:order-1 lg:w-[480px] lg:shrink-0 lg:px-8 lg:pb-16">
-        <div className="mb-3 mt-5 flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 shadow-[var(--shadow)]">
-          <Search size={18} className="text-[var(--text-3)]" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="חפשו אטרקציה…"
-            className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[var(--text-3)]"
-          />
-        </div>
-
-        <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
-          <button
-            onClick={() => setActiveCat(null)}
-            className="shrink-0 rounded-full px-3.5 py-1.5 text-[13px] transition"
-            style={{
-              background: activeCat === null ? "var(--brand)" : "var(--surface)",
-              color: activeCat === null ? "#fff" : "var(--text-2)",
-              border: `1px solid ${activeCat === null ? "var(--brand)" : "var(--border)"}`,
-            }}
-          >
-            הכל
-          </button>
-          {cats.map((c) => {
-            const m = cat(c);
-            const on = activeCat === c;
-            return (
-              <button
-                key={c}
-                onClick={() => setActiveCat(on ? null : c)}
-                className="shrink-0 rounded-full px-3.5 py-1.5 text-[13px] transition"
-                style={{
-                  background: on ? "var(--brand)" : "var(--surface)",
-                  color: on ? "#fff" : "var(--text-2)",
-                  border: `1px solid ${on ? "var(--brand)" : "var(--border)"}`,
-                }}
-              >
-                {m.he}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="flex flex-col gap-2.5">
-          {filtered.map((a) => {
-            const m = cat(a.category);
-            const isSel = selected?.id === a.id;
-            return (
-              <button
-                key={a.id}
-                onClick={() => setSelected(a)}
-                className={`flex w-full items-stretch gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-2.5 text-right shadow-[var(--shadow)] transition ${
-                  isSel ? "ring-2 ring-[var(--brand)]" : ""
-                }`}
-              >
-                {a.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={a.image_url}
-                    alt=""
-                    loading="lazy"
-                    className="size-[60px] shrink-0 rounded-[12px] object-cover"
-                  />
-                ) : (
-                  <div className="grid size-[60px] shrink-0 place-items-center rounded-[12px]"
-                       style={{ background: m.soft, color: m.color }}>
-                    <m.Icon size={22} />
-                  </div>
-                )}
-
-                <div className="min-w-0 flex-1 py-0.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-[15px] font-medium leading-tight">
-                      {a.name_he || a.name_en}
-                    </p>
-                    {!!a.family_score && (
-                      <span className="flex shrink-0 items-center gap-0.5 text-[12px] font-medium text-[var(--brand-ink)]">
-                        <Star size={13} fill="currentColor" /> {a.family_score}
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-0.5 truncate text-[12.5px] text-[var(--text-2)]">
-                    {descriptor(a)}
-                  </p>
-                  {a.website && (
-                    <a
-                      href={a.website}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      className="mt-1.5 inline-flex items-center gap-1 text-[12px] text-[var(--blue)]"
-                    >
-                      <ExternalLink size={12} /> אתר
-                    </a>
+      {/* editor's picks rail (must-see) */}
+      {mustSee.length > 0 && (
+        <section className="rise rise-1 border-y border-[var(--border)] bg-[var(--surface-2)] py-5">
+          <p className="eyebrow mb-3 px-5 lg:px-8">בחירת העורך · חובה לביקור</p>
+          <div className="flex gap-3 overflow-x-auto px-5 pb-1 lg:px-8">
+            {mustSee.map((a) => (
+              <button key={a.id} onClick={() => setSelected(a)}
+                className="group w-[200px] shrink-0 overflow-hidden rounded-[var(--radius-sm)] bg-[var(--surface)] text-right shadow-[var(--shadow)]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={a.image_url as string} alt="" loading="lazy"
+                  className="h-[120px] w-full object-cover" />
+                <div className="p-3">
+                  <p className="eyebrow">{meta(a)}</p>
+                  <p className="serif mt-1 text-[16px] leading-tight">{a.name_he || a.name_en}</p>
+                  {a.tagline_he && (
+                    <p className="mt-1 text-[12.5px] italic text-[var(--text-2)]">{a.tagline_he}</p>
                   )}
                 </div>
               </button>
-            );
-          })}
+            ))}
+          </div>
+        </section>
+      )}
+
+      <div className="lg:flex lg:items-start">
+        {/* map */}
+        <div className="sticky top-0 z-10 h-[240px] w-full overflow-hidden border-y border-[var(--border)] lg:order-2 lg:h-[calc(100dvh-57px)] lg:top-[57px] lg:flex-1 lg:border-y-0 lg:border-s">
+          <MapClient attractions={filtered} center={[dest.lat, dest.lng]} selected={selected} />
         </div>
-      </section>
+
+        {/* list */}
+        <section className="px-5 lg:order-1 lg:w-[500px] lg:shrink-0 lg:px-8 lg:pb-16">
+          <div className="mb-3 mt-5 flex items-center gap-2 border-b border-[var(--border)] pb-2">
+            <Search size={17} className="text-[var(--text-3)]" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)}
+              placeholder="חיפוש אטרקציה…"
+              className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[var(--text-3)]" />
+          </div>
+
+          <div className="mb-5 flex gap-4 overflow-x-auto pb-1">
+            {[null, ...cats].map((c) => {
+              const on = activeCat === c;
+              return (
+                <button key={c ?? "all"} onClick={() => setActiveCat(c)}
+                  className="shrink-0 whitespace-nowrap pb-1 text-[13px] transition"
+                  style={{
+                    color: on ? "var(--accent-ink)" : "var(--text-3)",
+                    fontWeight: on ? 500 : 400,
+                    borderBottom: `2px solid ${on ? "var(--accent)" : "transparent"}`,
+                  }}>
+                  {c === null ? "הכל" : CAT_HE[c] ?? c}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-col">
+            {filtered.map((a, i) => {
+              const isSel = selected?.id === a.id;
+              const cost = a.cost_level != null ? COST_HE[a.cost_level] : null;
+              return (
+                <button key={a.id} onClick={() => setSelected(a)}
+                  className="flex items-start gap-3.5 border-b border-[var(--border)] py-3.5 text-right transition"
+                  style={{ background: isSel ? "var(--accent-soft)" : "transparent" }}>
+                  {a.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={a.image_url} alt="" loading="lazy"
+                      className="h-[84px] w-[84px] shrink-0 rounded-[8px] object-cover" />
+                  ) : (
+                    <div className="grid h-[84px] w-[84px] shrink-0 place-items-center rounded-[8px] bg-[var(--surface-2)]">
+                      <span className="serif text-[22px] text-[var(--text-3)]">{(a.name_he || a.name_en).slice(0, 1)}</span>
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="eyebrow truncate">{meta(a)}</p>
+                      {a.must_see === 1 && (
+                        <span className="shrink-0 bg-[var(--accent)] px-1.5 py-0.5 text-[9px] font-medium tracking-wide text-white">חובה</span>
+                      )}
+                    </div>
+                    <p className="serif mt-0.5 text-[17px] leading-tight">{a.name_he || a.name_en}</p>
+                    {a.tagline_he && (
+                      <p className="mt-0.5 truncate text-[13px] italic text-[var(--text-2)]">{a.tagline_he}</p>
+                    )}
+                    <div className="mt-1.5 flex items-center gap-2.5 text-[12px] text-[var(--text-3)]">
+                      {!!a.family_score && (
+                        <span className="inline-flex items-center gap-0.5 text-[var(--accent-ink)]">
+                          <Star size={11} fill="currentColor" /> {a.family_score}
+                        </span>
+                      )}
+                      {cost && <span>{cost}</span>}
+                      {a.best_time_he && <span className="truncate">{a.best_time_he}</span>}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       </div>
     </main>
   );

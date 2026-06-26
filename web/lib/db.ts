@@ -31,11 +31,16 @@ export type Attraction = {
   duration_minutes: number | null;
   image_url: string | null;
   tagline_he: string | null;
+  best_season: string | null;
+  best_time_he: string | null;
+  dress_he: string | null;
+  cost_level: number | null;
+  must_see: number | null;
 };
 
 const ATTR_COLS = `id, name_he, name_en, lat, lng, category, subcategory,
   indoor_outdoor, family_score, tips_he, website, duration_minutes,
-  image_url, tagline_he`;
+  image_url, tagline_he, best_season, best_time_he, dress_he, cost_level, must_see`;
 
 export type Destination = {
   id: number;
