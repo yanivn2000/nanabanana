@@ -9,7 +9,33 @@ import requests
 import db
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 HEADERS = {"User-Agent": "NanaBanana/0.1 (trip planner; contact yaniv@eos-online.com)"}
+
+
+def geocode_city(query):
+    """Resolve a free-text city name to (city, country, lat, lng) via Nominatim.
+
+    Returns None if not found. Free, no API key; respects the OSM usage policy
+    (one request, User-Agent set).
+    """
+    resp = requests.get(
+        NOMINATIM_URL,
+        params={"q": query, "format": "jsonv2", "limit": 1,
+                "addressdetails": 1, "accept-language": "en"},
+        headers=HEADERS, timeout=20,
+    )
+    resp.raise_for_status()
+    results = resp.json()
+    if not results:
+        return None
+    r = results[0]
+    addr = r.get("address", {})
+    city = (addr.get("city") or addr.get("town") or addr.get("village")
+            or addr.get("municipality") or r.get("name") or query)
+    country = addr.get("country", "")
+    return {"city": city, "country": country,
+            "lat": float(r["lat"]), "lng": float(r["lon"])}
 
 # OSM tag -> (our category, indoor/outdoor, rough family_score 1-10)
 CATEGORY_MAP = {

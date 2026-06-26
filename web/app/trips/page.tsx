@@ -4,6 +4,7 @@ import Link from "next/link";
 import { SAMPLE_TRIP } from "@/lib/sample";
 import { useProfile, profileSummary } from "@/lib/store";
 import { Plus, ArrowLeft } from "lucide-react";
+import { Hotels } from "./Hotels";
 
 export default function TripsPage() {
   const [p, , loaded] = useProfile();
@@ -36,6 +37,8 @@ export default function TripsPage() {
       >
         <Plus size={18} /> טיול חדש
       </Link>
+
+      <Hotels />
     </main>
   );
 }

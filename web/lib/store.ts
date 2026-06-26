@@ -51,6 +51,53 @@ export function useProfile(): [FamilyProfile, (p: FamilyProfile) => void, boolea
   return [profile, save, loaded];
 }
 
+// --- Hotels the user already booked (basis for a star-trip) ---
+export type Hotel = {
+  id: string;
+  name: string;
+  label: string;   // resolved full address
+  city: string;
+  country: string;
+  lat: number;
+  lng: number;
+  checkIn?: string;
+  checkOut?: string;
+};
+
+const HOTELS_KEY = "nanabanana.hotels.v1";
+
+export function useHotels(): {
+  hotels: Hotel[];
+  add: (h: Hotel) => void;
+  remove: (id: string) => void;
+  loaded: boolean;
+} {
+  const [hotels, setHotels] = useState<Hotel[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(HOTELS_KEY);
+      if (raw) setHotels(JSON.parse(raw));
+    } catch {}
+    setLoaded(true);
+  }, []);
+
+  const persist = (next: Hotel[]) => {
+    setHotels(next);
+    try {
+      localStorage.setItem(HOTELS_KEY, JSON.stringify(next));
+    } catch {}
+  };
+
+  return {
+    hotels,
+    add: (h) => persist([...hotels, h]),
+    remove: (id) => persist(hotels.filter((x) => x.id !== id)),
+    loaded,
+  };
+}
+
 export function profileSummary(p: FamilyProfile): string {
   const kids = p.kids.length
     ? `${p.kids.length} ילדים (${p.kids.map((k) => k.age).join(", ")})`
