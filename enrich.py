@@ -25,9 +25,16 @@ _ITEM_SCHEMA = {
         "quality_keep": {"type": "boolean"},           # false = skip (junk/marker)
         "tips_he": {"type": "string"},
         "tagline_he": {"type": "string"},              # memorable one-liner
+        "best_season": {"type": "string",
+                        "enum": ["all", "spring", "summer", "autumn", "winter"]},
+        "best_time_he": {"type": "string"},            # when to arrive
+        "dress_he": {"type": "string"},                # what to wear
+        "cost_level": {"type": "integer"},             # 0=free,1=cheap,2=mid,3=pricey
+        "must_see": {"type": "boolean"},               # must-visit landmark
     },
     "required": ["id", "name_he", "family_score", "min_age", "max_age",
-                 "indoor_outdoor", "quality_keep", "tips_he", "tagline_he"],
+                 "indoor_outdoor", "quality_keep", "tips_he", "tagline_he",
+                 "best_season", "best_time_he", "dress_he", "cost_level", "must_see"],
     "additionalProperties": False,
 }
 OUTPUT_SCHEMA = {
@@ -52,7 +59,16 @@ SYSTEM = (
     "ages). tagline_he is a SHORT memorable hook in Hebrew (<=6 words) that makes "
     "the place recognizable instead of a foreign name — e.g. 'פארק המים הגדול "
     "באוסטריה', 'הטירה מהאגדות', 'גן החיות עם הפנדות'. Use a superlative or vivid "
-    "image when it fits; never just repeat the category."
+    "image when it fits; never just repeat the category. "
+    "best_season: the season this place is best (all/spring/summer/autumn/winter) — "
+    "outdoor/water places lean summer, indoor places 'all'. "
+    "best_time_he: short Hebrew on when to arrive (e.g. 'בוקר מוקדם, לפני העומס', "
+    "'אחר הצהריים לשקיעה', 'כל שעות היום'). "
+    "dress_he: short Hebrew on dress (e.g. 'נעלי הליכה נוחות', 'בגד ים ומגבת', "
+    "'כיסוי כתפיים — אתר דתי', 'לבוש חופשי'). "
+    "cost_level: 0=חינם, 1=זול, 2=בינוני, 3=יקר. "
+    "must_see: true ONLY for genuine must-visit landmarks a first-time visitor "
+    "should not miss; false for nice-but-skippable places."
 )
 
 
@@ -97,10 +113,13 @@ def enrich_batch(conn, client, rows, model):
         conn.execute(
             "UPDATE attractions SET name_he=?, family_score=?, min_age=?, "
             "max_age=?, indoor_outdoor=?, quality_keep=?, tips_he=?, tagline_he=?, "
+            "best_season=?, best_time_he=?, dress_he=?, cost_level=?, must_see=?, "
             "enriched_at=datetime('now') WHERE id=?",
             (it["name_he"], it["family_score"], it["min_age"], it["max_age"],
              it["indoor_outdoor"], 1 if it["quality_keep"] else 0,
-             it["tips_he"], it.get("tagline_he"), it["id"]),
+             it["tips_he"], it.get("tagline_he"),
+             it.get("best_season"), it.get("best_time_he"), it.get("dress_he"),
+             it.get("cost_level"), 1 if it.get("must_see") else 0, it["id"]),
         )
         updated += 1
     conn.commit()

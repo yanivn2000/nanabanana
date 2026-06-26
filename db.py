@@ -107,6 +107,11 @@ MIGRATIONS = [
     ("attractions", "image_url", "TEXT"),          # thumbnail from Wikipedia/Wikidata
     ("attractions", "image_checked_at", "TEXT"),   # when we looked for an image
     ("attractions", "tagline_he", "TEXT"),         # memorable one-liner (AI-generated)
+    ("attractions", "best_season", "TEXT"),        # all/spring/summer/autumn/winter
+    ("attractions", "best_time_he", "TEXT"),       # recommended time to arrive (Hebrew)
+    ("attractions", "dress_he", "TEXT"),           # appropriate dress (Hebrew)
+    ("attractions", "cost_level", "INTEGER"),      # 0=free,1=cheap,2=mid,3=pricey
+    ("attractions", "must_see", "INTEGER"),        # 1 = must-visit landmark
 ]
 
 
