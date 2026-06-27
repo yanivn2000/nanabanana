@@ -49,22 +49,28 @@ async function viaPhoton(q: string): Promise<GeoHit | null> {
   return { lat, lng, label: label || p.name || q, city: p.city || "", country: p.country || "" };
 }
 
+// Resolve with the first provider that returns a hit; null only if all finish
+// without one. Running them in parallel keeps latency to the fastest provider.
+function firstHit(promises: Promise<GeoHit | null>[]): Promise<GeoHit | null> {
+  return new Promise((resolve) => {
+    let remaining = promises.length;
+    let done = false;
+    for (const p of promises) {
+      p.then((hit) => { if (hit && !done) { done = true; resolve(hit); } })
+        .catch(() => {})
+        .finally(() => { remaining -= 1; if (remaining === 0 && !done) resolve(null); });
+    }
+  });
+}
+
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim();
   if (!q) return NextResponse.json({ error: "missing q" }, { status: 400 });
 
-  for (const [name, fn] of [["nominatim", viaNominatim], ["photon", viaPhoton]] as const) {
-    try {
-      const hit = await fn(q);
-      if (hit) {
-        console.log(`[geocode] "${q}" -> ${name} OK`);
-        return NextResponse.json({ found: true, ...hit });
-      }
-      console.log(`[geocode] "${q}" -> ${name} empty`);
-    } catch (e) {
-      console.warn(`[geocode] "${q}" -> ${name} failed: ${(e as Error).message}`);
-    }
-  }
-  // Both providers returned no result (or failed) — not found, not a crash.
-  return NextResponse.json({ found: false });
+  const hit = await firstHit([
+    viaNominatim(q).catch((e) => { console.warn(`[geocode] nominatim: ${e.message}`); return null; }),
+    viaPhoton(q).catch((e) => { console.warn(`[geocode] photon: ${e.message}`); return null; }),
+  ]);
+  console.log(`[geocode] "${q}" -> ${hit ? "found" : "not found"}`);
+  return NextResponse.json(hit ? { found: true, ...hit } : { found: false });
 }
