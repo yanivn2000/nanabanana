@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
-  Sparkles, Star, Loader2,
+  Sparkles, Star, Loader2, Pencil, ChevronUp, ChevronDown,
+  ChevronsUp, ChevronsDown, Trash2,
 } from "lucide-react";
 import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
@@ -34,6 +35,7 @@ export function TripView({ tripId }: { tripId: string }) {
   const { hotels } = useHotels();
   const [busy, setBusy] = useState<null | "generate" | "revise">(null);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
 
   const trip = trips.find((t) => t.id === tripId);
   const itinerary = trip?.itinerary ?? null;
@@ -76,6 +78,32 @@ export function TripView({ tripId }: { tripId: string }) {
   const revise = (instruction: string) =>
     call({ mode: "revise", current: itinerary, instruction }, "revise");
 
+  // --- manual editing: apply a transform to a clone, relabel days, save ---
+  function mutate(fn: (it: Itinerary) => void) {
+    if (!itinerary) return;
+    const it: Itinerary = JSON.parse(JSON.stringify(itinerary));
+    fn(it);
+    it.days = it.days.filter((d) => d.stops.length > 0);
+    it.days.forEach((d, i) => { d.label = `יום ${i + 1}`; });
+    update(tripId, { itinerary: it });
+  }
+  const swap = <T,>(arr: T[], i: number, j: number) => {
+    if (j < 0 || j >= arr.length) return;
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  };
+  const moveDay = (di: number, dir: -1 | 1) => mutate((it) => swap(it.days, di, di + dir));
+  const moveStop = (di: number, si: number, dir: -1 | 1) =>
+    mutate((it) => swap(it.days[di].stops, si, si + dir));
+  const moveStopToDay = (di: number, si: number, dir: -1 | 1) =>
+    mutate((it) => {
+      const tgt = di + dir;
+      if (tgt < 0 || tgt >= it.days.length) return;
+      const [s] = it.days[di].stops.splice(si, 1);
+      it.days[tgt].stops.push(s);
+    });
+  const deleteStop = (di: number, si: number) =>
+    mutate((it) => { it.days[di].stops.splice(si, 1); });
+
   if (loaded && !trip) {
     return (
       <main className="mx-auto max-w-[440px] px-5 pt-16 text-center">
@@ -98,11 +126,21 @@ export function TripView({ tripId }: { tripId: string }) {
           {trip?.month ? ` · ${MONTHS_HE[trip.month - 1]}` : ""}
           {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
         </p>
-        <button onClick={generate} disabled={!!busy || (!city)}
-          className="mt-4 flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-5 py-2.5 text-[14px] font-medium text-white disabled:opacity-50">
-          {busy === "generate" ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-          {busy === "generate" ? "בונה לו\"ז…" : itinerary ? "בנה מחדש" : "בנה לו\"ז עם AI"}
-        </button>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button onClick={generate} disabled={!!busy || (!city)}
+            className="flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-5 py-2.5 text-[14px] font-medium text-white disabled:opacity-50">
+            {busy === "generate" ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+            {busy === "generate" ? "בונה לו\"ז…" : itinerary ? "בנה מחדש" : "בנה לו\"ז עם AI"}
+          </button>
+          {itinerary && (
+            <button onClick={() => setEditing((v) => !v)}
+              className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-4 py-2.5 text-[14px] font-medium"
+              style={{ background: editing ? "var(--accent-soft)" : "transparent",
+                       color: editing ? "var(--accent-ink)" : "var(--text-2)" }}>
+              <Pencil size={14} /> {editing ? "סיום עריכה" : "עריכה ידנית"}
+            </button>
+          )}
+        </div>
         {!city && trip?.mode === "hotels" && (
           <p className="mt-2 text-[12px] text-[var(--text-3)]">הוסיפו מלון כדי לקבוע את אזור הטיול</p>
         )}
@@ -125,7 +163,15 @@ export function TripView({ tripId }: { tripId: string }) {
             <section key={di} className="mt-7">
               <div className="mb-3 flex items-center gap-2">
                 <span className="text-[15px] font-bold">{day.label}</span>
-                <span className="text-[13px] text-[var(--text-3)]">· {day.date} · {day.base}</span>
+                <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--text-3)]">· {day.date} · {day.base}</span>
+                {editing && (
+                  <span className="flex shrink-0 gap-1">
+                    <button onClick={() => moveDay(di, -1)} disabled={di === 0} aria-label="הזז יום למעלה"
+                      className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronUp size={15} /></button>
+                    <button onClick={() => moveDay(di, 1)} disabled={di === itinerary.days.length - 1} aria-label="הזז יום למטה"
+                      className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronDown size={15} /></button>
+                  </span>
+                )}
               </div>
               <div className="flex flex-col gap-2.5">
                 {day.stops.map((s, si) => (
@@ -142,6 +188,25 @@ export function TripView({ tripId }: { tripId: string }) {
                       </div>
                       <p className="mt-0.5 text-[12px] text-[var(--text-3)]">{s.time} · {s.duration}</p>
                       {s.note && <p className="mt-1.5 text-[13px] leading-snug text-[var(--text-2)]">{s.note}</p>}
+                      {editing && (
+                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-[var(--border)] pt-2.5">
+                          <button onClick={() => moveStop(di, si, -1)} disabled={si === 0} aria-label="העלה"
+                            className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronUp size={15} /></button>
+                          <button onClick={() => moveStop(di, si, 1)} disabled={si === day.stops.length - 1} aria-label="הורד"
+                            className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronDown size={15} /></button>
+                          <span className="mx-1 h-4 w-px bg-[var(--border)]"></span>
+                          <button onClick={() => moveStopToDay(di, si, -1)} disabled={di === 0}
+                            className="flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 text-[11px] disabled:opacity-30">
+                            <ChevronsUp size={13} /> ליום הקודם
+                          </button>
+                          <button onClick={() => moveStopToDay(di, si, 1)} disabled={di === itinerary.days.length - 1}
+                            className="flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 text-[11px] disabled:opacity-30">
+                            <ChevronsDown size={13} /> ליום הבא
+                          </button>
+                          <button onClick={() => deleteStop(di, si)} aria-label="מחק"
+                            className="mr-auto grid size-7 place-items-center rounded-md text-[var(--text-3)]"><Trash2 size={15} /></button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
