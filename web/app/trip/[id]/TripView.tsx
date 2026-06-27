@@ -52,9 +52,11 @@ export function TripView({ tripId }: { tripId: string }) {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) {
-        setError(data?.code === "no_key"
-          ? "ה-AI עוד לא מוגדר בשרת (חסר מפתח)."
-          : data?.error || "אירעה שגיאה");
+        const msg =
+          data?.code === "no_key" ? "ה-AI עוד לא מוגדר בשרת (חסר מפתח)."
+          : data?.code === "no_credit" ? "נגמר הקרדיט ב-Claude — לא ניתן לשנות בשיחה כרגע."
+          : data?.error || "אירעה שגיאה";
+        setError(msg);
         return;
       }
       update(tripId, { itinerary: data.itinerary });
