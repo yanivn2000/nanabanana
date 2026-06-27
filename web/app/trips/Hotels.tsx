@@ -22,23 +22,22 @@ export function Hotels() {
     setBusy(true);
     setErr(null);
     try {
-      const reqUrl = `/api/geocode?q=${encodeURIComponent(q)}`;
-      const res = await fetch(reqUrl);
-      if (!res.ok) {
-        setErr(`אבחון: סטטוס ${res.status} · ${new URL(reqUrl, location.href).href}`);
-        return;
-      }
-      const data = await res.json().catch(() => null);
+      const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+      const data = res.ok ? await res.json().catch(() => null) : null;
       if (!data) {
-        setErr("אבחון: התשובה אינה JSON תקין");
+        setErr("החיפוש נכשל זמנית — נסו שוב בעוד רגע");
         return;
       }
       if (!data.found) {
         setErr("לא מצאנו את הכתובת — נסו לדייק (עיר, רחוב)");
         return;
       }
+      // randomUUID only exists in secure contexts (HTTPS/localhost); the app is
+      // served over plain HTTP, so use a fallback that works everywhere.
+      const id = crypto?.randomUUID?.()
+        ?? `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
       const hotel: Hotel = {
-        id: crypto.randomUUID(),
+        id,
         name: name || data.city || "מלון",
         label: data.label,
         city: data.city,
@@ -51,8 +50,8 @@ export function Hotels() {
       add(hotel);
       setName(""); setAddress(""); setCheckIn(""); setCheckOut("");
       setOpen(false);
-    } catch (e) {
-      setErr(`אבחון: ${(e as Error)?.name || ""} ${(e as Error)?.message || String(e)}`);
+    } catch {
+      setErr("החיפוש נכשל זמנית — נסו שוב בעוד רגע");
     } finally {
       setBusy(false);
     }
