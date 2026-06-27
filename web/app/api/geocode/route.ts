@@ -18,9 +18,13 @@ export async function GET(req: NextRequest) {
       "accept-language": "he",
     });
 
+  // Hard timeout so a slow/blocked Nominatim never hangs the request.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
     const res = await fetch(url, {
       headers: { "User-Agent": "NanaBanana/0.1 (trip planner; yaniv@eos-online.com)" },
+      signal: ctrl.signal,
     });
     if (!res.ok) return NextResponse.json({ error: "geocode failed" }, { status: 502 });
     const results = (await res.json()) as Array<{
@@ -46,5 +50,7 @@ export async function GET(req: NextRequest) {
     });
   } catch {
     return NextResponse.json({ error: "network" }, { status: 502 });
+  } finally {
+    clearTimeout(timer);
   }
 }

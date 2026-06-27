@@ -23,8 +23,16 @@ export function Hotels() {
     setErr(null);
     try {
       const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      if (!res.ok || !data.found) {
+      if (!res.ok) {
+        setErr("החיפוש נכשל זמנית — נסו שוב בעוד רגע");
+        return;
+      }
+      const data = await res.json().catch(() => null);
+      if (!data) {
+        setErr("החיפוש נכשל זמנית — נסו שוב בעוד רגע");
+        return;
+      }
+      if (!data.found) {
         setErr("לא מצאנו את הכתובת — נסו לדייק (עיר, רחוב)");
         return;
       }
@@ -43,7 +51,7 @@ export function Hotels() {
       setName(""); setAddress(""); setCheckIn(""); setCheckOut("");
       setOpen(false);
     } catch {
-      setErr("שגיאת רשת");
+      setErr("החיפוש נכשל זמנית — נסו שוב בעוד רגע");
     } finally {
       setBusy(false);
     }
