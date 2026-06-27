@@ -2,55 +2,69 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-// Resolve a free-text hotel name/address to coordinates via OSM Nominatim.
-// Free, no key; we set a User-Agent per the OSM usage policy.
+const UA = "NanaBanana/0.1 (trip planner; yaniv@eos-online.com)";
+
+type GeoHit = {
+  lat: number; lng: number; label: string; city: string; country: string;
+};
+
+async function withTimeout(url: string, ms: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { headers: { "User-Agent": UA }, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+// Provider 1: OSM Nominatim (rich Hebrew labels, but strict rate limits).
+async function viaNominatim(q: string): Promise<GeoHit | null> {
+  const url = "https://nominatim.openstreetmap.org/search?" +
+    new URLSearchParams({ q, format: "jsonv2", limit: "1",
+      addressdetails: "1", "accept-language": "he" });
+  const res = await withTimeout(url, 7000);
+  if (!res.ok) throw new Error(`nominatim ${res.status}`);
+  const r = (await res.json())?.[0];
+  if (!r) return null;
+  const a = r.address ?? {};
+  return {
+    lat: Number(r.lat), lng: Number(r.lon), label: r.display_name,
+    city: a.city || a.town || a.village || a.municipality || "",
+    country: a.country || "",
+  };
+}
+
+// Provider 2: Photon (Komoot) — also OSM-based, far more lenient. Fallback.
+async function viaPhoton(q: string): Promise<GeoHit | null> {
+  const url = "https://photon.komoot.io/api/?" +
+    new URLSearchParams({ q, limit: "1", lang: "default" });
+  const res = await withTimeout(url, 7000);
+  if (!res.ok) throw new Error(`photon ${res.status}`);
+  const f = (await res.json())?.features?.[0];
+  if (!f) return null;
+  const [lng, lat] = f.geometry.coordinates;
+  const p = f.properties ?? {};
+  const label = [p.name, p.street, p.city, p.country].filter(Boolean).join(", ");
+  return { lat, lng, label: label || p.name || q, city: p.city || "", country: p.country || "" };
+}
+
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim();
   if (!q) return NextResponse.json({ error: "missing q" }, { status: 400 });
 
-  const url =
-    "https://nominatim.openstreetmap.org/search?" +
-    new URLSearchParams({
-      q,
-      format: "jsonv2",
-      limit: "1",
-      addressdetails: "1",
-      "accept-language": "he",
-    });
-
-  // Hard timeout so a slow/blocked Nominatim never hangs the request.
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 8000);
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "NanaBanana/0.1 (trip planner; yaniv@eos-online.com)" },
-      signal: ctrl.signal,
-    });
-    if (!res.ok) return NextResponse.json({ error: "geocode failed" }, { status: 502 });
-    const results = (await res.json()) as Array<{
-      lat: string;
-      lon: string;
-      display_name: string;
-      name?: string;
-      address?: Record<string, string>;
-    }>;
-    if (results.length === 0) {
-      return NextResponse.json({ found: false });
+  for (const [name, fn] of [["nominatim", viaNominatim], ["photon", viaPhoton]] as const) {
+    try {
+      const hit = await fn(q);
+      if (hit) {
+        console.log(`[geocode] "${q}" -> ${name} OK`);
+        return NextResponse.json({ found: true, ...hit });
+      }
+      console.log(`[geocode] "${q}" -> ${name} empty`);
+    } catch (e) {
+      console.warn(`[geocode] "${q}" -> ${name} failed: ${(e as Error).message}`);
     }
-    const r = results[0];
-    const a = r.address ?? {};
-    const city = a.city || a.town || a.village || a.municipality || "";
-    return NextResponse.json({
-      found: true,
-      lat: Number(r.lat),
-      lng: Number(r.lon),
-      label: r.display_name,
-      city,
-      country: a.country || "",
-    });
-  } catch {
-    return NextResponse.json({ error: "network" }, { status: 502 });
-  } finally {
-    clearTimeout(timer);
   }
+  // Both providers returned no result (or failed) — not found, not a crash.
+  return NextResponse.json({ found: false });
 }
