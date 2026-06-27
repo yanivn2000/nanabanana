@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
-  Sparkles, Star, Users, Car, Wallet, Loader2,
+  Sparkles, Star, Loader2,
 } from "lucide-react";
-import Link from "next/link";
-import { KIND_META, type Trip } from "@/lib/sample";
+import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
+import { useTrips, useProfile, useHotels, profileText } from "@/lib/store";
+import { Hotels } from "@/app/trips/Hotels";
 import { AskBar } from "./AskBar";
 
 const ICONS = {
@@ -26,10 +28,18 @@ function StopIcon({ kind }: { kind: Stop["kind"] }) {
   );
 }
 
-export function TripView({ trip, city }: { trip: Trip; city?: string }) {
-  const [itinerary, setItinerary] = useState<Itinerary>(trip.itinerary);
+export function TripView({ tripId }: { tripId: string }) {
+  const { trips, update, loaded } = useTrips();
+  const [profile] = useProfile();
+  const { hotels } = useHotels();
   const [busy, setBusy] = useState<null | "generate" | "revise">(null);
   const [error, setError] = useState<string | null>(null);
+
+  const trip = trips.find((t) => t.id === tripId);
+  const itinerary = trip?.itinerary ?? null;
+  const tripHotels = hotels.filter((h) => h.tripId === tripId);
+  // City for attractions: the trip's destination, or derived from a linked hotel.
+  const city = trip?.city || tripHotels[0]?.city;
 
   async function call(payload: object, mode: "generate" | "revise") {
     setBusy(mode);
@@ -38,16 +48,16 @@ export function TripView({ trip, city }: { trip: Trip; city?: string }) {
       const res = await fetch("/api/itinerary", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ city, ...payload }),
+        body: JSON.stringify({ city, profileText: profileText(profile), ...payload }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.code === "no_key"
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data) {
+        setError(data?.code === "no_key"
           ? "ה-AI עוד לא מוגדר בשרת (חסר מפתח)."
-          : data.error || "שגיאה");
+          : data?.error || "אירעה שגיאה");
         return;
       }
-      setItinerary(data.itinerary);
+      update(tripId, { itinerary: data.itinerary });
     } catch {
       setError("שגיאת רשת");
     } finally {
@@ -55,80 +65,97 @@ export function TripView({ trip, city }: { trip: Trip; city?: string }) {
     }
   }
 
-  const generate = () =>
-    call({ mode: "generate", days: trip.days, travellers: trip.travellers, tags: trip.tags }, "generate");
+  const generate = () => call({
+    mode: "generate",
+    days: trip?.days ?? 4,
+    hotels: tripHotels.map((h) => ({ name: h.name, city: h.city, lat: h.lat, lng: h.lng })),
+  }, "generate");
   const revise = (instruction: string) =>
     call({ mode: "revise", current: itinerary, instruction }, "revise");
 
+  if (loaded && !trip) {
+    return (
+      <main className="mx-auto max-w-[440px] px-5 pt-16 text-center">
+        <p className="serif text-[22px]">הטיול לא נמצא</p>
+        <Link href="/trips" className="mt-3 inline-block text-[14px] text-[var(--accent-ink)]">← לכל הטיולים</Link>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-[440px] pb-32 lg:max-w-2xl">
-      <header className="rise bg-[var(--brand)] px-5 pb-7 pt-7 text-white lg:px-8 lg:pt-9">
-        <Link href="/" className="mb-4 flex items-center gap-1 text-[13px] text-[var(--brand-soft)]">
-          <ChevronRight size={16} /> הטיולים שלי
+      <header className="rise bg-[var(--surface)] px-5 pb-6 pt-8 lg:px-8">
+        <Link href="/trips" className="eyebrow mb-3 inline-flex items-center gap-1">
+          <ChevronRight size={14} /> הטיולים שלי
         </Link>
-        <p className="text-[13px] text-[var(--brand-soft)]">{trip.travellers}</p>
-        <h1 className="mt-1 text-[27px] font-bold leading-tight">{itinerary.title} {trip.cover}</h1>
-        <p className="mt-1 text-sm text-[var(--brand-soft)]">{itinerary.subtitle}</p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {trip.tags.map((t, i) => (
-            <span key={t} className="flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-[12px]">
-              {[<Mountain key="0" size={13} />, <Users key="1" size={13} />, <Car key="2" size={13} />, <Wallet key="3" size={13} />][i]}
-              {t}
-            </span>
-          ))}
-        </div>
-        <button onClick={generate} disabled={!!busy}
-          className="mt-4 flex items-center gap-1.5 rounded-full bg-white/20 px-4 py-2 text-[13px] font-medium disabled:opacity-60">
+        <h1 className="serif text-[32px] leading-none lg:text-[40px]">{trip?.title ?? "…"}</h1>
+        <div className="rule mt-3"></div>
+        <p className="mt-3 text-[13px] text-[var(--text-2)]">
+          {city ? `${city} · ` : ""}{trip?.days} ימים
+          {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
+        </p>
+        <button onClick={generate} disabled={!!busy || (!city)}
+          className="mt-4 flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-5 py-2.5 text-[14px] font-medium text-white disabled:opacity-50">
           {busy === "generate" ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-          {busy === "generate" ? "בונה לו\"ז…" : `בנה לו"ז אמיתי${city ? ` ל${city}` : ""}`}
+          {busy === "generate" ? "בונה לו\"ז…" : itinerary ? "בנה מחדש" : "בנה לו\"ז עם AI"}
         </button>
+        {!city && trip?.mode === "hotels" && (
+          <p className="mt-2 text-[12px] text-[var(--text-3)]">הוסיפו מלון כדי לקבוע את אזור הטיול</p>
+        )}
       </header>
 
+      {/* hotels (always available; central for star-trips) */}
+      <div className="px-5 pt-5 lg:px-8">
+        <Hotels tripId={tripId} />
+      </div>
+
       {error && (
-        <div className="mx-5 mt-4 rounded-[var(--radius-card)] bg-[var(--amber-soft)] px-4 py-3 text-[13px] text-[var(--amber)]">
+        <div className="mx-5 mt-4 rounded-[var(--radius-card)] bg-[var(--amber-soft)] px-4 py-3 text-[13px] text-[var(--amber)] lg:mx-8">
           {error}
         </div>
       )}
 
-      <div className={`px-5 transition-opacity lg:px-8 ${busy ? "opacity-50" : ""}`}>
-        {itinerary.days.map((day, di) => (
-          <section key={di} className="mt-7">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="text-[15px] font-bold">{day.label}</span>
-              <span className="text-[13px] text-[var(--text-3)]">· {day.date} · {day.base}</span>
-            </div>
-            <div className="flex flex-col gap-2.5">
-              {day.stops.map((s, si) => (
-                <div key={si} className="flex items-start gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)]">
-                  <StopIcon kind={s.kind} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-[15px] font-medium leading-tight">{s.name}</p>
-                      {!!s.score && (
-                        <span className="flex shrink-0 items-center gap-0.5 text-[12px] font-medium text-[var(--brand-ink)]">
-                          <Star size={13} fill="currentColor" /> {s.score}
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-0.5 text-[12px] text-[var(--text-3)]">{s.time} · {s.duration}</p>
-                    {s.note && <p className="mt-1.5 text-[13px] leading-snug text-[var(--text-2)]">{s.note}</p>}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {day.why && (
-              <div className="mt-3 flex gap-2.5 rounded-[var(--radius-card)] bg-[var(--brand-soft)] p-3.5">
-                <Sparkles size={17} className="mt-0.5 shrink-0 text-[var(--brand-ink)]" />
-                <p className="text-[13px] leading-snug text-[var(--brand-ink)]">
-                  <span className="font-bold">למה ככה: </span>{day.why}
-                </p>
+      {itinerary && (
+        <div className={`px-5 transition-opacity lg:px-8 ${busy ? "opacity-50" : ""}`}>
+          {itinerary.days.map((day, di) => (
+            <section key={di} className="mt-7">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="text-[15px] font-bold">{day.label}</span>
+                <span className="text-[13px] text-[var(--text-3)]">· {day.date} · {day.base}</span>
               </div>
-            )}
-          </section>
-        ))}
-      </div>
+              <div className="flex flex-col gap-2.5">
+                {day.stops.map((s, si) => (
+                  <div key={si} className="flex items-start gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)]">
+                    <StopIcon kind={s.kind} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[15px] font-medium leading-tight">{s.name}</p>
+                        {!!s.score && (
+                          <span className="flex shrink-0 items-center gap-0.5 text-[12px] font-medium text-[var(--accent-ink)]">
+                            <Star size={13} fill="currentColor" /> {s.score}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-[12px] text-[var(--text-3)]">{s.time} · {s.duration}</p>
+                      {s.note && <p className="mt-1.5 text-[13px] leading-snug text-[var(--text-2)]">{s.note}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {day.why && (
+                <div className="mt-3 flex gap-2.5 rounded-[var(--radius-card)] bg-[var(--accent-soft)] p-3.5">
+                  <Sparkles size={17} className="mt-0.5 shrink-0 text-[var(--accent-ink)]" />
+                  <p className="text-[13px] leading-snug text-[var(--accent-ink)]">
+                    <span className="font-bold">למה ככה: </span>{day.why}
+                  </p>
+                </div>
+              )}
+            </section>
+          ))}
+        </div>
+      )}
 
-      <AskBar onSend={revise} busy={busy === "revise"} />
+      {itinerary && <AskBar onSend={revise} busy={busy === "revise"} />}
     </main>
   );
 }

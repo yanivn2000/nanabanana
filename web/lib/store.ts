@@ -1,6 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { Itinerary } from "./trip-types";
+
+// randomUUID only exists in secure contexts (HTTPS/localhost); we serve over
+// plain HTTP, so fall back to a good-enough id everywhere.
+export function uid(): string {
+  return (
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
+  );
+}
 
 export type Kid = { name: string; age: number; loves: string };
 
@@ -62,6 +72,7 @@ export type Hotel = {
   lng: number;
   checkIn?: string;
   checkOut?: string;
+  tripId?: string | null;   // which trip this hotel belongs to (null = unassigned)
 };
 
 const HOTELS_KEY = "nanabanana.hotels.v1";
@@ -70,6 +81,7 @@ export function useHotels(): {
   hotels: Hotel[];
   add: (h: Hotel) => void;
   remove: (id: string) => void;
+  link: (id: string, tripId: string | null) => void;
   loaded: boolean;
 } {
   const [hotels, setHotels] = useState<Hotel[]>([]);
@@ -94,8 +106,76 @@ export function useHotels(): {
     hotels,
     add: (h) => persist([...hotels, h]),
     remove: (id) => persist(hotels.filter((x) => x.id !== id)),
+    link: (id, tripId) =>
+      persist(hotels.map((x) => (x.id === id ? { ...x, tripId } : x))),
     loaded,
   };
+}
+
+// --- Trips: real, saved trip entities ---
+export type TripMode = "preferences" | "hotels";
+export type Trip = {
+  id: string;
+  title: string;
+  mode: TripMode;
+  city?: string;
+  country?: string;
+  destinationId?: number;
+  days: number;
+  itinerary?: Itinerary;
+  createdAt: number;
+};
+
+const TRIPS_KEY = "nanabanana.trips.v1";
+
+export function useTrips(): {
+  trips: Trip[];
+  create: (t: Omit<Trip, "id" | "createdAt">) => Trip;
+  update: (id: string, patch: Partial<Trip>) => void;
+  remove: (id: string) => void;
+  loaded: boolean;
+} {
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(TRIPS_KEY);
+      if (raw) setTrips(JSON.parse(raw));
+    } catch {}
+    setLoaded(true);
+  }, []);
+
+  const persist = (next: Trip[]) => {
+    setTrips(next);
+    try {
+      localStorage.setItem(TRIPS_KEY, JSON.stringify(next));
+    } catch {}
+  };
+
+  return {
+    trips,
+    create: (t) => {
+      const trip: Trip = { ...t, id: uid(), createdAt: Date.now() };
+      persist([trip, ...trips]);
+      return trip;
+    },
+    update: (id, patch) =>
+      persist(trips.map((x) => (x.id === id ? { ...x, ...patch } : x))),
+    remove: (id) => persist(trips.filter((x) => x.id !== id)),
+    loaded,
+  };
+}
+
+// Read a single trip by id outside React (e.g. on the trip page initial load).
+export function readTrip(id: string): Trip | null {
+  try {
+    const raw = localStorage.getItem(TRIPS_KEY);
+    if (!raw) return null;
+    return (JSON.parse(raw) as Trip[]).find((t) => t.id === id) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function profileSummary(p: FamilyProfile): string {
@@ -103,4 +183,24 @@ export function profileSummary(p: FamilyProfile): string {
     ? `${p.kids.length} ילדים (${p.kids.map((k) => k.age).join(", ")})`
     : "בלי ילדים";
   return `${p.adults} מבוגרים · ${kids}`;
+}
+
+// Rich Hebrew description of the family — fed to Claude so trips are personalized.
+export function profileText(p: FamilyProfile): string {
+  const lines = [`${p.adults} מבוגרים`];
+  if (p.kids.length) {
+    lines.push(
+      "ילדים: " +
+        p.kids
+          .map((k) => `${k.name || "ילד"} בן ${k.age}${k.loves ? ` (אוהב ${k.loves})` : ""}`)
+          .join(", ")
+    );
+  } else {
+    lines.push("ללא ילדים");
+  }
+  if (p.interests.length) lines.push("אוהבים: " + p.interests.join(", "));
+  if (p.dislikes.length) lines.push("פחות אוהבים: " + p.dislikes.join(", "));
+  lines.push(`קצב ${p.pace}`, `תקציב ${p.budget}`,
+    `עד ${p.dailyDriveHours} שעות נסיעה ביום`, `לינה: ${p.lodging}`);
+  return lines.join(" · ");
 }

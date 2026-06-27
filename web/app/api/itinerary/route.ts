@@ -6,6 +6,7 @@ import {
   reviseItinerary,
 } from "@/lib/ai";
 import { buildHeuristicItinerary } from "@/lib/heuristic";
+import type { TripHotel } from "@/lib/ai";
 import type { Itinerary } from "@/lib/trip-types";
 
 export const dynamic = "force-dynamic";
@@ -25,8 +26,8 @@ export async function POST(req: NextRequest) {
     mode: "generate" | "revise";
     city?: string;
     days?: number;
-    travellers?: string;
-    tags?: string[];
+    profileText?: string;
+    hotels?: TripHotel[];
     current?: Itinerary;
     instruction?: string;
   };
@@ -61,15 +62,17 @@ export async function POST(req: NextRequest) {
       if (!body.current || !body.instruction) {
         return NextResponse.json({ error: "missing current/instruction" }, { status: 400 });
       }
-      itinerary = await reviseItinerary(body.current, body.instruction, attractions);
+      itinerary = await reviseItinerary(
+        body.current, body.instruction, attractions, body.profileText
+      );
     } else {
       itinerary = await generateItinerary({
         city: dest.city,
         country: dest.country,
         days: body.days ?? 4,
-        travellers: body.travellers ?? "משפחה · 4 נוסעים",
-        tags: body.tags ?? ["טבע", "ילדים", "קצב רגוע"],
+        profileText: body.profileText ?? "משפחה · קצב רגוע",
         attractions,
+        hotels: body.hotels,
       });
     }
     return NextResponse.json({ itinerary });

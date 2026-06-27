@@ -93,21 +93,28 @@ async function callClaude(userText: string): Promise<Itinerary> {
   return JSON.parse(block.text) as Itinerary;
 }
 
+export type TripHotel = { name: string; city: string; lat: number; lng: number };
+
 export type GenerateParams = {
   city: string;
   country: string;
   days: number;
-  travellers: string;
-  tags: string[];
+  profileText: string;
   attractions: Attraction[];
+  hotels?: TripHotel[];
 };
+
+function hotelsBlock(hotels?: TripHotel[]): string {
+  if (!hotels || hotels.length === 0) return "";
+  const lines = hotels.map((h) => `- ${h.name} (${h.city}) [${h.lat},${h.lng}]`).join("\n");
+  return `\nהמשפחה כבר הזמינה את המלונות הבאים — בנה טיול כוכב: כל יום סובב סביב בסיס הלינה, עם טיולי-יום לאטרקציות בטווח הנסיעה היומי. סדר את הימים כדי למזער נסיעה:\n${lines}\n`;
+}
 
 export async function generateItinerary(p: GenerateParams): Promise<Itinerary> {
   const userText = `בנה לו"ז טיול ל${p.city}, ${p.country}.
 מספר ימים: ${p.days}
-משפחה: ${p.travellers}
-העדפות: ${p.tags.join(", ")}
-
+פרופיל המשפחה: ${p.profileText}
+${hotelsBlock(p.hotels)}
 אטרקציות זמינות (בחר מתוכן בלבד):
 ${attractionsBlock(p.attractions)}`;
   return callClaude(userText);
@@ -116,11 +123,12 @@ ${attractionsBlock(p.attractions)}`;
 export async function reviseItinerary(
   current: Itinerary,
   instruction: string,
-  attractions: Attraction[]
+  attractions: Attraction[],
+  profileText?: string
 ): Promise<Itinerary> {
   const userText = `זהו הלו"ז הנוכחי:
 ${JSON.stringify(current, null, 1)}
-
+${profileText ? `\nפרופיל המשפחה: ${profileText}\n` : ""}
 בקשת המשתמש לשינוי: "${instruction}"
 
 ארגן מחדש את הלו"ז לפי הבקשה. שמור על מה שעובד, שנה רק מה שצריך, ועדכן את שדה ה-"why" של הימים שהשתנו כדי להסביר את השינוי.

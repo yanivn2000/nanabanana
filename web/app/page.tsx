@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { listDestinations } from "@/lib/db";
-import { SAMPLE_TRIP } from "@/lib/sample";
 import { MapPin, ArrowLeft, Plus, Sparkles, Compass } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -22,28 +21,21 @@ export default function Home() {
       </header>
 
       <div className="lg:grid lg:grid-cols-3 lg:gap-4">
-      {/* hero CTA */}
+      {/* hero CTA → trips */}
       <Link
-        href="/trip/austria-family"
-        className="rise rise-1 block rounded-[var(--radius-card)] bg-[var(--brand)] p-5 text-white shadow-[var(--shadow)] lg:col-span-2 lg:p-8"
+        href="/trips"
+        className="rise rise-1 block rounded-[var(--radius-card)] bg-[var(--accent)] p-5 text-white shadow-[var(--shadow)] lg:col-span-2 lg:p-8"
       >
-        <div className="flex items-center gap-2 text-[13px] text-[var(--brand-soft)]">
-          <Sparkles size={15} /> ממשיכים מאיפה שעצרתם
+        <div className="flex items-center gap-2 text-[13px] text-[var(--accent-soft)]">
+          <Sparkles size={15} /> מתכננים את הבא
         </div>
-        <div className="mt-2 flex items-end justify-between">
-          <div>
-            <p className="text-[22px] font-bold leading-tight">{SAMPLE_TRIP.title}</p>
-            <p className="mt-1 text-sm text-[var(--brand-soft)]">
-              {SAMPLE_TRIP.subtitle} · {SAMPLE_TRIP.days} ימים
-            </p>
-          </div>
-          <span className="text-4xl">{SAMPLE_TRIP.cover}</span>
-        </div>
+        <p className="serif mt-2 text-[26px] leading-tight lg:text-[32px]">הטיולים שלי</p>
+        <p className="mt-1 text-sm text-[var(--accent-soft)]">בנו טיול חדש — לפי העדפות או לפי מלונות</p>
       </Link>
 
       {/* new trip */}
       <Link
-        href="/explore"
+        href="/trips"
         className="rise rise-2 mt-3 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-dashed border-[var(--border)] bg-[var(--surface)] py-4 text-[15px] font-medium text-[var(--text-2)] lg:mt-0 lg:flex-col lg:py-0"
       >
         <Plus size={18} /> טיול חדש
