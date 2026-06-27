@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
-import { useTrips, useProfile, useHotels, profileText } from "@/lib/store";
+import { useTrips, useProfile, useHotels, profileText, MONTHS_HE } from "@/lib/store";
 import { Hotels } from "@/app/trips/Hotels";
 import { AskBar } from "./AskBar";
 
@@ -70,6 +70,7 @@ export function TripView({ tripId }: { tripId: string }) {
   const generate = () => call({
     mode: "generate",
     days: trip?.days ?? 4,
+    month: trip?.month,
     hotels: tripHotels.map((h) => ({ name: h.name, city: h.city, lat: h.lat, lng: h.lng })),
   }, "generate");
   const revise = (instruction: string) =>
@@ -94,6 +95,7 @@ export function TripView({ tripId }: { tripId: string }) {
         <div className="rule mt-3"></div>
         <p className="mt-3 text-[13px] text-[var(--text-2)]">
           {city ? `${city} · ` : ""}{trip?.days} ימים
+          {trip?.month ? ` · ${MONTHS_HE[trip.month - 1]}` : ""}
           {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
         </p>
         <button onClick={generate} disabled={!!busy || (!city)}

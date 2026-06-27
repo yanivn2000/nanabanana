@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
     mode: "generate" | "revise";
     city?: string;
     days?: number;
+    month?: number;
     profileText?: string;
     hotels?: TripHotel[];
     current?: Itinerary;
@@ -88,6 +89,7 @@ export async function POST(req: NextRequest) {
       city: dest.city,
       country: dest.country,
       days: body.days ?? 4,
+      month: body.month,
       profileText: body.profileText ?? "משפחה · קצב רגוע",
       attractions,
       hotels: body.hotels,

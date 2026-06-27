@@ -122,9 +122,23 @@ export type Trip = {
   country?: string;
   destinationId?: number;
   days: number;
+  month: number;          // 1-12 — when the trip is (for seasonal relevance)
   itinerary?: Itinerary;
   createdAt: number;
 };
+
+export const MONTHS_HE = [
+  "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני",
+  "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר",
+];
+
+// Map a month to a season label + the best_season enum value, for the AI.
+export function monthSeason(month: number): { he: string; season: string } {
+  if ([12, 1, 2].includes(month)) return { he: "חורף", season: "winter" };
+  if ([3, 4, 5].includes(month)) return { he: "אביב", season: "spring" };
+  if ([6, 7, 8].includes(month)) return { he: "קיץ", season: "summer" };
+  return { he: "סתיו", season: "autumn" };
+}
 
 const TRIPS_KEY = "nanabanana.trips.v1";
 

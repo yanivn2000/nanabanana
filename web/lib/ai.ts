@@ -70,6 +70,7 @@ function attractionsBlock(attractions: Attraction[]): string {
         category: a.category,
         sub: a.subcategory,
         indoor_outdoor: a.indoor_outdoor,
+        season: a.best_season,
         score: a.family_score,
         tip: a.tips_he,
       })
@@ -99,10 +100,22 @@ export type GenerateParams = {
   city: string;
   country: string;
   days: number;
+  month?: number;
   profileText: string;
   attractions: Attraction[];
   hotels?: TripHotel[];
 };
+
+const MONTHS_HE = ["", "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני",
+  "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
+function seasonHint(month?: number): string {
+  if (!month) return "";
+  const he =
+    [12, 1, 2].includes(month) ? "חורף"
+    : [3, 4, 5].includes(month) ? "אביב"
+    : [6, 7, 8].includes(month) ? "קיץ" : "סתיו";
+  return `\nהטיול ב${MONTHS_HE[month]} (${he}). התאם את ההמלצות לעונה: העדף אטרקציות שמתאימות לעונה הזו (שדה season), הימנע ממקומות שמתאימים רק לעונה אחרת, וציין במידת הצורך מזג אוויר/לבוש. בחורף העדף אטרקציות מקורות; בקיץ אטרקציות מים/חוץ.\n`;
+}
 
 function hotelsBlock(hotels?: TripHotel[]): string {
   if (!hotels || hotels.length === 0) return "";
@@ -114,7 +127,7 @@ export async function generateItinerary(p: GenerateParams): Promise<Itinerary> {
   const userText = `בנה לו"ז טיול ל${p.city}, ${p.country}.
 מספר ימים: ${p.days}
 פרופיל המשפחה: ${p.profileText}
-${hotelsBlock(p.hotels)}
+${seasonHint(p.month)}${hotelsBlock(p.hotels)}
 אטרקציות זמינות (בחר מתוכן בלבד):
 ${attractionsBlock(p.attractions)}`;
   return callClaude(userText);

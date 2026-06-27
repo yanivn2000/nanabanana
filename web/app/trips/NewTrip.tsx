@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, BedDouble, MapPin, Loader2, X } from "lucide-react";
-import { useTrips } from "@/lib/store";
+import { useTrips, MONTHS_HE } from "@/lib/store";
 
 type Dest = { id: number; city: string; country: string; attraction_count: number };
 
@@ -13,6 +13,7 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
   const [mode, setMode] = useState<"preferences" | "hotels">("preferences");
   const [title, setTitle] = useState("");
   const [days, setDays] = useState(5);
+  const [month, setMonth] = useState<number | null>(null);
   const [destId, setDestId] = useState<number | null>(null);
   const [dests, setDests] = useState<Dest[]>([]);
   const [creating, setCreating] = useState(false);
@@ -34,6 +35,7 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
       title: autoTitle,
       mode,
       days,
+      month: month as number,
       ...(mode === "preferences" && dest
         ? { city: dest.city, country: dest.country, destinationId: dest.id }
         : {}),
@@ -41,7 +43,9 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
     router.push(`/trip/${trip.id}`);
   }
 
-  const canGo = mode === "hotels" || (mode === "preferences" && destId != null);
+  const canGo =
+    month != null &&
+    (mode === "hotels" || (mode === "preferences" && destId != null));
 
   return (
     <div className="mb-4 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
@@ -107,6 +111,28 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
         <input type="range" min={1} max={14} value={days}
           onChange={(e) => setDays(Number(e.target.value))}
           className="w-full accent-[var(--accent)]" />
+      </div>
+
+      <div className="mb-4">
+        <label className="mb-1.5 block text-[13px] text-[var(--text-2)]">
+          מתי? <span className="text-[var(--accent-ink)]">(חשוב — להמלצות לפי עונה)</span>
+        </label>
+        <div className="grid grid-cols-4 gap-1.5">
+          {MONTHS_HE.map((m, i) => {
+            const on = month === i + 1;
+            return (
+              <button key={m} onClick={() => setMonth(i + 1)}
+                className="rounded-lg py-2 text-[12.5px] transition"
+                style={{
+                  background: on ? "var(--accent)" : "var(--surface-2)",
+                  color: on ? "#fff" : "var(--text-2)",
+                  fontWeight: on ? 500 : 400,
+                }}>
+                {m}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <button onClick={go} disabled={!canGo || creating}
