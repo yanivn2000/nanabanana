@@ -22,14 +22,15 @@ export function Hotels() {
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+      const reqUrl = `/api/geocode?q=${encodeURIComponent(q)}`;
+      const res = await fetch(reqUrl);
       if (!res.ok) {
-        setErr("החיפוש נכשל זמנית — נסו שוב בעוד רגע");
+        setErr(`אבחון: סטטוס ${res.status} · ${new URL(reqUrl, location.href).href}`);
         return;
       }
       const data = await res.json().catch(() => null);
       if (!data) {
-        setErr("החיפוש נכשל זמנית — נסו שוב בעוד רגע");
+        setErr("אבחון: התשובה אינה JSON תקין");
         return;
       }
       if (!data.found) {
@@ -50,8 +51,8 @@ export function Hotels() {
       add(hotel);
       setName(""); setAddress(""); setCheckIn(""); setCheckOut("");
       setOpen(false);
-    } catch {
-      setErr("החיפוש נכשל זמנית — נסו שוב בעוד רגע");
+    } catch (e) {
+      setErr(`אבחון: ${(e as Error)?.name || ""} ${(e as Error)?.message || String(e)}`);
     } finally {
       setBusy(false);
     }
