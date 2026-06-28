@@ -14,7 +14,6 @@ const ITEMS = [
 // Desktop-only top navigation bar (mobile uses BottomNav).
 export function TopNav() {
   const pathname = usePathname();
-  if (pathname.startsWith("/trip/")) return null;
 
   return (
     <header className="sticky top-0 z-30 hidden border-b border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-lg lg:block">
