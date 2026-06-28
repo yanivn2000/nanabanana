@@ -112,6 +112,7 @@ MIGRATIONS = [
     ("attractions", "dress_he", "TEXT"),           # appropriate dress (Hebrew)
     ("attractions", "cost_level", "INTEGER"),      # 0=free,1=cheap,2=mid,3=pricey
     ("attractions", "must_see", "INTEGER"),        # 1 = must-visit landmark
+    ("attractions", "is_duplicate", "INTEGER"),    # 1 = hidden as a duplicate of another row
 ]
 
 

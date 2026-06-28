@@ -8,6 +8,7 @@ import db
 import pipeline_osm
 import enrich
 import pipeline_images
+import dedupe
 
 st.set_page_config(page_title="NanaBanana", page_icon="🍌", layout="wide")
 
@@ -74,6 +75,19 @@ with tab_settings:
     _sconn.close()
     st.divider()
     st.caption("המודל נשמר במאגר המשותף — האפליקציה הצרכנית קוראת אותו בכל בקשה, ללא צורך בפריסה מחדש.")
+
+    st.divider()
+    st.subheader("ניקוי כפילויות")
+    _dconn = db.get_conn()
+    dup_now = _dconn.execute(
+        "SELECT count(*) FROM attractions WHERE is_duplicate = 1").fetchone()[0]
+    _dconn.close()
+    st.metric("מסומנות ככפילות (מוסתרות)", f"{dup_now:,}")
+    st.caption("מזהה כפילויות לפי מזהה Wikidata משותף + קרבה גאוגרפית ושם דומה. הפיך — לא מוחק.")
+    if st.button("הרץ ניקוי כפילויות"):
+        with st.spinner("מנקה..."):
+            res = dedupe.dedupe()
+        st.success(f"נמצאו {res['clusters']} קבוצות · {res['duplicates_flagged']} כפילויות הוסתרו")
 
 with tab_ingest:
     st.subheader("משיכת אטרקציות מ-OpenStreetMap")

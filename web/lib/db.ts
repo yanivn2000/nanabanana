@@ -75,6 +75,7 @@ export function topAttractions(destinationId: number, limit = 40): Attraction[] 
        FROM attractions
        WHERE destination_id = ?
          AND (quality_keep = 1 OR quality_keep IS NULL)
+         AND (is_duplicate IS NULL OR is_duplicate = 0)
        ORDER BY (quality_keep = 1) DESC,
                 COALESCE(family_score, 0) DESC, name_en
        LIMIT ?`
@@ -108,6 +109,7 @@ export function attractionsForMap(destinationId: number, limit = 200): Attractio
        FROM attractions
        WHERE destination_id = ? AND lat IS NOT NULL AND lng IS NOT NULL
          AND (quality_keep = 1 OR quality_keep IS NULL)
+         AND (is_duplicate IS NULL OR is_duplicate = 0)
        ORDER BY COALESCE(family_score, 0) DESC, name_en
        LIMIT ?`
     )
