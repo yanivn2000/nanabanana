@@ -31,6 +31,25 @@ function Flyer({
   return null;
 }
 
+// Frame the map to the current set of points whenever it changes (e.g. when
+// filtering to a single day). Skips while a specific marker is selected.
+function FitBounds({ attractions, selected }: { attractions: Attraction[]; selected: Attraction | null }) {
+  const map = useMap();
+  const sig = attractions.map((a) => a.id).join(",");
+  useEffect(() => {
+    if (selected) return;
+    const pts = attractions
+      .filter((a) => a.lat != null && a.lng != null)
+      .map((a) => [a.lat as number, a.lng as number] as [number, number]);
+    if (pts.length === 1) map.setView(pts[0], 14);
+    else if (pts.length > 1) {
+      setTimeout(() => map.fitBounds(pts, { padding: [36, 36], maxZoom: 15 }), 60);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sig]);
+  return null;
+}
+
 export default function AttractionsMap({
   attractions,
   center,
@@ -50,6 +69,7 @@ export default function AttractionsMap({
         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
       />
       <Flyer selected={selected} markers={markers} />
+      <FitBounds attractions={attractions} selected={selected} />
       {attractions.map((a) => (
         <CircleMarker
           key={a.id}

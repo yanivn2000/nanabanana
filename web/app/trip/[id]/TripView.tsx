@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, Pencil, ChevronUp, ChevronDown,
-  ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation,
+  ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon,
 } from "lucide-react";
 import { googleMapsUrl } from "@/lib/geo";
 import { KIND_META } from "@/lib/sample";
@@ -44,6 +44,7 @@ export function TripView({ tripId }: { tripId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [activeDay, setActiveDay] = useState<number | null>(null);
   const COST_HE = ["חינם", "₪", "₪₪", "₪₪₪"];
 
   const trip = trips.find((t) => t.id === tripId);
@@ -54,8 +55,11 @@ export function TripView({ tripId }: { tripId: string }) {
   // City for display: Hebrew (hotel city from geocode is already Hebrew).
   const cityHe = trip?.cityHe || tripHotels[0]?.city || trip?.city;
 
-  // Map points = all itinerary stops that have coordinates (for the desktop map).
-  const stopPoints = (itinerary?.days.flatMap((d) => d.stops) ?? [])
+  // Map points = the selected day's stops, or all days when none is selected.
+  const mapDays = activeDay != null && itinerary?.days[activeDay]
+    ? [itinerary.days[activeDay]]
+    : (itinerary?.days ?? []);
+  const stopPoints = mapDays.flatMap((d) => d.stops)
     .filter((s) => s.lat != null && s.lng != null)
     .map((s, i) => ({
       id: i, name_he: s.name, name_en: s.name, lat: s.lat!, lng: s.lng!,
@@ -201,8 +205,23 @@ export function TripView({ tripId }: { tripId: string }) {
             <Hotels tripId={tripId} />
           </div>
           {stopPoints.length > 0 && (
-            <div className="mt-5 hidden h-[380px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)] lg:block">
-              <MapClient attractions={stopPoints} center={mapCenter} selected={null} />
+            <div className="mt-5 hidden lg:block">
+              <div className="mb-2 flex items-center justify-between px-0.5">
+                <span className="text-[12.5px] text-[var(--text-2)]">
+                  {activeDay != null ? `מציג: ${itinerary?.days[activeDay]?.label}` : "מציג: כל הימים"}
+                  {" · "}{stopPoints.length} מקומות
+                </span>
+                {activeDay != null && (
+                  <button onClick={() => setActiveDay(null)}
+                    className="text-[12px] font-medium text-[var(--accent-ink)]">הצג את כל הימים</button>
+                )}
+              </div>
+              <div className="h-[380px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
+                <MapClient attractions={stopPoints} center={mapCenter} selected={null} />
+              </div>
+              <p className="mt-2 px-0.5 text-[11.5px] leading-snug text-[var(--text-3)]">
+                לחצו על כותרת יום כדי לראות רק את עצירותיו · הצבע מציין סוג (כחול=תרבות, ירוק=טבע, סגול=אוכל)
+              </p>
             </div>
           )}
         </aside>
@@ -220,8 +239,22 @@ export function TripView({ tripId }: { tripId: string }) {
           {itinerary.days.map((day, di) => (
             <section key={di} className="mt-7 lg:mt-0 lg:self-start">
               <div className="mb-3 flex items-center gap-2">
-                <span className="text-[15px] font-bold">{day.label}</span>
-                <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--text-3)]">· {day.date} · {day.base}</span>
+                <button onClick={() => setActiveDay(activeDay === di ? null : di)}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-right">
+                  <span className="text-[15px] font-bold transition-colors"
+                    style={{ color: activeDay === di ? "var(--accent-ink)" : undefined }}>{day.label}</span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--text-3)]">· {day.date} · {day.base}</span>
+                </button>
+                {!editing && (
+                  <button onClick={() => setActiveDay(activeDay === di ? null : di)}
+                    className="hidden shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium transition lg:flex"
+                    style={{
+                      background: activeDay === di ? "var(--accent)" : "var(--surface-2)",
+                      color: activeDay === di ? "#fff" : "var(--text-2)",
+                    }}>
+                    <MapIcon size={12} /> {activeDay === di ? "מוצג במפה" : "הצג במפה"}
+                  </button>
+                )}
                 {editing && (
                   <span className="flex shrink-0 gap-1">
                     <button onClick={() => moveDay(di, -1)} disabled={di === 0} aria-label="הזז יום למעלה"
