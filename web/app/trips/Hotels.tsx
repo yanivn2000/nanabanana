@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useHotels, uid, type Hotel } from "@/lib/store";
 import { BedDouble, Plus, Trash2, MapPin, Loader2, X, Link2 } from "lucide-react";
 
-export function Hotels({ tripId }: { tripId: string }) {
+export function Hotels({ tripId, onFocus }: { tripId: string; onFocus?: (h: Hotel) => void }) {
   const { hotels, add, remove, link, loaded } = useHotels();
   const tripHotels = hotels.filter((h) => h.tripId === tripId);
   const unassigned = hotels.filter((h) => !h.tripId);
@@ -100,23 +100,35 @@ export function Hotels({ tripId }: { tripId: string }) {
       )}
 
       <div className="flex flex-col gap-2.5">
-        {tripHotels.map((h) => (
+        {tripHotels.map((h) => {
+          const canFocus = !!onFocus && h.lat != null && h.lng != null;
+          return (
           <div key={h.id}
             className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)]">
-            <div className="grid size-10 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-[var(--accent-soft)] text-[var(--accent-ink)]">
-              <BedDouble size={19} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[15px] font-medium">{h.name}</p>
-              <p className="truncate text-[12.5px] text-[var(--text-2)]">
-                {h.city ? `${h.city}${h.country ? ", " + h.country : ""}` : h.label}
-                {(h.checkIn || h.checkOut) ? ` · ${h.checkIn || ""}${h.checkOut ? "→" + h.checkOut : ""}` : ""}
-              </p>
-            </div>
+            <button onClick={() => canFocus && onFocus!(h)} disabled={!canFocus}
+              className={`flex min-w-0 flex-1 items-center gap-3 text-right ${canFocus ? "lg:cursor-pointer" : ""}`}>
+              <div className="grid size-10 shrink-0 place-items-center rounded-[var(--radius-sm)]"
+                style={{ background: "rgba(13,148,136,.12)", color: "#0d9488" }}>
+                <BedDouble size={19} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[15px] font-medium">{h.name}</p>
+                <p className="truncate text-[12.5px] text-[var(--text-2)]">
+                  {h.city ? `${h.city}${h.country ? ", " + h.country : ""}` : h.label}
+                  {(h.checkIn || h.checkOut) ? ` · ${h.checkIn || ""}${h.checkOut ? "→" + h.checkOut : ""}` : ""}
+                </p>
+                {canFocus && (
+                  <span className="mt-0.5 hidden items-center gap-1 text-[11.5px] text-[#0d9488] lg:inline-flex">
+                    <MapPin size={11} /> הצג במפה
+                  </span>
+                )}
+              </div>
+            </button>
             <button onClick={() => remove(h.id)} aria-label="מחק"
               className="grid size-9 shrink-0 place-items-center rounded-lg text-[var(--text-3)]"><Trash2 size={16} /></button>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {unassigned.length > 0 && (

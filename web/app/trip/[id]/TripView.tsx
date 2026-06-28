@@ -45,6 +45,7 @@ export function TripView({ tripId }: { tripId: string }) {
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [activeDay, setActiveDay] = useState<number | null>(null);
+  const [focus, setFocus] = useState<{ lat: number; lng: number; n: number } | null>(null);
   const COST_HE = ["חינם", "₪", "₪₪", "₪₪₪"];
 
   const trip = trips.find((t) => t.id === tripId);
@@ -69,10 +70,16 @@ export function TripView({ tripId }: { tripId: string }) {
       tagline_he: s.tagline ?? null, best_season: null, best_time_he: s.bestTime ?? null,
       dress_he: null, cost_level: s.cost ?? null, must_see: null,
     })) as Attraction[];
-  const mapCenter: [number, number] = stopPoints.length
+  // Hotels with coordinates — always shown on the map with a distinct marker.
+  const hotelPoints = tripHotels
+    .filter((h) => h.lat != null && h.lng != null)
+    .map((h) => ({ id: h.id, name: h.name, lat: h.lat as number, lng: h.lng as number }));
+
+  const centerFrom = stopPoints.length ? stopPoints : hotelPoints;
+  const mapCenter: [number, number] = centerFrom.length
     ? [
-        stopPoints.reduce((a, p) => a + (p.lat as number), 0) / stopPoints.length,
-        stopPoints.reduce((a, p) => a + (p.lng as number), 0) / stopPoints.length,
+        centerFrom.reduce((a, p) => a + (p.lat as number), 0) / centerFrom.length,
+        centerFrom.reduce((a, p) => a + (p.lng as number), 0) / centerFrom.length,
       ]
     : [0, 0];
 
@@ -202,14 +209,16 @@ export function TripView({ tripId }: { tripId: string }) {
         {/* aside: hotels + map of the trip (map on desktop only) */}
         <aside className="lg:order-2 lg:w-[360px] lg:shrink-0 lg:sticky lg:top-[73px]">
           <div className="px-5 pt-5 lg:px-0 lg:pt-0">
-            <Hotels tripId={tripId} />
+            <Hotels tripId={tripId}
+              onFocus={(h) => h.lat != null && h.lng != null && setFocus({ lat: h.lat, lng: h.lng, n: Date.now() })} />
           </div>
-          {stopPoints.length > 0 && (
+          {(stopPoints.length > 0 || hotelPoints.length > 0) && (
             <div className="mt-5 hidden lg:block">
               <div className="mb-2 flex items-center justify-between px-0.5">
                 <span className="text-[12.5px] text-[var(--text-2)]">
                   {activeDay != null ? `מציג: ${itinerary?.days[activeDay]?.label}` : "מציג: כל הימים"}
                   {" · "}{stopPoints.length} מקומות
+                  {hotelPoints.length > 0 ? ` · ${hotelPoints.length} מלון` : ""}
                 </span>
                 {activeDay != null && (
                   <button onClick={() => setActiveDay(null)}
@@ -217,10 +226,11 @@ export function TripView({ tripId }: { tripId: string }) {
                 )}
               </div>
               <div className="h-[380px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
-                <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered />
+                <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
+                  hotels={hotelPoints} focus={focus} />
               </div>
               <p className="mt-2 px-0.5 text-[11.5px] leading-snug text-[var(--text-3)]">
-                המספרים = סדר הביקור · הקו מחבר את המסלול · הצבע מציין סוג (כחול=תרבות, ירוק=טבע, סגול=אוכל)
+                <span className="text-[#0d9488]">🏨 המלון</span> תמיד מוצג · המספרים = סדר הביקור · הקו מחבר את המסלול · הצבע = סוג
               </p>
             </div>
           )}

@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { Attraction } from "@/lib/db";
+import type { MapHotel } from "./AttractionsMap";
 
 const AttractionsMap = dynamic(() => import("./AttractionsMap"), {
   ssr: false,
@@ -17,6 +18,8 @@ export function MapClient(props: {
   center: [number, number];
   selected: Attraction | null;
   ordered?: boolean;
+  hotels?: MapHotel[];
+  focus?: { lat: number; lng: number; n: number } | null;
 }) {
   return <AttractionsMap {...props} />;
 }

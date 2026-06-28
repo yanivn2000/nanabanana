@@ -32,23 +32,53 @@ function Flyer({
   return null;
 }
 
+export type MapHotel = { id: string; name: string; lat: number; lng: number };
+
 // Frame the map to the current set of points whenever it changes (e.g. when
-// filtering to a single day). Skips while a specific marker is selected.
-function FitBounds({ attractions, selected }: { attractions: Attraction[]; selected: Attraction | null }) {
+// filtering to a single day). Hotels are always included so they stay in view.
+// Skips while a specific marker is selected.
+function FitBounds({
+  attractions, hotels, selected,
+}: { attractions: Attraction[]; hotels: MapHotel[]; selected: Attraction | null }) {
   const map = useMap();
-  const sig = attractions.map((a) => a.id).join(",");
+  const sig = [...attractions.map((a) => a.id), ...hotels.map((h) => "h" + h.id)].join(",");
   useEffect(() => {
     if (selected) return;
-    const pts = attractions
-      .filter((a) => a.lat != null && a.lng != null)
-      .map((a) => [a.lat as number, a.lng as number] as [number, number]);
+    const pts = [
+      ...attractions.filter((a) => a.lat != null && a.lng != null)
+        .map((a) => [a.lat as number, a.lng as number] as [number, number]),
+      ...hotels.map((h) => [h.lat, h.lng] as [number, number]),
+    ];
     if (pts.length === 1) map.setView(pts[0], 14);
     else if (pts.length > 1) {
-      setTimeout(() => map.fitBounds(pts, { padding: [36, 36], maxZoom: 15 }), 60);
+      setTimeout(() => map.fitBounds(pts, { padding: [40, 40], maxZoom: 15 }), 60);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sig]);
   return null;
+}
+
+// Flies to a focused point (e.g. a hotel clicked in the list). The nonce
+// retriggers the fly even when the same hotel is clicked again.
+function FlyTo({ focus }: { focus: { lat: number; lng: number; n: number } | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (focus) map.flyTo([focus.lat, focus.lng], 15, { duration: 0.7 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus?.n]);
+  return null;
+}
+
+// Distinct hotel marker — a teal rounded pin with a bed glyph.
+function hotelIcon() {
+  const bed = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>';
+  return L.divIcon({
+    className: "hotel-pin",
+    html: `<div style="background:#0d9488;width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)">${bed}</div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -16],
+  });
 }
 
 // Numbered pin (used in trip view to show stop order along the route).
@@ -92,11 +122,15 @@ export default function AttractionsMap({
   center,
   selected,
   ordered,
+  hotels = [],
+  focus = null,
 }: {
   attractions: Attraction[];
   center: [number, number];
   selected: Attraction | null;
   ordered?: boolean;
+  hotels?: MapHotel[];
+  focus?: { lat: number; lng: number; n: number } | null;
 }) {
   const markers = useRef<Map<number, LeafletCircleMarker>>(new Map());
   const routePts = ordered
@@ -112,7 +146,20 @@ export default function AttractionsMap({
         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
       />
       <Flyer selected={selected} markers={markers} />
-      <FitBounds attractions={attractions} selected={selected} />
+      <FitBounds attractions={attractions} hotels={hotels} selected={selected} />
+      <FlyTo focus={focus} />
+
+      {hotels.map((h) => (
+        <Marker key={"h" + h.id} position={[h.lat, h.lng]} icon={hotelIcon()} zIndexOffset={1000}>
+          <Popup>
+            <div style={{ direction: "rtl", fontFamily: "sans-serif" }}>
+              <strong>🏨 {h.name}</strong>
+              <br />
+              <span style={{ color: "#666", fontSize: 12 }}>המלון שלכם</span>
+            </div>
+          </Popup>
+        </Marker>
+      ))}
 
       {ordered && routePts.length > 1 && (
         <Polyline positions={routePts}
