@@ -1,19 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Heebo, Frank_Ruhl_Libre } from "next/font/google";
+import { Assistant } from "next/font/google";
 import "./globals.css";
 import { BottomNav } from "@/components/BottomNav";
 import { TopNav } from "@/components/TopNav";
 
-const heebo = Heebo({
-  variable: "--font-heebo",
+const assistant = Assistant({
+  variable: "--font-assistant",
   subsets: ["hebrew", "latin"],
-  weight: ["400", "500", "700"],
-});
-
-const frank = Frank_Ruhl_Libre({
-  variable: "--font-frank",
-  subsets: ["hebrew", "latin"],
-  weight: ["500", "700"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -35,7 +29,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="he" dir="rtl" className={`${heebo.variable} ${frank.variable} h-full antialiased`}>
+    <html lang="he" dir="rtl" className={`${assistant.variable} h-full antialiased`}>
       <body className="min-h-full">
         <TopNav />
         {children}
