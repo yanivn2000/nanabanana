@@ -10,9 +10,15 @@ import {
 import { googleMapsUrl } from "@/lib/geo";
 import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
+import type { Attraction } from "@/lib/db";
 import { useTrips, useProfile, useHotels, profileText, MONTHS_HE } from "@/lib/store";
 import { Hotels } from "@/app/trips/Hotels";
+import { MapClient } from "@/components/MapClient";
 import { AskBar } from "./AskBar";
+
+const KIND_TO_CAT: Record<string, string> = {
+  nature: "nature", food: "food", culture: "museum", shopping: "shopping", rest: "leisure",
+};
 
 const ICONS = {
   mountain: Mountain, utensils: Utensils, landmark: Landmark,
@@ -47,6 +53,24 @@ export function TripView({ tripId }: { tripId: string }) {
   const city = trip?.city || tripHotels[0]?.city;
   // City for display: Hebrew (hotel city from geocode is already Hebrew).
   const cityHe = trip?.cityHe || tripHotels[0]?.city || trip?.city;
+
+  // Map points = all itinerary stops that have coordinates (for the desktop map).
+  const stopPoints = (itinerary?.days.flatMap((d) => d.stops) ?? [])
+    .filter((s) => s.lat != null && s.lng != null)
+    .map((s, i) => ({
+      id: i, name_he: s.name, name_en: s.name, lat: s.lat!, lng: s.lng!,
+      category: KIND_TO_CAT[s.kind] ?? "attraction", subcategory: null,
+      indoor_outdoor: null, family_score: s.score ?? null, tips_he: null,
+      website: s.website ?? null, duration_minutes: null, image_url: s.image ?? null,
+      tagline_he: s.tagline ?? null, best_season: null, best_time_he: s.bestTime ?? null,
+      dress_he: null, cost_level: s.cost ?? null, must_see: null,
+    })) as Attraction[];
+  const mapCenter: [number, number] = stopPoints.length
+    ? [
+        stopPoints.reduce((a, p) => a + (p.lat as number), 0) / stopPoints.length,
+        stopPoints.reduce((a, p) => a + (p.lng as number), 0) / stopPoints.length,
+      ]
+    : [0, 0];
 
   async function call(payload: object, mode: "generate" | "revise") {
     setBusy(mode);
@@ -138,7 +162,7 @@ export function TripView({ tripId }: { tripId: string }) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[440px] pb-32 lg:max-w-2xl">
+    <main className="mx-auto w-full max-w-[440px] pb-32 lg:max-w-6xl">
       <header className="rise bg-[var(--surface)] px-5 pb-6 pt-8 lg:px-8">
         <Link href="/trips" className="eyebrow mb-3 inline-flex items-center gap-1">
           <ChevronRight size={14} /> הטיולים שלי
@@ -170,21 +194,31 @@ export function TripView({ tripId }: { tripId: string }) {
         )}
       </header>
 
-      {/* hotels (always available; central for star-trips) */}
-      <div className="px-5 pt-5 lg:px-8">
-        <Hotels tripId={tripId} />
-      </div>
+      <div className="lg:flex lg:items-start lg:gap-8 lg:px-8 lg:pt-6">
+        {/* aside: hotels + map of the trip (map on desktop only) */}
+        <aside className="lg:order-2 lg:w-[360px] lg:shrink-0 lg:sticky lg:top-[73px]">
+          <div className="px-5 pt-5 lg:px-0 lg:pt-0">
+            <Hotels tripId={tripId} />
+          </div>
+          {stopPoints.length > 0 && (
+            <div className="mt-5 hidden h-[380px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)] lg:block">
+              <MapClient attractions={stopPoints} center={mapCenter} selected={null} />
+            </div>
+          )}
+        </aside>
 
+        {/* main column: error + days */}
+        <div className="lg:order-1 lg:min-w-0 lg:flex-1">
       {error && (
-        <div className="mx-5 mt-4 rounded-[var(--radius-card)] bg-[var(--amber-soft)] px-4 py-3 text-[13px] text-[var(--amber)] lg:mx-8">
+        <div className="mx-5 mt-4 rounded-[var(--radius-card)] bg-[var(--amber-soft)] px-4 py-3 text-[13px] text-[var(--amber)] lg:mx-0">
           {error}
         </div>
       )}
 
       {itinerary && (
-        <div className={`px-5 transition-opacity lg:px-8 ${busy ? "opacity-50" : ""}`}>
+        <div className={`px-5 transition-opacity lg:grid lg:grid-cols-2 lg:gap-x-6 lg:gap-y-8 lg:px-0 ${busy ? "opacity-50" : ""}`}>
           {itinerary.days.map((day, di) => (
-            <section key={di} className="mt-7">
+            <section key={di} className="mt-7 lg:mt-0 lg:self-start">
               <div className="mb-3 flex items-center gap-2">
                 <span className="text-[15px] font-bold">{day.label}</span>
                 <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--text-3)]">· {day.date} · {day.base}</span>
@@ -299,6 +333,8 @@ export function TripView({ tripId }: { tripId: string }) {
           ))}
         </div>
       )}
+        </div>
+      </div>
 
       {itinerary && <AskBar onSend={revise} busy={busy === "revise"} />}
     </main>

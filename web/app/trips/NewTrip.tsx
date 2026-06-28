@@ -49,7 +49,7 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
     (mode === "hotels" || (mode === "preferences" && destId != null));
 
   return (
-    <div className="mb-4 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
+    <div className="mb-4 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] lg:max-w-2xl">
       <div className="mb-3 flex items-center justify-between">
         <span className="serif text-[18px]">טיול חדש</span>
         <button onClick={onClose} aria-label="סגור" className="text-[var(--text-3)]"><X size={18} /></button>

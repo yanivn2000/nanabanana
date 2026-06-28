@@ -12,7 +12,7 @@ export default function TripsPage() {
   const [creating, setCreating] = useState(false);
 
   return (
-    <main className="mx-auto w-full max-w-[440px] px-5 pb-28 pt-8 lg:max-w-3xl lg:px-8 lg:pb-12">
+    <main className="mx-auto w-full max-w-[440px] px-5 pb-28 pt-8 lg:max-w-5xl lg:px-8 lg:pb-12">
       <header className="rise mb-5">
         <p className="eyebrow">הטיולים שלי</p>
         <h1 className="serif mt-1 text-[32px] leading-none lg:text-[40px]">המסעות שלי</h1>
@@ -23,7 +23,7 @@ export default function TripsPage() {
 
       {!creating && (
         <button onClick={() => setCreating(true)}
-          className="rise rise-1 mb-5 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[var(--accent)] py-4 text-[15px] font-medium text-white shadow-[var(--shadow)]">
+          className="rise rise-1 mb-5 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[var(--accent)] py-4 text-[15px] font-medium text-white shadow-[var(--shadow)] lg:max-w-xs">
           <Plus size={18} /> טיול חדש
         </button>
       )}
@@ -37,7 +37,7 @@ export default function TripsPage() {
         </div>
       )}
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
         {trips.map((t) => (
           <div key={t.id}
             className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
