@@ -7,10 +7,10 @@ import type { Destination } from "@/lib/db";
 
 export function ExploreList({ destinations }: { destinations: Destination[] }) {
   const [q, setQ] = useState("");
-  const filtered = destinations.filter(
-    (d) =>
-      d.city.toLowerCase().includes(q.toLowerCase()) ||
-      d.country.toLowerCase().includes(q.toLowerCase())
+  const filtered = destinations.filter((d) =>
+    `${d.city} ${d.country} ${d.city_he ?? ""} ${d.country_he ?? ""}`
+      .toLowerCase()
+      .includes(q.toLowerCase())
   );
 
   return (
@@ -39,9 +39,9 @@ export function ExploreList({ destinations }: { destinations: Destination[] }) {
                 <MapPin size={20} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-medium">{d.city}</p>
+                <p className="truncate text-[15px] font-medium">{d.city_he || d.city}</p>
                 <p className="text-[13px] text-[var(--text-2)]">
-                  {d.country} · {d.attraction_count.toLocaleString("he")} אטרקציות
+                  {d.country_he || d.country} · {d.attraction_count.toLocaleString("he")} אטרקציות
                 </p>
               </div>
               <ArrowLeft size={18} className="text-[var(--text-3)]" />

@@ -62,8 +62,8 @@ export function DestinationView({
         <Link href="/" className="eyebrow mb-4 inline-flex items-center gap-1 lg:hidden">
           <ChevronRight size={14} /> בית
         </Link>
-        <p className="eyebrow">יעד · {dest.country}</p>
-        <h1 className="serif mt-1.5 text-[36px] leading-none lg:text-[44px]">{dest.city}</h1>
+        <p className="eyebrow">יעד · {dest.country_he || dest.country}</p>
+        <h1 className="serif mt-1.5 text-[36px] leading-none lg:text-[44px]">{dest.city_he || dest.city}</h1>
         <div className="rule mt-3"></div>
         <p className="mt-3 text-[13px] text-[var(--text-2)]">
           {dest.attraction_count.toLocaleString("he")} מקומות במאגר

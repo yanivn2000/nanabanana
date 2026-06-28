@@ -46,6 +46,8 @@ export type Destination = {
   id: number;
   city: string;
   country: string;
+  city_he: string | null;
+  country_he: string | null;
   lat: number;
   lng: number;
   attraction_count: number;
@@ -56,8 +58,8 @@ export function listDestinations(): Destination[] {
   if (!d) return [];
   return d
     .prepare(
-      `SELECT dest.id, dest.city, dest.country, dest.lat, dest.lng,
-              count(a.id) AS attraction_count
+      `SELECT dest.id, dest.city, dest.country, dest.city_he, dest.country_he,
+              dest.lat, dest.lng, count(a.id) AS attraction_count
        FROM destinations dest
        LEFT JOIN attractions a ON a.destination_id = dest.id
        GROUP BY dest.id ORDER BY attraction_count DESC`
@@ -90,8 +92,8 @@ export function getDestination(id: number): Destination | null {
   return (
     (d
       .prepare(
-        `SELECT dest.id, dest.city, dest.country, dest.lat, dest.lng,
-                count(a.id) AS attraction_count
+        `SELECT dest.id, dest.city, dest.country, dest.city_he, dest.country_he,
+                dest.lat, dest.lng, count(a.id) AS attraction_count
          FROM destinations dest
          LEFT JOIN attractions a ON a.destination_id = dest.id
          WHERE dest.id = ? GROUP BY dest.id`

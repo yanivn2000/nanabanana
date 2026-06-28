@@ -40,8 +40,10 @@ export function TripView({ tripId }: { tripId: string }) {
   const trip = trips.find((t) => t.id === tripId);
   const itinerary = trip?.itinerary ?? null;
   const tripHotels = hotels.filter((h) => h.tripId === tripId);
-  // City for attractions: the trip's destination, or derived from a linked hotel.
+  // City for attractions/API: English destination, or derived from a linked hotel.
   const city = trip?.city || tripHotels[0]?.city;
+  // City for display: Hebrew (hotel city from geocode is already Hebrew).
+  const cityHe = trip?.cityHe || tripHotels[0]?.city || trip?.city;
 
   async function call(payload: object, mode: "generate" | "revise") {
     setBusy(mode);
@@ -122,7 +124,7 @@ export function TripView({ tripId }: { tripId: string }) {
         <h1 className="serif text-[32px] leading-none lg:text-[40px]">{trip?.title ?? "…"}</h1>
         <div className="rule mt-3"></div>
         <p className="mt-3 text-[13px] text-[var(--text-2)]">
-          {city ? `${city} · ` : ""}{trip?.days} ימים
+          {cityHe ? `${cityHe} · ` : ""}{trip?.days} ימים
           {trip?.month ? ` · ${MONTHS_HE[trip.month - 1]}` : ""}
           {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
         </p>

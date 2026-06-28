@@ -113,7 +113,32 @@ MIGRATIONS = [
     ("attractions", "cost_level", "INTEGER"),      # 0=free,1=cheap,2=mid,3=pricey
     ("attractions", "must_see", "INTEGER"),        # 1 = must-visit landmark
     ("attractions", "is_duplicate", "INTEGER"),    # 1 = hidden as a duplicate of another row
+    ("destinations", "city_he", "TEXT"),           # Hebrew display name
+    ("destinations", "country_he", "TEXT"),
 ]
+
+CITY_HE = {
+    "Salzburg": "זלצבורג", "Vienna": "וינה", "Berlin": "ברלין",
+    "Budapest": "בודפשט", "Prague": "פראג", "Barcelona": "ברצלונה",
+    "Rome": "רומא", "Athens": "אתונה", "Amsterdam": "אמסטרדם",
+    "Thessaloniki": "תסלוניקי", "Larnaca": "לרנקה", "Batumi": "בטומי",
+}
+COUNTRY_HE = {
+    "Austria": "אוסטריה", "Germany": "גרמניה", "Hungary": "הונגריה",
+    "Czechia": "צ׳כיה", "Czech Republic": "צ׳כיה", "Spain": "ספרד",
+    "Italy": "איטליה", "Greece": "יוון", "Netherlands": "הולנד",
+    "Cyprus": "קפריסין", "Georgia": "גאורגיה",
+}
+
+
+def populate_he_names(conn):
+    """Fill Hebrew city/country display names for known destinations."""
+    for r in conn.execute("SELECT id, city, country FROM destinations").fetchall():
+        conn.execute(
+            "UPDATE destinations SET city_he=?, country_he=? WHERE id=?",
+            (CITY_HE.get(r["city"]), COUNTRY_HE.get(r["country"]), r["id"]),
+        )
+    conn.commit()
 
 
 def _apply_migrations(conn):

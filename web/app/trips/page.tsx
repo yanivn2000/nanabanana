@@ -47,7 +47,7 @@ export default function TripsPage() {
             <Link href={`/trip/${t.id}`} className="min-w-0 flex-1">
               <p className="serif truncate text-[18px] leading-tight">{t.title}</p>
               <p className="mt-0.5 text-[13px] text-[var(--text-2)]">
-                {t.city ? `${t.city} · ` : ""}{t.days} ימים
+                {t.cityHe || t.city ? `${t.cityHe || t.city} · ` : ""}{t.days} ימים
                 {t.itinerary ? " · לו\"ז מוכן" : " · טרם נבנה"}
               </p>
             </Link>

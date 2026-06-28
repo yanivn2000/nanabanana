@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Sparkles, BedDouble, MapPin, Loader2, X } from "lucide-react";
 import { useTrips, MONTHS_HE } from "@/lib/store";
 
-type Dest = { id: number; city: string; country: string; attraction_count: number };
+type Dest = { id: number; city: string; country: string; city_he: string | null; country_he: string | null; attraction_count: number };
 
 export function NewTrip({ onClose }: { onClose: () => void }) {
   const router = useRouter();
@@ -27,9 +27,10 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
 
   function go() {
     const dest = dests.find((d) => d.id === destId);
+    const destHe = dest?.city_he || dest?.city;
     const autoTitle =
       title.trim() ||
-      (mode === "preferences" && dest ? `טיול ל${dest.city}` : "הטיול שלי");
+      (mode === "preferences" && destHe ? `טיול ל${destHe}` : "הטיול שלי");
     setCreating(true);
     const trip = create({
       title: autoTitle,
@@ -37,7 +38,7 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
       days,
       month: month as number,
       ...(mode === "preferences" && dest
-        ? { city: dest.city, country: dest.country, destinationId: dest.id }
+        ? { city: dest.city, cityHe: dest.city_he ?? undefined, country: dest.country, destinationId: dest.id }
         : {}),
     });
     router.push(`/trip/${trip.id}`);
@@ -95,7 +96,7 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
                   background: destId === d.id ? "var(--accent)" : "var(--surface-2)",
                   color: destId === d.id ? "#fff" : "var(--text-2)",
                 }}>
-                <MapPin size={13} /> {d.city}
+                <MapPin size={13} /> {d.city_he || d.city}
               </button>
             ))}
             {dests.length === 0 && <span className="text-[13px] text-[var(--text-3)]">טוען יעדים…</span>}

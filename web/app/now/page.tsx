@@ -82,7 +82,7 @@ export default function NowPage() {
       {state.phase === "ready" && (
         <>
           <p className="rise-1 mb-3 text-[13px] text-[var(--text-2)]">
-            אתם ליד <span className="font-medium text-[var(--text)]">{state.dest.city}</span> · {state.items.length} מקומות בקרבת מקום
+            אתם ליד <span className="font-medium text-[var(--text)]">{state.dest.city_he || state.dest.city}</span> · {state.items.length} מקומות בקרבת מקום
           </p>
 
           <div className="rise-1 mb-5 h-[200px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">

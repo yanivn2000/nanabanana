@@ -118,7 +118,8 @@ export type Trip = {
   id: string;
   title: string;
   mode: TripMode;
-  city?: string;
+  city?: string;          // English — used for attraction/API resolution
+  cityHe?: string;        // Hebrew — for display
   country?: string;
   destinationId?: number;
   days: number;
