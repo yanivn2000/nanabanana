@@ -32,6 +32,11 @@ export function DestinationView({
   const [selected, setSelected] = useState<Attraction | null>(null);
   const [query, setQuery] = useState("");
   const [activeCat, setActiveCat] = useState<string | null>(null);
+  const [flags, setFlags] = useState({
+    mustSee: false, free: false, indoor: false, top: false,
+  });
+  const toggleFlag = (k: keyof typeof flags) =>
+    setFlags((f) => ({ ...f, [k]: !f[k] }));
 
   const cats = useMemo(
     () => Array.from(new Set(attractions.map((a) => a.category))),
@@ -41,13 +46,17 @@ export function DestinationView({
     () =>
       attractions.filter((a) => {
         if (activeCat && a.category !== activeCat) return false;
+        if (flags.mustSee && a.must_see !== 1) return false;
+        if (flags.free && a.cost_level !== 0) return false;
+        if (flags.indoor && !(a.indoor_outdoor === "indoor" || a.indoor_outdoor === "both")) return false;
+        if (flags.top && (a.family_score ?? 0) < 8) return false;
         if (query) {
           const hay = `${a.name_he ?? ""} ${a.name_en} ${descriptor(a)}`.toLowerCase();
           if (!hay.includes(query.toLowerCase())) return false;
         }
         return true;
       }),
-    [attractions, activeCat, query]
+    [attractions, activeCat, query, flags]
   );
 
   const mustSee = useMemo(
@@ -129,7 +138,32 @@ export function DestinationView({
             })}
           </div>
 
+          <div className="mb-4 flex flex-wrap gap-2">
+            {([
+              ["mustSee", "⭐ חובה לביקור"],
+              ["free", "חינם"],
+              ["indoor", "מקורה"],
+              ["top", "מומלץ במיוחד"],
+            ] as const).map(([k, label]) => {
+              const on = flags[k];
+              return (
+                <button key={k} onClick={() => toggleFlag(k)}
+                  className="rounded-full px-3 py-1.5 text-[12.5px] transition"
+                  style={{
+                    background: on ? "var(--accent)" : "var(--surface)",
+                    color: on ? "#fff" : "var(--text-2)",
+                    border: `1px solid ${on ? "var(--accent)" : "var(--border)"}`,
+                  }}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
           <div className="flex flex-col">
+            {filtered.length === 0 && (
+              <p className="py-8 text-center text-[14px] text-[var(--text-3)]">אין תוצאות לסינון הזה</p>
+            )}
             {filtered.map((a, i) => {
               const isSel = selected?.id === a.id;
               const cost = a.cost_level != null ? COST_HE[a.cost_level] : null;
