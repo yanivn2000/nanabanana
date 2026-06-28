@@ -98,7 +98,9 @@ function AttractionPopup({ a }: { a: Attraction }) {
       <div style={{ direction: "rtl", fontFamily: "sans-serif", width: 230 }}>
         {a.image_url && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={bigImage(a.image_url)} alt="" style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", borderRadius: 8, marginBottom: 6, display: "block" }} />
+          <img src={bigImage(a.image_url)} alt=""
+            onError={(e) => { const t = e.currentTarget; if (t.src !== a.image_url) t.src = a.image_url as string; }}
+            style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", borderRadius: 8, marginBottom: 6, display: "block" }} />
         )}
         <strong>{a.name_he || a.name_en}</strong>
         <br />

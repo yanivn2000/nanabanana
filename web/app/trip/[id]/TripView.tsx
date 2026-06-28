@@ -356,6 +356,7 @@ export function TripView({ tripId }: { tripId: string }) {
                         {s.image && (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={bigImage(s.image)} alt="" loading="lazy"
+                            onError={(e) => { const t = e.currentTarget; if (s.image && t.src !== s.image) t.src = s.image; }}
                             className="mb-3 aspect-[4/3] w-full rounded-[10px] object-cover" />
                         )}
                         {s.tagline && s.tagline !== s.note && (

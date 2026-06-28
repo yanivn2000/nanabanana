@@ -89,6 +89,7 @@ export function DestinationView({
                 className="group w-[200px] shrink-0 overflow-hidden rounded-[var(--radius-sm)] bg-[var(--surface)] text-right shadow-[var(--shadow)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={bigImage(a.image_url, 480)} alt="" loading="lazy"
+                  onError={(e) => { const t = e.currentTarget; if (t.src !== a.image_url) t.src = a.image_url as string; }}
                   className="h-[150px] w-full object-cover" />
                 <div className="p-3">
                   <p className="eyebrow">{meta(a)}</p>
@@ -174,6 +175,7 @@ export function DestinationView({
                   {a.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={bigImage(a.image_url, 256)} alt="" loading="lazy"
+                      onError={(e) => { const t = e.currentTarget; if (t.src !== a.image_url) t.src = a.image_url as string; }}
                       className="h-[84px] w-[84px] shrink-0 rounded-[8px] object-cover" />
                   ) : (
                     <div className="grid h-[84px] w-[84px] shrink-0 place-items-center rounded-[8px] bg-[var(--surface-2)]">
