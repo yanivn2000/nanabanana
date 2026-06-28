@@ -16,6 +16,7 @@ export function MapClient(props: {
   attractions: Attraction[];
   center: [number, number];
   selected: Attraction | null;
+  ordered?: boolean;
 }) {
   return <AttractionsMap {...props} />;
 }

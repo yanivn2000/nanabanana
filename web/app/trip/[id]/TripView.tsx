@@ -217,10 +217,10 @@ export function TripView({ tripId }: { tripId: string }) {
                 )}
               </div>
               <div className="h-[380px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
-                <MapClient attractions={stopPoints} center={mapCenter} selected={null} />
+                <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered />
               </div>
               <p className="mt-2 px-0.5 text-[11.5px] leading-snug text-[var(--text-3)]">
-                לחצו על כותרת יום כדי לראות רק את עצירותיו · הצבע מציין סוג (כחול=תרבות, ירוק=טבע, סגול=אוכל)
+                המספרים = סדר הביקור · הקו מחבר את המסלול · הצבע מציין סוג (כחול=תרבות, ירוק=טבע, סגול=אוכל)
               </p>
             </div>
           )}
