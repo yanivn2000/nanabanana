@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, Pencil, ChevronUp, ChevronDown,
-  ChevronsUp, ChevronsDown, Trash2,
+  ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation,
 } from "lucide-react";
+import { googleMapsUrl } from "@/lib/geo";
 import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
 import { useTrips, useProfile, useHotels, profileText, MONTHS_HE } from "@/lib/store";
@@ -36,6 +37,8 @@ export function TripView({ tripId }: { tripId: string }) {
   const [busy, setBusy] = useState<null | "generate" | "revise">(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const COST_HE = ["חינם", "₪", "₪₪", "₪₪₪"];
 
   const trip = trips.find((t) => t.id === tripId);
   const itinerary = trip?.itinerary ?? null;
@@ -79,6 +82,25 @@ export function TripView({ tripId }: { tripId: string }) {
   }, "generate");
   const revise = (instruction: string) =>
     call({ mode: "revise", current: itinerary, instruction }, "revise");
+
+  // Auto-attach details to trips created before details existed (no AI/credit).
+  useEffect(() => {
+    if (!itinerary || !city) return;
+    const stops = itinerary.days.flatMap((d) => d.stops);
+    if (stops.length === 0) return;
+    if (stops.some((s) => s.lat != null || s.image || s.website)) return; // already has details
+    let cancelled = false;
+    fetch("/api/itinerary", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ mode: "details", city, current: itinerary,
+        hotels: tripHotels.map((h) => ({ name: h.name, city: h.city, lat: h.lat, lng: h.lng })) }),
+    })
+      .then((r) => r.json()).catch(() => null)
+      .then((d) => { if (!cancelled && d?.itinerary) update(tripId, { itinerary: d.itinerary }); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripId, !!itinerary, city]);
 
   // --- manual editing: apply a transform to a clone, relabel days, save ---
   function mutate(fn: (it: Itinerary) => void) {
@@ -176,42 +198,94 @@ export function TripView({ tripId }: { tripId: string }) {
                 )}
               </div>
               <div className="flex flex-col gap-2.5">
-                {day.stops.map((s, si) => (
-                  <div key={si} className="flex items-start gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)]">
-                    <StopIcon kind={s.kind} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-[15px] font-medium leading-tight">{s.name}</p>
-                        {!!s.score && (
-                          <span className="flex shrink-0 items-center gap-0.5 text-[12px] font-medium text-[var(--accent-ink)]">
-                            <Star size={13} fill="currentColor" /> {s.score}
-                          </span>
+                {day.stops.map((s, si) => {
+                  const key = `${di}-${si}`;
+                  const isOpen = expanded === key;
+                  const hasDetails = !editing && !!(
+                    s.image || s.website || s.bestTime || s.dress ||
+                    s.cost != null || (s.tagline && s.tagline !== s.note)
+                  );
+                  return (
+                  <div key={si} className="overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[var(--shadow)]">
+                    <div className={`flex items-start gap-3 p-3.5 ${hasDetails ? "cursor-pointer" : ""}`}
+                         onClick={() => hasDetails && setExpanded(isOpen ? null : key)}>
+                      <StopIcon kind={s.kind} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[15px] font-medium leading-tight">{s.name}</p>
+                          <div className="flex shrink-0 items-center gap-2">
+                            {!!s.score && (
+                              <span className="flex items-center gap-0.5 text-[12px] font-medium text-[var(--accent-ink)]">
+                                <Star size={13} fill="currentColor" /> {s.score}
+                              </span>
+                            )}
+                            {hasDetails && (
+                              <ChevronDown size={16}
+                                className={`text-[var(--text-3)] transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                            )}
+                          </div>
+                        </div>
+                        <p className="mt-0.5 text-[12px] text-[var(--text-3)]">{s.time} · {s.duration}</p>
+                        {s.note && <p className="mt-1.5 text-[13px] leading-snug text-[var(--text-2)]">{s.note}</p>}
+                        {editing && (
+                          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-[var(--border)] pt-2.5">
+                            <button onClick={() => moveStop(di, si, -1)} disabled={si === 0} aria-label="העלה"
+                              className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronUp size={15} /></button>
+                            <button onClick={() => moveStop(di, si, 1)} disabled={si === day.stops.length - 1} aria-label="הורד"
+                              className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronDown size={15} /></button>
+                            <span className="mx-1 h-4 w-px bg-[var(--border)]"></span>
+                            <button onClick={() => moveStopToDay(di, si, -1)} disabled={di === 0}
+                              className="flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 text-[11px] disabled:opacity-30">
+                              <ChevronsUp size={13} /> ליום הקודם
+                            </button>
+                            <button onClick={() => moveStopToDay(di, si, 1)} disabled={di === itinerary.days.length - 1}
+                              className="flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 text-[11px] disabled:opacity-30">
+                              <ChevronsDown size={13} /> ליום הבא
+                            </button>
+                            <button onClick={() => deleteStop(di, si)} aria-label="מחק"
+                              className="mr-auto grid size-7 place-items-center rounded-md text-[var(--text-3)]"><Trash2 size={15} /></button>
+                          </div>
                         )}
                       </div>
-                      <p className="mt-0.5 text-[12px] text-[var(--text-3)]">{s.time} · {s.duration}</p>
-                      {s.note && <p className="mt-1.5 text-[13px] leading-snug text-[var(--text-2)]">{s.note}</p>}
-                      {editing && (
-                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-[var(--border)] pt-2.5">
-                          <button onClick={() => moveStop(di, si, -1)} disabled={si === 0} aria-label="העלה"
-                            className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronUp size={15} /></button>
-                          <button onClick={() => moveStop(di, si, 1)} disabled={si === day.stops.length - 1} aria-label="הורד"
-                            className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronDown size={15} /></button>
-                          <span className="mx-1 h-4 w-px bg-[var(--border)]"></span>
-                          <button onClick={() => moveStopToDay(di, si, -1)} disabled={di === 0}
-                            className="flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 text-[11px] disabled:opacity-30">
-                            <ChevronsUp size={13} /> ליום הקודם
-                          </button>
-                          <button onClick={() => moveStopToDay(di, si, 1)} disabled={di === itinerary.days.length - 1}
-                            className="flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 text-[11px] disabled:opacity-30">
-                            <ChevronsDown size={13} /> ליום הבא
-                          </button>
-                          <button onClick={() => deleteStop(di, si)} aria-label="מחק"
-                            className="mr-auto grid size-7 place-items-center rounded-md text-[var(--text-3)]"><Trash2 size={15} /></button>
-                        </div>
-                      )}
                     </div>
+
+                    {isOpen && (
+                      <div className="border-t border-[var(--border)] px-3.5 pb-4 pt-3">
+                        {s.image && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={s.image} alt="" loading="lazy"
+                            className="mb-3 h-44 w-full rounded-[10px] object-cover" />
+                        )}
+                        {s.tagline && s.tagline !== s.note && (
+                          <p className="mb-2 text-[13.5px] italic text-[var(--text-2)]">{s.tagline}</p>
+                        )}
+                        <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[12.5px] text-[var(--text-2)]">
+                          {s.bestTime && <span><span className="text-[var(--text-3)]">מתי: </span>{s.bestTime}</span>}
+                          {s.dress && <span><span className="text-[var(--text-3)]">לבוש: </span>{s.dress}</span>}
+                          {s.cost != null && <span><span className="text-[var(--text-3)]">עלות: </span>{COST_HE[s.cost] ?? ""}</span>}
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {s.website && (
+                            <a href={s.website} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[12.5px] text-[var(--blue)]">
+                              <ExternalLink size={13} /> אתר רשמי
+                            </a>
+                          )}
+                          {s.lat != null && s.lng != null && (
+                            <a href={googleMapsUrl(s.lat, s.lng)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[12.5px] text-[var(--text-2)]">
+                              <Navigation size={13} /> פתח במפה
+                            </a>
+                          )}
+                        </div>
+                        {!s.website && !s.image && s.lat == null && (
+                          <p className="text-[12.5px] text-[var(--text-3)]">אין פרטים נוספים למקום הזה</p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
               {day.why && (
                 <div className="mt-3 flex gap-2.5 rounded-[var(--radius-card)] bg-[var(--accent-soft)] p-3.5">

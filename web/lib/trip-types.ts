@@ -9,6 +9,15 @@ export type Stop = {
   duration: string;
   score?: number;
   note?: string;
+  // Details matched back from the DB attraction (for the expandable view).
+  image?: string | null;
+  website?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  tagline?: string | null;
+  bestTime?: string | null;
+  dress?: string | null;
+  cost?: number | null;
 };
 
 export type Day = {

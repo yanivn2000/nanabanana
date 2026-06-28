@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listDestinations, topAttractions } from "@/lib/db";
+import type { Attraction } from "@/lib/db";
 import {
   aiConfigured,
   generateItinerary,
@@ -29,9 +30,48 @@ function resolveDestination(city?: string, lat?: number, lng?: number) {
   return dests[0];
 }
 
+function normName(s: string): string {
+  return s
+    .replace(/\(.*?\)/g, "")
+    .replace(/[^֐-׿\w ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+// Match each itinerary stop back to its DB attraction and attach details
+// (image, website, coords, tagline, time/dress/cost) for the expandable view.
+function attachDetails(it: Itinerary, attractions: Attraction[]): Itinerary {
+  const exact = new Map<string, Attraction>();
+  const list: { a: Attraction; n: string }[] = [];
+  for (const a of attractions) {
+    for (const n of [a.name_he, a.name_en]) {
+      const k = n ? normName(n) : "";
+      if (k) { exact.set(k, a); list.push({ a, n: k }); }
+    }
+  }
+  for (const day of it.days) {
+    for (const s of day.stops) {
+      const key = normName(s.name);
+      if (!key) continue;
+      let a = exact.get(key);
+      if (!a) {
+        a = list.find((x) => x.n.length >= 4 && (key.includes(x.n) || x.n.includes(key)))?.a;
+      }
+      if (a) {
+        s.image = a.image_url; s.website = a.website;
+        s.lat = a.lat; s.lng = a.lng;
+        s.tagline = a.tagline_he; s.bestTime = a.best_time_he;
+        s.dress = a.dress_he; s.cost = a.cost_level;
+      }
+    }
+  }
+  return it;
+}
+
 export async function POST(req: NextRequest) {
   let body: {
-    mode: "generate" | "revise";
+    mode: "generate" | "revise" | "details";
     city?: string;
     days?: number;
     month?: number;
@@ -53,6 +93,13 @@ export async function POST(req: NextRequest) {
   }
   const attractions = topAttractions(dest.id, 50);
 
+  // Attach DB details to an existing itinerary — no AI, so it works without
+  // credit and upgrades trips created before details existed.
+  if (body.mode === "details") {
+    if (!body.current) return NextResponse.json({ error: "missing current" }, { status: 400 });
+    return NextResponse.json({ itinerary: attachDetails(body.current, attractions) });
+  }
+
   // Revise needs the model. Without a key, ask the user to add one.
   if (body.mode === "revise" && !aiConfigured()) {
     return NextResponse.json({ error: "AI not configured", code: "no_key" }, { status: 503 });
@@ -60,9 +107,8 @@ export async function POST(req: NextRequest) {
 
   // Generate works without a key via the heuristic builder; AI upgrades it.
   if (body.mode !== "revise" && !aiConfigured()) {
-    const itinerary = buildHeuristicItinerary(
-      dest.city, dest.country, body.days ?? 4, attractions
-    );
+    const itinerary = attachDetails(buildHeuristicItinerary(
+      dest.city, dest.country, body.days ?? 4, attractions), attractions);
     return NextResponse.json({ itinerary, engine: "heuristic" });
   }
 
@@ -74,7 +120,7 @@ export async function POST(req: NextRequest) {
       const itinerary = await reviseItinerary(
         body.current, body.instruction, attractions, body.profileText
       );
-      return NextResponse.json({ itinerary });
+      return NextResponse.json({ itinerary: attachDetails(itinerary, attractions) });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       const code = /credit balance/i.test(msg) ? "no_credit" : undefined;
@@ -94,10 +140,11 @@ export async function POST(req: NextRequest) {
       attractions,
       hotels: body.hotels,
     });
-    return NextResponse.json({ itinerary });
+    return NextResponse.json({ itinerary: attachDetails(itinerary, attractions) });
   } catch (e) {
     console.warn(`[itinerary] AI generate failed, using heuristic: ${(e as Error).message}`);
-    const itinerary = buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, attractions);
+    const itinerary = attachDetails(
+      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, attractions), attractions);
     return NextResponse.json({ itinerary, engine: "heuristic" });
   }
 }
