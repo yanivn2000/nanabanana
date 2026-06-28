@@ -6,7 +6,7 @@ import L from "leaflet";
 import type { CircleMarker as LeafletCircleMarker } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Attraction } from "@/lib/db";
-import { catColor, categoryHe as CAT_HE_FN } from "@/lib/labels";
+import { catColor, categoryHe as CAT_HE_FN, bigImage } from "@/lib/labels";
 
 // Flies to the selected attraction and opens its popup when selection changes.
 function Flyer({
@@ -95,10 +95,10 @@ function numberedIcon(n: number, color: string) {
 function AttractionPopup({ a }: { a: Attraction }) {
   return (
     <Popup>
-      <div style={{ direction: "rtl", fontFamily: "sans-serif", minWidth: 170 }}>
+      <div style={{ direction: "rtl", fontFamily: "sans-serif", width: 230 }}>
         {a.image_url && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={a.image_url} alt="" style={{ width: "100%", height: 90, objectFit: "cover", borderRadius: 8, marginBottom: 6 }} />
+          <img src={bigImage(a.image_url)} alt="" style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", borderRadius: 8, marginBottom: 6, display: "block" }} />
         )}
         <strong>{a.name_he || a.name_en}</strong>
         <br />

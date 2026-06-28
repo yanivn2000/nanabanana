@@ -8,6 +8,7 @@ import {
   ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon,
 } from "lucide-react";
 import { googleMapsUrl } from "@/lib/geo";
+import { bigImage } from "@/lib/labels";
 import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
 import type { Attraction } from "@/lib/db";
@@ -330,8 +331,8 @@ export function TripView({ tripId }: { tripId: string }) {
                       <div className="border-t border-[var(--border)] px-3.5 pb-4 pt-3">
                         {s.image && (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={s.image} alt="" loading="lazy"
-                            className="mb-3 h-44 w-full rounded-[10px] object-cover" />
+                          <img src={bigImage(s.image)} alt="" loading="lazy"
+                            className="mb-3 aspect-[4/3] w-full rounded-[10px] object-cover" />
                         )}
                         {s.tagline && s.tagline !== s.note && (
                           <p className="mb-2 text-[13.5px] italic text-[var(--text-2)]">{s.tagline}</p>

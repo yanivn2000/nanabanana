@@ -50,3 +50,13 @@ export const CAT_COLOR: Record<string, string> = {
 export function catColor(c: string): string {
   return CAT_COLOR[c] ?? "#8a8780";
 }
+
+// Request a larger Wikimedia thumbnail than the stored one (sharper when shown
+// in a bigger / squarer box). Handles both upload.wikimedia "/NNNpx-" thumbs and
+// Commons FilePath "?width=" URLs. Leaves other URLs untouched.
+export function bigImage(url: string | null | undefined, px = 640): string | undefined {
+  if (!url) return undefined;
+  if (/[/-]\d+px-/.test(url)) return url.replace(/([/-])\d+px-/, `$1${px}px-`);
+  if (/[?&]width=\d+/.test(url)) return url.replace(/([?&]width=)\d+/, `$1${px}`);
+  return url;
+}
