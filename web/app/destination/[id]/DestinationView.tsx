@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Star, Search } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
-import { descriptor } from "@/lib/labels";
+import { descriptor, catColor } from "@/lib/labels";
 import type { Attraction, Destination } from "@/lib/db";
 
 const CAT_HE: Record<string, string> = {
@@ -114,12 +114,15 @@ export function DestinationView({
               const on = activeCat === c;
               return (
                 <button key={c ?? "all"} onClick={() => setActiveCat(c)}
-                  className="shrink-0 whitespace-nowrap pb-1 text-[13px] transition"
+                  className="flex shrink-0 items-center gap-1.5 whitespace-nowrap pb-1 text-[13px] transition"
                   style={{
-                    color: on ? "var(--accent-ink)" : "var(--text-3)",
+                    color: on ? "var(--accent-ink)" : "var(--text-2)",
                     fontWeight: on ? 500 : 400,
                     borderBottom: `2px solid ${on ? "var(--accent)" : "transparent"}`,
                   }}>
+                  {c !== null && (
+                    <span className="size-2.5 rounded-full" style={{ background: catColor(c) }} />
+                  )}
                   {c === null ? "הכל" : CAT_HE[c] ?? c}
                 </button>
               );

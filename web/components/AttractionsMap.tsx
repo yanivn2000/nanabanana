@@ -5,15 +5,7 @@ import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaf
 import type { CircleMarker as LeafletCircleMarker } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Attraction } from "@/lib/db";
-
-const CAT_COLOR: Record<string, string> = {
-  nature: "#1d9e75", museum: "#185fa5", attraction: "#d85a30",
-  sport: "#ba7517", food: "#7f77dd", shopping: "#d4537e",
-};
-const CAT_HE: Record<string, string> = {
-  nature: "טבע", museum: "מוזיאון", attraction: "אטרקציה", sport: "ספורט",
-  food: "אוכל", shopping: "קניות", tourism: "תיירות", leisure: "פנאי", historic: "היסטורי",
-};
+import { catColor, categoryHe as CAT_HE_FN } from "@/lib/labels";
 
 // Flies to the selected attraction and opens its popup when selection changes.
 function Flyer({
@@ -67,8 +59,8 @@ export default function AttractionsMap({
             if (m) markers.current.set(a.id, m);
           }}
           pathOptions={{
-            color: CAT_COLOR[a.category] ?? "#888",
-            fillColor: CAT_COLOR[a.category] ?? "#888",
+            color: catColor(a.category),
+            fillColor: catColor(a.category),
             fillOpacity: selected?.id === a.id ? 1 : 0.8,
             weight: selected?.id === a.id ? 3 : 1,
           }}
@@ -82,7 +74,7 @@ export default function AttractionsMap({
               <strong>{a.name_he || a.name_en}</strong>
               <br />
               <span style={{ color: "#666", fontSize: 12 }}>
-                {a.tagline_he || CAT_HE[a.category] || a.category}
+                {a.tagline_he || CAT_HE_FN(a.category)}
                 {a.family_score ? ` · ${a.family_score}/10` : ""}
               </span>
               {a.website && (

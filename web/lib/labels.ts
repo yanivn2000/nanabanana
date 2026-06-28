@@ -34,3 +34,19 @@ export function descriptor(a: Attraction): string {
 export function categoryHe(c: string): string {
   return CAT_HE[c] ?? c;
 }
+
+// Marker/legend colour per category — shared by the map and the filter legend.
+export const CAT_COLOR: Record<string, string> = {
+  nature: "#1d9e75",
+  attraction: "#d85a30",
+  museum: "#185fa5",
+  sport: "#ba7517",
+  food: "#7f77dd",
+  shopping: "#d4537e",
+  historic: "#8a6d45",
+  tourism: "#2aa198",
+  leisure: "#639922",
+};
+export function catColor(c: string): string {
+  return CAT_COLOR[c] ?? "#8a8780";
+}
