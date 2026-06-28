@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
     hotels?: TripHotel[];
     current?: Itinerary;
     instruction?: string;
+    dateContext?: string;
   };
   try {
     body = await req.json();
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest) {
     }
     try {
       const itinerary = await reviseItinerary(
-        body.current, body.instruction, attractions, body.profileText
+        body.current, body.instruction, attractions, body.profileText, body.dateContext
       );
       return NextResponse.json({ itinerary: attachDetails(itinerary, attractions) });
     } catch (e) {

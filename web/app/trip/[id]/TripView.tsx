@@ -84,6 +84,30 @@ export function TripView({ tripId }: { tripId: string }) {
       ]
     : [0, 0];
 
+  // Trip calendar dates (from the earliest hotel check-in). Enables live mode:
+  // only when today falls inside the trip do "today"/"tomorrow" mean anything.
+  const dayLabels = itinerary?.days.map((d, i) => d.label || `יום ${i + 1}`) ?? [];
+  const dayCount = dayLabels.length;
+  const startISO = tripHotels.map((h) => h.checkIn).filter(Boolean).sort()[0];
+  const startDate = startISO ? new Date(startISO + "T00:00:00") : null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const dayDate = (i: number) => (startDate ? new Date(startDate.getTime() + i * 86400000) : null);
+  const endDate = startDate && dayCount ? dayDate(dayCount - 1) : null;
+  const isLive = !!(startDate && endDate && today >= startDate && today <= endDate);
+  const todayIndex = isLive ? Math.round((today.getTime() - startDate!.getTime()) / 86400000) : null;
+  const tomorrowIndex = todayIndex != null && todayIndex + 1 < dayCount ? todayIndex + 1 : null;
+
+  const fmtDate = (d: Date) => d.toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "numeric" });
+  let dateContext = "";
+  if (startDate && dayCount) {
+    dateContext = `תאריך היום: ${fmtDate(today)}.\n` +
+      dayLabels.map((l, i) => `${l} = ${fmtDate(dayDate(i)!)}`).join("\n");
+    dateContext += isLive
+      ? `\nאנחנו עכשיו ביום ${todayIndex! + 1} של הטיול. "היום"=יום ${todayIndex! + 1}` +
+        (tomorrowIndex != null ? `, "מחר"=יום ${tomorrowIndex + 1}` : "") + "."
+      : `\nהמשתמש לא נמצא כרגע בטיול — אין "היום"/"מחר"; פנה לימים לפי המספר שלהם.`;
+  }
+
   async function call(payload: object, mode: "generate" | "revise") {
     setBusy(mode);
     setError(null);
@@ -117,7 +141,7 @@ export function TripView({ tripId }: { tripId: string }) {
     hotels: tripHotels.map((h) => ({ name: h.name, city: h.city, lat: h.lat, lng: h.lng })),
   }, "generate");
   const revise = (instruction: string) =>
-    call({ mode: "revise", current: itinerary, instruction }, "revise");
+    call({ mode: "revise", current: itinerary, instruction, dateContext: dateContext || undefined }, "revise");
 
   // Auto-attach details to trips created before details existed (no AI/credit).
   useEffect(() => {
@@ -380,7 +404,10 @@ export function TripView({ tripId }: { tripId: string }) {
         </div>
       </div>
 
-      {itinerary && <AskBar onSend={revise} busy={busy === "revise"} />}
+      {itinerary && (
+        <AskBar onSend={revise} busy={busy === "revise"}
+          days={dayLabels} todayIndex={todayIndex} tomorrowIndex={tomorrowIndex} />
+      )}
     </main>
   );
 }

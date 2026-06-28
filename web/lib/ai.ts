@@ -137,14 +137,15 @@ export async function reviseItinerary(
   current: Itinerary,
   instruction: string,
   attractions: Attraction[],
-  profileText?: string
+  profileText?: string,
+  dateContext?: string
 ): Promise<Itinerary> {
   const userText = `זהו הלו"ז הנוכחי:
 ${JSON.stringify(current, null, 1)}
-${profileText ? `\nפרופיל המשפחה: ${profileText}\n` : ""}
+${profileText ? `\nפרופיל המשפחה: ${profileText}\n` : ""}${dateContext ? `\nהקשר תאריכים:\n${dateContext}\n` : ""}
 בקשת המשתמש לשינוי: "${instruction}"
 
-ארגן מחדש את הלו"ז לפי הבקשה. שמור על מה שעובד, שנה רק מה שצריך, ועדכן את שדה ה-"why" של הימים שהשתנו כדי להסביר את השינוי.
+ארגן מחדש את הלו"ז לפי הבקשה. אם הבקשה מתייחסת ליום ספציפי — שנה אך ורק את אותו יום והשאר את כל שאר הימים בדיוק כפי שהם. שמור על מה שעובד, שנה רק מה שצריך, ועדכן את שדה ה-"why" של הימים שהשתנו כדי להסביר את השינוי. אל תשנה את מספר הימים אלא אם התבקשת במפורש.
 אם רלוונטי, בחר אטרקציות חלופיות מהרשימה:
 ${attractionsBlock(attractions)}`;
   return callClaude(userText);
