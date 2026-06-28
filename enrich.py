@@ -86,9 +86,12 @@ def _build_prompt(rows):
             + "\n".join(lines))
 
 
+PENDING_WHERE = "enriched_at IS NULL AND (is_duplicate IS NULL OR is_duplicate = 0)"
+
+
 def pending_count(conn):
     return conn.execute(
-        "SELECT count(*) FROM attractions WHERE enriched_at IS NULL"
+        f"SELECT count(*) FROM attractions WHERE {PENDING_WHERE}"
     ).fetchone()[0]
 
 
@@ -141,7 +144,7 @@ def enrich_pending(api_key, limit=60, progress=None, model=None):
 
     rows = conn.execute(
         "SELECT id, name_en, category, subcategory, website FROM attractions "
-        "WHERE enriched_at IS NULL "
+        f"WHERE {PENDING_WHERE} "
         "ORDER BY (image_url IS NOT NULL) DESC, "
         "         (info_sources IS NOT NULL AND info_sources NOT IN ('','[]')) DESC, "
         "         COALESCE(family_score, 0) DESC LIMIT ?", (limit,)
