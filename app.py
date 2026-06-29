@@ -90,7 +90,47 @@ with tab_settings:
         st.success(f"נמצאו {res['clusters']} קבוצות · {res['duplicates_flagged']} כפילויות הוסתרו")
 
 with tab_ingest:
-    st.subheader("משיכת אטרקציות מ-OpenStreetMap")
+    st.subheader("➕ הוסף עיר חדשה לפי שם")
+    st.caption("הקלידו שם עיר חופשי — נאתר אותה ב-OpenStreetMap ונמשוך את האטרקציות. אחרי זה כדאי להריץ 'משיכת תמונות' ו'העשרה'.")
+    nc1, nc2, nc3 = st.columns([2, 2, 1])
+    with nc1:
+        new_city = st.text_input("שם העיר", placeholder="למשל: Lisbon")
+    with nc2:
+        new_city_he = st.text_input("שם בעברית (לא חובה)", placeholder="למשל: ליסבון")
+    with nc3:
+        new_radius = st.slider("רדיוס (ק\"מ)", 5, 30, 12, key="newcity_radius")
+    if st.button("אתר והוסף עיר", type="primary", disabled=not new_city.strip()):
+        with st.spinner(f"מאתר את {new_city}..."):
+            try:
+                geo = pipeline_osm.geocode_city(new_city.strip())
+            except Exception as e:
+                geo = None
+                st.error(f"שגיאת איתור: {e}")
+        if geo is None:
+            st.warning("לא מצאנו את העיר — נסו שם מדויק יותר (למשל: Lisbon, Portugal).")
+        else:
+            st.info(f"נמצא: **{geo['city']}, {geo['country']}** · ({geo['lat']:.4f}, {geo['lng']:.4f})")
+            with st.spinner(f"מושך אטרקציות מ-{geo['city']}..."):
+                res = pipeline_osm.fetch_city(
+                    geo["city"], geo["country"], geo["lat"], geo["lng"], radius_km=new_radius)
+            # Hebrew display names: user override → known dict → leave as-is.
+            _c = db.get_conn()
+            he = new_city_he.strip() or db.CITY_HE.get(geo["city"])
+            country_he = db.COUNTRY_HE.get(geo["country"])
+            _c.execute(
+                "UPDATE destinations SET city_he=COALESCE(?, city_he), "
+                "country_he=COALESCE(?, country_he) WHERE city=? AND country=?",
+                (he, country_he, geo["city"], geo["country"]))
+            _c.commit()
+            _c.close()
+            st.success(
+                f"נוספה **{he or geo['city']}** · נמצאו {res['found']} · "
+                f"נוספו {res['inserted']} · כפילויות {res['skipped']}")
+            if not he:
+                st.caption("טיפ: לא נמצא שם עברי אוטומטי — הוסיפו אותו בשדה למעלה כדי שיוצג יפה באפליקציה.")
+
+    st.divider()
+    st.subheader("משיכת אטרקציות מ-OpenStreetMap (ערים מוכרות)")
     col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
         city = st.selectbox("עיר", list(SEED_CITIES.keys()))
