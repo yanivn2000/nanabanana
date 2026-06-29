@@ -46,11 +46,15 @@ st.caption(
     "**3) העשרה** עם Claude (תרגום, ציון, סינון) ← **4) ניקוי כפילויות**. "
     "כל שלב בטאב נפרד למטה.")
 o1, o2, o3, o4, o5 = st.columns(5)
-o1.metric("יעדים", f"{_o['dests']:,}")
-o2.metric("אטרקציות", f"{_o['attr']:,}")
-o3.metric("עם תמונה", f"{_o['img']:,}")
-o4.metric("הועשרו", f"{_o['enriched']:,}")
-o5.metric("עברו סינון", f"{_o['kept']:,}")
+o1.metric("יעדים", f"{_o['dests']:,}", help="ערים במאגר.")
+o2.metric("אטרקציות", f"{_o['attr']:,}",
+          help="כל המקומות שנקלטו מ-OpenStreetMap — לפני סינון איכות.")
+o3.metric("עם תמונה", f"{_o['img']:,}",
+          help="אטרקציות שנמשכה להן תמונה מ-Wikipedia/Wikidata.")
+o4.metric("הועשרו", f"{_o['enriched']:,}",
+          help="עובדו ע\"י Claude: תרגום לעברית, ציון משפחתי, טיפ וסינון keep/skip.")
+o5.metric("עברו סינון", f"{_o['kept']:,}",
+          help="אטרקציות אמיתיות ששווה להציג (quality_keep=1) — אלה שהמשתמש רואה באפליקציה.")
 st.divider()
 
 # Seed list of popular Israeli destinations (city, country, lat, lng)
@@ -189,8 +193,11 @@ with tab_ingest:
     _iconn.close()
 
     ic1, ic2 = st.columns(2)
-    ic1.metric("ממתינות לבדיקת תמונה (סה\"כ)", f"{img_pending:,}")
-    ic2.metric("עם תמונה (סה\"כ)", f"{img_have:,}")
+    ic1.metric("ממתינות לבדיקת תמונה (סה\"כ)", f"{img_pending:,}",
+               help="יש קישור Wikipedia/Wikidata אך עוד לא נבדק. אחרי בדיקה מסומן "
+                    "כ'נבדק' (image_checked_at) גם אם לא נמצאה תמונה, כדי לא לבדוק שוב.")
+    ic2.metric("עם תמונה (סה\"כ)", f"{img_have:,}",
+               help="אטרקציות שנמצאה ונשמרה להן תמונה.")
 
     # Coverage table: city, total, with image, % covered, pending.
     table = [{
@@ -230,12 +237,26 @@ with tab_enrich:
         "SELECT count(*) FROM attractions WHERE quality_keep=1").fetchone()[0]
     conn.close()
 
-    e1, e2, e3 = st.columns(3)
-    e1.metric("ממתינות להעשרה", f"{pending:,}")
-    e2.metric("הועשרו", f"{enriched:,}")
-    e3.metric("עברו סינון איכות", f"{kept:,}")
+    filtered_out = enriched - kept
 
-    st.caption("Claude מתרגם לעברית, נותן ציון משפחתי וטיפ, ומסמן אטרקציות לא רלוונטיות (אנדרטאות, שלטים).")
+    e1, e2, e3, e4 = st.columns(4)
+    e1.metric("ממתינות להעשרה", f"{pending:,}",
+              help="אטרקציות שעוד לא עברו עיבוד של Claude (לא כולל כפילויות מוסתרות).")
+    e2.metric("הועשרו", f"{enriched:,}",
+              help="כל אטרקציה ש-Claude עיבד: תרגם לעברית, נתן ציון משפחתי, טיפ ותגית, "
+                   "וקבע אם היא שווה הצגה. כולל גם את אלה שנדחו בסינון.")
+    e3.metric("עברו סינון איכות", f"{kept:,}",
+              help="תת-קבוצה של 'הועשרו' — אלה ש-Claude שפט כאטרקציה משפחתית אמיתית "
+                   "(quality_keep=1). רק אלה (יחד עם מקומות שטרם הועשרו) מוצגים באפליקציה.")
+    e4.metric("נדחו בסינון", f"{filtered_out:,}",
+              help="הועשרו אבל סומנו כלא-רלוונטיים (אנדרטאות, לוחות זיכרון, שלטים, פסלים "
+                   "זניחים). מוסתרים מהאפליקציה — לא נמחקים, הפיך.")
+
+    st.caption(
+        "**הקשר:** 'הועשרו' = כל מה ש-Claude עיבד. בכל עיבוד הוא מסמן keep/skip: "
+        "'עברו סינון' הם ה-keep (אטרקציה אמיתית), 'נדחו' הם ה-skip (רעש ש-OSM תייג "
+        "כאטרקציה). כלומר **הועשרו = עברו סינון + נדחו**. האפליקציה מציגה רק 'עברו "
+        "סינון' או מקומות שטרם הועשרו.")
     api_key = st.text_input("Anthropic API key", type="password",
                             help="המפתח לא נשמר — משמש רק להרצה הנוכחית")
     limit = st.slider("כמה אטרקציות להעשיר בהרצה", 15, 150, 60, step=15)
