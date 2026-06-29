@@ -51,6 +51,13 @@ export function catColor(c: string): string {
   return CAT_COLOR[c] ?? "#8a8780";
 }
 
+// Distinct colour per trip segment (leg) — shared by the map pins and the legend.
+export const SEG_PALETTE = ["#185fa5", "#d85a30", "#1d9e75", "#7f77dd", "#ba7517", "#d4537e"];
+export function segColor(i: number): string {
+  const n = SEG_PALETTE.length;
+  return SEG_PALETTE[((i % n) + n) % n];
+}
+
 // Request a larger Wikimedia image when it's SAFE to do so. Commons FilePath
 // "?width=" URLs regenerate from the original (serving the original if smaller),
 // so upscaling never fails. We deliberately do NOT touch upload.wikimedia

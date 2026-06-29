@@ -20,6 +20,8 @@ export function MapClient(props: {
   ordered?: boolean;
   hotels?: MapHotel[];
   focus?: { lat: number; lng: number; n: number } | null;
+  segIdx?: number[];
+  colorBySegment?: boolean;
 }) {
   return <AttractionsMap {...props} />;
 }

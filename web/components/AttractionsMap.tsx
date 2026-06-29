@@ -6,7 +6,7 @@ import L from "leaflet";
 import type { CircleMarker as LeafletCircleMarker } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Attraction } from "@/lib/db";
-import { catColor, categoryHe as CAT_HE_FN, bigImage } from "@/lib/labels";
+import { catColor, categoryHe as CAT_HE_FN, bigImage, segColor } from "@/lib/labels";
 
 // Flies to the selected attraction and opens its popup when selection changes.
 function Flyer({
@@ -33,6 +33,7 @@ function Flyer({
 }
 
 export type MapHotel = { id: string; name: string; lat: number; lng: number };
+
 
 // Frame the map to the current set of points whenever it changes (e.g. when
 // filtering to a single day). Hotels are always included so they stay in view.
@@ -126,6 +127,8 @@ export default function AttractionsMap({
   ordered,
   hotels = [],
   focus = null,
+  segIdx,
+  colorBySegment = false,
 }: {
   attractions: Attraction[];
   center: [number, number];
@@ -133,6 +136,8 @@ export default function AttractionsMap({
   ordered?: boolean;
   hotels?: MapHotel[];
   focus?: { lat: number; lng: number; n: number } | null;
+  segIdx?: number[];
+  colorBySegment?: boolean;
 }) {
   const markers = useRef<Map<number, LeafletCircleMarker>>(new Map());
   const routePts = ordered
@@ -173,7 +178,9 @@ export default function AttractionsMap({
             .filter((a) => a.lat != null && a.lng != null)
             .map((a, i) => (
               <Marker key={a.id} position={[a.lat as number, a.lng as number]}
-                icon={numberedIcon(i + 1, catColor(a.category))}>
+                icon={numberedIcon(
+                  i + 1,
+                  colorBySegment && segIdx ? segColor(segIdx[i] ?? 0) : catColor(a.category))}>
                 <AttractionPopup a={a} />
               </Marker>
             ))

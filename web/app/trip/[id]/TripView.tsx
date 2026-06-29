@@ -8,7 +8,7 @@ import {
   ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon,
 } from "lucide-react";
 import { googleMapsUrl } from "@/lib/geo";
-import { bigImage } from "@/lib/labels";
+import { bigImage, segColor } from "@/lib/labels";
 import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
 import type { Attraction } from "@/lib/db";
@@ -46,6 +46,7 @@ export function TripView({ tripId }: { tripId: string }) {
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [activeDay, setActiveDay] = useState<number | null>(null);
+  const [activeSegment, setActiveSegment] = useState<number | null>(null);
   const [focus, setFocus] = useState<{ lat: number; lng: number; n: number } | null>(null);
   const COST_HE = ["חינם", "₪", "₪₪", "₪₪₪"];
 
@@ -57,20 +58,34 @@ export function TripView({ tripId }: { tripId: string }) {
   // City for display: Hebrew (hotel city from geocode is already Hebrew).
   const cityHe = trip?.cityHe || tripHotels[0]?.city || trip?.city;
 
-  // Map points = the selected day's stops, or all days when none is selected.
-  const mapDays = activeDay != null && itinerary?.days[activeDay]
-    ? [itinerary.days[activeDay]]
-    : (itinerary?.days ?? []);
-  const stopPoints = mapDays.flatMap((d) => d.stops)
-    .filter((s) => s.lat != null && s.lng != null)
-    .map((s, i) => ({
-      id: i, name_he: s.name, name_en: s.name, lat: s.lat!, lng: s.lng!,
-      category: KIND_TO_CAT[s.kind] ?? "attraction", subcategory: null,
-      indoor_outdoor: null, family_score: s.score ?? null, tips_he: null,
-      website: s.website ?? null, duration_minutes: null, image_url: s.image ?? null,
-      tagline_he: s.tagline ?? null, best_season: null, best_time_he: s.bestTime ?? null,
-      dress_he: null, cost_level: s.cost ?? null, must_see: null,
-    })) as Attraction[];
+  // Segments (legs) of a multi-city trip — used to colour/filter the map.
+  const segs = trip?.segments ?? [];
+  const multiTrip = segs.length > 1;
+  const segIndexOf = (base?: string): number => {
+    if (!base || !multiTrip) return 0;
+    const i = segs.findIndex((s) =>
+      s.city === base || s.cityHe === base ||
+      (s.city && base.includes(s.city)) || (s.cityHe && base.includes(s.cityHe)));
+    return i >= 0 ? i : 0;
+  };
+
+  // Map points = the selected day's stops, the selected segment's, or all.
+  const allDays = itinerary?.days ?? [];
+  const mapDays =
+    activeDay != null && allDays[activeDay] ? [allDays[activeDay]]
+    : multiTrip && activeSegment != null ? allDays.filter((d) => segIndexOf(d.base) === activeSegment)
+    : allDays;
+  const mapStops = mapDays.flatMap((d) =>
+    d.stops.filter((s) => s.lat != null && s.lng != null).map((s) => ({ s, seg: segIndexOf(d.base) })));
+  const stopPoints = mapStops.map(({ s }, i) => ({
+    id: i, name_he: s.name, name_en: s.name, lat: s.lat!, lng: s.lng!,
+    category: KIND_TO_CAT[s.kind] ?? "attraction", subcategory: null,
+    indoor_outdoor: null, family_score: s.score ?? null, tips_he: null,
+    website: s.website ?? null, duration_minutes: null, image_url: s.image ?? null,
+    tagline_he: s.tagline ?? null, best_season: null, best_time_he: s.bestTime ?? null,
+    dress_he: null, cost_level: s.cost ?? null, must_see: null,
+  })) as Attraction[];
+  const stopSegIdx = mapStops.map(({ seg }) => seg);
   // Hotels with coordinates — always shown on the map with a distinct marker.
   const hotelPoints = tripHotels
     .filter((h) => h.lat != null && h.lng != null)
@@ -251,23 +266,55 @@ export function TripView({ tripId }: { tripId: string }) {
           </div>
           {(stopPoints.length > 0 || hotelPoints.length > 0) && (
             <div className="mt-5 hidden lg:block">
+              {/* segment filter (multi-city): show a whole leg on the map */}
+              {multiTrip && (
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  <button onClick={() => { setActiveSegment(null); setActiveDay(null); }}
+                    className="rounded-full px-2.5 py-1 text-[12px] transition"
+                    style={{
+                      background: activeSegment == null ? "var(--accent)" : "var(--surface)",
+                      color: activeSegment == null ? "#fff" : "var(--text-2)",
+                      border: `1px solid ${activeSegment == null ? "var(--accent)" : "var(--border)"}`,
+                    }}>כל הטיול</button>
+                  {segs.map((s, i) => {
+                    const on = activeSegment === i;
+                    return (
+                      <button key={s.id} onClick={() => { setActiveSegment(i); setActiveDay(null); }}
+                        className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] transition"
+                        style={{
+                          background: on ? "var(--accent)" : "var(--surface)",
+                          color: on ? "#fff" : "var(--text-2)",
+                          border: `1px solid ${on ? "var(--accent)" : "var(--border)"}`,
+                        }}>
+                        <span className="size-2.5 rounded-full" style={{ background: segColor(i) }} />
+                        {s.cityHe || s.city}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               <div className="mb-2 flex items-center justify-between px-0.5">
                 <span className="text-[12.5px] text-[var(--text-2)]">
-                  {activeDay != null ? `מציג: ${itinerary?.days[activeDay]?.label}` : "מציג: כל הימים"}
+                  {activeDay != null ? `מציג: ${itinerary?.days[activeDay]?.label}`
+                    : multiTrip && activeSegment != null ? `מציג: ${segs[activeSegment]?.cityHe || segs[activeSegment]?.city}`
+                    : "מציג: כל הטיול"}
                   {" · "}{stopPoints.length} מקומות
                   {hotelPoints.length > 0 ? ` · ${hotelPoints.length} מלון` : ""}
                 </span>
                 {activeDay != null && (
                   <button onClick={() => setActiveDay(null)}
-                    className="text-[12px] font-medium text-[var(--accent-ink)]">הצג את כל הימים</button>
+                    className="text-[12px] font-medium text-[var(--accent-ink)]">כל הימים</button>
                 )}
               </div>
               <div className="h-[380px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
                 <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
-                  hotels={hotelPoints} focus={focus} />
+                  hotels={hotelPoints} focus={focus}
+                  segIdx={stopSegIdx} colorBySegment={multiTrip} />
               </div>
               <p className="mt-2 px-0.5 text-[11.5px] leading-snug text-[var(--text-3)]">
-                <span className="text-[#0d9488]">🏨 המלון</span> תמיד מוצג · המספרים = סדר הביקור · הקו מחבר את המסלול · הצבע = סוג
+                <span className="text-[#0d9488]">🏨 המלון</span> תמיד מוצג · המספרים = סדר הביקור · הקו = מסלול ·
+                {multiTrip ? " הצבע = אזור (מקטע)" : " הצבע = סוג"}
               </p>
             </div>
           )}
