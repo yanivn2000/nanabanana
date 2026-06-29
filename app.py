@@ -28,8 +28,30 @@ CAT_LABEL_HE = {
 }
 db.init_db()
 
-st.title("🍌 NanaBanana")
-st.caption("מאגר נתוני טיולים — שלב א׳: איסוף ובדיקת מידע")
+st.title("🍌 NanaBanana — ניהול מאגר")
+
+# Pipeline overview + live funnel. Gives an at-a-glance picture of the whole
+# data flow so it's clear what each tab does and where the data stands.
+_oc = db.get_conn()
+_o = {
+    "dests": _oc.execute("SELECT count(*) FROM destinations").fetchone()[0],
+    "attr": _oc.execute("SELECT count(*) FROM attractions").fetchone()[0],
+    "img": _oc.execute("SELECT count(*) FROM attractions WHERE image_url IS NOT NULL").fetchone()[0],
+    "enriched": _oc.execute("SELECT count(*) FROM attractions WHERE enriched_at IS NOT NULL").fetchone()[0],
+    "kept": _oc.execute("SELECT count(*) FROM attractions WHERE quality_keep=1").fetchone()[0],
+}
+_oc.close()
+st.caption(
+    "צינור העבודה: **1) איסוף** ערים מ-OpenStreetMap ← **2) תמונות** מ-Wikipedia ← "
+    "**3) העשרה** עם Claude (תרגום, ציון, סינון) ← **4) ניקוי כפילויות**. "
+    "כל שלב בטאב נפרד למטה.")
+o1, o2, o3, o4, o5 = st.columns(5)
+o1.metric("יעדים", f"{_o['dests']:,}")
+o2.metric("אטרקציות", f"{_o['attr']:,}")
+o3.metric("עם תמונה", f"{_o['img']:,}")
+o4.metric("הועשרו", f"{_o['enriched']:,}")
+o5.metric("עברו סינון", f"{_o['kept']:,}")
+st.divider()
 
 # Seed list of popular Israeli destinations (city, country, lat, lng)
 SEED_CITIES = {
@@ -148,23 +170,55 @@ with tab_ingest:
 
     st.divider()
     st.subheader("משיכת תמונות מ-Wikipedia")
+    st.caption(
+        "תמונות נמשכות **רק** מאטרקציות שיש להן קישור Wikipedia/Wikidata (נשמר בזמן "
+        "הקליטה מ-OSM). \"ממתינות\" = יש קישור אך עוד לא נבדק; אחרי בדיקה מסומן כ\"נבדק\" "
+        "(גם אם לא נמצאה תמונה). חינם, ללא מפתח. המשיכה לפי ציון משפחתי — המקומות החשובים קודם.")
+
     _iconn = db.get_conn()
     img_pending = pipeline_images.pending_count(_iconn)
     img_have = _iconn.execute(
         "SELECT count(*) FROM attractions WHERE image_url IS NOT NULL").fetchone()[0]
+    # Per-city coverage — surfaces exactly which cities still need images.
+    city_rows = _iconn.execute(
+        "SELECT d.id, COALESCE(d.city_he, d.city) AS city, COUNT(*) AS total, "
+        "SUM(a.image_url IS NOT NULL) AS with_img, "
+        f"SUM({pipeline_images._PENDING_WHERE}) AS pending "
+        "FROM attractions a JOIN destinations d ON a.destination_id=d.id "
+        "GROUP BY d.id ORDER BY pending DESC, total DESC").fetchall()
     _iconn.close()
 
     ic1, ic2 = st.columns(2)
-    ic1.metric("ממתינות לבדיקת תמונה", f"{img_pending:,}")
-    ic2.metric("עם תמונה", f"{img_have:,}")
-    st.caption("מושך תמונה לכל אטרקציה שיש לה קישור Wikipedia/Wikidata. חינם, ללא מפתח.")
-    img_limit = st.slider("כמה לבדוק בהרצה", 20, 300, 100, step=20)
+    ic1.metric("ממתינות לבדיקת תמונה (סה\"כ)", f"{img_pending:,}")
+    ic2.metric("עם תמונה (סה\"כ)", f"{img_have:,}")
+
+    # Coverage table: city, total, with image, % covered, pending.
+    table = [{
+        "עיר": r["city"],
+        "סה\"כ": r["total"],
+        "עם תמונה": r["with_img"] or 0,
+        "כיסוי": f"{round(100 * (r['with_img'] or 0) / r['total'])}%" if r["total"] else "—",
+        "ממתינות": r["pending"] or 0,
+    } for r in city_rows]
+    st.dataframe(table, hide_index=True, use_container_width=True)
+
+    # Optional focus: only fetch for one city (new cities rank below old ones globally).
+    pending_cities = [r for r in city_rows if (r["pending"] or 0) > 0]
+    focus_opts = {"כל הערים": None}
+    focus_opts.update({f"{r['city']} ({r['pending']} ממתינות)": r["id"] for r in pending_cities})
+    fc1, fc2 = st.columns([2, 1])
+    with fc1:
+        focus_label = st.selectbox("התמקד בעיר (לא חובה)", list(focus_opts.keys()))
+    with fc2:
+        img_limit = st.slider("כמה לבדוק בהרצה", 20, 500, 200, step=20)
+    focus_id = focus_opts[focus_label]
     if st.button("משוך תמונות", type="primary", disabled=img_pending == 0):
         ibar = st.progress(0.0, text="מושך תמונות...")
         res = pipeline_images.fetch_images(
-            limit=img_limit,
-            progress=lambda d, t: ibar.progress(d / t, text=f"נבדקו {d}/{t}"))
+            limit=img_limit, destination_id=focus_id,
+            progress=lambda d, t: ibar.progress(d / t if t else 1.0, text=f"נבדקו {d}/{t}"))
         st.success(f"נבדקו {res['checked']} · נמצאו {res['found']} תמונות")
+        st.rerun()
 
 with tab_enrich:
     st.subheader("העשרה עם Claude — תרגום, ציון משפחתי, סינון איכות")

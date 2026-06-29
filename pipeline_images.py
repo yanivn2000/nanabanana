@@ -68,24 +68,35 @@ def find_image(info_sources_json):
     return None
 
 
-def pending_count(conn):
-    return conn.execute(
-        "SELECT count(*) FROM attractions "
-        "WHERE image_checked_at IS NULL AND info_sources NOT IN ('', '[]') "
-        "AND info_sources IS NOT NULL"
-    ).fetchone()[0]
+_PENDING_WHERE = ("image_checked_at IS NULL AND info_sources NOT IN ('', '[]') "
+                  "AND info_sources IS NOT NULL")
 
 
-def fetch_images(limit=80, sleep=0.3, progress=None):
-    """Fill image_url for attractions that have a Wikipedia/Wikidata source."""
+def pending_count(conn, destination_id=None):
+    sql = f"SELECT count(*) FROM attractions WHERE {_PENDING_WHERE}"
+    params = ()
+    if destination_id is not None:
+        sql += " AND destination_id=?"
+        params = (destination_id,)
+    return conn.execute(sql, params).fetchone()[0]
+
+
+def fetch_images(limit=80, sleep=0.3, progress=None, destination_id=None):
+    """Fill image_url for attractions that have a Wikipedia/Wikidata source.
+
+    When destination_id is given, only that city's attractions are processed
+    (useful for newly added cities that rank below older ones globally).
+    """
     db.init_db()
     conn = db.get_conn()
-    rows = conn.execute(
-        "SELECT id, info_sources FROM attractions "
-        "WHERE image_checked_at IS NULL AND info_sources NOT IN ('', '[]') "
-        "AND info_sources IS NOT NULL ORDER BY COALESCE(family_score,0) DESC LIMIT ?",
-        (limit,),
-    ).fetchall()
+    sql = (f"SELECT id, info_sources FROM attractions WHERE {_PENDING_WHERE}")
+    params = []
+    if destination_id is not None:
+        sql += " AND destination_id=?"
+        params.append(destination_id)
+    sql += " ORDER BY COALESCE(family_score,0) DESC LIMIT ?"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
 
     found = 0
     for i, r in enumerate(rows, 1):
