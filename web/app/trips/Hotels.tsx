@@ -1,13 +1,32 @@
 "use client";
 
 import { useState } from "react";
-import { useHotels, uid, type Hotel } from "@/lib/store";
+import { useHotels, uid, type Hotel, type Segment } from "@/lib/store";
 import { BedDouble, Plus, Trash2, MapPin, Loader2, X, Link2 } from "lucide-react";
 
-export function Hotels({ tripId, onFocus }: { tripId: string; onFocus?: (h: Hotel) => void }) {
-  const { hotels, add, remove, link, loaded } = useHotels();
+export function Hotels({
+  tripId, onFocus, segments,
+}: { tripId: string; onFocus?: (h: Hotel) => void; segments?: Segment[] }) {
+  const { hotels, add, remove, link, assign, loaded } = useHotels();
   const tripHotels = hotels.filter((h) => h.tripId === tripId);
   const unassigned = hotels.filter((h) => !h.tripId);
+  const multi = !!segments && segments.length > 1;
+
+  // Best-guess which leg a hotel belongs to, by matching its city/label to a
+  // segment's city name (Hebrew or English, either direction).
+  const matchSegment = (h: { city?: string; label?: string; name?: string }): string | null => {
+    if (!multi) return null;
+    const hay = `${h.city ?? ""} ${h.label ?? ""} ${h.name ?? ""}`.toLowerCase();
+    const m = segments!.find((s) => {
+      const names = [s.cityHe, s.city].filter(Boolean).map((n) => n!.toLowerCase());
+      return names.some((n) => n.length > 1 && (hay.includes(n) || n.includes((h.city ?? "").toLowerCase())));
+    });
+    return m?.id ?? null;
+  };
+  const segLabel = (id?: string | null) => {
+    const s = segments?.find((x) => x.id === id);
+    return s ? (s.cityHe || s.city) : null;
+  };
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -38,6 +57,7 @@ export function Hotels({ tripId, onFocus }: { tripId: string; onFocus?: (h: Hote
         checkIn: checkIn || undefined,
         checkOut: checkOut || undefined,
         tripId,
+        segmentId: matchSegment({ city: data.city, label: data.label, name }),
       };
       add(hotel);
       setName(""); setAddress(""); setCheckIn(""); setCheckOut("");
@@ -124,6 +144,16 @@ export function Hotels({ tripId, onFocus }: { tripId: string; onFocus?: (h: Hote
                 )}
               </div>
             </button>
+            {multi && (
+              <select value={h.segmentId ?? ""} onChange={(e) => assign(h.id, e.target.value || null)}
+                title="לאיזה מקטע שייך המלון"
+                className="shrink-0 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-1.5 text-[11.5px] text-[var(--text-2)] outline-none">
+                <option value="">— מקטע —</option>
+                {segments!.map((s) => (
+                  <option key={s.id} value={s.id}>{s.cityHe || s.city}</option>
+                ))}
+              </select>
+            )}
             <button onClick={() => remove(h.id)} aria-label="מחק"
               className="grid size-9 shrink-0 place-items-center rounded-lg text-[var(--text-3)]"><Trash2 size={16} /></button>
           </div>

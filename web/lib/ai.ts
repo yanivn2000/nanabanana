@@ -138,6 +138,7 @@ export type MultiSegment = {
   country: string;
   days: number;
   attractions: Attraction[];
+  hotels?: TripHotel[];
 };
 
 // One continuous itinerary across several base cities (a multi-city trip).
@@ -145,18 +146,22 @@ export async function generateMultiItinerary(p: {
   segments: MultiSegment[];
   month?: number;
   profileText: string;
-  hotels?: TripHotel[];
 }): Promise<Itinerary> {
   const total = p.segments.reduce((a, s) => a + s.days, 0);
   const order = p.segments.map((s, i) => `${i + 1}) ${s.city} (${s.days} ימים)`).join(" ← ");
   const segBlocks = p.segments
-    .map((s, i) =>
-      `### מקטע ${i + 1}: ${s.city}, ${s.country} — ${s.days} ימים\n` +
-      `אטרקציות זמינות במקטע זה (לימי מקטע זה בלבד):\n${attractionsBlock(s.attractions)}`)
+    .map((s, i) => {
+      const base = s.hotels && s.hotels.length
+        ? `בסיס הלינה במקטע זה: ${s.hotels.map((h) => `${h.name} (${h.city}) [${h.lat},${h.lng}]`).join(", ")}. סדר את ימי המקטע כדי למזער נסיעה מהבסיס.\n`
+        : "";
+      return `### מקטע ${i + 1}: ${s.city}, ${s.country} — ${s.days} ימים\n` +
+        base +
+        `אטרקציות זמינות במקטע זה (לימי מקטע זה בלבד):\n${attractionsBlock(s.attractions)}`;
+    })
     .join("\n\n");
   const userText = `בנה לו"ז לטיול רב-ערים אחד ורציף של ${total} ימים, העובר בין האזורים לפי הסדר: ${order}.
 פרופיל המשפחה: ${p.profileText}
-${seasonHint(p.month)}${hotelsBlock(p.hotels)}
+${seasonHint(p.month)}
 כללים למקטעים:
 - מספר את הימים ברצף 1..${total} (אל תתחיל ספירה מחדש בכל עיר). שדה base של כל יום = שם העיר/אזור של המקטע שאליו הוא שייך.
 - הקצה לכל מקטע בדיוק את מספר הימים שצוין, לפי הסדר.

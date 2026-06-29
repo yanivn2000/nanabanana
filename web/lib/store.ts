@@ -73,6 +73,7 @@ export type Hotel = {
   checkIn?: string;
   checkOut?: string;
   tripId?: string | null;   // which trip this hotel belongs to (null = unassigned)
+  segmentId?: string | null; // which leg of a multi-city trip (null = unassigned)
 };
 
 const HOTELS_KEY = "nanabanana.hotels.v1";
@@ -82,6 +83,7 @@ export function useHotels(): {
   add: (h: Hotel) => void;
   remove: (id: string) => void;
   link: (id: string, tripId: string | null) => void;
+  assign: (id: string, segmentId: string | null) => void;
   loaded: boolean;
 } {
   const [hotels, setHotels] = useState<Hotel[]>([]);
@@ -108,6 +110,8 @@ export function useHotels(): {
     remove: (id) => persist(hotels.filter((x) => x.id !== id)),
     link: (id, tripId) =>
       persist(hotels.map((x) => (x.id === id ? { ...x, tripId } : x))),
+    assign: (id, segmentId) =>
+      persist(hotels.map((x) => (x.id === id ? { ...x, segmentId } : x))),
     loaded,
   };
 }

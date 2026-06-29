@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
     current?: Itinerary;
     instruction?: string;
     dateContext?: string;
-    segments?: { city: string; days: number }[];
+    segments?: { city: string; days: number; hotels?: TripHotel[] }[];
   };
   try {
     body = await req.json();
@@ -109,9 +109,9 @@ export async function POST(req: NextRequest) {
     const segs = body.segments
       .map((s) => {
         const d = resolveDestination(s.city);
-        return d ? { dest: d as Destination, days: s.days } : null;
+        return d ? { dest: d as Destination, days: s.days, hotels: s.hotels } : null;
       })
-      .filter((x): x is { dest: Destination; days: number } => x !== null);
+      .filter((x): x is { dest: Destination; days: number; hotels: TripHotel[] | undefined } => x !== null);
     const segAttrs = segs.map((x) => ({ ...x, attractions: topAttractions(x.dest.id, 50) }));
     const allAttractions = segAttrs.flatMap((x) => x.attractions);
     const heuristic = () => attachDetails(
@@ -125,11 +125,11 @@ export async function POST(req: NextRequest) {
     try {
       const itinerary = await generateMultiItinerary({
         segments: segAttrs.map((x) => ({
-          city: x.dest.city, country: x.dest.country, days: x.days, attractions: x.attractions,
+          city: x.dest.city, country: x.dest.country, days: x.days,
+          attractions: x.attractions, hotels: x.hotels,
         })),
         month: body.month,
         profileText: body.profileText ?? "משפחה · קצב רגוע",
-        hotels: body.hotels,
       });
       return NextResponse.json({ itinerary: attachDetails(itinerary, allAttractions) });
     } catch (e) {

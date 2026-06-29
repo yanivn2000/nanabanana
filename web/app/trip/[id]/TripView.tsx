@@ -140,7 +140,12 @@ export function TripView({ tripId }: { tripId: string }) {
     month: trip?.month,
     hotels: tripHotels.map((h) => ({ name: h.name, city: h.city, lat: h.lat, lng: h.lng })),
     ...(trip?.segments && trip.segments.length > 1
-      ? { segments: trip.segments.map((s) => ({ city: s.city, days: s.days })) }
+      ? { segments: trip.segments.map((s) => ({
+          city: s.city, days: s.days,
+          hotels: tripHotels
+            .filter((h) => h.segmentId === s.id)
+            .map((h) => ({ name: h.name, city: h.city, lat: h.lat, lng: h.lng })),
+        })) }
       : {}),
   }, "generate");
   const revise = (instruction: string) =>
@@ -241,7 +246,7 @@ export function TripView({ tripId }: { tripId: string }) {
         {/* aside: hotels + map of the trip (map on desktop only) */}
         <aside className="lg:order-2 lg:w-[360px] lg:shrink-0 lg:sticky lg:top-[73px]">
           <div className="px-5 pt-5 lg:px-0 lg:pt-0">
-            <Hotels tripId={tripId}
+            <Hotels tripId={tripId} segments={trip?.segments}
               onFocus={(h) => h.lat != null && h.lng != null && setFocus({ lat: h.lat, lng: h.lng, n: Date.now() })} />
           </div>
           {(stopPoints.length > 0 || hotelPoints.length > 0) && (
