@@ -84,3 +84,23 @@ export function buildHeuristicItinerary(
     days: dayList,
   };
 }
+
+// Multi-city fallback: build each segment, concatenate with continuous day
+// numbering. Used when AI is unavailable for a multi-city trip.
+export function buildMultiHeuristicItinerary(
+  segments: { city: string; country: string; days: number; attractions: Attraction[] }[]
+): Itinerary {
+  const days: Itinerary["days"] = [];
+  for (const s of segments) {
+    const part = buildHeuristicItinerary(s.city, s.country, s.days, s.attractions);
+    for (const d of part.days) {
+      days.push({ ...d, label: `יום ${days.length + 1}`, base: s.city });
+    }
+  }
+  const cities = segments.map((s) => s.city).join(" → ");
+  return {
+    title: `${segments.map((s) => s.city).join(" + ")} עם המשפחה`,
+    subtitle: `${days.length} ימים · ${cities}`,
+    days,
+  };
+}

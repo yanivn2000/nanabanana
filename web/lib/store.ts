@@ -114,6 +114,17 @@ export function useHotels(): {
 
 // --- Trips: real, saved trip entities ---
 export type TripMode = "preferences" | "hotels";
+
+// One leg of a multi-city trip: a base city + how many days there.
+export type Segment = {
+  id: string;
+  city: string;           // English — for attraction/API resolution
+  cityHe?: string;        // Hebrew — for display
+  country?: string;
+  destinationId?: number;
+  days: number;
+};
+
 export type Trip = {
   id: string;
   title: string;
@@ -124,6 +135,7 @@ export type Trip = {
   destinationId?: number;
   days: number;
   month: number;          // 1-12 — when the trip is (for seasonal relevance)
+  segments?: Segment[];   // present (length ≥ 2) for multi-city trips
   itinerary?: Itinerary;
   createdAt: number;
 };

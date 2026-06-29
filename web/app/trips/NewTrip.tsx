@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, BedDouble, MapPin, Loader2, X } from "lucide-react";
-import { useTrips, MONTHS_HE } from "@/lib/store";
+import {
+  Sparkles, BedDouble, MapPin, Loader2, X, Plus, Minus, ChevronUp, ChevronDown,
+} from "lucide-react";
+import { useTrips, MONTHS_HE, uid, type Segment } from "@/lib/store";
 
 type Dest = { id: number; city: string; country: string; city_he: string | null; country_he: string | null; attraction_count: number };
 
@@ -12,9 +14,9 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
   const { create } = useTrips();
   const [mode, setMode] = useState<"preferences" | "hotels">("preferences");
   const [title, setTitle] = useState("");
-  const [days, setDays] = useState(5);
+  const [days, setDays] = useState(5);                 // hotels-mode single base
   const [month, setMonth] = useState<number | null>(null);
-  const [destId, setDestId] = useState<number | null>(null);
+  const [segs, setSegs] = useState<{ destId: number; days: number }[]>([]); // preferences legs
   const [dests, setDests] = useState<Dest[]>([]);
   const [creating, setCreating] = useState(false);
 
@@ -25,28 +27,53 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
       .catch(() => {});
   }, []);
 
-  function go() {
-    const dest = dests.find((d) => d.id === destId);
-    const destHe = dest?.city_he || dest?.city;
-    const autoTitle =
-      title.trim() ||
-      (mode === "preferences" && destHe ? `טיול ל${destHe}` : "הטיול שלי");
-    setCreating(true);
-    const trip = create({
-      title: autoTitle,
-      mode,
-      days,
-      month: month as number,
-      ...(mode === "preferences" && dest
-        ? { city: dest.city, cityHe: dest.city_he ?? undefined, country: dest.country, destinationId: dest.id }
-        : {}),
+  const addSeg = (id: number) =>
+    setSegs((s) => (s.some((x) => x.destId === id) ? s : [...s, { destId: id, days: 3 }]));
+  const removeSeg = (id: number) => setSegs((s) => s.filter((x) => x.destId !== id));
+  const setSegDays = (id: number, d: number) =>
+    setSegs((s) => s.map((x) => (x.destId === id ? { ...x, days: Math.max(1, Math.min(14, d)) } : x)));
+  const moveSeg = (i: number, dir: -1 | 1) =>
+    setSegs((s) => {
+      const j = i + dir;
+      if (j < 0 || j >= s.length) return s;
+      const n = [...s];
+      [n[i], n[j]] = [n[j], n[i]];
+      return n;
     });
+  const totalDays = segs.reduce((a, x) => a + x.days, 0);
+  const destOf = (id: number) => dests.find((d) => d.id === id);
+
+  function go() {
+    setCreating(true);
+    if (mode === "preferences") {
+      const segments: Segment[] = segs.map((s) => {
+        const d = destOf(s.destId)!;
+        return {
+          id: uid(), city: d.city, cityHe: d.city_he ?? undefined,
+          country: d.country, destinationId: d.id, days: s.days,
+        };
+      });
+      const heNames = segments.map((s) => s.cityHe || s.city);
+      const autoTitle =
+        title.trim() || (heNames.length === 1 ? `טיול ל${heNames[0]}` : heNames.join(" + "));
+      const first = segments[0];
+      const trip = create({
+        title: autoTitle, mode, month: month as number, days: totalDays,
+        city: first?.city, cityHe: first?.cityHe, country: first?.country,
+        destinationId: first?.destinationId,
+        ...(segments.length > 1 ? { segments } : {}),
+      });
+      router.push(`/trip/${trip.id}`);
+      return;
+    }
+    // hotels mode — single base, destination resolved from the hotels later
+    const autoTitle = title.trim() || "הטיול שלי";
+    const trip = create({ title: autoTitle, mode, days, month: month as number });
     router.push(`/trip/${trip.id}`);
   }
 
   const canGo =
-    month != null &&
-    (mode === "hotels" || (mode === "preferences" && destId != null));
+    month != null && (mode === "hotels" || (mode === "preferences" && segs.length >= 1));
 
   return (
     <div className="mb-4 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] lg:max-w-2xl">
@@ -71,7 +98,7 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
           }}>
           <Sparkles size={18} className="mb-1 text-[var(--accent-ink)]" />
           <div className="text-[13.5px] font-medium">בנה לי לפי העדפות</div>
-          <div className="text-[12px] text-[var(--text-2)]">בוחרים יעד, ה-AI בונה</div>
+          <div className="text-[12px] text-[var(--text-2)]">בוחרים יעד/ים, ה-AI בונה</div>
         </button>
         <button onClick={() => setMode("hotels")}
           className="rounded-[var(--radius-sm)] border p-3 text-right transition"
@@ -87,32 +114,71 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
 
       {mode === "preferences" && (
         <div className="mb-3">
-          <label className="mb-1.5 block text-[13px] text-[var(--text-2)]">יעד</label>
+          <label className="mb-1.5 block text-[13px] text-[var(--text-2)]">
+            יעדים <span className="text-[var(--text-3)]">(אפשר כמה — טיול רב-ערים)</span>
+          </label>
           <div className="flex flex-wrap gap-2">
-            {dests.map((d) => (
-              <button key={d.id} onClick={() => setDestId(d.id)}
-                className="flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] transition"
-                style={{
-                  background: destId === d.id ? "var(--accent)" : "var(--surface-2)",
-                  color: destId === d.id ? "#fff" : "var(--text-2)",
-                }}>
-                <MapPin size={13} /> {d.city_he || d.city}
-              </button>
-            ))}
+            {dests.map((d) => {
+              const on = segs.some((s) => s.destId === d.id);
+              return (
+                <button key={d.id} onClick={() => (on ? removeSeg(d.id) : addSeg(d.id))}
+                  className="flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] transition"
+                  style={{
+                    background: on ? "var(--accent)" : "var(--surface-2)",
+                    color: on ? "#fff" : "var(--text-2)",
+                  }}>
+                  <MapPin size={13} /> {d.city_he || d.city}
+                </button>
+              );
+            })}
             {dests.length === 0 && <span className="text-[13px] text-[var(--text-3)]">טוען יעדים…</span>}
           </div>
+
+          {segs.length > 0 && (
+            <div className="mt-3 flex flex-col gap-2">
+              {segs.map((s, i) => {
+                const d = destOf(s.destId);
+                return (
+                  <div key={s.destId} className="flex items-center gap-2 rounded-lg bg-[var(--surface-2)] px-2.5 py-2">
+                    <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-[11px] font-bold text-white">{i + 1}</span>
+                    {segs.length > 1 && (
+                      <span className="flex shrink-0 flex-col">
+                        <button onClick={() => moveSeg(i, -1)} disabled={i === 0} aria-label="העלה"
+                          className="text-[var(--text-3)] disabled:opacity-30"><ChevronUp size={14} /></button>
+                        <button onClick={() => moveSeg(i, 1)} disabled={i === segs.length - 1} aria-label="הורד"
+                          className="text-[var(--text-3)] disabled:opacity-30"><ChevronDown size={14} /></button>
+                      </span>
+                    )}
+                    <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{d?.city_he || d?.city}</span>
+                    <button onClick={() => setSegDays(s.destId, s.days - 1)} aria-label="פחות"
+                      className="grid size-7 place-items-center rounded-md bg-[var(--surface)] text-[var(--text-2)]"><Minus size={14} /></button>
+                    <span className="w-14 text-center text-[13px]">{s.days} ימים</span>
+                    <button onClick={() => setSegDays(s.destId, s.days + 1)} aria-label="עוד"
+                      className="grid size-7 place-items-center rounded-md bg-[var(--surface)] text-[var(--text-2)]"><Plus size={14} /></button>
+                    <button onClick={() => removeSeg(s.destId)} aria-label="הסר"
+                      className="grid size-7 place-items-center rounded-md text-[var(--text-3)]"><X size={15} /></button>
+                  </div>
+                );
+              })}
+              <p className="text-[12px] text-[var(--text-3)]">
+                סה״כ {totalDays} ימים{segs.length > 1 ? ` · ${segs.length} ערים` : ""}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
-      <div className="mb-4">
-        <div className="mb-1.5 flex items-center justify-between">
-          <label className="text-[13px] text-[var(--text-2)]">מספר ימים</label>
-          <span className="text-[13px] font-medium text-[var(--accent-ink)]">{days}</span>
+      {mode === "hotels" && (
+        <div className="mb-4">
+          <div className="mb-1.5 flex items-center justify-between">
+            <label className="text-[13px] text-[var(--text-2)]">מספר ימים</label>
+            <span className="text-[13px] font-medium text-[var(--accent-ink)]">{days}</span>
+          </div>
+          <input type="range" min={1} max={14} value={days}
+            onChange={(e) => setDays(Number(e.target.value))}
+            className="w-full accent-[var(--accent)]" />
         </div>
-        <input type="range" min={1} max={14} value={days}
-          onChange={(e) => setDays(Number(e.target.value))}
-          className="w-full accent-[var(--accent)]" />
-      </div>
+      )}
 
       <div className="mb-4">
         <label className="mb-1.5 block text-[13px] text-[var(--text-2)]">

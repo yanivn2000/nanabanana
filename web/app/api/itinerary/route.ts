@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listDestinations, topAttractions } from "@/lib/db";
-import type { Attraction } from "@/lib/db";
+import type { Attraction, Destination } from "@/lib/db";
 import {
   aiConfigured,
   generateItinerary,
+  generateMultiItinerary,
   reviseItinerary,
 } from "@/lib/ai";
-import { buildHeuristicItinerary } from "@/lib/heuristic";
+import { buildHeuristicItinerary, buildMultiHeuristicItinerary } from "@/lib/heuristic";
 import { haversineKm } from "@/lib/geo";
 import type { TripHotel } from "@/lib/ai";
 import type { Itinerary } from "@/lib/trip-types";
@@ -80,6 +81,7 @@ export async function POST(req: NextRequest) {
     current?: Itinerary;
     instruction?: string;
     dateContext?: string;
+    segments?: { city: string; days: number }[];
   };
   try {
     body = await req.json();
@@ -99,6 +101,41 @@ export async function POST(req: NextRequest) {
   if (body.mode === "details") {
     if (!body.current) return NextResponse.json({ error: "missing current" }, { status: 400 });
     return NextResponse.json({ itinerary: attachDetails(body.current, attractions) });
+  }
+
+  // Multi-city trip: one continuous itinerary across ordered segments, each
+  // built from its own city's attraction pool.
+  if (body.mode !== "revise" && body.segments && body.segments.length > 1) {
+    const segs = body.segments
+      .map((s) => {
+        const d = resolveDestination(s.city);
+        return d ? { dest: d as Destination, days: s.days } : null;
+      })
+      .filter((x): x is { dest: Destination; days: number } => x !== null);
+    const segAttrs = segs.map((x) => ({ ...x, attractions: topAttractions(x.dest.id, 50) }));
+    const allAttractions = segAttrs.flatMap((x) => x.attractions);
+    const heuristic = () => attachDetails(
+      buildMultiHeuristicItinerary(segAttrs.map((x) => ({
+        city: x.dest.city, country: x.dest.country, days: x.days, attractions: x.attractions,
+      }))), allAttractions);
+
+    if (!aiConfigured()) {
+      return NextResponse.json({ itinerary: heuristic(), engine: "heuristic" });
+    }
+    try {
+      const itinerary = await generateMultiItinerary({
+        segments: segAttrs.map((x) => ({
+          city: x.dest.city, country: x.dest.country, days: x.days, attractions: x.attractions,
+        })),
+        month: body.month,
+        profileText: body.profileText ?? "משפחה · קצב רגוע",
+        hotels: body.hotels,
+      });
+      return NextResponse.json({ itinerary: attachDetails(itinerary, allAttractions) });
+    } catch (e) {
+      console.warn(`[itinerary] multi AI failed, heuristic: ${(e as Error).message}`);
+      return NextResponse.json({ itinerary: heuristic(), engine: "heuristic" });
+    }
   }
 
   // Revise needs the model. Without a key, ask the user to add one.

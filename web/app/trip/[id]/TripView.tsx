@@ -139,6 +139,9 @@ export function TripView({ tripId }: { tripId: string }) {
     days: trip?.days ?? 4,
     month: trip?.month,
     hotels: tripHotels.map((h) => ({ name: h.name, city: h.city, lat: h.lat, lng: h.lng })),
+    ...(trip?.segments && trip.segments.length > 1
+      ? { segments: trip.segments.map((s) => ({ city: s.city, days: s.days })) }
+      : {}),
   }, "generate");
   const revise = (instruction: string) =>
     call({ mode: "revise", current: itinerary, instruction, dateContext: dateContext || undefined }, "revise");
@@ -206,8 +209,12 @@ export function TripView({ tripId }: { tripId: string }) {
         <h1 className="serif text-[32px] leading-none lg:text-[40px]">{trip?.title ?? "…"}</h1>
         <div className="rule mt-3"></div>
         <p className="mt-3 text-[13px] text-[var(--text-2)]">
-          {cityHe ? `${cityHe} · ` : ""}{trip?.days} ימים
+          {trip?.segments && trip.segments.length > 1
+            ? `${trip.segments.map((s) => s.cityHe || s.city).join(" → ")} · `
+            : cityHe ? `${cityHe} · ` : ""}
+          {trip?.days} ימים
           {trip?.month ? ` · ${MONTHS_HE[trip.month - 1]}` : ""}
+          {trip?.segments && trip.segments.length > 1 ? ` · ${trip.segments.length} ערים` : ""}
           {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2">

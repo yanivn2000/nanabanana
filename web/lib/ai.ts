@@ -133,6 +133,40 @@ ${attractionsBlock(p.attractions)}`;
   return callClaude(userText);
 }
 
+export type MultiSegment = {
+  city: string;
+  country: string;
+  days: number;
+  attractions: Attraction[];
+};
+
+// One continuous itinerary across several base cities (a multi-city trip).
+export async function generateMultiItinerary(p: {
+  segments: MultiSegment[];
+  month?: number;
+  profileText: string;
+  hotels?: TripHotel[];
+}): Promise<Itinerary> {
+  const total = p.segments.reduce((a, s) => a + s.days, 0);
+  const order = p.segments.map((s, i) => `${i + 1}) ${s.city} (${s.days} ימים)`).join(" ← ");
+  const segBlocks = p.segments
+    .map((s, i) =>
+      `### מקטע ${i + 1}: ${s.city}, ${s.country} — ${s.days} ימים\n` +
+      `אטרקציות זמינות במקטע זה (לימי מקטע זה בלבד):\n${attractionsBlock(s.attractions)}`)
+    .join("\n\n");
+  const userText = `בנה לו"ז לטיול רב-ערים אחד ורציף של ${total} ימים, העובר בין האזורים לפי הסדר: ${order}.
+פרופיל המשפחה: ${p.profileText}
+${seasonHint(p.month)}${hotelsBlock(p.hotels)}
+כללים למקטעים:
+- מספר את הימים ברצף 1..${total} (אל תתחיל ספירה מחדש בכל עיר). שדה base של כל יום = שם העיר/אזור של המקטע שאליו הוא שייך.
+- הקצה לכל מקטע בדיוק את מספר הימים שצוין, לפי הסדר.
+- ביום המעבר בין מקטע למקטע ציין במפורש את הנסיעה בין הערים (ב-note וב-why) והשאר אותו קליל — אל תעמיס אטרקציות ביום נסיעה.
+- לכל יום בחר אטרקציות אך ורק מרשימת האטרקציות של אותו מקטע.
+
+${segBlocks}`;
+  return callClaude(userText);
+}
+
 export async function reviseItinerary(
   current: Itinerary,
   instruction: string,
