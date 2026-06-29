@@ -1,5 +1,9 @@
 """NanaBanana — trip planner. Stage 1: data explorer + OSM ingest."""
 import json
+import os
+import subprocess
+import sys
+import time
 import streamlit as st
 import folium
 from streamlit_folium import st_folium
@@ -261,7 +265,7 @@ with tab_enrich:
                             help="המפתח לא נשמר — משמש רק להרצה הנוכחית")
     limit = st.slider("כמה אטרקציות להעשיר בהרצה", 15, 150, 60, step=15)
 
-    if st.button("הרץ העשרה", type="primary", disabled=not api_key or pending == 0):
+    if st.button("הרץ העשרה (חד-פעמי, עם מפתח שהודבק)", disabled=not api_key or pending == 0):
         bar = st.progress(0.0, text="מעשיר...")
         try:
             done = enrich.enrich_pending(
@@ -270,6 +274,56 @@ with tab_enrich:
             st.success(f"הועשרו {done} אטרקציות")
         except Exception as ex:
             st.error(f"שגיאה: {ex}")
+
+    st.divider()
+    st.subheader("🔄 הרצה רציפה ברקע")
+    st.caption(
+        "מריץ העשרה batch אחרי batch עד שלא נשאר כלום — או עד שנגמר הקרדיט/קרתה תקלה, "
+        "ואז נעצר בעדינות. רץ **ברקע בשרת**, אפשר לסגור את הדף. אם נעצר — פשוט הפעילו שוב "
+        "(ימשיך מהמקום שבו עצר). המפתח נקרא אוטומטית מהשרת, אין צורך להדביק. "
+        "⚠️ צורך קרדיטים של Claude כל עוד רץ.")
+
+    LOG = os.path.expanduser("~/enrichloop.log")
+    running = subprocess.run(
+        ["pgrep", "-f", "enrich_loop.py"], capture_output=True).returncode == 0
+
+    if running:
+        sc1, sc2 = st.columns([1, 3])
+        sc1.success("🟢 רץ כעת")
+        if sc2.button("⛔ עצור"):
+            subprocess.run(["pkill", "-f", "enrich_loop.py"])
+            time.sleep(1)
+            st.rerun()
+    else:
+        _mc = db.get_conn()
+        cur_model = db.get_model(_mc)
+        _mc.close()
+        m_ids = list(MODELS.keys())
+        if cur_model not in m_ids:
+            m_ids = [cur_model] + m_ids
+        bulk_model = st.selectbox(
+            "מודל להרצה הזו", m_ids, index=m_ids.index(cur_model),
+            format_func=lambda m: MODELS.get(m, m),
+            help="לבכמות גדולה כדאי Sonnet — זול ומהיר. לא משנה את מודל האפליקציה.")
+        if st.button("▶️ הפעל העשרה ברקע", type="primary", disabled=pending == 0):
+            with open(LOG, "a") as f:
+                subprocess.Popen(
+                    [sys.executable, "-u", "enrich_loop.py", bulk_model],
+                    cwd=os.path.dirname(os.path.abspath(__file__)),
+                    stdout=f, stderr=subprocess.STDOUT, start_new_session=True)
+            st.success("הופעל ברקע ✓")
+            time.sleep(1.5)
+            st.rerun()
+
+    rc1, rc2 = st.columns([1, 3])
+    if rc1.button("🔄 רענן סטטוס"):
+        st.rerun()
+    if os.path.exists(LOG):
+        try:
+            tail = "".join(open(LOG).readlines()[-12:])
+        except Exception:
+            tail = ""
+        st.code(tail or "(עוד אין פלט)", language=None)
 
 with tab_browse:
     conn = db.get_conn()
