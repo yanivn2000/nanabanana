@@ -13,6 +13,7 @@ import pipeline_osm
 import enrich
 import pipeline_images
 import dedupe
+import tickets
 
 st.set_page_config(page_title="NanaBanana", page_icon="🍌", layout="wide")
 
@@ -72,8 +73,67 @@ SEED_CITIES = {
     "Tbilisi": ("Georgia", 41.7151, 44.8271),
 }
 
-tab_browse, tab_ingest, tab_enrich, tab_settings = st.tabs(
-    ["🔍 דפדוף בנתונים", "⬇️ איסוף מ-OpenStreetMap", "✨ העשרה עם Claude", "⚙️ הגדרות"])
+tab_browse, tab_ingest, tab_enrich, tab_tickets, tab_settings = st.tabs(
+    ["🔍 דפדוף בנתונים", "⬇️ איסוף מ-OpenStreetMap", "✨ העשרה עם Claude",
+     "🎫 בקשות פיתוח", "⚙️ הגדרות"])
+
+with tab_tickets:
+    st.subheader("🎫 בקשות פיתוח")
+    st.caption(
+        "פתחו בקשה — באג, פיצ'ר, רעיון או עיצוב. אפשר לצרף תמונות וטקסט חופשי. "
+        "לכל בקשה יינתן מספר טיקט; תנו אותו למפתח (דרך Claude Code) והוא ימשוך את הבקשה לדיון.")
+
+    TICKET_TYPES = {"bug": "באג 🐞", "feature": "פיצ'ר ✨", "idea": "רעיון 💡", "design": "עיצוב 🎨"}
+
+    with st.form("new_ticket", clear_on_submit=True):
+        tc1, tc2 = st.columns([1, 2])
+        ttype = tc1.selectbox("סוג", list(TICKET_TYPES.keys()), format_func=lambda k: TICKET_TYPES[k])
+        ttitle = tc2.text_input("כותרת קצרה")
+        tbody = st.text_area("תיאור — מה להוסיף / לתקן, איך זה אמור לעבוד, באיזה מסך…", height=140)
+        tfiles = st.file_uploader("תמונות (לא חובה)",
+                                  type=["png", "jpg", "jpeg", "webp", "gif"],
+                                  accept_multiple_files=True)
+        tsubmit = st.form_submit_button("פתח טיקט", type="primary")
+    if tsubmit:
+        if not ttitle.strip() and not tbody.strip():
+            st.warning("הוסיפו לפחות כותרת או תיאור.")
+        else:
+            imgs = [(f.name, f.getvalue()) for f in (tfiles or [])]
+            tid = tickets.create_ticket(ttype, ttitle.strip(), tbody.strip(), imgs)
+            st.success(f"נפתח טיקט #{tid} ✓ — מסרו את המספר הזה למפתח.")
+
+    st.divider()
+    fcol1, fcol2 = st.columns([1, 3])
+    status_filter = fcol1.selectbox("סינון", ["הכל", "פתוחים", "בוצעו"])
+    status_map = {"הכל": None, "פתוחים": "open", "בוצעו": "done"}
+    ticket_rows = tickets.list_tickets(status_map[status_filter])
+    st.caption(f"{len(ticket_rows)} טיקטים")
+
+    for t in ticket_rows:
+        done = t["status"] == "done"
+        label = (f"#{t['id']} · {TICKET_TYPES.get(t['type'], t['type'])} · "
+                 f"{t['title'] or '(ללא כותרת)'} · {'✅ בוצע' if done else '🟠 פתוח'}")
+        with st.expander(label):
+            st.caption(t["created_at"])
+            if t["body"]:
+                st.write(t["body"])
+            imgs = tickets.image_paths(t)
+            if imgs:
+                icols = st.columns(min(len(imgs), 3))
+                for i, p in enumerate(imgs):
+                    try:
+                        icols[i % len(icols)].image(p, width=260)
+                    except Exception:
+                        icols[i % len(icols)].caption(p)
+            bc1, bc2, _ = st.columns([1, 1, 3])
+            if done:
+                if bc1.button("פתח מחדש", key=f"reopen{t['id']}"):
+                    tickets.set_status(t["id"], "open"); st.rerun()
+            else:
+                if bc1.button("סמן כבוצע", key=f"done{t['id']}"):
+                    tickets.set_status(t["id"], "done"); st.rerun()
+            if bc2.button("מחק", key=f"del{t['id']}"):
+                tickets.delete_ticket(t["id"]); st.rerun()
 
 # Available Claude models (id -> Hebrew label). Shared by both apps via DB.
 MODELS = {

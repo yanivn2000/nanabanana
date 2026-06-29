@@ -75,6 +75,16 @@ CREATE TABLE IF NOT EXISTS settings (
     value TEXT
 );
 
+CREATE TABLE IF NOT EXISTS tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT,                       -- bug/feature/idea/design
+    title TEXT,
+    body TEXT,
+    images TEXT,                     -- JSON array of relative image paths
+    status TEXT DEFAULT 'open',      -- open/done
+    created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_attr_dest ON attractions(destination_id);
 CREATE INDEX IF NOT EXISTS idx_attr_cat ON attractions(category);
 """
