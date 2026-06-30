@@ -1,14 +1,20 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useProfile, DEFAULT_PROFILE } from "@/lib/store";
-import { Check, Users } from "lucide-react";
+import { Check, Users, ChevronRight } from "lucide-react";
 import { ProfileEditor } from "@/components/ProfileEditor";
 
 export default function ProfilePage() {
   const [p, save, loaded] = useProfile();
+  const router = useRouter();
 
   return (
     <main className="mx-auto w-full max-w-[440px] px-5 pb-28 pt-8 lg:max-w-2xl lg:px-8 lg:pb-12">
+      <Link href="/" className="eyebrow mb-4 inline-flex items-center gap-1">
+        <ChevronRight size={14} /> בית
+      </Link>
       <header className="rise mb-6 flex items-center gap-3">
         <div className="grid size-11 place-items-center rounded-full bg-[var(--brand-soft)] text-[var(--brand-ink)]">
           <Users size={20} />
@@ -28,6 +34,10 @@ export default function ProfilePage() {
             <span className="flex items-center gap-2 text-[13px] text-[var(--brand-ink)]"><Check size={16} /> נשמר אוטומטית במכשיר</span>
             <button onClick={() => save(DEFAULT_PROFILE)} className="text-[12px] text-[var(--brand-ink)] underline">אפס</button>
           </div>
+          <button onClick={() => router.back()}
+            className="mt-3 w-full rounded-full bg-[var(--accent)] py-3 text-[15px] font-medium text-white">
+            סיום
+          </button>
         </>
       )}
     </main>
