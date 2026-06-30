@@ -23,6 +23,8 @@ export type FamilyProfile = {
   budget: "חסכוני" | "בינוני" | "מפנק";
   dailyDriveHours: number;
   lodging: string;         // מלון / אירבנב / צימר
+  accessibility?: string[]; // כיסא גלגלים / ללא מדרגות / נגיש לעגלה …
+  dietary?: string[];       // ללא גלוטן / צמחוני / כשר …
 };
 
 export const DEFAULT_PROFILE: FamilyProfile = {
@@ -34,6 +36,8 @@ export const DEFAULT_PROFILE: FamilyProfile = {
   budget: "בינוני",
   dailyDriveHours: 1,
   lodging: "מלון",
+  accessibility: [],
+  dietary: [],
 };
 
 const KEY = "nanabanana.profile.v1";
@@ -234,5 +238,9 @@ export function profileText(p: FamilyProfile): string {
   if (p.dislikes.length) lines.push("פחות אוהבים: " + p.dislikes.join(", "));
   lines.push(`קצב ${p.pace}`, `תקציב ${p.budget}`,
     `עד ${p.dailyDriveHours} שעות נסיעה ביום`, `לינה: ${p.lodging}`);
+  if (p.accessibility?.length)
+    lines.push("נגישות (חובה להתחשב — העדף מקומות נגישים ללא מדרגות מיותרות): " + p.accessibility.join(", "));
+  if (p.dietary?.length)
+    lines.push("תזונה (ציין/העדף אפשרויות מתאימות ליד עצירות אוכל): " + p.dietary.join(", "));
   return lines.join(" · ");
 }

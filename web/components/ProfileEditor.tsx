@@ -7,6 +7,8 @@ const INTERESTS = ["טבע", "אוכל", "תרבות", "קניות", "ספורט
 const PACES = ["רגוע", "בינוני", "אינטנסיבי"] as const;
 const BUDGETS = ["חסכוני", "בינוני", "מפנק"] as const;
 const LODGINGS = ["מלון", "אירבנב", "צימר", "מעורב"];
+const ACCESSIBILITY = ["כיסא גלגלים", "ללא מדרגות", "נגיש לעגלה", "שמיעה/ראייה"];
+const DIETARY = ["ללא גלוטן", "צמחוני", "טבעוני", "כשר", "ללא לקטוז"];
 
 function Chip({ on, children, onClick }: { on: boolean; children: React.ReactNode; onClick: () => void }) {
   return (
@@ -141,6 +143,26 @@ export function ProfileEditor({ value: p, onChange: save }: {
         <div className="flex flex-wrap gap-2">
           {LODGINGS.map((v) => (
             <Chip key={v} on={p.lodging === v} onClick={() => save({ ...p, lodging: v })}>{v}</Chip>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <label className="mb-2 block text-[14px] font-medium">נגישות</label>
+        <div className="flex flex-wrap gap-2">
+          {ACCESSIBILITY.map((v) => (
+            <Chip key={v} on={(p.accessibility ?? []).includes(v)}
+              onClick={() => save({ ...p, accessibility: toggle(p.accessibility ?? [], v) })}>{v}</Chip>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <label className="mb-2 block text-[14px] font-medium">תזונה</label>
+        <div className="flex flex-wrap gap-2">
+          {DIETARY.map((v) => (
+            <Chip key={v} on={(p.dietary ?? []).includes(v)}
+              onClick={() => save({ ...p, dietary: toggle(p.dietary ?? [], v) })}>{v}</Chip>
           ))}
         </div>
       </section>
