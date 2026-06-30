@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Compass, Briefcase, User } from "lucide-react";
+import { AuthButton } from "./AuthButton";
 
 const ITEMS = [
   { href: "/", label: "בית", Icon: Home },
@@ -40,6 +41,7 @@ export function TopNav() {
               </Link>
             );
           })}
+          <span className="ms-1"><AuthButton /></span>
         </nav>
       </div>
     </header>

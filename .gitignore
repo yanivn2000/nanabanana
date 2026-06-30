@@ -9,3 +9,4 @@ venv/
 .DS_Store
 .streamlit/secrets.toml
 data/*.db
+web/test
