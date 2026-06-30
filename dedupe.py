@@ -29,7 +29,7 @@ def _wikidata(info_sources):
     if not info_sources:
         return None
     try:
-        for s in json.loads(info_sources):
+        for s in db.jloads(info_sources):
             if s.get("title") == "Wikidata":
                 return s["url"].rstrip("/").split("/")[-1]
     except Exception:

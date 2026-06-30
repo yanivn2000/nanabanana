@@ -51,11 +51,8 @@ def _from_wikidata(url):
 
 def find_image(info_sources_json):
     """Try Wikipedia first (better thumbs), then Wikidata. Returns URL or None."""
-    if not info_sources_json:
-        return None
-    try:
-        sources = json.loads(info_sources_json)
-    except Exception:
+    sources = db.jloads(info_sources_json)
+    if not sources:
         return None
     wiki = next((s["url"] for s in sources if s.get("title") == "Wikipedia"), None)
     wd = next((s["url"] for s in sources if s.get("title") == "Wikidata"), None)
@@ -68,8 +65,8 @@ def find_image(info_sources_json):
     return None
 
 
-_PENDING_WHERE = ("image_checked_at IS NULL AND info_sources NOT IN ('', '[]') "
-                  "AND info_sources IS NOT NULL")
+_PENDING_WHERE = ("image_checked_at IS NULL AND info_sources IS NOT NULL "
+                  "AND info_sources <> '[]'::jsonb")
 
 
 def pending_count(conn, destination_id=None):

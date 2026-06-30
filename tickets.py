@@ -29,10 +29,11 @@ def create_ticket(ttype, title, body, images=None):
     db.init_db()
     conn = db.get_conn()
     cur = conn.execute(
-        "INSERT INTO tickets (type, title, body, images, status) VALUES (?,?,?,?,'open')",
+        "INSERT INTO tickets (type, title, body, images, status) "
+        "VALUES (?,?,?,?::jsonb,'open') RETURNING id",
         (ttype, title, body, "[]"),
     )
-    tid = cur.lastrowid
+    tid = cur.fetchone()[0]
     conn.commit()
 
     saved = []
@@ -44,7 +45,7 @@ def create_ticket(ttype, title, body, images=None):
             out = dest / f"{i}{ext}"
             out.write_bytes(data)
             saved.append(f"tickets/{tid}/{out.name}")
-        conn.execute("UPDATE tickets SET images=? WHERE id=?", (json.dumps(saved), tid))
+        conn.execute("UPDATE tickets SET images=?::jsonb WHERE id=?", (json.dumps(saved), tid))
         conn.commit()
     conn.close()
     return tid
@@ -84,10 +85,22 @@ def delete_ticket(tid):
     conn.close()
 
 
+def _imgs(val):
+    """images column may come back as a JSON string (CLI) or a parsed list (jsonb)."""
+    if not val:
+        return []
+    if isinstance(val, (list, dict)):
+        return val
+    try:
+        return json.loads(val)
+    except (ValueError, TypeError):
+        return []
+
+
 def image_paths(ticket):
     """Absolute server paths to a ticket's images (for opening/scp)."""
     base = db.DB_PATH.parent
-    return [str(base / p) for p in json.loads(ticket.get("images") or "[]")]
+    return [str(base / p) for p in _imgs(ticket.get("images"))]
 
 
 def _cli():
@@ -98,7 +111,7 @@ def _cli():
             print("(no tickets)")
             return
         for r in rows:
-            n = len(json.loads(r.get("images") or "[]"))
+            n = len(_imgs(r.get("images")))
             print(f"#{r['id']:<4} [{r['status']:<4}] {TYPE_HE.get(r['type'], r['type'])}  "
                   f"{r['title']}  · {r['created_at']}" + (f"  · {n} img" if n else ""))
         return

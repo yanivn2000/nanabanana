@@ -146,7 +146,7 @@ def enrich_pending(api_key, limit=60, progress=None, model=None):
         "SELECT id, name_en, category, subcategory, website FROM attractions "
         f"WHERE {PENDING_WHERE} "
         "ORDER BY (image_url IS NOT NULL) DESC, "
-        "         (info_sources IS NOT NULL AND info_sources NOT IN ('','[]')) DESC, "
+        "         (info_sources IS NOT NULL AND info_sources <> '[]'::jsonb) DESC, "
         "         COALESCE(family_score, 0) DESC LIMIT ?", (limit,)
     ).fetchall()
 

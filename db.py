@@ -1,96 +1,98 @@
-"""SQLite schema and helpers for NanaBanana.
+"""Postgres (Supabase) data layer for the admin/pipeline.
 
-One file, one DB. Start simple (SQLite), migrate to Postgres when we grow.
+Drop-in replacement for the old SQLite db.py: exposes the same helpers
+(get_conn, upsert_*, settings, populate_he_names) but talks to the shared
+Supabase Postgres — the same database the consumer app on Vercel reads.
+
+A thin shim makes psycopg2 look like the sqlite3 API the modules already use:
+`conn.execute(sql, params).fetchone()/.fetchall()`, with rows that support both
+`row[0]` and `row['col']` (psycopg2 DictRow). SQLite `?` placeholders and
+`datetime('now')` are translated automatically.
 """
-import sqlite3
 import json
+import os
 from pathlib import Path
 
+import psycopg2
+import psycopg2.extras
+
+# Kept for the tickets image directory (db.DB_PATH.parent == the data dir).
 DB_PATH = Path(__file__).parent / "data" / "nanabanana.db"
+WEB_ENV = os.path.expanduser("~/.nanabanana-web.env")
+LOCAL_ENV = Path(__file__).parent / "web" / ".env.local"
 
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS destinations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    country TEXT,
-    region TEXT,
-    city TEXT,
-    name_he TEXT,
-    name_en TEXT,
-    lat REAL,
-    lng REAL,
-    description_he TEXT,
-    best_months TEXT,                -- JSON array e.g. [6,7,8]
-    israeli_popularity_score INTEGER,-- 1-100
-    timezone TEXT,
-    currency TEXT,
-    language TEXT,
-    created_at TEXT DEFAULT (datetime('now')),
-    UNIQUE(country, city)
-);
-
-CREATE TABLE IF NOT EXISTS attractions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    destination_id INTEGER REFERENCES destinations(id),
-    name_he TEXT,
-    name_en TEXT,
-    lat REAL,
-    lng REAL,
-    category TEXT,                   -- nature/museum/sport/shopping/food
-    subcategory TEXT,
-    indoor_outdoor TEXT,             -- indoor/outdoor/both
-    duration_minutes INTEGER,
-    price_usd REAL,
-    min_age INTEGER,
-    max_age INTEGER,
-    family_score INTEGER,            -- 1-10
-    physical_intensity INTEGER,      -- 1-5
-    opening_hours TEXT,              -- raw OSM opening_hours string
-    rating_google REAL,
-    rating_count INTEGER,
-    description_he TEXT,
-    tips_he TEXT,
-    website TEXT,                    -- official site link
-    video_links TEXT,               -- JSON array of YouTube/video URLs
-    info_sources TEXT,              -- JSON array of {title,url} we pulled data from
-    osm_id TEXT,
-    osm_type TEXT,                   -- node/way/relation
-    google_place_id TEXT,
-    created_at TEXT DEFAULT (datetime('now')),
-    UNIQUE(osm_type, osm_id)
-);
-
-CREATE TABLE IF NOT EXISTS media (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    entity_type TEXT,                -- attraction/destination
-    entity_id INTEGER,
-    type TEXT,                       -- photo/video
-    url TEXT,
-    thumbnail_url TEXT,
-    source TEXT,                     -- google/wikipedia/youtube/osm
-    created_at TEXT DEFAULT (datetime('now'))
-);
-
-CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT
-);
-
-CREATE TABLE IF NOT EXISTS tickets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT,                       -- bug/feature/idea/design
-    title TEXT,
-    body TEXT,
-    images TEXT,                     -- JSON array of relative image paths
-    status TEXT DEFAULT 'open',      -- open/done
-    created_at TEXT DEFAULT (datetime('now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_attr_dest ON attractions(destination_id);
-CREATE INDEX IF NOT EXISTS idx_attr_cat ON attractions(category);
-"""
-
-# Default AI model, shared by both apps. Override via the admin Settings tab.
 DEFAULT_MODEL = "claude-opus-4-8"
+
+
+def _dsn():
+    dsn = os.environ.get("DATABASE_URL")
+    if dsn:
+        return dsn
+    for path in (WEB_ENV, LOCAL_ENV):
+        try:
+            for line in open(path):
+                if line.strip().startswith("DATABASE_URL="):
+                    return line.split("=", 1)[1].strip().strip('"').strip("'")
+        except FileNotFoundError:
+            continue
+    raise RuntimeError("DATABASE_URL not set (env or ~/.nanabanana-web.env)")
+
+
+def _translate(sql):
+    return sql.replace("datetime('now')", "now()").replace("?", "%s")
+
+
+class PgConn:
+    """sqlite3-Connection-like wrapper over a psycopg2 connection."""
+
+    def __init__(self, dsn):
+        self._c = psycopg2.connect(dsn, cursor_factory=psycopg2.extras.DictCursor)
+        self._c.autocommit = True
+
+    def execute(self, sql, params=()):
+        cur = self._c.cursor()
+        cur.execute(_translate(sql), params)
+        return cur
+
+    def cursor(self):
+        return self._c.cursor()
+
+    def commit(self):
+        pass  # autocommit
+
+    def rollback(self):
+        try:
+            self._c.rollback()
+        except Exception:
+            pass
+
+    def close(self):
+        try:
+            self._c.close()
+        except Exception:
+            pass
+
+
+def get_conn():
+    return PgConn(_dsn())
+
+
+def jloads(val):
+    """jsonb columns come back as Python objects; legacy callers may pass a
+    JSON string. Return a Python list/dict either way ([] for empty/None)."""
+    if not val:
+        return []
+    if isinstance(val, (list, dict)):
+        return val
+    try:
+        return json.loads(val)
+    except (ValueError, TypeError):
+        return []
+
+
+def init_db():
+    """No-op: the Postgres schema already exists (see supabase/schema.sql)."""
+    return None
 
 
 def get_setting(conn, key, default=None):
@@ -110,22 +112,6 @@ def set_setting(conn, key, value):
 def get_model(conn):
     return get_setting(conn, "model", DEFAULT_MODEL)
 
-# Columns added after the initial schema shipped — applied idempotently on init.
-MIGRATIONS = [
-    ("attractions", "quality_keep", "INTEGER"),   # 1=worth visiting, 0=skip (AI-judged)
-    ("attractions", "enriched_at", "TEXT"),        # when the AI enrichment ran
-    ("attractions", "image_url", "TEXT"),          # thumbnail from Wikipedia/Wikidata
-    ("attractions", "image_checked_at", "TEXT"),   # when we looked for an image
-    ("attractions", "tagline_he", "TEXT"),         # memorable one-liner (AI-generated)
-    ("attractions", "best_season", "TEXT"),        # all/spring/summer/autumn/winter
-    ("attractions", "best_time_he", "TEXT"),       # recommended time to arrive (Hebrew)
-    ("attractions", "dress_he", "TEXT"),           # appropriate dress (Hebrew)
-    ("attractions", "cost_level", "INTEGER"),      # 0=free,1=cheap,2=mid,3=pricey
-    ("attractions", "must_see", "INTEGER"),        # 1 = must-visit landmark
-    ("attractions", "is_duplicate", "INTEGER"),    # 1 = hidden as a duplicate of another row
-    ("destinations", "city_he", "TEXT"),           # Hebrew display name
-    ("destinations", "country_he", "TEXT"),
-]
 
 CITY_HE = {
     "Salzburg": "זלצבורג", "Vienna": "וינה", "Berlin": "ברלין",
@@ -151,35 +137,12 @@ def populate_he_names(conn):
     conn.commit()
 
 
-def _apply_migrations(conn):
-    for table, col, coltype in MIGRATIONS:
-        cols = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
-        if col not in cols:
-            conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {coltype}")
-
-
-def get_conn():
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def init_db():
-    conn = get_conn()
-    conn.executescript(SCHEMA)
-    _apply_migrations(conn)
-    conn.commit()
-    conn.close()
-
-
 def upsert_destination(conn, **kw):
     """Insert or fetch a destination by (country, city). Returns id."""
-    cur = conn.execute(
+    row = conn.execute(
         "SELECT id FROM destinations WHERE country=? AND city=?",
         (kw.get("country"), kw.get("city")),
-    )
-    row = cur.fetchone()
+    ).fetchone()
     if row:
         return row["id"]
     cols = ["country", "region", "city", "name_he", "name_en", "lat", "lng",
@@ -187,20 +150,20 @@ def upsert_destination(conn, **kw):
             "timezone", "currency", "language"]
     vals = [kw.get(c) for c in cols]
     if isinstance(kw.get("best_months"), (list, tuple)):
-        vals[cols.index("best_months")] = json.dumps(kw["best_months"])
+        vals[cols.index("best_months")] = psycopg2.extras.Json(list(kw["best_months"]))
     placeholders = ",".join("?" * len(cols))
     cur = conn.execute(
-        f"INSERT INTO destinations ({','.join(cols)}) VALUES ({placeholders})",
+        f"INSERT INTO destinations ({','.join(cols)}) VALUES ({placeholders}) RETURNING id",
         vals,
     )
-    return cur.lastrowid
+    return cur.fetchone()[0]
 
 
 def upsert_attraction(conn, **kw):
-    """Insert attraction keyed on (osm_type, osm_id). Skip if exists."""
+    """Insert attraction keyed on (osm_type, osm_id). Skip (return None) if exists."""
     for jcol in ("video_links", "info_sources"):
         if isinstance(kw.get(jcol), (list, dict)):
-            kw[jcol] = json.dumps(kw[jcol], ensure_ascii=False)
+            kw[jcol] = psycopg2.extras.Json(kw[jcol])
     cols = ["destination_id", "name_he", "name_en", "lat", "lng", "category",
             "subcategory", "indoor_outdoor", "duration_minutes", "price_usd",
             "min_age", "max_age", "family_score", "physical_intensity",
@@ -209,16 +172,17 @@ def upsert_attraction(conn, **kw):
             "osm_id", "osm_type", "google_place_id"]
     vals = [kw.get(c) for c in cols]
     placeholders = ",".join("?" * len(cols))
-    try:
-        cur = conn.execute(
-            f"INSERT INTO attractions ({','.join(cols)}) VALUES ({placeholders})",
-            vals,
-        )
-        return cur.lastrowid
-    except sqlite3.IntegrityError:
-        return None  # already exists
+    cur = conn.execute(
+        f"INSERT INTO attractions ({','.join(cols)}) VALUES ({placeholders}) "
+        "ON CONFLICT (osm_type, osm_id) DO NOTHING RETURNING id",
+        vals,
+    )
+    row = cur.fetchone()
+    return row[0] if row else None
 
 
 if __name__ == "__main__":
-    init_db()
-    print(f"DB ready at {DB_PATH}")
+    c = get_conn()
+    n = c.execute("SELECT count(*) FROM attractions").fetchone()[0]
+    print(f"Postgres OK · {n} attractions")
+    c.close()

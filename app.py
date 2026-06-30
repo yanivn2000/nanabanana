@@ -439,7 +439,7 @@ with tab_browse:
             clng = sum(r["lng"] for r in mapped) / len(mapped)
             fmap = folium.Map(location=[clat, clng], zoom_start=12, tiles="CartoDB positron")
             for r in mapped:
-                srcs = json.loads(r["info_sources"]) if r["info_sources"] else []
+                srcs = db.jloads(r["info_sources"])
                 name = r["name_he"] or r["name_en"]
                 links = ""
                 if r["website"]:
@@ -461,7 +461,7 @@ with tab_browse:
         # list below the map
         table = []
         for r in rows:
-            srcs = json.loads(r["info_sources"]) if r["info_sources"] else []
+            srcs = db.jloads(r["info_sources"])
             table.append({
                 "עברית": r["name_he"] or "—",
                 "שם": r["name_en"],
