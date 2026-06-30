@@ -103,18 +103,25 @@ with tab_tickets:
             st.success(f"נפתח טיקט #{tid} ✓ — מסרו את המספר הזה למפתח.")
 
     st.divider()
-    fcol1, fcol2 = st.columns([1, 3])
-    status_filter = fcol1.selectbox("סינון", ["הכל", "פתוחים", "בוצעו"])
-    status_map = {"הכל": None, "פתוחים": "open", "בוצעו": "done"}
+    st.caption(
+        "מחזור חיים: **פתוח** → המפתח מסמן **בוצע (ממתין לאישור)** → הצוות עובר ומאשר. "
+        "אם זה לא לשביעות רצונכם — פתחו מחדש עם הערה, או פתחו **טיקט המשך** (עם הפניה לטיקט המקור).")
+
+    STATUS_HE = {"open": "🟠 פתוח", "done": "🔵 בוצע · ממתין לאישור", "approved": "✅ אושר"}
+    fcol1, _ = st.columns([1, 3])
+    status_filter = fcol1.selectbox("סינון", ["הכל", "ממתינים לאישור", "פתוחים", "אושרו"])
+    status_map = {"הכל": None, "ממתינים לאישור": "done", "פתוחים": "open", "אושרו": "approved"}
     ticket_rows = tickets.list_tickets(status_map[status_filter])
     st.caption(f"{len(ticket_rows)} טיקטים")
 
     for t in ticket_rows:
-        done = t["status"] == "done"
+        status = t["status"]
         label = (f"#{t['id']} · {TICKET_TYPES.get(t['type'], t['type'])} · "
-                 f"{t['title'] or '(ללא כותרת)'} · {'✅ בוצע' if done else '🟠 פתוח'}")
-        with st.expander(label):
+                 f"{t['title'] or '(ללא כותרת)'} · {STATUS_HE.get(status, status)}")
+        with st.expander(label, expanded=(status == "done" and status_filter == "ממתינים לאישור")):
             st.caption(t["created_at"])
+            if t.get("parent_id"):
+                st.caption(f"↪︎ המשך לטיקט #{t['parent_id']}")
             if t["body"]:
                 st.write(t["body"])
             imgs = tickets.image_paths(t)
@@ -125,15 +132,33 @@ with tab_tickets:
                         icols[i % len(icols)].image(p, width=260)
                     except Exception:
                         icols[i % len(icols)].caption(p)
-            bc1, bc2, _ = st.columns([1, 1, 3])
-            if done:
-                if bc1.button("פתח מחדש", key=f"reopen{t['id']}"):
-                    tickets.set_status(t["id"], "open"); st.rerun()
+            if t.get("notes"):
+                st.info(f"💬 הערות צוות:\n\n{t['notes']}")
+
+            if status == "done":
+                st.markdown("**הצוות: לאשר שבוצע כראוי?**")
+                note = st.text_input("הערה (לפתיחה מחדש / לטיקט המשך)", key=f"note{t['id']}")
+                a1, a2, a3, a4 = st.columns(4)
+                if a1.button("✅ אשר", key=f"appr{t['id']}", type="primary"):
+                    tickets.set_status(t["id"], "approved", note); st.rerun()
+                if a2.button("↩︎ פתח מחדש", key=f"reopen{t['id']}"):
+                    tickets.set_status(t["id"], "open", note); st.rerun()
+                if a3.button("➕ טיקט המשך", key=f"follow{t['id']}"):
+                    nid = tickets.create_ticket(
+                        t["type"], f"המשך: {t['title'] or ''}".strip(),
+                        note.strip() or "(ראו טיקט מקור)", parent_id=t["id"])
+                    st.success(f"נפתח טיקט המשך #{nid} (מקושר ל-#{t['id']})"); st.rerun()
+                if a4.button("מחק", key=f"del{t['id']}"):
+                    tickets.delete_ticket(t["id"]); st.rerun()
             else:
-                if bc1.button("סמן כבוצע", key=f"done{t['id']}"):
-                    tickets.set_status(t["id"], "done"); st.rerun()
-            if bc2.button("מחק", key=f"del{t['id']}"):
-                tickets.delete_ticket(t["id"]); st.rerun()
+                b1, b2, _ = st.columns([1, 1, 2])
+                if status == "approved":
+                    if b1.button("↩︎ פתח מחדש", key=f"reopen{t['id']}"):
+                        tickets.set_status(t["id"], "open"); st.rerun()
+                else:
+                    b1.caption("ממתין לפיתוח")
+                if b2.button("מחק", key=f"del{t['id']}"):
+                    tickets.delete_ticket(t["id"]); st.rerun()
 
 # Available Claude models (id -> Hebrew label). Shared by both apps via DB.
 MODELS = {

@@ -24,14 +24,15 @@ TYPE_HE = {
 }
 
 
-def create_ticket(ttype, title, body, images=None):
-    """images: list of (filename, bytes). Returns the new ticket id."""
+def create_ticket(ttype, title, body, images=None, parent_id=None):
+    """images: list of (filename, bytes). parent_id links a follow-up to its
+    original ticket. Returns the new ticket id."""
     db.init_db()
     conn = db.get_conn()
     cur = conn.execute(
-        "INSERT INTO tickets (type, title, body, images, status) "
-        "VALUES (?,?,?,?::jsonb,'open') RETURNING id",
-        (ttype, title, body, "[]"),
+        "INSERT INTO tickets (type, title, body, images, status, parent_id) "
+        "VALUES (?,?,?,?::jsonb,'open',?) RETURNING id",
+        (ttype, title, body, "[]", parent_id),
     )
     tid = cur.fetchone()[0]
     conn.commit()
@@ -71,9 +72,15 @@ def get_ticket(tid):
     return dict(row) if row else None
 
 
-def set_status(tid, status):
+def set_status(tid, status, note=None):
+    """Set status; if a note is given, append it to the ticket's notes log."""
     conn = db.get_conn()
-    conn.execute("UPDATE tickets SET status=? WHERE id=?", (status, tid))
+    if note and note.strip():
+        conn.execute(
+            "UPDATE tickets SET status=?, notes = COALESCE(notes || E'\\n', '') || ? WHERE id=?",
+            (status, note.strip(), tid))
+    else:
+        conn.execute("UPDATE tickets SET status=? WHERE id=?", (status, tid))
     conn.commit()
     conn.close()
 
@@ -123,15 +130,25 @@ def _cli():
         print(f"# Ticket #{t['id']}  ({t['status']})")
         print(f"Type:    {TYPE_HE.get(t['type'], t['type'])}")
         print(f"Title:   {t['title']}")
+        if t.get("parent_id"):
+            print(f"Follow-up of: #{t['parent_id']}")
         print(f"Created: {t['created_at']}")
         print(f"\n{t['body']}\n")
+        if t.get("notes"):
+            print(f"Notes (team):\n{t['notes']}\n")
         imgs = image_paths(t)
         if imgs:
             print("Images:")
             for p in imgs:
                 print(f"  {p}")
         return
-    print("usage: tickets.py [list [status] | show <id>]")
+    # dev marks a ticket done (pending team approval); approve = team verified
+    if args[0] in ("done", "approve", "reopen") and len(args) > 1:
+        status = {"done": "done", "approve": "approved", "reopen": "open"}[args[0]]
+        set_status(int(args[1]), status)
+        print(f"#{args[1]} -> {status}")
+        return
+    print("usage: tickets.py [list [status] | show <id> | done <id> | approve <id> | reopen <id>]")
 
 
 if __name__ == "__main__":

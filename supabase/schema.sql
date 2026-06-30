@@ -85,7 +85,9 @@ create table if not exists tickets (
   title      text,
   body       text,
   images     jsonb,
-  status     text default 'open',
+  status     text default 'open',   -- open | done (pending approval) | approved
+  notes      text,                  -- team verification / rejection notes
+  parent_id  integer,               -- links a follow-up to its original ticket
   created_at timestamptz default now()
 );
 
