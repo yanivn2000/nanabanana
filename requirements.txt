@@ -3,3 +3,4 @@ requests>=2.32
 folium>=0.17
 streamlit-folium>=0.22
 anthropic>=0.69
+psycopg2-binary>=2.9
