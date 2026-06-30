@@ -61,6 +61,11 @@ export function TripView({ tripId }: { tripId: string }) {
   const tripHotels = hotels.filter((h) => h.tripId === tripId);
   // City for attractions/API: English destination, or derived from a linked hotel.
   const city = trip?.city || tripHotels[0]?.city;
+  // Can build once we know WHERE: a destination (preferences) or a located hotel
+  // (hotels mode) — the API resolves the area from the hotel's coordinates even
+  // when the geocoder returned no city name.
+  const hotelLocated = tripHotels.some((h) => h.lat != null && h.lng != null);
+  const canBuild = !!trip?.city || !!trip?.destinationId || hotelLocated;
   // City for display: Hebrew (hotel city from geocode is already Hebrew).
   const cityHe = trip?.cityHe || tripHotels[0]?.city || trip?.city;
 
@@ -244,7 +249,7 @@ export function TripView({ tripId }: { tripId: string }) {
           {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button onClick={generate} disabled={!!busy || (!city)}
+          <button onClick={generate} disabled={!!busy || !canBuild}
             className="flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-5 py-2.5 text-[14px] font-medium text-white disabled:opacity-50">
             {busy === "generate" ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
             {busy === "generate" ? "בונה לו\"ז…" : itinerary ? "בנה מחדש" : "בנה לו\"ז עם AI"}
@@ -282,8 +287,8 @@ export function TripView({ tripId }: { tripId: string }) {
           </div>
         )}
 
-        {!city && trip?.mode === "hotels" && (
-          <p className="mt-2 text-[12px] text-[var(--text-3)]">הוסיפו מלון כדי לקבוע את אזור הטיול</p>
+        {!canBuild && trip?.mode === "hotels" && (
+          <p className="mt-2 text-[12px] text-[var(--accent-ink)]">↓ הוסיפו מלון (למטה) כדי לקבוע את אזור הטיול — ואז אפשר לבנות לו״ז</p>
         )}
       </header>
 
