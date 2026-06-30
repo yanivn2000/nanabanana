@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const UA = "NanaBanana/0.1 (trip planner; yaniv@eos-online.com)";
+const UA = "Yalle/0.1 (trip planner; yaniv@eos-online.com)";
 
 type GeoHit = {
   lat: number; lng: number; label: string; city: string; country: string;

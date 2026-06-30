@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listDestinations } from "@/lib/db";
 import { MapPin, ArrowLeft, Plus, Sparkles, Compass } from "lucide-react";
+import { YalleMark } from "@/components/YalleMark";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +16,8 @@ export default async function Home() {
           <p className="text-sm text-[var(--text-2)]">ערב טוב, יניב 👋</p>
           <h1 className="mt-0.5 text-[26px] font-bold leading-tight lg:text-[34px]">לאן טסים?</h1>
         </div>
-        <div className="grid size-11 place-items-center rounded-full bg-[var(--brand-soft)] text-xl lg:hidden">
-          🍌
+        <div className="lg:hidden">
+          <YalleMark size={38} />
         </div>
       </header>
 

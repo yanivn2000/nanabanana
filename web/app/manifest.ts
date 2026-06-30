@@ -2,13 +2,13 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "NanaBanana · מתכננים טיול",
-    short_name: "NanaBanana",
-    description: "מתכננים את הטיול המשפחתי המושלם — בעברית.",
+    name: "Yalle · תבנה לי טיול",
+    short_name: "Yalle",
+    description: "תבנה לי טיול — האפליקציה שבונה את הטיול המשפחתי שלכם, בעברית.",
     start_url: "/",
     display: "standalone",
-    background_color: "#f7f6f2",
-    theme_color: "#1d9e75",
+    background_color: "#faf6ee",
+    theme_color: "#f4685e",
     lang: "he",
     dir: "rtl",
     icons: [

@@ -11,15 +11,15 @@ const assistant = Assistant({
 });
 
 export const metadata: Metadata = {
-  title: "NanaBanana · מתכננים טיול",
+  title: "Yalle · תבנה לי טיול",
   description:
-    "האפליקציה שבונה לכם את הטיול המשפחתי המושלם — בעברית, מותאם למשפחה שלכם.",
+    "תבנה לי טיול — האפליקציה שבונה לכם את הטיול המשפחתי המושלם, בעברית, מותאם למשפחה שלכם.",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, statusBarStyle: "default", title: "NanaBanana" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Yalle" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1d9e75",
+  themeColor: "#f4685e",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

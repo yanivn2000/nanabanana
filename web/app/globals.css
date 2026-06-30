@@ -1,47 +1,51 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #faf8f3;
+  /* Yalle palette — cream canvas, navy ink, coral hero accent */
+  --bg: #faf6ee;
   --surface: #ffffff;
-  --surface-2: #f1ede4;
-  --text: #1a1815;
-  --text-2: #6b6459;
-  --text-3: #9c9487;
-  --border: rgba(26, 24, 21, 0.10);
-  /* editorial accent (terracotta) */
-  --accent: #c2552e;
-  --accent-ink: #97391b;
-  --accent-soft: #f5e7df;
-  /* kept green for positive/nav cues */
-  --brand: #1d6e56;
-  --brand-ink: #0f6e56;
-  --brand-soft: #e3efe9;
-  --amber: #ba7517;
-  --amber-soft: #faeeda;
-  --blue: #185fa5;
-  --blue-soft: #e6f1fb;
+  --surface-2: #f2ece0;
+  --text: #16263f;
+  --text-2: #5a6475;
+  --text-3: #9aa1ad;
+  --border: rgba(22, 38, 63, 0.10);
+  /* coral — primary accent */
+  --accent: #f4685e;
+  --accent-ink: #cb4438;
+  --accent-soft: #fce4e1;
+  /* teal — secondary accent / nav cues */
+  --brand: #1fa8a0;
+  --brand-ink: #137e77;
+  --brand-soft: #ddf0ee;
+  /* warm yellow — sparing highlights + warnings */
+  --amber: #c9780a;
+  --amber-soft: #fbecd2;
+  --blue: #1f7a90;
+  --blue-soft: #e3f1f3;
   --radius: 14px;
   --radius-sm: 10px;
-  --shadow: 0 1px 2px rgba(40,30,20,0.04), 0 10px 30px rgba(40,30,20,0.07);
+  --shadow: 0 1px 2px rgba(22,38,63,0.04), 0 10px 30px rgba(22,38,63,0.07);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #15120e;
-    --surface: #211e18;
-    --surface-2: #2b271f;
-    --text: #f3efe6;
-    --text-2: #a8a193;
-    --text-3: #6f6a5e;
-    --border: rgba(255, 248, 235, 0.10);
-    --accent: #e0794f;
-    --accent-ink: #f0a986;
-    --accent-soft: #38231a;
-    --brand: #5dcaa5;
-    --brand-ink: #9fe1cb;
-    --brand-soft: #14302a;
-    --amber-soft: #2e2410;
-    --blue-soft: #0c2742;
+    --bg: #111d33;
+    --surface: #18253f;
+    --surface-2: #20304d;
+    --text: #f3f1ea;
+    --text-2: #9aa3b2;
+    --text-3: #6b7484;
+    --border: rgba(230, 238, 250, 0.12);
+    --accent: #f4685e;
+    --accent-ink: #f59288;
+    --accent-soft: #3a201d;
+    --brand: #2bb6ad;
+    --brand-ink: #7fd6cf;
+    --brand-soft: #123330;
+    --amber: #e8a33b;
+    --amber-soft: #2f2611;
+    --blue: #59b6c8;
+    --blue-soft: #0e2a33;
     --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 10px 30px rgba(0,0,0,0.5);
   }
 }
