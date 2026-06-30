@@ -3,8 +3,8 @@ import { ExploreList } from "./ExploreList";
 
 export const dynamic = "force-dynamic";
 
-export default function ExplorePage() {
-  const destinations = listDestinations();
+export default async function ExplorePage() {
+  const destinations = await listDestinations();
   return (
     <main className="mx-auto w-full max-w-[440px] px-5 pb-28 pt-8 lg:max-w-5xl lg:px-8 lg:pb-12">
       <header className="rise mb-5">

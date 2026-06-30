@@ -80,7 +80,7 @@ function attractionsBlock(attractions: Attraction[]): string {
 
 async function callClaude(userText: string): Promise<Itinerary> {
   const resp = await client().messages.create({
-    model: getModel(),
+    model: await getModel(),
     max_tokens: 8000,
     system: SYSTEM,
     thinking: { type: "adaptive" },

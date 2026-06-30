@@ -10,8 +10,8 @@ export default async function DestinationPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const dest = getDestination(Number(id));
+  const dest = await getDestination(Number(id));
   if (!dest) notFound();
-  const attractions = attractionsForMap(dest.id, 200);
+  const attractions = await attractionsForMap(dest.id, 200);
   return <DestinationView dest={dest} attractions={attractions} />;
 }

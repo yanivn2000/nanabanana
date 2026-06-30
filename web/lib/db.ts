@@ -1,19 +1,26 @@
-import Database from "better-sqlite3";
-import path from "node:path";
-import fs from "node:fs";
+import { Pool } from "pg";
 
-// The same SQLite file the Streamlit data tool fills. Override with NANABANANA_DB.
-const DB_PATH =
-  process.env.NANABANANA_DB ||
-  path.join(process.cwd(), "..", "data", "nanabanana.db");
+// Postgres (Supabase) connection. Reads DATABASE_URL from the environment.
+// A single pool is reused across hot-reloads / serverless invocations.
+const g = globalThis as unknown as { _nbPool?: Pool };
 
-let _db: Database.Database | null = null;
+function pool(): Pool | null {
+  if (!process.env.DATABASE_URL) return null; // graceful: app still builds/runs
+  if (!g._nbPool) {
+    g._nbPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }, // Supabase pooler uses TLS
+      max: 5,
+    });
+  }
+  return g._nbPool;
+}
 
-function db(): Database.Database | null {
-  if (_db) return _db;
-  if (!fs.existsSync(DB_PATH)) return null; // graceful: app still builds/runs
-  _db = new Database(DB_PATH, { readonly: true, fileMustExist: true });
-  return _db;
+async function query<T>(text: string, params: unknown[] = []): Promise<T[]> {
+  const p = pool();
+  if (!p) return [];
+  const res = await p.query(text, params);
+  return res.rows as T[];
 }
 
 export type Attraction = {
@@ -53,86 +60,65 @@ export type Destination = {
   attraction_count: number;
 };
 
-export function listDestinations(): Destination[] {
-  const d = db();
-  if (!d) return [];
-  return d
-    .prepare(
-      `SELECT dest.id, dest.city, dest.country, dest.city_he, dest.country_he,
-              dest.lat, dest.lng, count(a.id) AS attraction_count
-       FROM destinations dest
-       LEFT JOIN attractions a ON a.destination_id = dest.id
-       GROUP BY dest.id ORDER BY attraction_count DESC`
-    )
-    .all() as Destination[];
-}
+const DEST_SELECT = `SELECT dest.id, dest.city, dest.country, dest.city_he,
+         dest.country_he, dest.lat, dest.lng, count(a.id)::int AS attraction_count
+  FROM destinations dest
+  LEFT JOIN attractions a ON a.destination_id = dest.id`;
 
-export function topAttractions(destinationId: number, limit = 40): Attraction[] {
-  const d = db();
-  if (!d) return [];
-  // Prefer AI-kept, high-score attractions; fall back to any if none enriched yet.
-  const rows = d
-    .prepare(
-      `SELECT ${ATTR_COLS}
-       FROM attractions
-       WHERE destination_id = ?
-         AND (quality_keep = 1 OR quality_keep IS NULL)
-         AND (is_duplicate IS NULL OR is_duplicate = 0)
-       ORDER BY (quality_keep = 1) DESC,
-                COALESCE(family_score, 0) DESC, name_en
-       LIMIT ?`
-    )
-    .all(destinationId, limit) as Attraction[];
-  return rows;
-}
-
-export function getDestination(id: number): Destination | null {
-  const d = db();
-  if (!d) return null;
-  return (
-    (d
-      .prepare(
-        `SELECT dest.id, dest.city, dest.country, dest.city_he, dest.country_he,
-                dest.lat, dest.lng, count(a.id) AS attraction_count
-         FROM destinations dest
-         LEFT JOIN attractions a ON a.destination_id = dest.id
-         WHERE dest.id = ? GROUP BY dest.id`
-      )
-      .get(id) as Destination | undefined) ?? null
+export async function listDestinations(): Promise<Destination[]> {
+  return query<Destination>(
+    `${DEST_SELECT} GROUP BY dest.id ORDER BY attraction_count DESC`
   );
 }
 
-export function attractionsForMap(destinationId: number, limit = 200): Attraction[] {
-  const d = db();
-  if (!d) return [];
-  return d
-    .prepare(
-      `SELECT ${ATTR_COLS}
+export async function getDestination(id: number): Promise<Destination | null> {
+  const rows = await query<Destination>(
+    `${DEST_SELECT} WHERE dest.id = $1 GROUP BY dest.id`, [id]
+  );
+  return rows[0] ?? null;
+}
+
+export async function topAttractions(destinationId: number, limit = 40): Promise<Attraction[]> {
+  // Prefer AI-kept, high-score attractions; fall back to any if none enriched yet.
+  return query<Attraction>(
+    `SELECT ${ATTR_COLS}
        FROM attractions
-       WHERE destination_id = ? AND lat IS NOT NULL AND lng IS NOT NULL
+       WHERE destination_id = $1
+         AND (quality_keep = 1 OR quality_keep IS NULL)
+         AND (is_duplicate IS NULL OR is_duplicate = 0)
+       ORDER BY COALESCE(quality_keep = 1, false) DESC,
+                COALESCE(family_score, 0) DESC, name_en
+       LIMIT $2`,
+    [destinationId, limit]
+  );
+}
+
+export async function attractionsForMap(destinationId: number, limit = 200): Promise<Attraction[]> {
+  return query<Attraction>(
+    `SELECT ${ATTR_COLS}
+       FROM attractions
+       WHERE destination_id = $1 AND lat IS NOT NULL AND lng IS NOT NULL
          AND (quality_keep = 1 OR quality_keep IS NULL)
          AND (is_duplicate IS NULL OR is_duplicate = 0)
        ORDER BY COALESCE(family_score, 0) DESC, name_en
-       LIMIT ?`
-    )
-    .all(destinationId, limit) as Attraction[];
+       LIMIT $2`,
+    [destinationId, limit]
+  );
 }
 
 // Shared AI model setting (written by the Streamlit admin Settings tab).
-export function getModel(): string {
+export async function getModel(): Promise<string> {
   const fallback = process.env.NANABANANA_MODEL || "claude-opus-4-8";
-  const d = db();
-  if (!d) return fallback;
   try {
-    const row = d.prepare("SELECT value FROM settings WHERE key='model'").get() as
-      | { value: string }
-      | undefined;
-    return row?.value || fallback;
+    const rows = await query<{ value: string }>(
+      "SELECT value FROM settings WHERE key='model'"
+    );
+    return rows[0]?.value || fallback;
   } catch {
     return fallback;
   }
 }
 
 export function dataReady(): boolean {
-  return db() !== null;
+  return pool() !== null;
 }

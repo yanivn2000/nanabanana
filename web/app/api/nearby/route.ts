@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "missing lat/lng" }, { status: 400 });
   }
 
-  const dests = listDestinations();
+  const dests = await listDestinations();
   if (dests.length === 0) {
     return NextResponse.json({ error: "no destinations" }, { status: 404 });
   }
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     .map((d) => ({ d, km: haversineKm(lat, lng, d.lat, d.lng) }))
     .sort((a, b) => a.km - b.km)[0];
 
-  const attractions = attractionsForMap(nearestDest.d.id, 200)
+  const attractions = (await attractionsForMap(nearestDest.d.id, 200))
     .filter((a) => a.lat && a.lng)
     .map((a) => ({
       ...a,

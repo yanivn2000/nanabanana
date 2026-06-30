@@ -4,8 +4,8 @@ import { MapPin, ArrowLeft, Plus, Sparkles, Compass } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default function Home() {
-  const destinations = listDestinations();
+export default async function Home() {
+  const destinations = await listDestinations();
 
   return (
     <main className="mx-auto w-full max-w-[440px] px-5 pb-24 pt-8 lg:max-w-6xl lg:px-8 lg:pb-12">

@@ -16,8 +16,8 @@ export const dynamic = "force-dynamic";
 
 // Match by city name; otherwise (e.g. a hotel in a village we didn't ingest)
 // pick the nearest ingested destination by coordinates.
-function resolveDestination(city?: string, lat?: number, lng?: number) {
-  const dests = listDestinations();
+async function resolveDestination(city?: string, lat?: number, lng?: number) {
+  const dests = await listDestinations();
   if (dests.length === 0) return null;
   if (city) {
     const match = dests.find((d) => d.city.toLowerCase() === city.toLowerCase());
@@ -90,11 +90,11 @@ export async function POST(req: NextRequest) {
   }
 
   const near = body.hotels?.[0];
-  const dest = resolveDestination(body.city, near?.lat, near?.lng);
+  const dest = await resolveDestination(body.city, near?.lat, near?.lng);
   if (!dest) {
     return NextResponse.json({ error: "no destinations in DB" }, { status: 404 });
   }
-  const attractions = topAttractions(dest.id, 50);
+  const attractions = await topAttractions(dest.id, 50);
 
   // Attach DB details to an existing itinerary — no AI, so it works without
   // credit and upgrades trips created before details existed.
@@ -106,13 +106,15 @@ export async function POST(req: NextRequest) {
   // Multi-city trip: one continuous itinerary across ordered segments, each
   // built from its own city's attraction pool.
   if (body.mode !== "revise" && body.segments && body.segments.length > 1) {
-    const segs = body.segments
-      .map((s) => {
-        const d = resolveDestination(s.city);
+    const resolved = await Promise.all(
+      body.segments.map(async (s) => {
+        const d = await resolveDestination(s.city);
         return d ? { dest: d as Destination, days: s.days, hotels: s.hotels } : null;
-      })
-      .filter((x): x is { dest: Destination; days: number; hotels: TripHotel[] | undefined } => x !== null);
-    const segAttrs = segs.map((x) => ({ ...x, attractions: topAttractions(x.dest.id, 50) }));
+      }));
+    const segs = resolved.filter(
+      (x): x is { dest: Destination; days: number; hotels: TripHotel[] | undefined } => x !== null);
+    const segAttrs = await Promise.all(
+      segs.map(async (x) => ({ ...x, attractions: await topAttractions(x.dest.id, 50) })));
     const allAttractions = segAttrs.flatMap((x) => x.attractions);
     const heuristic = () => attachDetails(
       buildMultiHeuristicItinerary(segAttrs.map((x) => ({
