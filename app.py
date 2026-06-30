@@ -250,8 +250,8 @@ with tab_ingest:
     # Per-city coverage — surfaces exactly which cities still need images.
     city_rows = _iconn.execute(
         "SELECT d.id, COALESCE(d.city_he, d.city) AS city, COUNT(*) AS total, "
-        "SUM(a.image_url IS NOT NULL) AS with_img, "
-        f"SUM({pipeline_images._PENDING_WHERE}) AS pending "
+        "SUM((a.image_url IS NOT NULL)::int) AS with_img, "
+        f"SUM(({pipeline_images._PENDING_WHERE})::int) AS pending "
         "FROM attractions a JOIN destinations d ON a.destination_id=d.id "
         "GROUP BY d.id ORDER BY pending DESC, total DESC").fetchall()
     _iconn.close()
