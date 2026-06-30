@@ -145,6 +145,11 @@ export type Trip = {
   month: number;          // 1-12 — when the trip is (for seasonal relevance)
   segments?: Segment[];   // present (length ≥ 2) for multi-city trips
   profile?: FamilyProfile; // per-trip travelers — overrides the global profile
+  packing?: {              // per-trip packing list state (#18)
+    checked: string[];
+    removed: string[];
+    custom: { id: string; label: string }[];
+  };
   itinerary?: Itinerary;
   createdAt: number;
 };

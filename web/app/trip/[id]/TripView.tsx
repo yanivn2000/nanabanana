@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, Pencil, ChevronUp, ChevronDown,
-  ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon, Users,
+  ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon, Users, Luggage,
 } from "lucide-react";
 import { googleMapsUrl } from "@/lib/geo";
 import { bigImage, segColor } from "@/lib/labels";
@@ -14,6 +14,7 @@ import type { Itinerary, Stop } from "@/lib/trip-types";
 import type { Attraction } from "@/lib/db";
 import { useTrips, useProfile, useHotels, profileText, profileSummary, MONTHS_HE } from "@/lib/store";
 import { ProfileEditor } from "@/components/ProfileEditor";
+import { PackingList } from "@/components/PackingList";
 import { Hotels } from "@/app/trips/Hotels";
 import { MapClient } from "@/components/MapClient";
 import { AskBar } from "./AskBar";
@@ -46,6 +47,7 @@ export function TripView({ tripId }: { tripId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editTravelers, setEditTravelers] = useState(false);
+  const [showPacking, setShowPacking] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [activeDay, setActiveDay] = useState<number | null>(null);
   const [activeSegment, setActiveSegment] = useState<number | null>(null);
@@ -291,6 +293,25 @@ export function TripView({ tripId }: { tripId: string }) {
           <div className="px-5 pt-5 lg:px-0 lg:pt-0">
             <Hotels tripId={tripId} segments={trip?.segments}
               onFocus={(h) => h.lat != null && h.lng != null && setFocus({ lat: h.lat, lng: h.lng, n: Date.now() })} />
+          </div>
+
+          {/* #18 — packing list */}
+          <div className="mt-4 px-5 lg:px-0">
+            <button onClick={() => setShowPacking((v) => !v)}
+              className="flex w-full items-center justify-between rounded-[var(--radius-card)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow)]">
+              <span className="flex items-center gap-2 text-[14px] font-medium">
+                <Luggage size={17} className="text-[var(--brand-ink)]" /> מה לארוז
+              </span>
+              {showPacking ? <ChevronUp size={17} className="text-[var(--text-3)]" /> : <ChevronDown size={17} className="text-[var(--text-3)]" />}
+            </button>
+            {showPacking && (
+              <div className="mt-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
+                <PackingList
+                  profile={tripProfile} month={trip?.month} days={trip?.days ?? 4} country={trip?.country}
+                  value={trip?.packing}
+                  onChange={(packing) => update(tripId, { packing })} />
+              </div>
+            )}
           </div>
           {(stopPoints.length > 0 || hotelPoints.length > 0) && (
             <div className="mt-5 hidden lg:block">
