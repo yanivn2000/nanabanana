@@ -291,7 +291,7 @@ export function TripView({ tripId }: { tripId: string }) {
         {/* aside: hotels + map of the trip (map on desktop only) */}
         <aside className="lg:order-2 lg:w-[360px] lg:shrink-0 lg:sticky lg:top-[73px]">
           <div className="px-5 pt-5 lg:px-0 lg:pt-0">
-            <Hotels tripId={tripId} segments={trip?.segments}
+            <Hotels tripId={tripId} segments={trip?.segments} countryHint={trip?.country}
               onFocus={(h) => h.lat != null && h.lng != null && setFocus({ lat: h.lat, lng: h.lng, n: Date.now() })} />
           </div>
 

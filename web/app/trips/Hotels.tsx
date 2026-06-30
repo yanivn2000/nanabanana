@@ -5,8 +5,8 @@ import { useHotels, uid, type Hotel, type Segment } from "@/lib/store";
 import { BedDouble, Plus, Trash2, MapPin, Loader2, X, Link2 } from "lucide-react";
 
 export function Hotels({
-  tripId, onFocus, segments,
-}: { tripId: string; onFocus?: (h: Hotel) => void; segments?: Segment[] }) {
+  tripId, onFocus, segments, countryHint,
+}: { tripId: string; onFocus?: (h: Hotel) => void; segments?: Segment[]; countryHint?: string }) {
   const { hotels, add, remove, link, assign, loaded } = useHotels();
   const tripHotels = hotels.filter((h) => h.tripId === tripId);
   const unassigned = hotels.filter((h) => !h.tripId);
@@ -42,7 +42,8 @@ export function Hotels({
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+      const cc = countryHint ? `&cc=${encodeURIComponent(countryHint)}` : "";
+      const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}${cc}`);
       const data = res.ok ? await res.json().catch(() => null) : null;
       if (!data) { setErr("החיפוש נכשל זמנית — נסו שוב בעוד רגע"); return; }
       if (!data.found) { setErr("לא מצאנו את הכתובת — נסו לדייק (עיר, רחוב)"); return; }
