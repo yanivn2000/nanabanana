@@ -5,14 +5,15 @@ import Link from "next/link";
 import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, Pencil, ChevronUp, ChevronDown,
-  ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon,
+  ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon, Users,
 } from "lucide-react";
 import { googleMapsUrl } from "@/lib/geo";
 import { bigImage, segColor } from "@/lib/labels";
 import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
 import type { Attraction } from "@/lib/db";
-import { useTrips, useProfile, useHotels, profileText, MONTHS_HE } from "@/lib/store";
+import { useTrips, useProfile, useHotels, profileText, profileSummary, MONTHS_HE } from "@/lib/store";
+import { ProfileEditor } from "@/components/ProfileEditor";
 import { Hotels } from "@/app/trips/Hotels";
 import { MapClient } from "@/components/MapClient";
 import { AskBar } from "./AskBar";
@@ -39,11 +40,12 @@ function StopIcon({ kind }: { kind: Stop["kind"] }) {
 
 export function TripView({ tripId }: { tripId: string }) {
   const { trips, update, loaded } = useTrips();
-  const [profile] = useProfile();
+  const [globalProfile] = useProfile();
   const { hotels } = useHotels();
   const [busy, setBusy] = useState<null | "generate" | "revise">(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [editTravelers, setEditTravelers] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [activeDay, setActiveDay] = useState<number | null>(null);
   const [activeSegment, setActiveSegment] = useState<number | null>(null);
@@ -52,6 +54,8 @@ export function TripView({ tripId }: { tripId: string }) {
 
   const trip = trips.find((t) => t.id === tripId);
   const itinerary = trip?.itinerary ?? null;
+  // Per-trip travelers override the global profile (different group per trip).
+  const tripProfile = trip?.profile ?? globalProfile;
   const tripHotels = hotels.filter((h) => h.tripId === tripId);
   // City for attractions/API: English destination, or derived from a linked hotel.
   const city = trip?.city || tripHotels[0]?.city;
@@ -130,7 +134,7 @@ export function TripView({ tripId }: { tripId: string }) {
       const res = await fetch("/api/itinerary", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ city, profileText: profileText(profile), ...payload }),
+        body: JSON.stringify({ city, profileText: profileText(tripProfile), ...payload }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) {
@@ -251,7 +255,31 @@ export function TripView({ tripId }: { tripId: string }) {
               <Pencil size={14} /> {editing ? "סיום עריכה" : "עריכה ידנית"}
             </button>
           )}
+          <button onClick={() => setEditTravelers((v) => !v)}
+            className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-4 py-2.5 text-[14px] font-medium"
+            style={{ background: editTravelers ? "var(--brand-soft)" : "transparent",
+                     color: editTravelers ? "var(--brand-ink)" : "var(--text-2)" }}>
+            <Users size={14} /> מי נוסע
+          </button>
         </div>
+
+        <p className="mt-2 text-[12px] text-[var(--text-3)]">
+          נוסעים: {profileSummary(tripProfile)}{trip?.profile ? "" : " · ברירת מחדל מהפרופיל הכללי"}
+        </p>
+
+        {editTravelers && (
+          <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-4 lg:max-w-2xl">
+            <p className="mb-3 text-[13px] text-[var(--text-2)]">
+              מי נוסע בטיול <span className="font-medium">הזה</span>? משפיע על מה שה-AI יבנה (טיול עם הילדים שונה מטיול זוגי) — לא משנה את הפרופיל הכללי.
+            </p>
+            <ProfileEditor value={tripProfile} onChange={(p) => update(tripId, { profile: p })} />
+            {trip?.profile && (
+              <button onClick={() => update(tripId, { profile: undefined })}
+                className="mt-4 text-[12px] text-[var(--accent-ink)] underline">אפס לפרופיל הכללי</button>
+            )}
+          </div>
+        )}
+
         {!city && trip?.mode === "hotels" && (
           <p className="mt-2 text-[12px] text-[var(--text-3)]">הוסיפו מלון כדי לקבוע את אזור הטיול</p>
         )}

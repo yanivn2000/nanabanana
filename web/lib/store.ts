@@ -140,6 +140,7 @@ export type Trip = {
   days: number;
   month: number;          // 1-12 — when the trip is (for seasonal relevance)
   segments?: Segment[];   // present (length ≥ 2) for multi-city trips
+  profile?: FamilyProfile; // per-trip travelers — overrides the global profile
   itinerary?: Itinerary;
   createdAt: number;
 };
