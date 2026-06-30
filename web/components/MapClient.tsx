@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { Attraction } from "@/lib/db";
-import type { MapHotel } from "./AttractionsMap";
+import type { MapHotel, MapBounds } from "./AttractionsMap";
 
 const AttractionsMap = dynamic(() => import("./AttractionsMap"), {
   ssr: false,
@@ -22,6 +22,8 @@ export function MapClient(props: {
   focus?: { lat: number; lng: number; n: number } | null;
   segIdx?: number[];
   colorBySegment?: boolean;
+  userPos?: [number, number] | null;
+  onBounds?: (b: MapBounds) => void;
 }) {
   return <AttractionsMap {...props} />;
 }

@@ -37,6 +37,9 @@ export function DestinationView({
   });
   const toggleFlag = (k: keyof typeof flags) =>
     setFlags((f) => ({ ...f, [k]: !f[k] }));
+  // #13 — narrow the list to what's currently visible on the map.
+  const [mapOnly, setMapOnly] = useState(false);
+  const [bounds, setBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
 
   const cats = useMemo(
     () => Array.from(new Set(attractions.map((a) => a.category))),
@@ -63,6 +66,15 @@ export function DestinationView({
     () => attractions.filter((a) => a.must_see === 1 && a.image_url).slice(0, 12),
     [attractions]
   );
+
+  // The list shows the filtered set, optionally narrowed to the map viewport.
+  const listItems = useMemo(() => {
+    if (!mapOnly || !bounds) return filtered;
+    return filtered.filter((a) =>
+      a.lat != null && a.lng != null &&
+      a.lat <= bounds.north && a.lat >= bounds.south &&
+      a.lng <= bounds.east && a.lng >= bounds.west);
+  }, [filtered, mapOnly, bounds]);
 
   return (
     <main className="mx-auto w-full max-w-[440px] pb-28 lg:max-w-none lg:pb-0">
@@ -107,7 +119,7 @@ export function DestinationView({
       <div className="lg:flex lg:items-start">
         {/* map */}
         <div className="sticky top-0 z-10 h-[240px] w-full overflow-hidden border-y border-[var(--border)] lg:order-2 lg:h-[calc(100dvh-57px)] lg:top-[57px] lg:flex-1 lg:border-y-0 lg:border-s">
-          <MapClient attractions={filtered} center={[dest.lat, dest.lng]} selected={selected} />
+          <MapClient attractions={filtered} center={[dest.lat, dest.lng]} selected={selected} onBounds={setBounds} />
         </div>
 
         {/* list */}
@@ -159,13 +171,30 @@ export function DestinationView({
                 </button>
               );
             })}
+            <button onClick={() => setMapOnly((v) => !v)}
+              className="rounded-full px-3 py-1.5 text-[12.5px] transition"
+              style={{
+                background: mapOnly ? "var(--brand)" : "var(--surface)",
+                color: mapOnly ? "#fff" : "var(--text-2)",
+                border: `1px solid ${mapOnly ? "var(--brand)" : "var(--border)"}`,
+              }}>
+              📍 רק מה שעל המפה
+            </button>
           </div>
 
+          {mapOnly && (
+            <p className="mb-2 text-[12px] text-[var(--brand-ink)]">
+              מציג {listItems.length} מקומות באזור המפה — הזיזו או הגדילו את המפה לעדכון
+            </p>
+          )}
+
           <div className="flex flex-col">
-            {filtered.length === 0 && (
-              <p className="py-8 text-center text-[14px] text-[var(--text-3)]">אין תוצאות לסינון הזה</p>
+            {listItems.length === 0 && (
+              <p className="py-8 text-center text-[14px] text-[var(--text-3)]">
+                {mapOnly ? "אין מקומות באזור המפה הנוכחי — הקטינו זום או הזיזו" : "אין תוצאות לסינון הזה"}
+              </p>
             )}
-            {filtered.map((a, i) => {
+            {listItems.map((a, i) => {
               const isSel = selected?.id === a.id;
               const cost = a.cost_level != null ? COST_HE[a.cost_level] : null;
               return (

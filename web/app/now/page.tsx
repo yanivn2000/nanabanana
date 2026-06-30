@@ -86,7 +86,7 @@ export default function NowPage() {
           </p>
 
           <div className="rise-1 mb-5 h-[200px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
-            <MapClient attractions={state.items} center={state.pos} selected={null} />
+            <MapClient attractions={state.items} center={state.pos} selected={null} userPos={state.pos} />
           </div>
 
           <div className="flex flex-col gap-2.5">

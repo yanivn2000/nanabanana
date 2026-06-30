@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import type { CircleMarker as LeafletCircleMarker } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -39,16 +39,17 @@ export type MapHotel = { id: string; name: string; lat: number; lng: number };
 // filtering to a single day). Hotels are always included so they stay in view.
 // Skips while a specific marker is selected.
 function FitBounds({
-  attractions, hotels, selected,
-}: { attractions: Attraction[]; hotels: MapHotel[]; selected: Attraction | null }) {
+  attractions, hotels, selected, userPos,
+}: { attractions: Attraction[]; hotels: MapHotel[]; selected: Attraction | null; userPos?: [number, number] | null }) {
   const map = useMap();
-  const sig = [...attractions.map((a) => a.id), ...hotels.map((h) => "h" + h.id)].join(",");
+  const sig = [...attractions.map((a) => a.id), ...hotels.map((h) => "h" + h.id), userPos ? "u" : ""].join(",");
   useEffect(() => {
     if (selected) return;
     const pts = [
       ...attractions.filter((a) => a.lat != null && a.lng != null)
         .map((a) => [a.lat as number, a.lng as number] as [number, number]),
       ...hotels.map((h) => [h.lat, h.lng] as [number, number]),
+      ...(userPos ? [userPos] : []),
     ];
     if (pts.length === 1) map.setView(pts[0], 14);
     else if (pts.length > 1) {
@@ -120,6 +121,35 @@ function AttractionPopup({ a }: { a: Attraction }) {
   );
 }
 
+export type MapBounds = { north: number; south: number; east: number; west: number };
+
+// Reports the visible viewport bounds to the parent on pan/zoom (and on mount),
+// so the list can show only what's currently on the map.
+function BoundsReporter({ onBounds }: { onBounds?: (b: MapBounds) => void }) {
+  const report = (map: L.Map) => {
+    if (!onBounds) return;
+    const b = map.getBounds();
+    onBounds({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() });
+  };
+  const map = useMapEvents({
+    moveend: () => report(map),
+    zoomend: () => report(map),
+  });
+  useEffect(() => { report(map); /* initial */ // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
+function userIcon() {
+  return L.divIcon({
+    className: "user-dot",
+    html: '<div style="width:18px;height:18px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 6px rgba(37,99,235,.18),0 1px 4px rgba(0,0,0,.4)"></div>',
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    popupAnchor: [0, -10],
+  });
+}
+
 export default function AttractionsMap({
   attractions,
   center,
@@ -129,6 +159,8 @@ export default function AttractionsMap({
   focus = null,
   segIdx,
   colorBySegment = false,
+  userPos = null,
+  onBounds,
 }: {
   attractions: Attraction[];
   center: [number, number];
@@ -138,6 +170,8 @@ export default function AttractionsMap({
   focus?: { lat: number; lng: number; n: number } | null;
   segIdx?: number[];
   colorBySegment?: boolean;
+  userPos?: [number, number] | null;
+  onBounds?: (b: MapBounds) => void;
 }) {
   const markers = useRef<Map<number, LeafletCircleMarker>>(new Map());
   const routePts = ordered
@@ -153,8 +187,19 @@ export default function AttractionsMap({
         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
       />
       <Flyer selected={selected} markers={markers} />
-      <FitBounds attractions={attractions} hotels={hotels} selected={selected} />
+      <FitBounds attractions={attractions} hotels={hotels} selected={selected} userPos={userPos} />
       <FlyTo focus={focus} />
+      <BoundsReporter onBounds={onBounds} />
+
+      {userPos && (
+        <Marker position={userPos} icon={userIcon()} zIndexOffset={2000}>
+          <Popup>
+            <div style={{ direction: "rtl", fontFamily: "sans-serif" }}>
+              <strong>📍 כאן אתם</strong>
+            </div>
+          </Popup>
+        </Marker>
+      )}
 
       {hotels.map((h) => (
         <Marker key={"h" + h.id} position={[h.lat, h.lng]} icon={hotelIcon()} zIndexOffset={1000}>
