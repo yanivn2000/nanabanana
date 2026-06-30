@@ -43,6 +43,21 @@ export default async function Home() {
       </Link>
       </div>
 
+      {/* don't know where? get a recommendation */}
+      <Link
+        href="/recommend"
+        className="rise rise-2 mt-3 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)]"
+      >
+        <div className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--accent-soft)] text-[var(--accent-ink)]">
+          <Sparkles size={20} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-medium">לא יודעים לאן?</p>
+          <p className="text-[13px] text-[var(--text-2)]">קבלו המלצת יעד לפי המשפחה והעונה</p>
+        </div>
+        <ArrowLeft size={18} className="text-[var(--text-3)]" />
+      </Link>
+
       {/* on-trip mode */}
       <Link
         href="/now"

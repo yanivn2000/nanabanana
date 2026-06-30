@@ -106,6 +106,35 @@ export async function attractionsForMap(destinationId: number, limit = 200): Pro
   );
 }
 
+// Per-destination "what it offers" summary — feeds the destination recommender.
+export type DestinationSummary = {
+  id: number; city: string; country: string;
+  city_he: string | null; country_he: string | null;
+  total: number; nature: number; museum: number; historic: number;
+  food: number; shopping: number; water_park: number; theme_park: number;
+  zoo: number; must_see: number;
+};
+
+export async function destinationSummaries(): Promise<DestinationSummary[]> {
+  return query<DestinationSummary>(
+    `SELECT d.id, d.city, d.country, d.city_he, d.country_he,
+        count(a.id)::int AS total,
+        count(*) FILTER (WHERE a.category='nature')::int   AS nature,
+        count(*) FILTER (WHERE a.category='museum')::int   AS museum,
+        count(*) FILTER (WHERE a.category='historic')::int AS historic,
+        count(*) FILTER (WHERE a.category='food')::int     AS food,
+        count(*) FILTER (WHERE a.category='shopping')::int AS shopping,
+        count(*) FILTER (WHERE a.subcategory='water_park')::int AS water_park,
+        count(*) FILTER (WHERE a.subcategory='theme_park')::int AS theme_park,
+        count(*) FILTER (WHERE a.subcategory='zoo')::int        AS zoo,
+        count(*) FILTER (WHERE a.must_see=1)::int          AS must_see
+      FROM destinations d JOIN attractions a ON a.destination_id = d.id
+      WHERE (a.quality_keep = 1 OR a.quality_keep IS NULL)
+        AND (a.is_duplicate IS NULL OR a.is_duplicate = 0)
+      GROUP BY d.id ORDER BY total DESC`
+  );
+}
+
 // Shared AI model setting (written by the Streamlit admin Settings tab).
 export async function getModel(): Promise<string> {
   const fallback = process.env.NANABANANA_MODEL || "claude-opus-4-8";

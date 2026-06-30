@@ -1,7 +1,7 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { getModel } from "./db";
-import type { Attraction } from "./db";
+import type { Attraction, DestinationSummary } from "./db";
 import type { Itinerary } from "./trip-types";
 
 export function aiConfigured(): boolean {
@@ -188,4 +188,65 @@ ${profileText ? `\nפרופיל המשפחה: ${profileText}\n` : ""}${dateConte
 אם רלוונטי, בחר אטרקציות חלופיות מהרשימה:
 ${attractionsBlock(attractions)}`;
   return callClaude(userText);
+}
+
+// --- Destination recommender (#7): "I don't know where to go" ---
+const RECO_SCHEMA = {
+  type: "object",
+  properties: {
+    recommendations: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          city: { type: "string" },        // must be one of the provided cities (English)
+          reason: { type: "string" },       // Hebrew — why it fits THIS family
+          highlights: { type: "string" },   // Hebrew — 2-4 keywords
+        },
+        required: ["city", "reason", "highlights"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["recommendations"],
+  additionalProperties: false,
+};
+
+export type DestinationReco = { city: string; reason: string; highlights: string };
+
+function summariesBlock(s: DestinationSummary[]): string {
+  return s
+    .map((d) => JSON.stringify({
+      city: d.city, country: d.country, total: d.total, must_see: d.must_see,
+      museum: d.museum, historic: d.historic, nature: d.nature, food: d.food,
+      shopping: d.shopping, water_park: d.water_park, theme_park: d.theme_park, zoo: d.zoo,
+    }))
+    .join("\n");
+}
+
+export async function recommendDestinations(p: {
+  profileText: string;
+  month?: number;
+  summaries: DestinationSummary[];
+}): Promise<DestinationReco[]> {
+  const userText = `משפחה מתלבטת לאן לטוס — היא יודעת מי נוסע ומה מעדיפים, אבל לא לאן.
+המלץ על 3 יעדים מתוך הרשימה בלבד, מהמתאים ביותר ולמטה.
+פרופיל המשפחה: ${p.profileText}
+${seasonHint(p.month)}
+לכל המלצה: "reason" = משפט-שניים בעברית למה היעד מתאים *למשפחה הזו* (קשר להעדפות, לגילאי הילדים ולעונה); "highlights" = 2-4 מילות מפתח (למשל "מוזיאונים, פארקי מים, היסטוריה"). שדה "city" חייב להיות בדיוק אחד מהשמות (באנגלית) שברשימה.
+היעדים האפשריים (המספרים = כמה אטרקציות מכל סוג במאגר):
+${summariesBlock(p.summaries)}`;
+
+  const resp = await client().messages.create({
+    model: await getModel(),
+    max_tokens: 2000,
+    system: "אתה יועץ טיולים למשפחות ישראליות. ענה בעברית טבעית, התאם להעדפות ולעונה, ואל תמליץ על יעד שאינו ברשימה שסופקה.",
+    thinking: { type: "adaptive" },
+    output_config: { format: { type: "json_schema", schema: RECO_SCHEMA } },
+    messages: [{ role: "user", content: userText }],
+  } as Anthropic.MessageCreateParamsNonStreaming);
+
+  const block = resp.content.find((b) => b.type === "text");
+  if (!block || block.type !== "text") throw new Error("no text block");
+  return (JSON.parse(block.text).recommendations ?? []) as DestinationReco[];
 }
