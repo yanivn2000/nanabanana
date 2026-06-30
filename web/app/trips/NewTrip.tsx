@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Sparkles, BedDouble, MapPin, Loader2, X, Plus, Minus, ChevronUp, ChevronDown,
+  Sparkles, BedDouble, MapPin, Loader2, X, Plus, Minus, ChevronUp, ChevronDown, Users,
 } from "lucide-react";
-import { useTrips, MONTHS_HE, uid, type Segment } from "@/lib/store";
+import { useTrips, useProfile, profileSummary, MONTHS_HE, uid, type Segment, type FamilyProfile } from "@/lib/store";
+import { ProfileEditor } from "@/components/ProfileEditor";
 
 type Dest = { id: number; city: string; country: string; city_he: string | null; country_he: string | null; attraction_count: number };
 
@@ -19,6 +20,10 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
   const [segs, setSegs] = useState<{ destId: number; days: number }[]>([]); // preferences legs
   const [dests, setDests] = useState<Dest[]>([]);
   const [creating, setCreating] = useState(false);
+  const [globalProfile] = useProfile();
+  // null = use the global profile; an object = travelers customized for this trip.
+  const [travelers, setTravelers] = useState<FamilyProfile | null>(null);
+  const [editTravelers, setEditTravelers] = useState(false);
 
   useEffect(() => {
     fetch("/api/destinations")
@@ -62,13 +67,17 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
         city: first?.city, cityHe: first?.cityHe, country: first?.country,
         destinationId: first?.destinationId,
         ...(segments.length > 1 ? { segments } : {}),
+        ...(travelers ? { profile: travelers } : {}),
       });
       router.push(`/trip/${trip.id}`);
       return;
     }
     // hotels mode — single base, destination resolved from the hotels later
     const autoTitle = title.trim() || "הטיול שלי";
-    const trip = create({ title: autoTitle, mode, days, month: month as number });
+    const trip = create({
+      title: autoTitle, mode, days, month: month as number,
+      ...(travelers ? { profile: travelers } : {}),
+    });
     router.push(`/trip/${trip.id}`);
   }
 
@@ -200,6 +209,29 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
             );
           })}
         </div>
+      </div>
+
+      {/* who's traveling — per-trip, defaults from the global profile */}
+      <div className="mb-4">
+        <button onClick={() => setEditTravelers((v) => !v)}
+          className="flex w-full items-center justify-between rounded-lg bg-[var(--surface-2)] px-3 py-2.5 text-right">
+          <span className="flex items-center gap-2 text-[13px] text-[var(--text-2)]">
+            <Users size={15} /> מי נוסע · <span className="font-medium text-[var(--text)]">{profileSummary(travelers ?? globalProfile)}</span>
+          </span>
+          {editTravelers ? <ChevronUp size={16} className="text-[var(--text-3)]" /> : <ChevronDown size={16} className="text-[var(--text-3)]" />}
+        </button>
+        {editTravelers && (
+          <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] p-4">
+            <p className="mb-3 text-[12.5px] text-[var(--text-3)]">
+              ברירת המחדל מהפרופיל הכללי. שינוי כאן חל על הטיול הזה בלבד (טיול זוגי שונה מטיול עם הילדים).
+            </p>
+            <ProfileEditor value={travelers ?? globalProfile} onChange={setTravelers} />
+            {travelers && (
+              <button onClick={() => setTravelers(null)}
+                className="mt-4 text-[12px] text-[var(--accent-ink)] underline">אפס לפרופיל הכללי</button>
+            )}
+          </div>
+        )}
       </div>
 
       <button onClick={go} disabled={!canGo || creating}
