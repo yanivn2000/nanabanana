@@ -242,7 +242,7 @@ export function profileText(p: FamilyProfile): string {
   if (p.interests.length) lines.push("אוהבים: " + p.interests.join(", "));
   if (p.dislikes.length) lines.push("פחות אוהבים: " + p.dislikes.join(", "));
   lines.push(`קצב ${p.pace}`, `תקציב ${p.budget}`,
-    `עד ${p.dailyDriveHours} שעות נסיעה ביום`, `לינה: ${p.lodging}`);
+    `עד ${p.dailyDriveHours} שעות נסיעה לכל כיוון מבסיס הלינה (רדיוס לטיולי-יום)`, `לינה: ${p.lodging}`);
   if (p.accessibility?.length)
     lines.push("נגישות (חובה להתחשב — העדף מקומות נגישים ללא מדרגות מיותרות): " + p.accessibility.join(", "));
   if (p.dietary?.length)

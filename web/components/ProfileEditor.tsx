@@ -129,10 +129,11 @@ export function ProfileEditor({ value: p, onChange: save }: {
       </section>
 
       <section>
-        <div className="mb-2 flex items-center justify-between">
-          <label className="text-[14px] font-medium">מרחק נסיעה ביום</label>
-          <span className="text-[13px] text-[var(--brand-ink)]">{p.dailyDriveHours} שעות</span>
+        <div className="mb-1 flex items-center justify-between">
+          <label className="text-[14px] font-medium">זמן נסיעה לכל כיוון</label>
+          <span className="text-[13px] text-[var(--brand-ink)]">עד {p.dailyDriveHours} שעות</span>
         </div>
+        <p className="mb-2 text-[12px] text-[var(--text-3)]">עד כמה רחוק מהבסיס מוכנים לנסוע לטיול-יום (כיוון אחד)</p>
         <input type="range" min={0.5} max={5} step={0.5} value={p.dailyDriveHours}
           onChange={(e) => save({ ...p, dailyDriveHours: Number(e.target.value) })}
           className="w-full accent-[var(--brand)]" />
