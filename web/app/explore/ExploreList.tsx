@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Search, MapPin, ArrowLeft } from "lucide-react";
 import type { Destination } from "@/lib/db";
+import { regionOf, REGION_ORDER } from "@/lib/labels";
 
 export function ExploreList({ destinations }: { destinations: Destination[] }) {
   const [q, setQ] = useState("");
@@ -12,6 +13,11 @@ export function ExploreList({ destinations }: { destinations: Destination[] }) {
       .toLowerCase()
       .includes(q.toLowerCase())
   );
+
+  // Group by region, in REGION_ORDER, dropping empty regions.
+  const byRegion = REGION_ORDER
+    .map((region) => ({ region, items: filtered.filter((d) => regionOf(d.country) === region) }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <>
@@ -25,27 +31,34 @@ export function ExploreList({ destinations }: { destinations: Destination[] }) {
         />
       </div>
 
-      {filtered.length === 0 ? (
+      {byRegion.length === 0 ? (
         <p className="mt-8 text-center text-sm text-[var(--text-3)]">לא נמצאו יעדים.</p>
       ) : (
-        <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-3 lg:gap-4">
-          {filtered.map((d) => (
-            <Link
-              key={d.id}
-              href={`/destination/${d.id}`}
-              className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)]"
-            >
-              <div className="grid size-11 place-items-center rounded-[var(--radius-sm)] bg-[var(--brand-soft)] text-[var(--brand-ink)]">
-                <MapPin size={20} />
+        <div className="flex flex-col gap-7">
+          {byRegion.map(({ region, items }) => (
+            <section key={region}>
+              <p className="eyebrow mb-3">{region} · {items.length}</p>
+              <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-3 lg:gap-4">
+                {items.map((d) => (
+                  <Link
+                    key={d.id}
+                    href={`/destination/${d.id}`}
+                    className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)]"
+                  >
+                    <div className="grid size-11 place-items-center rounded-[var(--radius-sm)] bg-[var(--brand-soft)] text-[var(--brand-ink)]">
+                      <MapPin size={20} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[15px] font-medium">{d.city_he || d.city}</p>
+                      <p className="text-[13px] text-[var(--text-2)]">
+                        {d.country_he || d.country} · {d.attraction_count.toLocaleString("he")} אטרקציות
+                      </p>
+                    </div>
+                    <ArrowLeft size={18} className="text-[var(--text-3)]" />
+                  </Link>
+                ))}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-medium">{d.city_he || d.city}</p>
-                <p className="text-[13px] text-[var(--text-2)]">
-                  {d.country_he || d.country} · {d.attraction_count.toLocaleString("he")} אטרקציות
-                </p>
-              </div>
-              <ArrowLeft size={18} className="text-[var(--text-3)]" />
-            </Link>
+            </section>
           ))}
         </div>
       )}

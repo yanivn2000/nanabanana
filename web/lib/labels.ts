@@ -58,6 +58,24 @@ export function segColor(i: number): string {
   return SEG_PALETTE[((i % n) + n) % n];
 }
 
+// Group destinations under regions (ticket #14). Maps a country (English, as
+// stored) to a Hebrew region; REGION_ORDER sets the display order.
+const COUNTRY_REGION: Record<string, string> = {
+  Germany: "מרכז אירופה", Austria: "מרכז אירופה", Czechia: "מרכז אירופה",
+  "Czech Republic": "מרכז אירופה", Hungary: "מרכז אירופה", Switzerland: "מרכז אירופה",
+  France: "מערב אירופה", Netherlands: "מערב אירופה", "United Kingdom": "מערב אירופה",
+  Spain: "מערב אירופה", Portugal: "מערב אירופה",
+  Italy: "דרום אירופה", Greece: "דרום אירופה", Cyprus: "דרום אירופה",
+  Georgia: "מזרח אירופה וקווקז",
+  Israel: "ישראל",
+};
+export const REGION_ORDER = [
+  "מערב אירופה", "מרכז אירופה", "דרום אירופה", "מזרח אירופה וקווקז", "ישראל", "אחר",
+];
+export function regionOf(country: string | null | undefined): string {
+  return (country && COUNTRY_REGION[country]) || "אחר";
+}
+
 // Request a larger Wikimedia image when it's SAFE to do so. Commons FilePath
 // "?width=" URLs regenerate from the original (serving the original if smaller),
 // so upscaling never fails. We deliberately do NOT touch upload.wikimedia

@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useTrips, useProfile, profileSummary, MONTHS_HE, uid, type Segment, type FamilyProfile } from "@/lib/store";
 import { ProfileEditor } from "@/components/ProfileEditor";
+import { regionOf, REGION_ORDER } from "@/lib/labels";
 
 type Dest = { id: number; city: string; country: string; city_he: string | null; country_he: string | null; attraction_count: number };
 
@@ -126,21 +127,31 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
           <label className="mb-1.5 block text-[13px] text-[var(--text-2)]">
             יעדים <span className="text-[var(--text-3)]">(אפשר כמה — טיול רב-ערים)</span>
           </label>
-          <div className="flex flex-wrap gap-2">
-            {dests.map((d) => {
-              const on = segs.some((s) => s.destId === d.id);
-              return (
-                <button key={d.id} onClick={() => (on ? removeSeg(d.id) : addSeg(d.id))}
-                  className="flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] transition"
-                  style={{
-                    background: on ? "var(--accent)" : "var(--surface-2)",
-                    color: on ? "#fff" : "var(--text-2)",
-                  }}>
-                  <MapPin size={13} /> {d.city_he || d.city}
-                </button>
-              );
-            })}
-            {dests.length === 0 && <span className="text-[13px] text-[var(--text-3)]">טוען יעדים…</span>}
+          {dests.length === 0 && <span className="text-[13px] text-[var(--text-3)]">טוען יעדים…</span>}
+          <div className="flex flex-col gap-3">
+            {REGION_ORDER
+              .map((region) => ({ region, items: dests.filter((d) => regionOf(d.country) === region) }))
+              .filter((g) => g.items.length > 0)
+              .map(({ region, items }) => (
+                <div key={region}>
+                  <p className="mb-1.5 text-[11px] text-[var(--text-3)]">{region}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {items.map((d) => {
+                      const on = segs.some((s) => s.destId === d.id);
+                      return (
+                        <button key={d.id} onClick={() => (on ? removeSeg(d.id) : addSeg(d.id))}
+                          className="flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] transition"
+                          style={{
+                            background: on ? "var(--accent)" : "var(--surface-2)",
+                            color: on ? "#fff" : "var(--text-2)",
+                          }}>
+                          <MapPin size={13} /> {d.city_he || d.city}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
           </div>
 
           {segs.length > 0 && (
