@@ -16,7 +16,23 @@ import dedupe
 import tickets
 import insights
 
-st.set_page_config(page_title="NanaBanana", page_icon="🍌", layout="wide")
+st.set_page_config(page_title="ניהול מאגר · Yalle", page_icon="🗺️", layout="wide")
+
+# Right-to-left layout for the whole admin (Hebrew-first tool). Streamlit has no
+# built-in RTL, so we set direction on the app container + right-align text.
+st.markdown("""
+<style>
+.stApp { direction: rtl; }
+.stApp [data-testid="stMarkdownContainer"],
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5,
+.stApp p, .stApp li, .stApp label,
+.stApp [data-testid="stMetricValue"],
+.stApp [data-testid="stMetricLabel"],
+.stApp [data-testid="stWidgetLabel"] { text-align: right; }
+.stApp input, .stApp textarea { text-align: right; }
+.stTabs [data-baseweb="tab-list"] { direction: rtl; }
+</style>
+""", unsafe_allow_html=True)
 
 # Marker colour per category (folium named colours)
 CAT_COLOR = {
@@ -34,7 +50,7 @@ CAT_LABEL_HE = {
 }
 db.init_db()
 
-st.title("🍌 NanaBanana — ניהול מאגר")
+st.title("🗺️ ניהול מאגר · Yalle")
 
 # Pipeline overview + live funnel. Gives an at-a-glance picture of the whole
 # data flow so it's clear what each tab does and where the data stands.
@@ -155,7 +171,7 @@ with tab_knowledge:
             return ""
         kn_key = _server_key()
         if not kn_key:
-            kn_key = st.text_input("Anthropic API key", type="password", key="kn_key",
+            kn_key = st.text_input("מפתח API של Anthropic", type="password", key="kn_key",
                                    help="לא נמצא מפתח בשרת — הדביקו לשימוש חד-פעמי")
 
         if st.button("🧠 נתח עם Claude", disabled=not (kn_src_text.strip() and kn_key)):
@@ -214,7 +230,7 @@ with tab_knowledge:
         if is_thread:
             col_cfg["משפחה"] = st.column_config.TextColumn(width="small")
         edited = st.data_editor(
-            df, hide_index=True, use_container_width=True, key="kn_editor", column_config=col_cfg)
+            df, hide_index=True, width="stretch", key="kn_editor", column_config=col_cfg)
         kept = edited[edited["שמור"]]
         if st.button(f"💾 שמור {len(kept)} תובנות מאושרות", disabled=len(kept) == 0):
             items = [{
@@ -526,7 +542,7 @@ with tab_enrich:
         "'עברו סינון' הם ה-keep (אטרקציה אמיתית), 'נדחו' הם ה-skip (רעש ש-OSM תייג "
         "כאטרקציה). כלומר **הועשרו = עברו סינון + נדחו**. האפליקציה מציגה רק 'עברו "
         "סינון' או מקומות שטרם הועשרו.")
-    api_key = st.text_input("Anthropic API key", type="password",
+    api_key = st.text_input("מפתח API של Anthropic", type="password",
                             help="המפתח לא נשמר — משמש רק להרצה הנוכחית")
     limit = st.slider("כמה אטרקציות להעשיר בהרצה", 15, 150, 60, step=15)
 
