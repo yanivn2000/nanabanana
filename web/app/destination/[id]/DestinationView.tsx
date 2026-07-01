@@ -31,13 +31,16 @@ export function DestinationView({
   dest,
   attractions,
   insights = {},
+  placeGroups = [],
 }: {
   dest: Destination;
   attractions: Attraction[];
   insights?: Record<number, Insight[]>;
+  placeGroups?: { name: string; items: Insight[] }[];
 }) {
   const [selected, setSelected] = useState<Attraction | null>(null);
   const [query, setQuery] = useState("");
+  const [showPlaces, setShowPlaces] = useState(false);
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [flags, setFlags] = useState({
     mustSee: false, free: false, indoor: false, top: false, withInsights: false,
@@ -121,6 +124,46 @@ export function DestinationView({
               </button>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* Recommended specific places we don't have as attractions (hotels,
+          restaurants, tours, day-trips) — from travelers, grouped by place. */}
+      {placeGroups.length > 0 && (
+        <section className="rise border-b border-[var(--border)] bg-[var(--surface)] px-5 py-4 lg:px-8">
+          <button onClick={() => setShowPlaces((v) => !v)}
+            className="flex w-full items-center justify-between text-right">
+            <span className="text-[15px] font-medium">
+              🏨 מלונות, אוכל והמלצות ממטיילים
+              <span className="mr-1.5 text-[13px] font-normal text-[var(--text-3)]">({placeGroups.length} מקומות)</span>
+            </span>
+            <span className="text-[13px] text-[var(--brand-ink)]">{showPlaces ? "הסתר ▴" : "הצג ▾"}</span>
+          </button>
+          {showPlaces && (
+            <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+              {placeGroups.slice(0, 120).map((g) => (
+                <div key={g.name} className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                  <p className="mb-1 text-[13.5px] font-medium">
+                    {g.name}
+                    {g.items.length > 1 && (
+                      <span className="mr-1 text-[11.5px] font-normal text-[var(--text-3)]">· {g.items.length} מטיילים</span>
+                    )}
+                  </p>
+                  <div className="flex flex-col gap-1">
+                    {g.items.map((ins) => (
+                      <p key={ins.id} className="flex items-start gap-1 text-[12.5px] leading-snug text-[var(--text-2)]">
+                        <span className="shrink-0">{KIND_ICON[ins.kind] ?? "💬"}</span>
+                        <span>{ins.text_he}</span>
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {placeGroups.length > 120 && (
+                <p className="text-[12px] text-[var(--text-3)]">מוצגים 120 המקומות שהומלצו הכי הרבה מתוך {placeGroups.length}.</p>
+              )}
+            </div>
+          )}
         </section>
       )}
 

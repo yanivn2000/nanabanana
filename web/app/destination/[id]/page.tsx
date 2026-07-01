@@ -18,9 +18,29 @@ export default async function DestinationPage({
   ]);
   // Group attraction-linked insights into a plain object (client-serializable).
   const insights: Record<number, Insight[]> = {};
+  // Specific places we don't have as attractions (hotels, food, tours) — grouped
+  // by their free-text name. City-wide tips (place = the city, or blank) are
+  // intentionally left out.
+  const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, "").trim();
+  const cityTerms = new Set([norm(dest.city), norm(dest.city_he ?? "")].filter(Boolean));
+  const placeMap = new Map<string, Insight[]>();
   for (const ins of allInsights) {
-    if (ins.attraction_id == null) continue;
-    (insights[ins.attraction_id] ??= []).push(ins);
+    if (ins.attraction_id != null) {
+      (insights[ins.attraction_id] ??= []).push(ins);
+      continue;
+    }
+    const pn = (ins.place_name ?? "").trim();
+    if (pn.length < 3 || cityTerms.has(norm(pn))) continue; // city-wide / blank → skip
+    (placeMap.get(pn) ?? placeMap.set(pn, []).get(pn)!).push(ins);
   }
-  return <DestinationView dest={dest} attractions={attractions} insights={insights} />;
+  // Sort places by how many travelers mentioned them (consensus first).
+  const placeGroups = [...placeMap.entries()]
+    .map(([name, items]) => ({ name, items }))
+    .sort((a, b) => b.items.length - a.items.length);
+
+  return (
+    <DestinationView
+      dest={dest} attractions={attractions} insights={insights} placeGroups={placeGroups}
+    />
+  );
 }

@@ -315,6 +315,25 @@ def _toks(s):
     return {t for t in _norm(s).split() if len(t) >= 2}
 
 
+_city_cache = {}
+
+
+def _city_terms(conn, destination_id):
+    """Tokens of the destination's own name (he+en). These must NOT anchor a
+    match — otherwise a hotel like 'Element Amsterdam' or a plain 'Amsterdam'
+    city-wide tip gets absorbed into a bogus 'Amsterdam' attraction node."""
+    if destination_id not in _city_cache:
+        r = conn.execute(
+            "SELECT city, city_he FROM destinations WHERE id=?", (destination_id,)
+        ).fetchone()
+        toks = set()
+        if r:
+            for nm in (r["city"], r["city_he"]):
+                toks |= _toks(nm)
+        _city_cache[destination_id] = toks
+    return _city_cache[destination_id]
+
+
 def match_attraction(conn, destination_id, place_name):
     """Match a free-text place name to one of our attractions in this
     destination. Returns (attraction_id, matched_name) or (None, None).
@@ -322,11 +341,13 @@ def match_attraction(conn, destination_id, place_name):
     Token-based (not raw substring): an EXACT name wins; otherwise every
     meaningful token of the shorter name must appear in the other, so we don't
     match on a shared generic word ("park") or a city token ("in Zaandam").
+    The destination's own city name never anchors a match, and hidden
+    attractions (duplicates / components / the city node) are never targets.
     """
     place = _norm(place_name)
-    ptoks = _toks(place_name)
-    pcore = ptoks - _STOP
-    if len(place) < 3 or not ptoks:
+    city = _city_terms(conn, destination_id)
+    pcore = _toks(place_name) - _STOP - city
+    if len(place) < 3 or not pcore:      # need a distinctive, non-city anchor
         return None, None
 
     # A lone meaningful token must be distinctive enough (≥4 chars) to anchor a
@@ -338,7 +359,8 @@ def match_attraction(conn, destination_id, place_name):
         "SELECT id, name_en, name_he, COALESCE(family_score,0) AS fs, "
         "       COALESCE(must_see,0) AS ms "
         "FROM attractions WHERE destination_id=? "
-        "AND (is_duplicate IS NULL OR is_duplicate=0)",
+        "AND (is_duplicate IS NULL OR is_duplicate=0) "
+        "AND (is_component IS NULL OR is_component=0)",
         (destination_id,),
     ).fetchall()
 
@@ -349,7 +371,7 @@ def match_attraction(conn, destination_id, place_name):
             n = _norm(name)
             if not n:
                 continue
-            ncore = _toks(name) - _STOP
+            ncore = _toks(name) - _STOP - city
             s = None
             if n == place:
                 s = 100
@@ -378,6 +400,24 @@ def match_attraction(conn, destination_id, place_name):
     if best and best[0] >= 62:
         return best[1], best[2]
     return None, None
+
+
+def rematch_all(conn, progress=None):
+    """Recompute attraction_id for every stored insight with the current matcher
+    (e.g. after tightening it). Returns how many changed."""
+    rows = conn.execute(
+        "SELECT id, destination_id, place_name, attraction_id FROM insights"
+    ).fetchall()
+    changed = 0
+    for i, row in enumerate(rows):
+        aid, _ = match_attraction(conn, row["destination_id"], row["place_name"] or "")
+        if aid != row["attraction_id"]:
+            conn.execute("UPDATE insights SET attraction_id=? WHERE id=?", (aid, row["id"]))
+            changed += 1
+        if progress:
+            progress(i + 1, len(rows))
+    conn.commit()
+    return changed
 
 
 def save(conn, destination_id, url, default_author, raw_text, items):
