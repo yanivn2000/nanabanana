@@ -97,10 +97,16 @@ SYSTEM_THREAD = (
     "You are a travel-knowledge editor for an Israeli family trip-planning app. "
     "You are given a THREAD containing posts from SEVERAL DIFFERENT travellers / "
     "families about the same destination (e.g. a forum thread or a collection of "
-    "write-ups). Split it by author and return one group per distinct family. "
-    "For each family: `author` = a short label — use a name/handle if the text "
-    "gives one, otherwise 'משפחה 1', 'משפחה 2', ... in order of appearance. "
-    "`insights` = that family's insights, using these rules per insight: "
+    "write-ups). Split it by author and return one group per distinct write-up. "
+    "For each group: `author` = a short Hebrew label identifying it. Prefer a "
+    "name / handle / signature if the text gives one. If it does NOT (common — "
+    "many summaries are anonymous), synthesize a SHORT descriptive label from "
+    "THAT group's own distinguishing details — group composition, trip length, "
+    "or a distinctive angle. Examples: '2 חברות · 4 ימים', 'הרכב של 8 · גילאים "
+    "25-73', 'שתי חברות ותיקות', 'קבוצה · טירה + זאנסה + וולנדם'. Make each label "
+    "DISTINCT from the others. Only if a group has no distinguishing detail at "
+    "all, fall back to 'מטייל 1', 'מטייל 2', ... in order of appearance. "
+    "`insights` = that group's insights, using these rules per insight: "
     "`place` = the specific place, written EXACTLY as in the text (keep original "
     "language); \"\" only for a destination-wide tip. "
     "`kind`: tip / warning / verdict / food / season / access. "
@@ -140,9 +146,11 @@ def distill(raw_text, dest_name, api_key, model=None, thread=False):
             + raw_text.strip()
         )
         schema, system = OUTPUT_SCHEMA, SYSTEM
+    # A multi-family thread produces many more insights, so it needs a much
+    # larger output budget than a single post.
     resp = client.messages.create(
         model=model,
-        max_tokens=8000,
+        max_tokens=20000 if thread else 8000,
         system=system,
         output_config={"format": {"type": "json_schema", "schema": schema}},
         messages=[{"role": "user", "content": prompt}],
@@ -150,6 +158,8 @@ def distill(raw_text, dest_name, api_key, model=None, thread=False):
     text = next((b.text for b in resp.content if b.type == "text"), None)
     if not text:
         raise ValueError(f"no text block (stop_reason={resp.stop_reason})")
+    if resp.stop_reason == "max_tokens":
+        raise ValueError("התוכן ארוך מדי לעיבוד בבת אחת — חלקו אותו לשני חלקים והזינו בנפרד.")
     data = json.loads(text)
     if thread:
         items = []
