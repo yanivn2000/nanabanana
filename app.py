@@ -18,19 +18,78 @@ import insights
 
 st.set_page_config(page_title="ניהול מאגר · Yalle", page_icon="🗺️", layout="wide")
 
-# Right-to-left layout for the whole admin (Hebrew-first tool). Streamlit has no
-# built-in RTL, so we set direction on the app container + right-align text.
+# RTL + a slicker, tighter, more professional look. Streamlit has no built-in
+# RTL, so we set direction on the app container, right-align text, switch to a
+# clean Hebrew font (Assistant), condense spacing, and card-ify inputs/metrics.
 st.markdown("""
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&display=swap');
+
+/* base */
+html, body, .stApp, .stApp * { font-family:'Assistant',-apple-system,'Segoe UI','Noto Sans Hebrew',sans-serif; }
 .stApp { direction: rtl; }
 .stApp [data-testid="stMarkdownContainer"],
-.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5,
-.stApp p, .stApp li, .stApp label,
-.stApp [data-testid="stMetricValue"],
-.stApp [data-testid="stMetricLabel"],
+.stApp h1,.stApp h2,.stApp h3,.stApp h4,.stApp h5,.stApp p,.stApp li,.stApp label,
+.stApp [data-testid="stMetricValue"],.stApp [data-testid="stMetricLabel"],
 .stApp [data-testid="stWidgetLabel"] { text-align: right; }
 .stApp input, .stApp textarea { text-align: right; }
-.stTabs [data-baseweb="tab-list"] { direction: rtl; }
+
+/* layout: reclaim top space, cap width, tighten vertical rhythm */
+.stApp [data-testid="stMainBlockContainer"],
+.stApp .block-container { padding-top:2.2rem; padding-bottom:3rem; max-width:1180px; }
+.stApp [data-testid="stHeader"] { background:transparent; }
+[data-testid="stVerticalBlock"] { gap:.55rem; }
+[data-testid="stHorizontalBlock"] { gap:.8rem; }
+
+/* headings */
+.stApp h1 { font-size:1.85rem; font-weight:800; letter-spacing:-.01em; }
+.stApp h2 { font-size:1.35rem; font-weight:700; }
+.stApp h3 { font-size:1.12rem; font-weight:700; }
+
+/* widget labels: compact + muted, hugging their field */
+[data-testid="stWidgetLabel"] p { font-size:.82rem; font-weight:600; color:#5b6472; margin-bottom:.2rem; }
+
+/* inputs / selects / textareas: rounded, subtle border, focus ring */
+.stTextInput input, .stNumberInput input, .stTextArea textarea,
+[data-baseweb="select"] > div, [data-baseweb="input"] {
+  border-radius:11px !important; border:1px solid #e6e8ec !important;
+  background:#fff !important; box-shadow:none !important;
+}
+.stTextInput input:focus, .stTextArea textarea:focus {
+  border-color:#1fa8a0 !important; box-shadow:0 0 0 3px rgba(31,168,160,.13) !important;
+}
+
+/* metrics as clean cards */
+[data-testid="stMetric"] {
+  background:#fff; border:1px solid #eef0f2; border-radius:14px; padding:.75rem 1rem;
+  box-shadow:0 1px 2px rgba(16,38,63,.04);
+}
+[data-testid="stMetricValue"] { font-size:1.55rem; font-weight:800; color:#16263f; }
+[data-testid="stMetricLabel"] p { color:#6b7280; font-weight:600; }
+
+/* buttons */
+.stButton > button, .stFormSubmitButton > button, .stDownloadButton > button {
+  border-radius:11px; font-weight:700; padding:.5rem 1.15rem; border:1px solid #e6e8ec;
+}
+.stButton > button[kind="primary"], .stFormSubmitButton > button[kind="primary"],
+[data-testid="stBaseButton-primary"] {
+  background:#f4685e !important; border-color:#f4685e !important; color:#fff !important;
+}
+.stButton > button:hover { border-color:#1fa8a0; color:#1fa8a0; }
+
+/* tabs: slick underline in brand color */
+.stTabs [data-baseweb="tab-list"] { direction:rtl; gap:.35rem; border-bottom:1px solid #eef0f2; }
+.stTabs [data-baseweb="tab"] { font-weight:600; padding:.45rem .8rem; }
+.stTabs [aria-selected="true"] { color:#f4685e; }
+.stTabs [data-baseweb="tab-highlight"] { background:#f4685e; }
+
+/* misc polish */
+hr { margin:1rem 0 !important; border-color:#eef0f2; }
+[data-testid="stCaptionContainer"], .stApp small { color:#6b7280; line-height:1.5; }
+[data-testid="stExpander"] { border-radius:12px; border:1px solid #eef0f2; }
+[data-testid="stExpander"] summary { font-weight:600; }
+.stAlert { border-radius:12px; }
+[data-testid="stFileUploaderDropzone"] { border-radius:12px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -492,7 +551,7 @@ with tab_ingest:
         "כיסוי": f"{round(100 * (r['with_img'] or 0) / r['total'])}%" if r["total"] else "—",
         "ממתינות": r["pending"] or 0,
     } for r in city_rows]
-    st.dataframe(table, hide_index=True, use_container_width=True)
+    st.dataframe(table, hide_index=True, width="stretch")
 
     # Optional focus: only fetch for one city (new cities rank below old ones globally).
     pending_cities = [r for r in city_rows if (r["pending"] or 0) > 0]
