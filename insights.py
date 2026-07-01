@@ -50,6 +50,25 @@ OUTPUT_SCHEMA = {
     "additionalProperties": False,
 }
 
+# Thread mode: several travellers/families in one pasted text. Grouped by author
+# so each becomes its OWN source — repetition across families is a consensus
+# signal we must NOT collapse.
+_FAMILY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "author": {"type": "string"},   # short label for this family/author
+        "insights": {"type": "array", "items": _INSIGHT_SCHEMA},
+    },
+    "required": ["author", "insights"],
+    "additionalProperties": False,
+}
+THREAD_SCHEMA = {
+    "type": "object",
+    "properties": {"families": {"type": "array", "items": _FAMILY_SCHEMA}},
+    "required": ["families"],
+    "additionalProperties": False,
+}
+
 SYSTEM = (
     "You are a travel-knowledge editor for an Israeli family trip-planning app. "
     "You are given a REAL traveller's post about a destination (a blog, forum "
@@ -73,32 +92,73 @@ SYSTEM = (
     "has nothing useful, return an empty list."
 )
 
+# Same rules as SYSTEM, but the input is a THREAD of several different families.
+SYSTEM_THREAD = (
+    "You are a travel-knowledge editor for an Israeli family trip-planning app. "
+    "You are given a THREAD containing posts from SEVERAL DIFFERENT travellers / "
+    "families about the same destination (e.g. a forum thread or a collection of "
+    "write-ups). Split it by author and return one group per distinct family. "
+    "For each family: `author` = a short label — use a name/handle if the text "
+    "gives one, otherwise 'משפחה 1', 'משפחה 2', ... in order of appearance. "
+    "`insights` = that family's insights, using these rules per insight: "
+    "`place` = the specific place, written EXACTLY as in the text (keep original "
+    "language); \"\" only for a destination-wide tip. "
+    "`kind`: tip / warning / verdict / food / season / access. "
+    "`text_he`: ONE short, factual, actionable Hebrew sentence (≤25 words). "
+    "`sentiment`: pos / neg / neutral. "
+    "CRITICAL: de-duplicate WITHIN each family, but do NOT merge insights ACROSS "
+    "different families — if two families independently recommend or warn about "
+    "the same place, keep BOTH (that agreement is valuable consensus signal). "
+    "Do NOT invent anything not supported by the text. If a family has nothing "
+    "useful, omit it."
+)
 
-def distill(raw_text, dest_name, api_key, model=None):
-    """Turn one pasted post into a list of structured insight dicts.
 
-    Returns [{place, kind, text_he, sentiment}, ...]. Does not touch the DB.
+def distill(raw_text, dest_name, api_key, model=None, thread=False):
+    """Distil a pasted post (or a multi-family thread) into structured insights.
+
+    Single post (thread=False): returns [{place, kind, text_he, sentiment}, ...].
+    Thread (thread=True): returns the same flat list, but each item also carries
+    an `author` label so it can be saved as one source per family. Does not touch
+    the DB.
     """
     conn = db.get_conn()
     model = model or db.get_model(conn)
     conn.close()
     client = anthropic.Anthropic(api_key=api_key)
-    prompt = (
-        f"Destination: {dest_name}\n\n"
-        "Distil the following traveller's post into structured insights:\n\n"
-        f"{raw_text.strip()}"
-    )
+    if thread:
+        prompt = (
+            f"Destination: {dest_name}\n\n"
+            "Split the following thread by family and distil each family's "
+            "insights:\n\n" + raw_text.strip()
+        )
+        schema, system = THREAD_SCHEMA, SYSTEM_THREAD
+    else:
+        prompt = (
+            f"Destination: {dest_name}\n\n"
+            "Distil the following traveller's post into structured insights:\n\n"
+            + raw_text.strip()
+        )
+        schema, system = OUTPUT_SCHEMA, SYSTEM
     resp = client.messages.create(
         model=model,
         max_tokens=8000,
-        system=SYSTEM,
-        output_config={"format": {"type": "json_schema", "schema": OUTPUT_SCHEMA}},
+        system=system,
+        output_config={"format": {"type": "json_schema", "schema": schema}},
         messages=[{"role": "user", "content": prompt}],
     )
     text = next((b.text for b in resp.content if b.type == "text"), None)
     if not text:
         raise ValueError(f"no text block (stop_reason={resp.stop_reason})")
-    return json.loads(text)["insights"]
+    data = json.loads(text)
+    if thread:
+        items = []
+        for fam in data.get("families", []):
+            author = fam.get("author") or ""
+            for it in fam.get("insights", []):
+                items.append({**it, "author": author})
+        return items
+    return data["insights"]
 
 
 def _norm(s):
@@ -143,31 +203,43 @@ def match_attraction(conn, destination_id, place_name):
     return None, None
 
 
-def save(conn, destination_id, url, author, raw_text, items):
-    """Persist a source + its approved insights (each matched to an attraction
-    where possible). `items` = list of {place, kind, text_he, sentiment}.
-    Returns (source_id, n_saved, n_matched)."""
-    src = conn.execute(
-        "INSERT INTO sources (destination_id, url, author, raw_text, created_at) "
-        "VALUES (?,?,?,?,datetime('now')) RETURNING id",
-        (destination_id, url or None, author or None, raw_text),
-    ).fetchone()
-    source_id = src["id"]
-    n_saved = n_matched = 0
+def save(conn, destination_id, url, default_author, raw_text, items):
+    """Persist approved insights, matched to attractions where possible.
+
+    `items` = list of {place, kind, text_he, sentiment, author?}. Items are
+    grouped by `author` (falling back to `default_author`) so each family/author
+    becomes its OWN source row — keeping repetition across families as a
+    consensus signal rather than collapsing it.
+    Returns (source_ids, n_saved, n_matched)."""
+    from collections import OrderedDict
+    groups = OrderedDict()
     for it in items:
-        aid, _ = match_attraction(conn, destination_id, it.get("place", ""))
-        if aid:
-            n_matched += 1
-        conn.execute(
-            "INSERT INTO insights (source_id, destination_id, attraction_id, "
-            "place_name, kind, text_he, sentiment, status, weight, created_at) "
-            "VALUES (?,?,?,?,?,?,?, 'approved', 1, datetime('now'))",
-            (source_id, destination_id, aid, it.get("place") or None,
-             it.get("kind"), it.get("text_he"), it.get("sentiment")),
-        )
-        n_saved += 1
+        author = (it.get("author") or default_author or "").strip() or None
+        groups.setdefault(author, []).append(it)
+
+    source_ids, n_saved, n_matched = [], 0, 0
+    for author, group in groups.items():
+        src = conn.execute(
+            "INSERT INTO sources (destination_id, url, author, raw_text, created_at) "
+            "VALUES (?,?,?,?,datetime('now')) RETURNING id",
+            (destination_id, url or None, author, raw_text),
+        ).fetchone()
+        source_id = src["id"]
+        source_ids.append(source_id)
+        for it in group:
+            aid, _ = match_attraction(conn, destination_id, it.get("place", ""))
+            if aid:
+                n_matched += 1
+            conn.execute(
+                "INSERT INTO insights (source_id, destination_id, attraction_id, "
+                "place_name, kind, text_he, sentiment, status, weight, created_at) "
+                "VALUES (?,?,?,?,?,?,?, 'approved', 1, datetime('now'))",
+                (source_id, destination_id, aid, it.get("place") or None,
+                 it.get("kind"), it.get("text_he"), it.get("sentiment")),
+            )
+            n_saved += 1
     conn.commit()
-    return source_id, n_saved, n_matched
+    return source_ids, n_saved, n_matched
 
 
 def list_insights(conn, destination_id=None, limit=500):

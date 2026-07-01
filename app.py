@@ -102,14 +102,29 @@ with tab_knowledge:
     if not kn_opts:
         st.info("אין עדיין יעדים במאגר — הוסיפו עיר בלשונית האיסוף קודם.")
     else:
+        kn_mode = st.radio(
+            "סוג הזנה", ["single", "thread"], horizontal=True, key="kn_mode",
+            format_func=lambda m: "פוסט יחיד" if m == "single" else "שרשור (כמה משפחות)")
+        kn_is_thread = kn_mode == "thread"
+        if kn_is_thread:
+            st.caption(
+                "הדביקו שרשור עם כמה המלצות ממשפחות שונות. Claude יזהה גבולות בין "
+                "המשפחות וייצור **מקור נפרד לכל אחת** — בלי לאחד ביניהן, כדי לשמור על "
+                "חוזק הקונצנזוס (כמה משפחות המליצו על אותו דבר).")
         kn_dest = st.selectbox("יעד", list(kn_opts.keys()),
                                format_func=lambda i: kn_opts[i], key="kn_dest")
         c1, c2 = st.columns(2)
-        kn_author = c1.text_input("מקור / כותב (לא חובה)", key="kn_author",
-                                  placeholder="למשל: משפחת כהן, בלוג ׳מטיילים באירופה׳")
+        kn_author = c1.text_input(
+            "מקור כללי (לא חובה)" if kn_is_thread else "מקור / כותב (לא חובה)",
+            key="kn_author",
+            placeholder="שם השרשור/הפורום" if kn_is_thread else "למשל: משפחת כהן, בלוג ׳מטיילים באירופה׳",
+            help="בשרשור — Claude מזהה שם לכל משפחה; זה משמש רק כברירת מחדל למי שלא זוהה." if kn_is_thread else None)
         kn_url = c2.text_input("קישור (לא חובה)", key="kn_url", placeholder="https://…")
-        kn_text = st.text_area("הדביקו כאן את תוכן הפוסט", height=220, key="kn_text",
-                               placeholder="הטקסט המלא של הפוסט/הסיכום — באיזו שפה שהיא.")
+        kn_text = st.text_area(
+            "הדביקו כאן את השרשור" if kn_is_thread else "הדביקו כאן את תוכן הפוסט",
+            height=220, key="kn_text",
+            placeholder="הדביקו את כל השרשור — כמה המלצות ממשפחות שונות, אחת אחרי השנייה." if kn_is_thread
+            else "הטקסט המלא של הפוסט/הסיכום — באיזו שפה שהיא.")
 
         # Anthropic key: prefer the server-side key, fall back to a pasted one.
         def _server_key():
@@ -129,9 +144,9 @@ with tab_knowledge:
                                    help="לא נמצא מפתח בשרת — הדביקו לשימוש חד-פעמי")
 
         if st.button("🧠 נתח עם Claude", disabled=not (kn_text.strip() and kn_key)):
-            with st.spinner("Claude מנתח את הפוסט…"):
+            with st.spinner("Claude מנתח את השרשור…" if kn_is_thread else "Claude מנתח את הפוסט…"):
                 try:
-                    items = insights.distill(kn_text, kn_opts[kn_dest], kn_key)
+                    items = insights.distill(kn_text, kn_opts[kn_dest], kn_key, thread=kn_is_thread)
                     # precompute the attraction match for each, for the review table
                     mc = db.get_conn()
                     for it in items:
@@ -140,48 +155,57 @@ with tab_knowledge:
                     mc.close()
                     st.session_state["kn_draft"] = {
                         "dest": kn_dest, "author": kn_author, "url": kn_url,
-                        "text": kn_text, "items": items,
+                        "text": kn_text, "items": items, "thread": kn_is_thread,
                     }
                 except Exception as ex:
                     st.error(f"שגיאה בניתוח: {ex}")
 
     draft = st.session_state.get("kn_draft")
     if draft and draft.get("items"):
+        is_thread = draft.get("thread")
         st.divider()
         st.markdown("##### ✅ אשרו את התובנות שכדאי לשמור")
-        st.caption(
-            "ערכו את הטקסט אם צריך, בטלו סימון למה שלא שווה, ואז שמרו. "
-            "עמודת ׳זוהה כ׳ מראה לאיזו אטרקציה במאגר קישרנו את התובנה (אם בכלל).")
+        cap = ("ערכו את הטקסט אם צריך, בטלו סימון למה שלא שווה, ואז שמרו. "
+               "עמודת ׳זוהה כ׳ מראה לאיזו אטרקציה במאגר קישרנו את התובנה (אם בכלל).")
+        if is_thread:
+            fam_n = len({(it.get("author") or "").strip() for it in draft["items"] if (it.get("author") or "").strip()})
+            cap += f" זוהו **{fam_n} משפחות** — כל אחת נשמרת כמקור נפרד. אפשר לתקן שם משפחה בעמודת ׳משפחה׳."
+        st.caption(cap)
         import pandas as pd
         df = pd.DataFrame([{
             "שמור": True,
+            **({"משפחה": (it.get("author") or draft["author"] or "")} if is_thread else {}),
             "סוג": it.get("kind"),
             "מקום": it.get("place", ""),
             "תובנה (עברית)": it.get("text_he", ""),
             "יחס": it.get("sentiment", "neutral"),
             "זוהה כ": it.get("match", ""),
         } for it in draft["items"]])
+        col_cfg = {
+            "שמור": st.column_config.CheckboxColumn(width="small"),
+            "סוג": st.column_config.SelectboxColumn(options=list(insights.KIND_HE.keys()), width="small"),
+            "מקום": st.column_config.TextColumn(width="medium"),
+            "תובנה (עברית)": st.column_config.TextColumn(width="large"),
+            "יחס": st.column_config.SelectboxColumn(options=["pos", "neg", "neutral"], width="small"),
+            "זוהה כ": st.column_config.TextColumn(width="medium", disabled=True),
+        }
+        if is_thread:
+            col_cfg["משפחה"] = st.column_config.TextColumn(width="small")
         edited = st.data_editor(
-            df, hide_index=True, use_container_width=True, key="kn_editor",
-            column_config={
-                "שמור": st.column_config.CheckboxColumn(width="small"),
-                "סוג": st.column_config.SelectboxColumn(options=list(insights.KIND_HE.keys()), width="small"),
-                "מקום": st.column_config.TextColumn(width="medium"),
-                "תובנה (עברית)": st.column_config.TextColumn(width="large"),
-                "יחס": st.column_config.SelectboxColumn(options=["pos", "neg", "neutral"], width="small"),
-                "זוהה כ": st.column_config.TextColumn(width="medium", disabled=True),
-            })
+            df, hide_index=True, use_container_width=True, key="kn_editor", column_config=col_cfg)
         kept = edited[edited["שמור"]]
         if st.button(f"💾 שמור {len(kept)} תובנות מאושרות", disabled=len(kept) == 0):
             items = [{
                 "place": r["מקום"], "kind": r["סוג"],
                 "text_he": r["תובנה (עברית)"], "sentiment": r["יחס"],
+                **({"author": r["משפחה"]} if is_thread else {}),
             } for _, r in kept.iterrows()]
             sc = db.get_conn()
-            _, n_saved, n_matched = insights.save(
+            src_ids, n_saved, n_matched = insights.save(
                 sc, draft["dest"], draft["url"], draft["author"], draft["text"], items)
             sc.close()
-            st.success(f"נשמרו {n_saved} תובנות · מתוכן {n_matched} קושרו לאטרקציה במאגר")
+            src_note = f" ב-{len(src_ids)} מקורות" if is_thread else ""
+            st.success(f"נשמרו {n_saved} תובנות{src_note} · מתוכן {n_matched} קושרו לאטרקציה במאגר")
             del st.session_state["kn_draft"]
             st.rerun()
 
