@@ -14,7 +14,13 @@ The stored result is then used by the consumer app BOTH with AI (injected into
 the itinerary prompt with high priority) AND without AI (shown on attraction
 cards). Because it is pre-distilled, no AI is needed at read time.
 """
+import io
 import json
+import os
+import re
+import shutil
+import subprocess
+import tempfile
 
 import anthropic
 
@@ -169,6 +175,116 @@ def distill(raw_text, dest_name, api_key, model=None, thread=False):
                 items.append({**it, "author": author})
         return items
     return data["insights"]
+
+
+# --- Upload a document (PDF/txt) with several write-ups -----------------------
+
+_BIDI = re.compile("[‎‏‪-‮⁦-⁩]")
+
+
+def _clean_text(t):
+    t = _BIDI.sub("", t)                    # strip RTL/LTR control marks
+    t = re.sub(r"[ \t]+\n", "\n", t)
+    t = re.sub(r"\n{3,}", "\n\n", t)        # collapse big blank-page gaps
+    return t.strip()
+
+
+def extract_text(filename, data):
+    """Plain text from an uploaded .pdf / .txt. Prefers `pdftotext -layout`
+    (best for Hebrew RTL), falls back to pypdf."""
+    name = (filename or "").lower()
+    if not name.endswith(".pdf"):
+        return _clean_text(data.decode("utf-8", "replace"))
+    if shutil.which("pdftotext"):
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
+            f.write(data)
+            path = f.name
+        try:
+            out = subprocess.run(["pdftotext", "-layout", path, "-"],
+                                 capture_output=True, timeout=90)
+            txt = out.stdout.decode("utf-8", "replace")
+            if txt.strip():
+                return _clean_text(txt)
+        finally:
+            os.unlink(path)
+    from pypdf import PdfReader
+    reader = PdfReader(io.BytesIO(data))
+    return _clean_text("\n".join((p.extract_text() or "") for p in reader.pages))
+
+
+_SPLIT_SCHEMA = {
+    "type": "object",
+    "properties": {"starts": {"type": "array", "items": {"type": "string"}}},
+    "required": ["starts"],
+    "additionalProperties": False,
+}
+SPLIT_SYSTEM = (
+    "You are given a document that concatenates SEVERAL separate travel write-ups "
+    "(trip summaries) about the same destination, one after another. Identify "
+    "where each distinct write-up STARTS. Return `starts`: an ordered list, one "
+    "entry per write-up, each the VERBATIM opening text of that write-up — copy "
+    "its first line / first ~8 words EXACTLY as they appear (same language and "
+    "characters), so it can be located in the document. Do not paraphrase. If it "
+    "is really just one write-up, return a single entry."
+)
+
+
+def split_writeups(text, api_key, model=None):
+    """Split a concatenated document into its individual write-ups. Uses one
+    cheap AI call to find each write-up's verbatim opening, then cuts locally.
+    Returns a list of segment strings (>=1)."""
+    conn = db.get_conn()
+    model = model or db.get_model(conn)
+    conn.close()
+    client = anthropic.Anthropic(api_key=api_key)
+    resp = client.messages.create(
+        model=model,
+        max_tokens=3000,
+        system=SPLIT_SYSTEM,
+        output_config={"format": {"type": "json_schema", "schema": _SPLIT_SCHEMA}},
+        messages=[{"role": "user", "content": text}],
+    )
+    tb = next((b.text for b in resp.content if b.type == "text"), None)
+    starts = json.loads(tb).get("starts", []) if tb else []
+    idxs = []
+    for s in starts:
+        frag = (s or "").strip()
+        if not frag:
+            continue
+        i = text.find(frag)
+        if i < 0:                            # fuzzy: fall back to first 5 words
+            short = " ".join(frag.split()[:5])
+            i = text.find(short) if short else -1
+        if i >= 0:
+            idxs.append(i)
+    idxs = sorted(set(idxs))
+    if len(idxs) < 2:
+        return [text]
+    bounds = idxs + [len(text)]
+    return [seg for a, b in zip(bounds, bounds[1:]) if (seg := text[a:b].strip())]
+
+
+def distill_document(text, dest_name, api_key, model=None, progress=None):
+    """Distil a whole uploaded document. Short inputs go through a single thread
+    call; long ones are split into write-ups and distilled one-by-one (robust to
+    size + fast). Returns the same flat item list as distill(thread=True).
+    `progress` is an optional callback(done, total)."""
+    if len(text) < 12000:
+        items = distill(text, dest_name, api_key, model=model, thread=True)
+        if progress:
+            progress(1, 1)
+        return items
+    segs = split_writeups(text, api_key, model=model)
+    total = len(segs)
+    items = []
+    for i, seg in enumerate(segs):
+        try:
+            items += distill(seg, dest_name, api_key, model=model, thread=True)
+        except (ValueError, KeyError, json.JSONDecodeError) as e:
+            print(f"skip segment {i + 1}/{total}: {e}", flush=True)
+        if progress:
+            progress(i + 1, total)
+    return items
 
 
 def _norm(s):

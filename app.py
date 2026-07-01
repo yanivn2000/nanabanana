@@ -108,9 +108,10 @@ with tab_knowledge:
         kn_is_thread = kn_mode == "thread"
         if kn_is_thread:
             st.caption(
-                "הדביקו שרשור עם כמה המלצות ממשפחות שונות. Claude יזהה גבולות בין "
-                "המשפחות וייצור **מקור נפרד לכל אחת** — בלי לאחד ביניהן, כדי לשמור על "
-                "חוזק הקונצנזוס (כמה משפחות המליצו על אותו דבר).")
+                "הדביקו שרשור — או **העלו קובץ PDF/טקסט** — עם כמה המלצות ממשפחות שונות. "
+                "Claude יזהה גבולות בין המשפחות וייצור **מקור נפרד לכל אחת** — בלי לאחד "
+                "ביניהן, כדי לשמור על חוזק הקונצנזוס (כמה משפחות המליצו על אותו דבר). "
+                "מסמכים גדולים מפוצלים אוטומטית לסיכומים ומעובדים אחד-אחד.")
         kn_dest = st.selectbox("יעד", list(kn_opts.keys()),
                                format_func=lambda i: kn_opts[i], key="kn_dest")
         c1, c2 = st.columns(2)
@@ -120,11 +121,25 @@ with tab_knowledge:
             placeholder="שם השרשור/הפורום" if kn_is_thread else "למשל: משפחת כהן, בלוג ׳מטיילים באירופה׳",
             help="בשרשור — Claude מזהה שם לכל משפחה; זה משמש רק כברירת מחדל למי שלא זוהה." if kn_is_thread else None)
         kn_url = c2.text_input("קישור (לא חובה)", key="kn_url", placeholder="https://…")
+
+        # Optional file upload (thread mode): PDF/txt → extracted text.
+        kn_upload_text = ""
+        if kn_is_thread:
+            kn_file = st.file_uploader("או העלו קובץ (PDF / טקסט)", type=["pdf", "txt"], key="kn_file")
+            if kn_file is not None:
+                try:
+                    kn_upload_text = insights.extract_text(kn_file.name, kn_file.getvalue())
+                    st.caption(f"📄 חולצו {len(kn_upload_text):,} תווים מתוך {kn_file.name}")
+                except Exception as ex:
+                    st.error(f"לא הצלחתי לחלץ טקסט מהקובץ: {ex}")
+
         kn_text = st.text_area(
-            "הדביקו כאן את השרשור" if kn_is_thread else "הדביקו כאן את תוכן הפוסט",
-            height=220, key="kn_text",
-            placeholder="הדביקו את כל השרשור — כמה המלצות ממשפחות שונות, אחת אחרי השנייה." if kn_is_thread
+            "או הדביקו כאן את השרשור" if kn_is_thread else "הדביקו כאן את תוכן הפוסט",
+            height=180 if kn_is_thread else 220, key="kn_text",
+            placeholder="הדביקו את כל השרשור — כמה המלצות ממשפחות שונות (אם לא העליתם קובץ)." if kn_is_thread
             else "הטקסט המלא של הפוסט/הסיכום — באיזו שפה שהיא.")
+        # File takes precedence over pasted text when both are present.
+        kn_src_text = kn_upload_text or kn_text
 
         # Anthropic key: prefer the server-side key, fall back to a pasted one.
         def _server_key():
@@ -143,22 +158,29 @@ with tab_knowledge:
             kn_key = st.text_input("Anthropic API key", type="password", key="kn_key",
                                    help="לא נמצא מפתח בשרת — הדביקו לשימוש חד-פעמי")
 
-        if st.button("🧠 נתח עם Claude", disabled=not (kn_text.strip() and kn_key)):
-            with st.spinner("Claude מנתח את השרשור…" if kn_is_thread else "Claude מנתח את הפוסט…"):
-                try:
-                    items = insights.distill(kn_text, kn_opts[kn_dest], kn_key, thread=kn_is_thread)
-                    # precompute the attraction match for each, for the review table
-                    mc = db.get_conn()
-                    for it in items:
-                        _, mname = insights.match_attraction(mc, kn_dest, it.get("place", ""))
-                        it["match"] = mname or ""
-                    mc.close()
-                    st.session_state["kn_draft"] = {
-                        "dest": kn_dest, "author": kn_author, "url": kn_url,
-                        "text": kn_text, "items": items, "thread": kn_is_thread,
-                    }
-                except Exception as ex:
-                    st.error(f"שגיאה בניתוח: {ex}")
+        if st.button("🧠 נתח עם Claude", disabled=not (kn_src_text.strip() and kn_key)):
+            try:
+                if kn_is_thread:
+                    bar = st.progress(0.0, text="מנתח…")
+                    items = insights.distill_document(
+                        kn_src_text, kn_opts[kn_dest], kn_key,
+                        progress=lambda d, t: bar.progress(d / t, text=f"מעבד סיכום {d}/{t}"))
+                    bar.empty()
+                else:
+                    with st.spinner("Claude מנתח את הפוסט…"):
+                        items = insights.distill(kn_src_text, kn_opts[kn_dest], kn_key)
+                # precompute the attraction match for each, for the review table
+                mc = db.get_conn()
+                for it in items:
+                    _, mname = insights.match_attraction(mc, kn_dest, it.get("place", ""))
+                    it["match"] = mname or ""
+                mc.close()
+                st.session_state["kn_draft"] = {
+                    "dest": kn_dest, "author": kn_author, "url": kn_url,
+                    "text": kn_src_text, "items": items, "thread": kn_is_thread,
+                }
+            except Exception as ex:
+                st.error(f"שגיאה בניתוח: {ex}")
 
     draft = st.session_state.get("kn_draft")
     if draft and draft.get("items"):

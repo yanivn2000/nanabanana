@@ -4,3 +4,5 @@ folium>=0.17
 streamlit-folium>=0.22
 anthropic>=0.69
 psycopg2-binary>=2.9
+pandas>=2.0
+pypdf>=4.0
