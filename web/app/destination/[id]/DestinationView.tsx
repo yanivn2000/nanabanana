@@ -244,17 +244,33 @@ export function DestinationView({
                     {a.tagline_he && (
                       <p className="mt-0.5 truncate text-[13px] italic text-[var(--text-2)]">{a.tagline_he}</p>
                     )}
-                    {insights[a.id]?.[0] && (
-                      <p className="mt-1 flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]">
-                        <span className="shrink-0">{KIND_ICON[insights[a.id][0].kind] ?? "💬"}</span>
-                        <span className="line-clamp-2">
-                          {insights[a.id][0].text_he}
-                          {insights[a.id].length > 1 && (
-                            <span className="text-[var(--text-3)]"> · +{insights[a.id].length - 1} מטיילים</span>
-                          )}
-                        </span>
-                      </p>
-                    )}
+                    {insights[a.id]?.length ? (
+                      isSel ? (
+                        // Selected: show every traveler insight for this place.
+                        <div className="mt-1.5 flex flex-col gap-1">
+                          <p className="text-[11px] font-medium text-[var(--text-3)]">
+                            תובנות ממטיילים ({insights[a.id].length})
+                          </p>
+                          {insights[a.id].map((ins) => (
+                            <p key={ins.id} className="flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]">
+                              <span className="shrink-0">{KIND_ICON[ins.kind] ?? "💬"}</span>
+                              <span>{ins.text_he}</span>
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        // Collapsed: teaser (first insight) + honest count of the rest.
+                        <p className="mt-1 flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]">
+                          <span className="shrink-0">{KIND_ICON[insights[a.id][0].kind] ?? "💬"}</span>
+                          <span className="line-clamp-2">
+                            {insights[a.id][0].text_he}
+                            {insights[a.id].length > 1 && (
+                              <span className="text-[var(--text-3)]"> · עוד {insights[a.id].length - 1} תובנות ▾</span>
+                            )}
+                          </span>
+                        </p>
+                      )
+                    ) : null}
                     <div className="mt-1.5 flex items-center gap-2.5 text-[12px] text-[var(--text-3)]">
                       {!!a.family_score && (
                         <span className="inline-flex items-center gap-0.5 text-[var(--accent-ink)]">
