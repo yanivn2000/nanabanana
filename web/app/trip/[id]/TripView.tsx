@@ -52,6 +52,12 @@ export function TripView({ tripId }: { tripId: string }) {
   const [activeDay, setActiveDay] = useState<number | null>(null);
   const [activeSegment, setActiveSegment] = useState<number | null>(null);
   const [focus, setFocus] = useState<{ lat: number; lng: number; n: number } | null>(null);
+  // Destinations, for picking a target city when there's no hotel yet.
+  const [dests, setDests] = useState<{ id: number; city: string; country: string; city_he: string | null }[]>([]);
+  useEffect(() => {
+    fetch("/api/destinations").then((r) => r.json())
+      .then((d) => setDests(d.destinations ?? [])).catch(() => {});
+  }, []);
   const COST_HE = ["חינם", "₪", "₪₪", "₪₪₪"];
 
   const trip = trips.find((t) => t.id === tripId);
@@ -287,8 +293,23 @@ export function TripView({ tripId }: { tripId: string }) {
           </div>
         )}
 
-        {!canBuild && trip?.mode === "hotels" && (
-          <p className="mt-2 text-[12px] text-[var(--accent-ink)]">↓ הוסיפו מלון (למטה) כדי לקבוע את אזור הטיול — ואז אפשר לבנות לו״ז</p>
+        {!canBuild && !multiTrip && (
+          <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3.5 lg:max-w-xl">
+            <p className="mb-2 text-[13px] text-[var(--text-2)]">
+              לאן הטיול? בחרו עיר ונבנה לו״ז סביב מרכז העיר — או הוסיפו מלון (למטה) לטיול-כוכב מדויק יותר.
+            </p>
+            <select value={trip?.destinationId ?? ""}
+              onChange={(e) => {
+                const d = dests.find((x) => String(x.id) === e.target.value);
+                if (d) update(tripId, { city: d.city, cityHe: d.city_he || d.city, country: d.country, destinationId: d.id });
+              }}
+              className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[14px] text-[var(--text)] outline-none">
+              <option value="">{dests.length ? "בחרו עיר יעד…" : "טוען ערים…"}</option>
+              {dests.map((d) => (
+                <option key={d.id} value={d.id}>{(d.city_he || d.city)} · {d.country}</option>
+              ))}
+            </select>
+          </div>
         )}
       </header>
 
