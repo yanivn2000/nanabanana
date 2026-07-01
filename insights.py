@@ -445,18 +445,50 @@ def save(conn, destination_id, url, default_author, raw_text, items):
         source_ids.append(source_id)
         for it in group:
             aid, _ = match_attraction(conn, destination_id, it.get("place", ""))
+            place = it.get("place") or None
+            text = it.get("text_he")
+            # Skip an insight identical to one already stored (same place + text)
+            # — avoids duplicates when the same content is analysed/saved twice.
+            dup = conn.execute(
+                "SELECT 1 FROM insights WHERE destination_id=? AND text_he=? "
+                "AND attraction_id IS NOT DISTINCT FROM ? "
+                "AND place_name IS NOT DISTINCT FROM ? LIMIT 1",
+                (destination_id, text, aid, place),
+            ).fetchone()
+            if dup:
+                continue
             if aid:
                 n_matched += 1
             conn.execute(
                 "INSERT INTO insights (source_id, destination_id, attraction_id, "
                 "place_name, kind, text_he, sentiment, status, weight, created_at) "
                 "VALUES (?,?,?,?,?,?,?, 'approved', 1, datetime('now'))",
-                (source_id, destination_id, aid, it.get("place") or None,
-                 it.get("kind"), it.get("text_he"), it.get("sentiment")),
+                (source_id, destination_id, aid, place,
+                 it.get("kind"), text, it.get("sentiment")),
             )
             n_saved += 1
     conn.commit()
     return source_ids, n_saved, n_matched
+
+
+def dedupe_insights(conn):
+    """Delete exact-duplicate insights (same destination + attraction/place +
+    text), keeping the earliest of each. Returns how many were removed.
+    Then drops any source rows left with no insights."""
+    cur = conn.execute(
+        "DELETE FROM insights a USING insights b "
+        "WHERE a.id > b.id AND a.destination_id = b.destination_id "
+        "AND a.text_he = b.text_he "
+        "AND a.attraction_id IS NOT DISTINCT FROM b.attraction_id "
+        "AND a.place_name IS NOT DISTINCT FROM b.place_name"
+    )
+    removed = cur.rowcount
+    conn.execute(
+        "DELETE FROM sources s WHERE NOT EXISTS "
+        "(SELECT 1 FROM insights i WHERE i.source_id = s.id)"
+    )
+    conn.commit()
+    return removed
 
 
 def list_insights(conn, destination_id=None, limit=500):

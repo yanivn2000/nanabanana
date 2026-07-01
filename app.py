@@ -168,6 +168,10 @@ with tab_knowledge:
     k1.metric("תובנות שנשמרו", f"{total_ins:,}")
     k2.metric("יעדים מכוסים", f"{n_dests:,}")
     k3.metric("מקורות (פוסטים)", f"{n_srcs:,}")
+    if st.button("🧹 נקה תובנות כפולות", help="מוחק תובנות זהות (אותו מקום + אותו טקסט) ומשאיר אחת. קורה כשמעלים את אותו תוכן פעמיים."):
+        removed = insights.dedupe_insights(db.get_conn())
+        st.success(f"נמחקו {removed} תובנות כפולות" if removed else "אין תובנות כפולות 🎉")
+        st.rerun()
 
     kn_dest_rows = kn_conn.execute(
         "SELECT id, city, country, city_he FROM destinations ORDER BY city").fetchall()
