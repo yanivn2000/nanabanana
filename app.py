@@ -244,16 +244,23 @@ with tab_knowledge:
                 else:
                     with st.spinner("Claude מנתח את הפוסט…"):
                         items = insights.distill(kn_src_text, kn_opts[kn_dest], kn_key)
-                # precompute the attraction match for each, for the review table
-                mc = db.get_conn()
-                for it in items:
-                    _, mname = insights.match_attraction(mc, kn_dest, it.get("place", ""))
-                    it["match"] = mname or ""
-                mc.close()
-                st.session_state["kn_draft"] = {
-                    "dest": kn_dest, "author": kn_author, "url": kn_url,
-                    "text": kn_src_text, "items": items, "thread": kn_is_thread,
-                }
+                if not items:
+                    st.warning(
+                        "לא חולצו תובנות מהתוכן. ודאו שהקובץ טקסטואלי (לא סרוק כתמונה), "
+                        "שהתוכן רלוונטי ליעד שנבחר, ונסו שוב. אם זה שרשור ארוך — נסו לפצל "
+                        "אותו לשני חלקים ולהזין בנפרד.")
+                else:
+                    # precompute the attraction match for each, for the review table
+                    mc = db.get_conn()
+                    for it in items:
+                        _, mname = insights.match_attraction(mc, kn_dest, it.get("place", ""))
+                        it["match"] = mname or ""
+                    mc.close()
+                    st.session_state["kn_draft"] = {
+                        "dest": kn_dest, "author": kn_author, "url": kn_url,
+                        "text": kn_src_text, "items": items, "thread": kn_is_thread,
+                    }
+                    st.success(f"✓ חולצו {len(items)} תובנות — אשרו למטה מה לשמור.")
             except Exception as ex:
                 st.error(f"שגיאה בניתוח: {ex}")
 

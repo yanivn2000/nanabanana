@@ -277,13 +277,20 @@ def distill_document(text, dest_name, api_key, model=None, progress=None):
     segs = split_writeups(text, api_key, model=model)
     total = len(segs)
     items = []
+    failed = 0
+    last_err = None
     for i, seg in enumerate(segs):
         try:
             items += distill(seg, dest_name, api_key, model=model, thread=True)
-        except (ValueError, KeyError, json.JSONDecodeError) as e:
+        except Exception as e:          # keep going on a bad segment, but remember
+            failed += 1
+            last_err = e
             print(f"skip segment {i + 1}/{total}: {e}", flush=True)
         if progress:
             progress(i + 1, total)
+    # If everything failed, surface it instead of returning a silent empty list.
+    if not items and failed:
+        raise RuntimeError(f"כל {failed} הסיכומים נכשלו בעיבוד. שגיאה אחרונה: {last_err}")
     return items
 
 
