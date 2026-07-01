@@ -291,16 +291,42 @@ def _norm(s):
     return "".join(ch for ch in (s or "").lower() if ch.isalnum() or ch.isspace()).strip()
 
 
-def match_attraction(conn, destination_id, place_name):
-    """Best-effort match of a free-text place name to one of our attractions in
-    this destination. Returns (attraction_id, matched_name) or (None, None).
+# Generic words that must NOT, on their own, justify a match — otherwise a
+# "park"/"museum"/city token makes everything collide.
+_STOP = {
+    "the", "de", "van", "der", "den", "het", "een", "a", "of", "and", "und",
+    "la", "le", "el", "il", "at", "in", "on", "st",
+    "park", "garden", "gardens", "museum", "house", "home", "palace", "castle",
+    "church", "square", "market", "street", "bridge", "tower", "cathedral",
+    "gallery", "center", "centre", "old", "new", "great", "royal",
+    "פארק", "גן", "גני", "מוזיאון", "בית", "הבית", "ארמון", "טירה", "כנסייה",
+    "כיכר", "שוק", "רחוב", "גשר", "מגדל", "קתדרלה", "גלריה", "מרכז", "של", "עם",
+}
 
-    Matches on English or Hebrew name; prefers an exact match, then a
-    contains-match, preferring higher family_score / must-see rows.
+
+def _toks(s):
+    return {t for t in _norm(s).split() if len(t) >= 2}
+
+
+def match_attraction(conn, destination_id, place_name):
+    """Match a free-text place name to one of our attractions in this
+    destination. Returns (attraction_id, matched_name) or (None, None).
+
+    Token-based (not raw substring): an EXACT name wins; otherwise every
+    meaningful token of the shorter name must appear in the other, so we don't
+    match on a shared generic word ("park") or a city token ("in Zaandam").
     """
     place = _norm(place_name)
-    if not place or len(place) < 3:
+    ptoks = _toks(place_name)
+    pcore = ptoks - _STOP
+    if len(place) < 3 or not ptoks:
         return None, None
+
+    # A lone meaningful token must be distinctive enough (≥4 chars) to anchor a
+    # match — avoids matching on a short common word.
+    def ok_anchor(core):
+        return len(core) >= 2 or (len(core) == 1 and len(next(iter(core))) >= 4)
+
     rows = conn.execute(
         "SELECT id, name_en, name_he, COALESCE(family_score,0) AS fs, "
         "       COALESCE(must_see,0) AS ms "
@@ -308,23 +334,41 @@ def match_attraction(conn, destination_id, place_name):
         "AND (is_duplicate IS NULL OR is_duplicate=0)",
         (destination_id,),
     ).fetchall()
-    best = None
+
+    best = None  # (score, id, display)
     for r in rows:
+        cand = None
         for name in (r["name_en"], r["name_he"]):
             n = _norm(name)
             if not n:
                 continue
+            ncore = _toks(name) - _STOP
+            s = None
             if n == place:
-                score = 100
-            elif place in n or n in place:
-                # weight by how much of the shorter string overlaps
-                score = 40 + int(20 * min(len(n), len(place)) / max(len(n), len(place)))
-            else:
-                continue
-            score += r["fs"] + (5 if r["ms"] else 0)
-            if best is None or score > best[0]:
-                best = (score, r["id"], r["name_he"] or r["name_en"])
-    if best and best[0] >= 45:      # require a real match, not a 1-char coincidence
+                s = 100
+            elif pcore and ncore and pcore <= ncore and ok_anchor(pcore):
+                s = 68 + int(24 * len(pcore) / len(ncore))       # place ⊆ attraction
+            elif pcore and ncore and ncore <= pcore and ok_anchor(ncore):
+                s = 62 + int(20 * len(ncore) / len(pcore))       # attraction ⊆ place
+            elif pcore and ncore and (pcore & ncore):
+                jac = len(pcore & ncore) / len(pcore | ncore)
+                if jac >= 0.6 and ok_anchor(pcore & ncore):
+                    s = 55 + int(18 * jac)                       # strong overlap
+            if s is not None and (cand is None or s > cand):
+                cand = s
+        if cand is None:
+            continue
+        cand += 0.1 * r["fs"] + (2 if r["ms"] else 0)            # gentle tiebreak only
+        if best is None or cand > best[0]:
+            he, en = r["name_he"], r["name_en"]
+            # Show the English name too when the Hebrew one is generic/unrelated,
+            # so a match like "Vondelpark → PARK אמסטרדם · Vondelpark" is clear.
+            disp = he or en
+            if he and en and _norm(en) not in _norm(he):
+                disp = f"{he} · {en}"
+            best = (cand, r["id"], disp)
+
+    if best and best[0] >= 62:
         return best[1], best[2]
     return None, None
 
