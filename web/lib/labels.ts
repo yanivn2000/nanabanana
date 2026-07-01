@@ -21,18 +21,25 @@ const SUB_HE: Record<string, string> = {
 
 const CAT_HE: Record<string, string> = {
   nature: "טבע", museum: "מוזיאון", attraction: "אטרקציה", sport: "ספורט",
-  food: "אוכל", shopping: "קניות", tourism: "תיירות", leisure: "פנאי", historic: "אתר היסטורי",
+  food: "אוכל", shopping: "קניות", tourism: "תיירות", leisure: "פנאי", historic: "היסטורי",
 };
+
+// Fold near-duplicate categories into one bucket for display/filtering.
+// Tourism sites are effectively historic landmarks, so merge them together.
+const CAT_MERGE: Record<string, string> = { tourism: "historic" };
+export function mergeCat(c: string): string {
+  return CAT_MERGE[c] ?? c;
+}
 
 // Best available memorable line: AI tagline → subcategory → category.
 export function descriptor(a: Attraction): string {
   if (a.tagline_he) return a.tagline_he;
   if (a.subcategory && SUB_HE[a.subcategory]) return SUB_HE[a.subcategory];
-  return CAT_HE[a.category] ?? a.category;
+  return CAT_HE[mergeCat(a.category)] ?? a.category;
 }
 
 export function categoryHe(c: string): string {
-  return CAT_HE[c] ?? c;
+  return CAT_HE[mergeCat(c)] ?? c;
 }
 
 // Marker/legend colour per category — shared by the map and the filter legend.
@@ -48,7 +55,7 @@ export const CAT_COLOR: Record<string, string> = {
   leisure: "#639922",
 };
 export function catColor(c: string): string {
-  return CAT_COLOR[c] ?? "#8a8780";
+  return CAT_COLOR[mergeCat(c)] ?? "#8a8780";
 }
 
 // Distinct colour per trip segment (leg) — shared by the map pins and the legend.

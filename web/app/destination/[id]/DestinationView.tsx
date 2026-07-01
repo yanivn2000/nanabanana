@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Star, Search } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
-import { descriptor, catColor, bigImage } from "@/lib/labels";
+import { descriptor, catColor, bigImage, mergeCat } from "@/lib/labels";
 import type { Attraction, Destination, Insight } from "@/lib/db";
 
 // Emoji per insight kind — quick visual cue for the source of the tip.
@@ -22,7 +22,7 @@ const SEASON_HE: Record<string, string> = {
 const COST_HE = ["חינם", "₪", "₪₪", "₪₪₪"];
 
 function meta(a: Attraction): string {
-  const parts = [CAT_HE[a.category] ?? a.category];
+  const parts = [CAT_HE[mergeCat(a.category)] ?? a.category];
   if (a.best_season && SEASON_HE[a.best_season]) parts.push(SEASON_HE[a.best_season]);
   return parts.join(" · ");
 }
@@ -49,13 +49,13 @@ export function DestinationView({
   const [bounds, setBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
 
   const cats = useMemo(
-    () => Array.from(new Set(attractions.map((a) => a.category))),
+    () => Array.from(new Set(attractions.map((a) => mergeCat(a.category)))),
     [attractions]
   );
   const filtered = useMemo(
     () =>
       attractions.filter((a) => {
-        if (activeCat && a.category !== activeCat) return false;
+        if (activeCat && mergeCat(a.category) !== activeCat) return false;
         if (flags.mustSee && a.must_see !== 1) return false;
         if (flags.free && a.cost_level !== 0) return false;
         if (flags.indoor && !(a.indoor_outdoor === "indoor" || a.indoor_outdoor === "both")) return false;
