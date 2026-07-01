@@ -40,7 +40,7 @@ export function DestinationView({
   const [query, setQuery] = useState("");
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [flags, setFlags] = useState({
-    mustSee: false, free: false, indoor: false, top: false,
+    mustSee: false, free: false, indoor: false, top: false, withInsights: false,
   });
   const toggleFlag = (k: keyof typeof flags) =>
     setFlags((f) => ({ ...f, [k]: !f[k] }));
@@ -60,13 +60,14 @@ export function DestinationView({
         if (flags.free && a.cost_level !== 0) return false;
         if (flags.indoor && !(a.indoor_outdoor === "indoor" || a.indoor_outdoor === "both")) return false;
         if (flags.top && (a.family_score ?? 0) < 8) return false;
+        if (flags.withInsights && !insights[a.id]?.length) return false;
         if (query) {
           const hay = `${a.name_he ?? ""} ${a.name_en} ${descriptor(a)}`.toLowerCase();
           if (!hay.includes(query.toLowerCase())) return false;
         }
         return true;
       }),
-    [attractions, activeCat, query, flags]
+    [attractions, activeCat, query, flags, insights]
   );
 
   const mustSee = useMemo(
@@ -178,6 +179,15 @@ export function DestinationView({
                 </button>
               );
             })}
+            <button onClick={() => toggleFlag("withInsights")}
+              className="rounded-full px-3 py-1.5 text-[12.5px] transition"
+              style={{
+                background: flags.withInsights ? "var(--brand)" : "var(--surface)",
+                color: flags.withInsights ? "#fff" : "var(--text-2)",
+                border: `1px solid ${flags.withInsights ? "var(--brand)" : "var(--border)"}`,
+              }}>
+              💬 עם תובנות מטיילים
+            </button>
             <button onClick={() => setMapOnly((v) => !v)}
               className="rounded-full px-3 py-1.5 text-[12.5px] transition"
               style={{
@@ -189,6 +199,11 @@ export function DestinationView({
             </button>
           </div>
 
+          {flags.withInsights && (
+            <p className="mb-2 text-[12px] text-[var(--brand-ink)]">
+              מציג רק מקומות עם תובנות מטיילים ({listItems.length})
+            </p>
+          )}
           {mapOnly && (
             <p className="mb-2 text-[12px] text-[var(--brand-ink)]">
               מציג {listItems.length} מקומות באזור המפה — הזיזו או הגדילו את המפה לעדכון
