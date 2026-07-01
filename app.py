@@ -15,6 +15,7 @@ import pipeline_images
 import dedupe
 import tickets
 import insights
+import components
 
 st.set_page_config(page_title="ניהול מאגר · Yalle", page_icon="🗺️", layout="wide")
 
@@ -465,6 +466,55 @@ with tab_settings:
         with st.spinner("מנקה..."):
             res = dedupe.dedupe()
         st.success(f"נמצאו {res['clusters']} קבוצות · {res['duplicates_flagged']} כפילויות הוסתרו")
+
+    st.divider()
+    st.subheader("🧩 תת-אטרקציות (רכיבים של אתר גדול)")
+    st.caption(
+        "מזהה פריטים גנריים שיושבים **בתוך אתר-אב** (גן חיות / פארק שעשועים / פארק מים "
+        "/ אקווריום) — כמו חיות בגן חיות או מתקנים בפארק. מוזיאונים, פארקים, נקודות-תצפית "
+        "ואנדרטאות **מוגנים ולעולם לא מסומנים** (גם אם צמודים לאתר-אב). "
+        "עברו אתר-אחר-אתר, ומה שנראה תקין — פשוט אל תסתירו. הפיך: 'הסתרה' מעלימה מהאפליקציה, לא מוחקת.")
+
+    cc = db.get_conn()
+    comp_hidden = components.hidden_count(cc)
+    radius = st.slider("רדיוס מאתר-האב (מטר)", 100, 400, 200, step=50, key="comp_radius",
+                       help="מרחק שנחשב 'בתוך' האתר. גדול יותר = תופס יותר רכיבים בקצוות, אבל סיכוי גבוה יותר לטעות.")
+    cands = components.find_candidates(cc, radius_m=radius)
+    cmA, cmB = st.columns(2)
+    cmA.metric("מועמדות שזוהו", f"{len(cands):,}")
+    cmB.metric("מוסתרות כרגע", f"{comp_hidden:,}")
+
+    if cands:
+        from collections import defaultdict
+        groups = defaultdict(list)
+        for a in cands:
+            groups[(a["parent_id"], a["parent_name"], a["parent_sub"])].append(a)
+        st.caption(f"נמצאו {len(cands)} מועמדות ב-{len(groups)} אתרי-אב.")
+        if st.button(f"🙈 הסתר את כל {len(cands)} המועמדות בבת אחת", key="hide_all_comp"):
+            components.hide(cc, [a["id"] for a in cands])
+            st.success(f"הוסתרו {len(cands)} תת-אטרקציות")
+            st.rerun()
+        for (pid, pname, psub), items in sorted(groups.items(), key=lambda kv: -len(kv[1])):
+            with st.expander(f"{pname} — {len(items)} רכיבים"):
+                if st.button(f"🙈 הסתר את כל {len(items)} הרכיבים כאן", key=f"hide_p_{pid}"):
+                    components.hide(cc, [a["id"] for a in items])
+                    st.rerun()
+                for a in items:
+                    nm = a["name_he"] or a["name_en"]
+                    star = " ⭐" if a["must_see"] else ""
+                    st.write(f"• {nm} · {a['distance_m']}מ׳{star}")
+    else:
+        st.info("לא זוהו מועמדות ברדיוס הזה.")
+
+    if comp_hidden:
+        with st.expander(f"↩︎ מוסתרות — שחזור ({comp_hidden})"):
+            for r in components.list_hidden(cc):
+                rc1, rc2 = st.columns([5, 1])
+                rc1.write(f"• {r['name_he'] or r['name_en']}")
+                if rc2.button("שחזר", key=f"restore_c_{r['id']}"):
+                    components.restore(cc, [r["id"]])
+                    st.rerun()
+    cc.close()
 
 with tab_ingest:
     st.subheader("➕ הוסף עיר חדשה לפי שם")

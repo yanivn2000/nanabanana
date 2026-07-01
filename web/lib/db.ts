@@ -86,6 +86,7 @@ export async function topAttractions(destinationId: number, limit = 40): Promise
        WHERE destination_id = $1
          AND (quality_keep = 1 OR quality_keep IS NULL)
          AND (is_duplicate IS NULL OR is_duplicate = 0)
+         AND (is_component IS NULL OR is_component = 0)
        ORDER BY COALESCE(quality_keep = 1, false) DESC,
                 COALESCE(family_score, 0) DESC, name_en
        LIMIT $2`,
@@ -100,6 +101,7 @@ export async function attractionsForMap(destinationId: number, limit = 200): Pro
        WHERE destination_id = $1 AND lat IS NOT NULL AND lng IS NOT NULL
          AND (quality_keep = 1 OR quality_keep IS NULL)
          AND (is_duplicate IS NULL OR is_duplicate = 0)
+         AND (is_component IS NULL OR is_component = 0)
        ORDER BY COALESCE(family_score, 0) DESC, name_en
        LIMIT $2`,
     [destinationId, limit]
