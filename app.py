@@ -14,6 +14,7 @@ import enrich
 import pipeline_images
 import dedupe
 import tickets
+import insights
 
 st.set_page_config(page_title="NanaBanana", page_icon="🍌", layout="wide")
 
@@ -73,9 +74,142 @@ SEED_CITIES = {
     "Tbilisi": ("Georgia", 41.7151, 44.8271),
 }
 
-tab_browse, tab_ingest, tab_enrich, tab_tickets, tab_settings = st.tabs(
+tab_browse, tab_ingest, tab_enrich, tab_knowledge, tab_tickets, tab_settings = st.tabs(
     ["🔍 דפדוף בנתונים", "⬇️ איסוף מ-OpenStreetMap", "✨ העשרה עם Claude",
-     "🎫 בקשות פיתוח", "⚙️ הגדרות"])
+     "💬 מקורות ידע", "🎫 בקשות פיתוח", "⚙️ הגדרות"])
+
+with tab_knowledge:
+    st.subheader("💬 מקורות ידע — אימון על תוכן אמין")
+    st.caption(
+        "הדביקו פוסט אמיתי של מטייל (בלוג, פורום, סיכום של חבר) על יעד. Claude "
+        "ינתח אותו **פעם אחת** ויחלץ תובנות מובנות לפי מקום (טיפ / אזהרה / שווה-לא-שווה "
+        "/ אוכל / עונה / נגישות). אתם מאשרים את מה ששווה לשמור — ומאז המערכת מעדיפה "
+        "את הידע הזה על-פני מידע כללי מהרשת, **גם עם וגם בלי AI**.")
+
+    kn_conn = db.get_conn()
+    total_ins, n_dests, n_srcs = insights.counts(kn_conn)
+    k1, k2, k3 = st.columns(3)
+    k1.metric("תובנות שנשמרו", f"{total_ins:,}")
+    k2.metric("יעדים מכוסים", f"{n_dests:,}")
+    k3.metric("מקורות (פוסטים)", f"{n_srcs:,}")
+
+    kn_dest_rows = kn_conn.execute(
+        "SELECT id, city, country, city_he FROM destinations ORDER BY city").fetchall()
+    kn_opts = {r["id"]: f"{r['city_he'] or r['city']} · {r['country']}" for r in kn_dest_rows}
+
+    st.divider()
+    st.markdown("##### ➕ הכנס פוסט חדש")
+    if not kn_opts:
+        st.info("אין עדיין יעדים במאגר — הוסיפו עיר בלשונית האיסוף קודם.")
+    else:
+        kn_dest = st.selectbox("יעד", list(kn_opts.keys()),
+                               format_func=lambda i: kn_opts[i], key="kn_dest")
+        c1, c2 = st.columns(2)
+        kn_author = c1.text_input("מקור / כותב (לא חובה)", key="kn_author",
+                                  placeholder="למשל: משפחת כהן, בלוג ׳מטיילים באירופה׳")
+        kn_url = c2.text_input("קישור (לא חובה)", key="kn_url", placeholder="https://…")
+        kn_text = st.text_area("הדביקו כאן את תוכן הפוסט", height=220, key="kn_text",
+                               placeholder="הטקסט המלא של הפוסט/הסיכום — באיזו שפה שהיא.")
+
+        # Anthropic key: prefer the server-side key, fall back to a pasted one.
+        def _server_key():
+            k = os.environ.get("ANTHROPIC_API_KEY")
+            if k:
+                return k
+            try:
+                for line in open(os.path.expanduser("~/.nanabanana-web.env")):
+                    if line.strip().startswith("ANTHROPIC_API_KEY="):
+                        return line.split("=", 1)[1].strip().strip('"').strip("'")
+            except FileNotFoundError:
+                pass
+            return ""
+        kn_key = _server_key()
+        if not kn_key:
+            kn_key = st.text_input("Anthropic API key", type="password", key="kn_key",
+                                   help="לא נמצא מפתח בשרת — הדביקו לשימוש חד-פעמי")
+
+        if st.button("🧠 נתח עם Claude", disabled=not (kn_text.strip() and kn_key)):
+            with st.spinner("Claude מנתח את הפוסט…"):
+                try:
+                    items = insights.distill(kn_text, kn_opts[kn_dest], kn_key)
+                    # precompute the attraction match for each, for the review table
+                    mc = db.get_conn()
+                    for it in items:
+                        _, mname = insights.match_attraction(mc, kn_dest, it.get("place", ""))
+                        it["match"] = mname or ""
+                    mc.close()
+                    st.session_state["kn_draft"] = {
+                        "dest": kn_dest, "author": kn_author, "url": kn_url,
+                        "text": kn_text, "items": items,
+                    }
+                except Exception as ex:
+                    st.error(f"שגיאה בניתוח: {ex}")
+
+    draft = st.session_state.get("kn_draft")
+    if draft and draft.get("items"):
+        st.divider()
+        st.markdown("##### ✅ אשרו את התובנות שכדאי לשמור")
+        st.caption(
+            "ערכו את הטקסט אם צריך, בטלו סימון למה שלא שווה, ואז שמרו. "
+            "עמודת ׳זוהה כ׳ מראה לאיזו אטרקציה במאגר קישרנו את התובנה (אם בכלל).")
+        import pandas as pd
+        df = pd.DataFrame([{
+            "שמור": True,
+            "סוג": it.get("kind"),
+            "מקום": it.get("place", ""),
+            "תובנה (עברית)": it.get("text_he", ""),
+            "יחס": it.get("sentiment", "neutral"),
+            "זוהה כ": it.get("match", ""),
+        } for it in draft["items"]])
+        edited = st.data_editor(
+            df, hide_index=True, use_container_width=True, key="kn_editor",
+            column_config={
+                "שמור": st.column_config.CheckboxColumn(width="small"),
+                "סוג": st.column_config.SelectboxColumn(options=list(insights.KIND_HE.keys()), width="small"),
+                "מקום": st.column_config.TextColumn(width="medium"),
+                "תובנה (עברית)": st.column_config.TextColumn(width="large"),
+                "יחס": st.column_config.SelectboxColumn(options=["pos", "neg", "neutral"], width="small"),
+                "זוהה כ": st.column_config.TextColumn(width="medium", disabled=True),
+            })
+        kept = edited[edited["שמור"]]
+        if st.button(f"💾 שמור {len(kept)} תובנות מאושרות", disabled=len(kept) == 0):
+            items = [{
+                "place": r["מקום"], "kind": r["סוג"],
+                "text_he": r["תובנה (עברית)"], "sentiment": r["יחס"],
+            } for _, r in kept.iterrows()]
+            sc = db.get_conn()
+            _, n_saved, n_matched = insights.save(
+                sc, draft["dest"], draft["url"], draft["author"], draft["text"], items)
+            sc.close()
+            st.success(f"נשמרו {n_saved} תובנות · מתוכן {n_matched} קושרו לאטרקציה במאגר")
+            del st.session_state["kn_draft"]
+            st.rerun()
+
+    st.divider()
+    st.markdown("##### 📚 תובנות שמורות")
+    browse_dest = st.selectbox(
+        "סנן לפי יעד", [0] + list(kn_opts.keys()),
+        format_func=lambda i: "כל היעדים" if i == 0 else kn_opts[i], key="kn_browse")
+    saved = insights.list_insights(kn_conn, browse_dest or None, limit=300)
+    if not saved:
+        st.info("עדיין אין תובנות שמורות. הכניסו פוסט ראשון למעלה.")
+    for row in saved:
+        attr = row["attr_he"] or row["attr_en"]
+        where = attr or (row["place_name"] or "כללי")
+        badge = "🔗" if row["attraction_id"] else "•"
+        with st.container(border=True):
+            tc, dc = st.columns([10, 1])
+            tc.markdown(
+                f"**{insights.KIND_HE.get(row['kind'], row['kind'])}** — {row['text_he']}  \n"
+                f"<span style='color:#888;font-size:12px'>{badge} {where} · "
+                f"{row['dest_city']}{(' · ' + row['src_author']) if row['src_author'] else ''}</span>",
+                unsafe_allow_html=True)
+            if dc.button("🗑️", key=f"del_ins_{row['id']}", help="מחק תובנה"):
+                dc2 = db.get_conn()
+                insights.delete_insight(dc2, row["id"])
+                dc2.close()
+                st.rerun()
+    kn_conn.close()
 
 with tab_tickets:
     st.subheader("🎫 בקשות פיתוח")

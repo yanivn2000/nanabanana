@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listDestinations, topAttractions } from "@/lib/db";
+import { listDestinations, topAttractions, insightsForDestination } from "@/lib/db";
 import type { Attraction, Destination } from "@/lib/db";
 import {
   aiConfigured,
@@ -114,7 +114,11 @@ export async function POST(req: NextRequest) {
     const segs = resolved.filter(
       (x): x is { dest: Destination; days: number; hotels: TripHotel[] | undefined } => x !== null);
     const segAttrs = await Promise.all(
-      segs.map(async (x) => ({ ...x, attractions: await topAttractions(x.dest.id, 50) })));
+      segs.map(async (x) => ({
+        ...x,
+        attractions: await topAttractions(x.dest.id, 50),
+        insights: await insightsForDestination(x.dest.id),
+      })));
     const allAttractions = segAttrs.flatMap((x) => x.attractions);
     const heuristic = () => attachDetails(
       buildMultiHeuristicItinerary(segAttrs.map((x) => ({
@@ -128,7 +132,7 @@ export async function POST(req: NextRequest) {
       const itinerary = await generateMultiItinerary({
         segments: segAttrs.map((x) => ({
           city: x.dest.city, country: x.dest.country, days: x.days,
-          attractions: x.attractions, hotels: x.hotels,
+          attractions: x.attractions, hotels: x.hotels, insights: x.insights,
         })),
         month: body.month,
         profileText: body.profileText ?? "משפחה · קצב רגוע",
@@ -179,6 +183,7 @@ export async function POST(req: NextRequest) {
       profileText: body.profileText ?? "משפחה · קצב רגוע",
       attractions,
       hotels: body.hotels,
+      insights: await insightsForDestination(dest.id),
     });
     return NextResponse.json({ itinerary: attachDetails(itinerary, attractions) });
   } catch (e) {

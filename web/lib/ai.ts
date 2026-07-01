@@ -1,8 +1,27 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { getModel } from "./db";
-import type { Attraction, DestinationSummary } from "./db";
+import type { Attraction, DestinationSummary, Insight } from "./db";
 import type { Itinerary } from "./trip-types";
+
+const KIND_HE_INS: Record<string, string> = {
+  tip: "טיפ", warning: "אזהרה", verdict: "שווה/לא שווה",
+  food: "אוכל", season: "עונה", access: "נגישות",
+};
+
+// Verified real-traveller knowledge — trusted ABOVE generic model knowledge.
+// Distilled + team-approved in the admin; injected here with top priority.
+function verifiedBlock(insights: Insight[] | undefined, attractions: Attraction[]): string {
+  if (!insights || insights.length === 0) return "";
+  const nameById = new Map(attractions.map((a) => [a.id, a.name_he || a.name_en]));
+  const lines = insights.map((v) => {
+    const place = v.attraction_id != null ? nameById.get(v.attraction_id) ?? v.place_name : v.place_name;
+    return `- [${KIND_HE_INS[v.kind] ?? v.kind}] ${place ? place + ": " : ""}${v.text_he}`;
+  });
+  return `\n**ידע אמת ממטיילים אמיתיים (עדיפות עליונה — סמוך על זה יותר מכל ידע כללי):**
+המידע הבא נאסף מדיווחים של מטיילים אמיתיים ואומת ידנית על ידי הצוות. תן לו משקל גבוה מכל ידע כללי: אם תובנה ממליצה על מקום — קדם אותו; אם מזהירה — הימנע או תזמן בהתאם; ושלב את העצה הרלוונטית בשדה note/why של היום המתאים.
+${lines.join("\n")}\n`;
+}
 
 export function aiConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY);
@@ -104,6 +123,7 @@ export type GenerateParams = {
   profileText: string;
   attractions: Attraction[];
   hotels?: TripHotel[];
+  insights?: Insight[];
 };
 
 const MONTHS_HE = ["", "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני",
@@ -127,7 +147,7 @@ export async function generateItinerary(p: GenerateParams): Promise<Itinerary> {
   const userText = `בנה לו"ז טיול ל${p.city}, ${p.country}.
 מספר ימים: ${p.days}
 פרופיל המשפחה: ${p.profileText}
-${seasonHint(p.month)}${hotelsBlock(p.hotels)}
+${seasonHint(p.month)}${hotelsBlock(p.hotels)}${verifiedBlock(p.insights, p.attractions)}
 אטרקציות זמינות (בחר מתוכן בלבד):
 ${attractionsBlock(p.attractions)}`;
   return callClaude(userText);
@@ -139,6 +159,7 @@ export type MultiSegment = {
   days: number;
   attractions: Attraction[];
   hotels?: TripHotel[];
+  insights?: Insight[];
 };
 
 // One continuous itinerary across several base cities (a multi-city trip).
@@ -156,6 +177,7 @@ export async function generateMultiItinerary(p: {
         : "";
       return `### מקטע ${i + 1}: ${s.city}, ${s.country} — ${s.days} ימים\n` +
         base +
+        verifiedBlock(s.insights, s.attractions) +
         `אטרקציות זמינות במקטע זה (לימי מקטע זה בלבד):\n${attractionsBlock(s.attractions)}`;
     })
     .join("\n\n");

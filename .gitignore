@@ -10,3 +10,6 @@ venv/
 .streamlit/secrets.toml
 data/*.db
 web/test
+
+# local preview launch config (absolute paths, machine-specific)
+.claude/

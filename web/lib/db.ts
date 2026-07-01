@@ -135,6 +135,41 @@ export async function destinationSummaries(): Promise<DestinationSummary[]> {
   );
 }
 
+// --- Verified-knowledge layer: real-traveller insights distilled + approved
+// in the admin. Trusted ABOVE generic web knowledge, used with and without AI.
+export type Insight = {
+  id: number;
+  attraction_id: number | null;
+  place_name: string | null;
+  kind: string;            // tip | warning | verdict | food | season | access
+  text_he: string;
+  sentiment: string | null; // pos | neg | neutral
+};
+
+// All approved insights for a destination (attraction-linked + general).
+export async function insightsForDestination(destinationId: number): Promise<Insight[]> {
+  return query<Insight>(
+    `SELECT id, attraction_id, place_name, kind, text_he, sentiment
+       FROM insights
+       WHERE destination_id = $1 AND status = 'approved'
+       ORDER BY weight DESC, id DESC`,
+    [destinationId]
+  );
+}
+
+// Group a destination's insights by attraction id (for card display / prompts).
+export async function insightsByAttraction(
+  destinationId: number
+): Promise<Map<number, Insight[]>> {
+  const rows = await insightsForDestination(destinationId);
+  const m = new Map<number, Insight[]>();
+  for (const r of rows) {
+    if (r.attraction_id == null) continue;
+    (m.get(r.attraction_id) ?? m.set(r.attraction_id, []).get(r.attraction_id)!).push(r);
+  }
+  return m;
+}
+
 // Shared AI model setting (written by the Streamlit admin Settings tab).
 export async function getModel(): Promise<string> {
   const fallback = process.env.NANABANANA_MODEL || "claude-opus-4-8";

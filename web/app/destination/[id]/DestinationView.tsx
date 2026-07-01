@@ -5,7 +5,12 @@ import Link from "next/link";
 import { ChevronRight, Star, Search } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
 import { descriptor, catColor, bigImage } from "@/lib/labels";
-import type { Attraction, Destination } from "@/lib/db";
+import type { Attraction, Destination, Insight } from "@/lib/db";
+
+// Emoji per insight kind — quick visual cue for the source of the tip.
+const KIND_ICON: Record<string, string> = {
+  tip: "💡", warning: "⚠️", verdict: "👍", food: "🍽️", season: "🗓️", access: "♿",
+};
 
 const CAT_HE: Record<string, string> = {
   nature: "טבע", museum: "מוזיאון", attraction: "אטרקציה", sport: "ספורט",
@@ -25,9 +30,11 @@ function meta(a: Attraction): string {
 export function DestinationView({
   dest,
   attractions,
+  insights = {},
 }: {
   dest: Destination;
   attractions: Attraction[];
+  insights?: Record<number, Insight[]>;
 }) {
   const [selected, setSelected] = useState<Attraction | null>(null);
   const [query, setQuery] = useState("");
@@ -221,6 +228,17 @@ export function DestinationView({
                     <p className="serif mt-0.5 text-[17px] leading-tight">{a.name_he || a.name_en}</p>
                     {a.tagline_he && (
                       <p className="mt-0.5 truncate text-[13px] italic text-[var(--text-2)]">{a.tagline_he}</p>
+                    )}
+                    {insights[a.id]?.[0] && (
+                      <p className="mt-1 flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]">
+                        <span className="shrink-0">{KIND_ICON[insights[a.id][0].kind] ?? "💬"}</span>
+                        <span className="line-clamp-2">
+                          {insights[a.id][0].text_he}
+                          {insights[a.id].length > 1 && (
+                            <span className="text-[var(--text-3)]"> · +{insights[a.id].length - 1} מטיילים</span>
+                          )}
+                        </span>
+                      </p>
                     )}
                     <div className="mt-1.5 flex items-center gap-2.5 text-[12px] text-[var(--text-3)]">
                       {!!a.family_score && (
