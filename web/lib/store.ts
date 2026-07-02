@@ -155,6 +155,7 @@ export type Trip = {
     removed: string[];
     custom: { id: string; label: string }[];
   };
+  budget?: { dailyTarget?: number }; // per-trip daily budget target, € (#15)
   itinerary?: Itinerary;
   createdAt: number;
 };
