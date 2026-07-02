@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getDestination, attractionsForMap, insightsForDestination, type Insight } from "@/lib/db";
-import { passesForCity } from "@/lib/passes";
+import { passesForCity, passCovers } from "@/lib/passes";
 import { DestinationView } from "./DestinationView";
 
 export const dynamic = "force-dynamic";
@@ -39,10 +39,16 @@ export default async function DestinationPage({
     .map(([name, items]) => ({ name, items }))
     .sort((a, b) => b.items.length - a.items.length);
 
+  const passes = passesForCity(dest.city, dest.city_he);
+  // Attractions covered by a pass's curated include-list → shown with a 💳 tag.
+  const coveredIds = attractions
+    .filter((a) => passes.some((p) => passCovers(p, a.name_en, a.name_he)))
+    .map((a) => a.id);
+
   return (
     <DestinationView
       dest={dest} attractions={attractions} insights={insights} placeGroups={placeGroups}
-      passes={passesForCity(dest.city, dest.city_he)}
+      passes={passes} coveredIds={coveredIds}
     />
   );
 }

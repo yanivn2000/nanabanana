@@ -34,13 +34,16 @@ export function DestinationView({
   insights = {},
   placeGroups = [],
   passes = [],
+  coveredIds = [],
 }: {
   dest: Destination;
   attractions: Attraction[];
   insights?: Record<number, Insight[]>;
   placeGroups?: { name: string; items: Insight[] }[];
   passes?: Pass[];
+  coveredIds?: number[];
 }) {
+  const covered = new Set(coveredIds);
   const [selected, setSelected] = useState<Attraction | null>(null);
   const [query, setQuery] = useState("");
   const [showPlaces, setShowPlaces] = useState(false);
@@ -126,7 +129,12 @@ export function DestinationView({
                     <span className="shrink-0 self-center text-[12px] text-[var(--brand-ink)]">פרטים ↗</span>
                   </a>
                 ))}
-                <p className="text-[11px] text-[var(--text-3)]">כרטיס אזורי/עירוני שיכול לחסוך על תחבורה וכניסות. בדקו מה משתלם לטיול שלכם.</p>
+                {passes.some((p) => p.included?.length) && (
+                  <p className="text-[11.5px] text-[var(--brand-ink)]">
+                    אטרקציות שמסומנות 💳 ברשימה נכללות בכרטיס{passes.find((p) => p.updated)?.updated ? ` (עודכן ${passes.find((p) => p.updated)!.updated})` : ""}.
+                  </p>
+                )}
+                <p className="text-[11px] text-[var(--text-3)]">כרטיס אזורי/עירוני שיכול לחסוך על תחבורה וכניסות. הכיסוי משתנה מעת לעת — אמתו את הרשימה המלאה באתר הרשמי.</p>
               </div>
             )}
           </div>
@@ -312,6 +320,10 @@ export function DestinationView({
                       <p className="eyebrow truncate">{meta(a)}</p>
                       {a.must_see === 1 && (
                         <span className="shrink-0 bg-[var(--accent)] px-1.5 py-0.5 text-[9px] font-medium tracking-wide text-white">חובה</span>
+                      )}
+                      {covered.has(a.id) && (
+                        <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium"
+                          style={{ background: "var(--brand-soft)", color: "var(--brand-ink)" }}>💳 כלול בכרטיס</span>
                       )}
                     </div>
                     <p className="serif mt-0.5 text-[17px] leading-tight">{a.name_he || a.name_en}</p>
