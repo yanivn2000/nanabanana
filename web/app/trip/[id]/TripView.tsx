@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, Pencil, ChevronUp, ChevronDown,
-  ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon, Users, Luggage,
+  ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon, Users, Luggage, ListChecks,
 } from "lucide-react";
 import { googleMapsUrl } from "@/lib/geo";
 import { bigImage, segColor } from "@/lib/labels";
@@ -15,6 +15,7 @@ import type { Attraction } from "@/lib/db";
 import { useTrips, useProfile, useHotels, profileText, profileSummary, MONTHS_HE } from "@/lib/store";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { PackingList } from "@/components/PackingList";
+import { TravelChecklist } from "@/components/TravelChecklist";
 import { Hotels } from "@/app/trips/Hotels";
 import { MapClient } from "@/components/MapClient";
 import { AskBar } from "./AskBar";
@@ -48,6 +49,7 @@ export function TripView({ tripId }: { tripId: string }) {
   const [editing, setEditing] = useState(false);
   const [editTravelers, setEditTravelers] = useState(false);
   const [showPacking, setShowPacking] = useState(false);
+  const [showChecklist, setShowChecklist] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [activeDay, setActiveDay] = useState<number | null>(null);
   const [activeSegment, setActiveSegment] = useState<number | null>(null);
@@ -336,6 +338,25 @@ export function TripView({ tripId }: { tripId: string }) {
                   profile={tripProfile} month={trip?.month} days={trip?.days ?? 4} country={trip?.country}
                   value={trip?.packing}
                   onChange={(packing) => update(tripId, { packing })} />
+              </div>
+            )}
+          </div>
+
+          {/* #17 — pre-flight checklist */}
+          <div className="mt-3 px-5 lg:px-0">
+            <button onClick={() => setShowChecklist((v) => !v)}
+              className="flex w-full items-center justify-between rounded-[var(--radius-card)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow)]">
+              <span className="flex items-center gap-2 text-[14px] font-medium">
+                <ListChecks size={17} className="text-[var(--brand-ink)]" /> לפני שיוצאים
+              </span>
+              {showChecklist ? <ChevronUp size={17} className="text-[var(--text-3)]" /> : <ChevronDown size={17} className="text-[var(--text-3)]" />}
+            </button>
+            {showChecklist && (
+              <div className="mt-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
+                <TravelChecklist
+                  profile={tripProfile}
+                  value={trip?.checklist}
+                  onChange={(checklist) => update(tripId, { checklist })} />
               </div>
             )}
           </div>

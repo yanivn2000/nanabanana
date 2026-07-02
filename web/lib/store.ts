@@ -150,6 +150,11 @@ export type Trip = {
     removed: string[];
     custom: { id: string; label: string }[];
   };
+  checklist?: {            // per-trip pre-flight checklist state (#17)
+    checked: string[];
+    removed: string[];
+    custom: { id: string; label: string }[];
+  };
   itinerary?: Itinerary;
   createdAt: number;
 };

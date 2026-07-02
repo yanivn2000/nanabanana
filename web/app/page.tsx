@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { listDestinations } from "@/lib/db";
-import { MapPin, ArrowLeft, Plus, Sparkles, Compass } from "lucide-react";
+import { ArrowLeft, Plus, Sparkles, Compass } from "lucide-react";
 import { YalleMark } from "@/components/YalleMark";
+import { DestinationsGrid } from "./DestinationsGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -82,32 +83,7 @@ export default async function Home() {
           )}
         </div>
 
-        {destinations.length === 0 ? (
-          <div className="rounded-[var(--radius-card)] bg-[var(--surface)] p-5 text-center text-sm text-[var(--text-2)]">
-            עדיין אין נתונים — הריצו איסוף בכלי הניהול.
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-3 lg:gap-4">
-            {destinations.map((d) => (
-              <Link
-                href={`/destination/${d.id}`}
-                key={d.id}
-                className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)]"
-              >
-                <div className="grid size-11 place-items-center rounded-[var(--radius-sm)] bg-[var(--brand-soft)] text-[var(--brand-ink)]">
-                  <MapPin size={20} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[15px] font-medium">{d.city_he || d.city}</p>
-                  <p className="text-[13px] text-[var(--text-2)]">
-                    {d.country_he || d.country} · {d.attraction_count.toLocaleString("he")} אטרקציות
-                  </p>
-                </div>
-                <ArrowLeft size={18} className="text-[var(--text-3)]" />
-              </Link>
-            ))}
-          </div>
-        )}
+        <DestinationsGrid destinations={destinations} />
       </section>
     </main>
   );
