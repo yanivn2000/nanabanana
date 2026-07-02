@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getDestination, attractionsForMap, insightsForDestination, type Insight } from "@/lib/db";
+import { passesForCity } from "@/lib/passes";
 import { DestinationView } from "./DestinationView";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,7 @@ export default async function DestinationPage({
   return (
     <DestinationView
       dest={dest} attractions={attractions} insights={insights} placeGroups={placeGroups}
+      passes={passesForCity(dest.city, dest.city_he)}
     />
   );
 }

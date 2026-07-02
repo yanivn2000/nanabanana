@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight, Star, Search } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
 import { descriptor, catColor, bigImage, mergeCat } from "@/lib/labels";
+import { passUrl, type Pass } from "@/lib/passes";
 import type { Attraction, Destination, Insight } from "@/lib/db";
 
 // Emoji per insight kind — quick visual cue for the source of the tip.
@@ -32,15 +33,18 @@ export function DestinationView({
   attractions,
   insights = {},
   placeGroups = [],
+  passes = [],
 }: {
   dest: Destination;
   attractions: Attraction[];
   insights?: Record<number, Insight[]>;
   placeGroups?: { name: string; items: Insight[] }[];
+  passes?: Pass[];
 }) {
   const [selected, setSelected] = useState<Attraction | null>(null);
   const [query, setQuery] = useState("");
   const [showPlaces, setShowPlaces] = useState(false);
+  const [showPasses, setShowPasses] = useState(false);
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [flags, setFlags] = useState({
     mustSee: false, free: false, indoor: false, top: false, withInsights: false,
@@ -100,6 +104,33 @@ export function DestinationView({
         <p className="mt-3 text-[13px] text-[var(--text-2)]">
           {dest.attraction_count.toLocaleString("he")} מקומות במאגר
         </p>
+
+        {/* money-saving pass badge (#16) */}
+        {passes.length > 0 && (
+          <div className="mt-3">
+            <button onClick={() => setShowPasses((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition"
+              style={{ background: "var(--brand-soft)", color: "var(--brand-ink)", border: "1px solid var(--brand)" }}>
+              💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
+            </button>
+            {showPasses && (
+              <div className="mt-2 flex flex-col gap-2 lg:max-w-md">
+                {passes.map((p) => (
+                  <a key={p.name} href={passUrl(p.name)} target="_blank" rel="noreferrer"
+                    className="flex items-start gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-2.5 shadow-[var(--shadow)]">
+                    <span className="shrink-0">💳</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13.5px] font-medium">{p.name}</span>
+                      <span className="block text-[12px] text-[var(--text-2)]">{p.note_he}</span>
+                    </span>
+                    <span className="shrink-0 self-center text-[12px] text-[var(--brand-ink)]">פרטים ↗</span>
+                  </a>
+                ))}
+                <p className="text-[11px] text-[var(--text-3)]">כרטיס אזורי/עירוני שיכול לחסוך על תחבורה וכניסות. בדקו מה משתלם לטיול שלכם.</p>
+              </div>
+            )}
+          </div>
+        )}
       </header>
 
       {/* editor's picks rail (must-see) */}
