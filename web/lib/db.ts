@@ -43,11 +43,13 @@ export type Attraction = {
   dress_he: string | null;
   cost_level: number | null;
   must_see: number | null;
+  description_he: string | null;
 };
 
 const ATTR_COLS = `id, name_he, name_en, lat, lng, category, subcategory,
   indoor_outdoor, family_score, tips_he, website, duration_minutes,
-  image_url, tagline_he, best_season, best_time_he, dress_he, cost_level, must_see`;
+  image_url, tagline_he, best_season, best_time_he, dress_he, cost_level, must_see,
+  description_he`;
 
 export type Destination = {
   id: number;

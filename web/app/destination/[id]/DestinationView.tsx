@@ -328,7 +328,10 @@ export function DestinationView({
                     </div>
                     <p className="serif mt-0.5 text-[17px] leading-tight">{a.name_he || a.name_en}</p>
                     {a.tagline_he && (
-                      <p className="mt-0.5 truncate text-[13px] italic text-[var(--text-2)]">{a.tagline_he}</p>
+                      <p className={`mt-0.5 text-[13px] italic text-[var(--text-2)] ${isSel ? "" : "truncate"}`}>{a.tagline_he}</p>
+                    )}
+                    {isSel && a.description_he && (
+                      <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--text-2)]">{a.description_he}</p>
                     )}
                     {insights[a.id]?.length ? (
                       isSel ? (
