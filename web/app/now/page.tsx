@@ -17,6 +17,7 @@ type State =
 
 export default function NowPage() {
   const [state, setState] = useState<State>({ phase: "idle" });
+  const [openId, setOpenId] = useState<number | null>(null);
 
   async function locate() {
     if (!("geolocation" in navigator)) {
@@ -103,17 +104,26 @@ export default function NowPage() {
                   </div>
                 )}
                 <div className="min-w-0 flex-1 py-0.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-[15px] font-medium leading-tight">{a.name_he || a.name_en}</p>
-                    {!!a.family_score && (
-                      <span className="flex shrink-0 items-center gap-0.5 text-[12px] font-medium text-[var(--brand-ink)]">
-                        <Star size={12} fill="currentColor" /> {a.family_score}
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-0.5 text-[12.5px] text-[var(--text-2)]">
-                    {descriptor(a)} · <span className="text-[var(--brand-ink)]">{formatDistance(a.distanceKm)}</span>
-                  </p>
+                  <button type="button" onClick={() => a.description_he && setOpenId(openId === a.id ? null : a.id)}
+                    className="block w-full text-right">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-[15px] font-medium leading-tight">{a.name_he || a.name_en}</p>
+                      {!!a.family_score && (
+                        <span className="flex shrink-0 items-center gap-0.5 text-[12px] font-medium text-[var(--brand-ink)]">
+                          <Star size={12} fill="currentColor" /> {a.family_score}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-[12.5px] text-[var(--text-2)]">
+                      {descriptor(a)} · <span className="text-[var(--brand-ink)]">{formatDistance(a.distanceKm)}</span>
+                      {a.description_he && (
+                        <span className="text-[var(--text-3)]"> · {openId === a.id ? "פחות ▴" : "עוד ▾"}</span>
+                      )}
+                    </p>
+                  </button>
+                  {openId === a.id && a.description_he && (
+                    <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--text-2)]">{a.description_he}</p>
+                  )}
                   <div className="mt-2 flex gap-2">
                     <a href={wazeUrl(a.lat as number, a.lng as number)} target="_blank" rel="noreferrer"
                       className="flex items-center gap-1 rounded-full bg-[var(--brand)] px-3 py-1.5 text-[12px] font-medium text-white">
