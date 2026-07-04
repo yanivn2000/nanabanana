@@ -126,10 +126,18 @@ export type MapBounds = { north: number; south: number; east: number; west: numb
 // Reports the visible viewport bounds to the parent on pan/zoom (and on mount),
 // so the list can show only what's currently on the map.
 function BoundsReporter({ onBounds }: { onBounds?: (b: MapBounds) => void }) {
+  const last = useRef("");
   const report = (map: L.Map) => {
     if (!onBounds) return;
     const b = map.getBounds();
-    onBounds({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() });
+    const nb = { north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() };
+    // Only report when the viewport ACTUALLY changed. A programmatic fit/fly
+    // fires moveend → onBounds → setState → re-render; this guard stops an
+    // identical re-report from looping and cuts redundant re-renders.
+    const key = [nb.north, nb.south, nb.east, nb.west].map((n) => n.toFixed(4)).join();
+    if (key === last.current) return;
+    last.current = key;
+    onBounds(nb);
   };
   const map = useMapEvents({
     moveend: () => report(map),
