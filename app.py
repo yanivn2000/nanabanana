@@ -350,7 +350,8 @@ with tab_tickets:
         "פתחו בקשה — באג, פיצ'ר, רעיון או עיצוב. אפשר לצרף תמונות וטקסט חופשי. "
         "לכל בקשה יינתן מספר טיקט; תנו אותו למפתח (דרך Claude Code) והוא ימשוך את הבקשה לדיון.")
 
-    TICKET_TYPES = {"bug": "באג 🐞", "feature": "פיצ'ר ✨", "idea": "רעיון 💡", "design": "עיצוב 🎨"}
+    TICKET_TYPES = {"epic": "איפיון-על / אפיק 🎯", "system": "מערכתי / תשתית 🏗️",
+                    "feature": "פיצ'ר ✨", "bug": "באג 🐞", "idea": "רעיון 💡", "design": "עיצוב 🎨"}
 
     with st.form("new_ticket", clear_on_submit=True):
         tc1, tc2 = st.columns([1, 2])

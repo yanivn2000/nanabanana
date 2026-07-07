@@ -17,8 +17,10 @@ import db
 TICKETS_DIR = db.DB_PATH.parent / "tickets"
 
 TYPE_HE = {
-    "bug": "באג 🐞",
+    "epic": "איפיון-על / אפיק 🎯",
+    "system": "מערכתי / תשתית 🏗️",
     "feature": "פיצ'ר ✨",
+    "bug": "באג 🐞",
     "idea": "רעיון 💡",
     "design": "עיצוב 🎨",
 }
