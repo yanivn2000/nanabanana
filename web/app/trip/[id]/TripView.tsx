@@ -5,14 +5,14 @@ import Link from "next/link";
 import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, Pencil, ChevronUp, ChevronDown,
-  ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon, Users, Luggage, ListChecks, Wallet,
+  ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon, Users, Luggage, ListChecks, Wallet, CalendarDays,
 } from "lucide-react";
 import { googleMapsUrl } from "@/lib/geo";
 import { bigImage, segColor } from "@/lib/labels";
 import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
 import type { Attraction } from "@/lib/db";
-import { useTrips, useProfile, useHotels, profileText, profileSummary, MONTHS_HE } from "@/lib/store";
+import { useTrips, useProfile, useHotels, profileText, profileSummary, MONTHS_HE, datesToInfo } from "@/lib/store";
 import { deriveTaste } from "@/lib/taste";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { PackingList } from "@/components/PackingList";
@@ -260,6 +260,25 @@ export function TripView({ tripId }: { tripId: string }) {
           {trip?.segments && trip.segments.length > 1 ? ` · ${trip.segments.length} ערים` : ""}
           {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
         </p>
+
+        {/* exact dates → powers season, length and (soon) the live-events feed (#64) */}
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12.5px] text-[var(--text-2)]">
+          <CalendarDays size={14} className="text-[var(--text-3)]" />
+          <span>תאריכים:</span>
+          <input type="date" value={trip?.startDate ?? ""}
+            onChange={(e) => {
+              const info = datesToInfo(e.target.value, trip?.endDate);
+              update(tripId, { startDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
+            }}
+            className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[12.5px] text-[var(--text)] outline-none" />
+          <span>–</span>
+          <input type="date" value={trip?.endDate ?? ""} min={trip?.startDate}
+            onChange={(e) => {
+              const info = datesToInfo(trip?.startDate, e.target.value);
+              update(tripId, { endDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
+            }}
+            className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[12.5px] text-[var(--text)] outline-none" />
+        </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <button onClick={generate} disabled={!!busy || !canBuild}
             className="flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-5 py-2.5 text-[14px] font-medium text-white disabled:opacity-50">

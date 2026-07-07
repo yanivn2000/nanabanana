@@ -144,6 +144,8 @@ export type Trip = {
   destinationId?: number;
   days: number;
   month: number;          // 1-12 — when the trip is (for seasonal relevance)
+  startDate?: string;     // exact dates (ISO yyyy-mm-dd) — powers the events layer (#64)
+  endDate?: string;
   segments?: Segment[];   // present (length ≥ 2) for multi-city trips
   profile?: FamilyProfile; // per-trip travelers — overrides the global profile
   packing?: {              // per-trip packing list state (#18)
@@ -165,6 +167,17 @@ export const MONTHS_HE = [
   "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני",
   "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר",
 ];
+
+// From an exact date range → {days (inclusive), month} to keep the rest of the
+// app (season, length) working off dates. (#64)
+export function datesToInfo(startDate?: string, endDate?: string): { days: number; month: number } | null {
+  if (!startDate || !endDate) return null;
+  const a = new Date(startDate + "T00:00:00");
+  const b = new Date(endDate + "T00:00:00");
+  if (isNaN(+a) || isNaN(+b) || b < a) return null;
+  const days = Math.round((+b - +a) / 86400000) + 1;
+  return { days: Math.max(1, days), month: a.getMonth() + 1 };
+}
 
 // Map a month to a season label + the best_season enum value, for the AI.
 export function monthSeason(month: number): { he: string; season: string } {
@@ -255,4 +268,31 @@ export function profileText(p: FamilyProfile): string {
   if (p.dietary?.length)
     lines.push("תזונה (ציין/העדף אפשרויות מתאימות ליד עצירות אוכל): " + p.dietary.join(", "));
   return lines.join(" · ");
+}
+
+// --- Follows (#65): who/what the traveler tracks → ⭐ boosts in the events feed.
+// User-level (not per-trip): you follow Metallica / Arsenal regardless of city.
+export type Follows = {
+  artists: string[];       // "Metallica" → concerts
+  teams: string[];         // "Arsenal" → matches
+  observances: string[];   // "גאווה", "חג המולד", "יום האהבה" → dated city events
+};
+export const DEFAULT_FOLLOWS: Follows = { artists: [], teams: [], observances: [] };
+const FOLLOWS_KEY = "nanabanana.follows.v1";
+
+export function useFollows(): [Follows, (f: Follows) => void, boolean] {
+  const [follows, setFollows] = useState<Follows>(DEFAULT_FOLLOWS);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(FOLLOWS_KEY);
+      if (raw) setFollows({ ...DEFAULT_FOLLOWS, ...JSON.parse(raw) });
+    } catch {}
+    setLoaded(true);
+  }, []);
+  const save = (f: Follows) => {
+    setFollows(f);
+    try { localStorage.setItem(FOLLOWS_KEY, JSON.stringify(f)); } catch {}
+  };
+  return [follows, save, loaded];
 }

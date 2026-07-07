@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useProfile, DEFAULT_PROFILE } from "@/lib/store";
-import { Check, Users, ChevronRight } from "lucide-react";
+import { useProfile, useFollows, DEFAULT_PROFILE } from "@/lib/store";
+import { Check, Users, ChevronRight, Star } from "lucide-react";
 import { ProfileEditor } from "@/components/ProfileEditor";
+import { FollowsEditor } from "@/components/FollowsEditor";
 
 export default function ProfilePage() {
   const [p, save, loaded] = useProfile();
+  const [follows, saveFollows] = useFollows();
   const router = useRouter();
 
   return (
@@ -30,7 +32,19 @@ export default function ProfilePage() {
       ) : (
         <>
           <ProfileEditor value={p} onChange={save} />
-          <div className="mt-6 flex items-center justify-between rounded-[var(--radius-card)] bg-[var(--brand-soft)] px-4 py-3">
+
+          <div className="mt-7 border-t border-[var(--border)] pt-6">
+            <div className="mb-3 flex items-center gap-2">
+              <Star size={17} className="text-[var(--brand-ink)]" fill="currentColor" />
+              <h2 className="text-[16px] font-bold">עוקב אחרי</h2>
+            </div>
+            <p className="mb-4 text-[13px] text-[var(--text-2)]">
+              כשההרכב שלכם מנגן, הקבוצה משחקת או שיש יום מיוחד — בדיוק בתאריכי הטיול — נבליט לכם את זה ⭐
+            </p>
+            <FollowsEditor value={follows} onChange={saveFollows} />
+          </div>
+
+          <div className="mt-7 flex items-center justify-between rounded-[var(--radius-card)] bg-[var(--brand-soft)] px-4 py-3">
             <span className="flex items-center gap-2 text-[13px] text-[var(--brand-ink)]"><Check size={16} /> נשמר אוטומטית במכשיר</span>
             <button onClick={() => save(DEFAULT_PROFILE)} className="text-[12px] text-[var(--brand-ink)] underline">אפס</button>
           </div>
