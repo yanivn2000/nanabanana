@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
-"""Phase 0b — the 'actuality' layer: match LIVE events to a couple's taste,
-inside their exact trip dates. Mock London feed now (swap for Ticketmaster /
-Bandsintown once a key exists); the matching logic is what we're proving.
+"""Phase 0b — read happenings from the DB, match by TIME-shape × taste × follows.
+
+Proves the extensible pipeline: one matcher handles point / run / recurring /
+annual / seasonal. A Feb window surfaces gigs+matches+musical-runs+markets+
+Valentine's; a Dec window surfaces the Christmas season — same code, no changes.
 """
 import datetime as dt
 
+import db
 from eval_personas import YANIV, ADI, ROTEM, SHLOMIT, merge
 
-WINDOW = (dt.date(2027, 2, 12), dt.date(2027, 2, 16))   # exact trip dates
+LONDON = 14
+HE_DAY = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
 
-# Both couples travel together → add a little 'romantic' weight (Valentine's).
 BRIEFS = {
     "יניב + עדי": (dict(merge(YANIV, ADI), romantic=(3, False)),
                    {"artists": {"Metallica", "Foo Fighters"}, "teams": set()}),
@@ -17,80 +20,118 @@ BRIEFS = {
                       {"artists": {"Coldplay"}, "teams": {"Arsenal"}}),
 }
 
-# Mock live feed for the window (title, date, venue, taste tags, price£, artist, team, ongoing)
-E = lambda t, d, v, tags, p, artist=None, team=None, ongoing=False: dict(
-    title=t, date=dt.date(2027, 2, d), venue=v, tags=set(tags), price=p,
-    artist=artist, team=team, ongoing=ongoing)
-FEED = [
-    E("מטאליקה — M72 World Tour", 13, "The O2", ["live_music"], 95, artist="Metallica"),
-    E("ליל ג׳אז ב-Ronnie Scott's", 12, "Soho", ["live_music", "nightlife"], 45),
-    E("ארסנל נגד צ׳לסי", 15, "Emirates Stadium", ["sports"], 70, team="Arsenal"),
-    E("אגם הברבורים (בלט)", 14, "Royal Opera House", ["classical_opera"], 120),
-    E("Hamilton", 13, "Victoria Palace, West End", ["theatre"], 85),
-    E("ערב האהבה על הגג", 14, "The Shard", ["romantic", "nightlife"], 60),
-    E("יריד וינטג׳ מיוחד", 15, "Camden Market", ["vintage_shopping"], 0),
-    E("ליל מועדון ב-Fabric", 14, "Farringdon", ["nightlife", "live_music"], 30),
-    E("ואן גוך — חוויה סוחפת", 12, "Seward Street", ["art"], 25, ongoing=True),
-    E("אנגליה נגד צרפת — רוגבי Six Nations", 15, "Twickenham", ["sports"], 90),
-    E("Wicked", 16, "Apollo Victoria, West End", ["theatre"], 75),
-]
+
+def _mmdd(s, year):
+    m, d = map(int, s.split("-")); return dt.date(year, m, d)
 
 
-def score(ev, brief, follow):
-    s = sum(w + (2 if must else 0) for tag, (w, must) in brief.items() if tag in ev["tags"])
+def occurs(h, frm, to):
+    t, s, e, recur = h["temporal"], h["start_date"], h["end_date"], h["recur"]
+    if t == "point":
+        return bool(s) and frm <= s <= to
+    if t == "run":
+        return bool(s and e) and not (e < frm or s > to)
+    if t == "recurring":
+        days = {int(x) for x in recur.split(":")[1].split(",")} if recur else set()
+        d = frm
+        while d <= to:
+            if (not s or d >= s) and (not e or d <= e) and (not days or d.weekday() in days):
+                return True
+            d += dt.timedelta(days=1)
+        return False
+    if t == "annual":
+        return any(frm <= _mmdd(recur, y) <= to for y in range(frm.year, to.year + 1))
+    if t == "seasonal":
+        a, b = recur.split("..")
+        for y in range(frm.year - 1, to.year + 1):
+            ps, pe = _mmdd(a, y), _mmdd(b, y)
+            if pe < ps:
+                pe = _mmdd(b, y + 1)
+            if not (pe < frm or ps > to):
+                return True
+        return False
+    return False
+
+
+def when_label(h, frm, to):
+    t = h["temporal"]
+    if t == "point":
+        return f"{h['start_date']:%d/%m} ({HE_DAY[h['start_date'].weekday()]})"
+    if t == "annual":
+        for y in range(frm.year, to.year + 1):
+            d = _mmdd(h["recur"], y)
+            if frm <= d <= to:
+                return f"{d:%d/%m} ({HE_DAY[d.weekday()]})"
+    if t == "run":
+        return "לאורך השהות"
+    if t == "recurring":
+        days = {int(x) for x in h["recur"].split(":")[1].split(",")}
+        return "כל יום" if len(days) >= 7 else "בימים " + ",".join(HE_DAY[d] for d in sorted(days))
+    if t == "seasonal":
+        return "עונתי (בתקופת השהות)"
+    return "—"
+
+
+def score(h, brief, follow):
+    tags = set(db.jloads(h["taste_tags"]))
+    s = sum(w + (2 if must else 0) for tag, (w, must) in brief.items() if tag in tags)
     hit = None
-    if ev["artist"] and ev["artist"] in follow["artists"]:
-        s += 10; hit = f"⭐ אמן שאתם עוקבים: {ev['artist']}"
-    if ev["team"] and ev["team"] in follow["teams"]:
-        s += 10; hit = f"⭐ הקבוצה שלכם: {ev['team']}"
+    perf = set(db.jloads(h["performers"]))
+    if perf & follow["artists"]:
+        s += 10; hit = f"⭐ אמן שאתם עוקבים: {', '.join(perf & follow['artists'])}"
+    if perf & follow["teams"]:
+        s += 10; hit = f"⭐ הקבוצה שלכם: {', '.join(perf & follow['teams'])}"
     return s, hit
 
 
-def feed_for(brief, follow, n=6):
+def feed(rows, brief, follow, frm, to, n=8):
     out = []
-    for ev in FEED:
-        if not (WINDOW[0] <= ev["date"] <= WINDOW[1]):
+    for h in rows:
+        if not occurs(h, frm, to):
             continue
-        s, hit = score(ev, brief, follow)
+        s, hit = score(h, brief, follow)
         if s > 0:
-            out.append((s, hit, ev))
+            out.append((s, hit, h))
     out.sort(key=lambda x: -x[0])
     return out[:n]
 
 
-HE_DAY = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
+def run_window(rows, frm, to, title):
+    print("\n" + "#" * 68)
+    print(f"{title}  ·  {frm:%d/%m} – {to:%d/%m}/{to.year}  ·  לונדון")
+    print("#" * 68)
+    feeds = {}
+    for label, (brief, follow) in BRIEFS.items():
+        f = feed(rows, brief, follow, frm, to)
+        feeds[label] = f
+        print(f"\n— קורה כשאתם שם · {label} —")
+        for (s, hit, h) in f:
+            price = "חינם" if (h["price_from"] or 0) == 0 else f"מ-£{int(h['price_from'])}"
+            star = f"  {hit}" if hit else ""
+            print(f"  {when_label(h, frm, to):<20} {h['title_he']:<28} ({','.join(db.jloads(h['taste_tags']))} · {price}){star}")
+    return feeds
 
 
 def main():
-    print(f"טווח הטיול: {WINDOW[0]:%d/%m} – {WINDOW[1]:%d/%m}/2027  ·  לונדון\n")
-    feeds = {}
-    for label, (brief, follow) in BRIEFS.items():
-        f = feed_for(brief, follow)
-        feeds[label] = f
-        print("=" * 66)
-        print(f"קורה כשאתם שם — {label}")
-        print("-" * 66)
-        for (s, hit, ev) in f:
-            when = f"{ev['date']:%d/%m} ({HE_DAY[ev['date'].weekday()]})" if not ev["ongoing"] else "לאורך השהות"
-            tags = ",".join(sorted(ev["tags"]))
-            price = "חינם" if ev["price"] == 0 else f"מ-£{ev['price']}"
-            star = f"  {hit}" if hit else ""
-            print(f"  {when:<16} {ev['title']:<30} @ {ev['venue']}  ({tags} · {price}){star}")
-        print()
+    c = db.get_conn()
+    rows = c.execute("SELECT * FROM happenings WHERE destination_id=%s", (LONDON,)).fetchall()
+    c.close()
 
-    print("#" * 66)
-    la, lb = list(feeds)
-    ida = {e[2]['title'] for e in feeds[la]}
-    idb = {e[2]['title'] for e in feeds[lb]}
-    def has(feed, kw): return any(kw in e[2]['title'] for e in feed)
-    def ok(name, c): print(f"  [{'✓' if c else '✗'}] {name}")
-    print("בדיקת פיצול אירועים:")
-    ok("יניב+עדי מקבלים את מטאליקה", has(feeds[la], "מטאליקה"))
-    ok("יניב+עדי לא מקבלים את משחק הכדורגל", not has(feeds[la], "ארסנל"))
-    ok("רותם+שלומית מקבלים את ארסנל", has(feeds[lb], "ארסנל"))
-    ok("רותם+שלומית מקבלים את הבלט", has(feeds[lb], "בלט"))
-    ok("שני הזוגות מקבלים את ערב האהבה (14/2)", has(feeds[la], "האהבה") and has(feeds[lb], "האהבה"))
-    print(f"\nחפיפה בין הפידים: {len(ida & idb)} אירועים · ייחודי ליניב {len(ida - idb)} · ייחודי לרותם {len(idb - ida)}")
+    feb = run_window(rows, dt.date(2027, 2, 12), dt.date(2027, 2, 16), "חלון 1 — פברואר")
+    dec = run_window(rows, dt.date(2027, 12, 21), dt.date(2027, 12, 26), "חלון 2 — דצמבר (אותו קוד, אפס שינוי)")
+
+    def has(f, kw): return any(kw in e[2]["title_he"] for e in f)
+    def ok(name, cond): print(f"  [{'✓' if cond else '✗'}] {name}")
+    la, lb = list(BRIEFS)
+    print("\n" + "=" * 68 + "\nבדיקות (טעם × זמן × עוקב):")
+    ok("פב׳: יניב מקבל מטאליקה (point + עוקב)", has(feb[la], "מטאליקה"))
+    ok("פב׳: רותם מקבל ארסנל (point + קבוצה)", has(feb[lb], "ארסנל"))
+    ok("פב׳: שני הזוגות מקבלים מחזמר רץ (run)", has(feb[la], "Hamilton") and has(feb[lb], "Hamilton"))
+    ok("פב׳: יום האהבה מופיע (annual 14/2)", has(feb[la], "האהבה"))
+    ok("פב׳: קמדן מופיע (recurring)", has(feb[la], "קמדן"))
+    ok("פב׳: חג המולד לא מופיע (מחוץ לחלון)", not has(feb[la], "חג המולד"))
+    ok("דצמ׳: שוקי חג המולד מופיעים (seasonal)", has(dec[la], "חג המולד") or has(dec[la], "חג"))
+    ok("דצמ׳: מטאליקה לא מופיע (מחוץ לחלון)", not has(dec[la], "מטאליקה"))
 
 
 if __name__ == "__main__":
