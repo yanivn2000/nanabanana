@@ -8,6 +8,7 @@ import {
   reviseItinerary,
 } from "@/lib/ai";
 import { buildHeuristicItinerary, buildMultiHeuristicItinerary } from "@/lib/heuristic";
+import { rankByTaste, tasteEmphasis } from "@/lib/taste";
 import { haversineKm } from "@/lib/geo";
 import type { TripHotel } from "@/lib/ai";
 import type { Itinerary } from "@/lib/trip-types";
@@ -81,6 +82,7 @@ export async function POST(req: NextRequest) {
     current?: Itinerary;
     instruction?: string;
     dateContext?: string;
+    taste?: Record<string, number>;
     segments?: { city: string; days: number; hotels?: TripHotel[] }[];
   };
   try {
@@ -94,13 +96,17 @@ export async function POST(req: NextRequest) {
   if (!dest) {
     return NextResponse.json({ error: "no destinations in DB" }, { status: 404 });
   }
-  const attractions = await topAttractions(dest.id, 50);
+  // Broad candidate pool, then narrow to the group's TASTE (#63): a music/
+  // vintage couple and a sports/history couple get different attraction sets
+  // fed to the builder → genuinely different trips. No taste → family order.
+  const pool = await topAttractions(dest.id, 150);
+  const attractions = rankByTaste(pool, body.taste, 50);
 
   // Attach DB details to an existing itinerary — no AI, so it works without
   // credit and upgrades trips created before details existed.
   if (body.mode === "details") {
     if (!body.current) return NextResponse.json({ error: "missing current" }, { status: 400 });
-    return NextResponse.json({ itinerary: attachDetails(body.current, attractions) });
+    return NextResponse.json({ itinerary: attachDetails(body.current, pool) });
   }
 
   // Multi-city trip: one continuous itinerary across ordered segments, each
@@ -116,7 +122,7 @@ export async function POST(req: NextRequest) {
     const segAttrs = await Promise.all(
       segs.map(async (x) => ({
         ...x,
-        attractions: await topAttractions(x.dest.id, 50),
+        attractions: rankByTaste(await topAttractions(x.dest.id, 150), body.taste, 50),
         insights: await insightsForDestination(x.dest.id),
       })));
     const allAttractions = segAttrs.flatMap((x) => x.attractions);
@@ -136,6 +142,7 @@ export async function POST(req: NextRequest) {
         })),
         month: body.month,
         profileText: body.profileText ?? "משפחה · קצב רגוע",
+        emphasis: tasteEmphasis(body.taste),
       });
       return NextResponse.json({ itinerary: attachDetails(itinerary, allAttractions) });
     } catch (e) {
@@ -184,6 +191,7 @@ export async function POST(req: NextRequest) {
       attractions,
       hotels: body.hotels,
       insights: await insightsForDestination(dest.id),
+      emphasis: tasteEmphasis(body.taste),
     });
     return NextResponse.json({ itinerary: attachDetails(itinerary, attractions) });
   } catch (e) {

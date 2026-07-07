@@ -25,6 +25,7 @@ export type FamilyProfile = {
   lodging: string;         // מלון / אירבנב / צימר
   accessibility?: string[]; // כיסא גלגלים / ללא מדרגות / נגיש לעגלה …
   dietary?: string[];       // ללא גלוטן / צמחוני / כשר …
+  taste?: Record<string, number>; // explicit taste weights (equalizer, #63/#66)
 };
 
 export const DEFAULT_PROFILE: FamilyProfile = {

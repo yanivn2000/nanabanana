@@ -13,6 +13,7 @@ import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
 import type { Attraction } from "@/lib/db";
 import { useTrips, useProfile, useHotels, profileText, profileSummary, MONTHS_HE } from "@/lib/store";
+import { deriveTaste } from "@/lib/taste";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { PackingList } from "@/components/PackingList";
 import { TravelChecklist } from "@/components/TravelChecklist";
@@ -151,7 +152,8 @@ export function TripView({ tripId }: { tripId: string }) {
       const res = await fetch("/api/itinerary", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ city, profileText: profileText(tripProfile), ...payload }),
+        body: JSON.stringify({ city, profileText: profileText(tripProfile),
+          taste: deriveTaste(tripProfile), ...payload }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) {

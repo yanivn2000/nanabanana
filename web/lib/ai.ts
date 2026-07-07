@@ -124,7 +124,12 @@ export type GenerateParams = {
   attractions: Attraction[];
   hotels?: TripHotel[];
   insights?: Insight[];
+  emphasis?: string;   // top taste tags in Hebrew — bias the plan (#63)
 };
+
+function emphasisBlock(e?: string): string {
+  return e ? `\nהעדפות מודגשות של הקבוצה (תן להן משקל רב — בנה את הטיול סביבן): ${e}.\n` : "";
+}
 
 const MONTHS_HE = ["", "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני",
   "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
@@ -147,7 +152,7 @@ export async function generateItinerary(p: GenerateParams): Promise<Itinerary> {
   const userText = `בנה לו"ז טיול ל${p.city}, ${p.country}.
 מספר ימים: ${p.days}
 פרופיל המשפחה: ${p.profileText}
-${seasonHint(p.month)}${hotelsBlock(p.hotels)}${verifiedBlock(p.insights, p.attractions)}
+${emphasisBlock(p.emphasis)}${seasonHint(p.month)}${hotelsBlock(p.hotels)}${verifiedBlock(p.insights, p.attractions)}
 אטרקציות זמינות (בחר מתוכן בלבד):
 ${attractionsBlock(p.attractions)}`;
   return callClaude(userText);
@@ -167,6 +172,7 @@ export async function generateMultiItinerary(p: {
   segments: MultiSegment[];
   month?: number;
   profileText: string;
+  emphasis?: string;
 }): Promise<Itinerary> {
   const total = p.segments.reduce((a, s) => a + s.days, 0);
   const order = p.segments.map((s, i) => `${i + 1}) ${s.city} (${s.days} ימים)`).join(" ← ");
@@ -183,7 +189,7 @@ export async function generateMultiItinerary(p: {
     .join("\n\n");
   const userText = `בנה לו"ז לטיול רב-ערים אחד ורציף של ${total} ימים, העובר בין האזורים לפי הסדר: ${order}.
 פרופיל המשפחה: ${p.profileText}
-${seasonHint(p.month)}
+${emphasisBlock(p.emphasis)}${seasonHint(p.month)}
 כללים למקטעים:
 - מספר את הימים ברצף 1..${total} (אל תתחיל ספירה מחדש בכל עיר). שדה base של כל יום = שם העיר/אזור של המקטע שאליו הוא שייך.
 - הקצה לכל מקטע בדיוק את מספר הימים שצוין, לפי הסדר.
