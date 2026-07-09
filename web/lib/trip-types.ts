@@ -9,6 +9,10 @@ export type Stop = {
   duration: string;
   score?: number;
   note?: string;
+  // Two-tier day (Explore build): true = day anchor (a chosen "כן"/must-see),
+  // false = an "אם יש זמן" filler. Undefined = not built from a selection, or a
+  // logistical stop (meal/rest) that matched no attraction.
+  anchor?: boolean;
   // Details matched back from the DB attraction (for the expandable view).
   image?: string | null;
   website?: string | null;

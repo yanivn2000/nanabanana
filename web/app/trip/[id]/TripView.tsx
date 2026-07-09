@@ -67,6 +67,8 @@ export function TripView({ tripId }: { tripId: string }) {
 
   const trip = trips.find((t) => t.id === tripId);
   const itinerary = trip?.itinerary ?? null;
+  // Trip built from an Explore selection → show the two tiers (anchor / "אם יש זמן").
+  const fromSelection = !!trip?.selection;
   // Per-trip travelers override the global profile (different group per trip).
   const tripProfile = trip?.profile ?? globalProfile;
   const tripHotels = hotels.filter((h) => h.tripId === tripId);
@@ -176,6 +178,7 @@ export function TripView({ tripId }: { tripId: string }) {
     mode: "generate",
     days: trip?.days ?? 4,
     month: trip?.month,
+    selection: trip?.selection,   // Explore build: anchors-first, "אם יש זמן" fillers (F1)
     hotels: tripHotels.map((h) => ({ name: h.name, city: h.city, lat: h.lat, lng: h.lng })),
     ...(trip?.segments && trip.segments.length > 1
       ? { segments: trip.segments.map((s) => ({
@@ -511,7 +514,15 @@ export function TripView({ tripId }: { tripId: string }) {
                       <StopIcon kind={s.kind} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-[15px] font-medium leading-tight">{s.name}</p>
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <p className="truncate text-[15px] font-medium leading-tight">{s.name}</p>
+                            {fromSelection && s.anchor === true && (
+                              <span className="shrink-0 rounded-full bg-[var(--brand-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--brand-ink)]">עוגן</span>
+                            )}
+                            {fromSelection && s.anchor === false && (
+                              <span className="shrink-0 rounded-full bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px] text-[var(--text-3)]">אם יש זמן</span>
+                            )}
+                          </div>
                           <div className="flex shrink-0 items-center gap-2">
                             {!!s.score && (
                               <span className="flex items-center gap-0.5 text-[12px] font-medium text-[var(--accent-ink)]">

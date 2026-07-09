@@ -125,10 +125,25 @@ export type GenerateParams = {
   hotels?: TripHotel[];
   insights?: Insight[];
   emphasis?: string;   // top taste tags in Hebrew — bias the plan (#63)
+  // Two-tier build from the Explore selection (F1): anchors = the traveler's
+  // chosen "כן"/must-sees (each is a day's centerpiece), fillers = "אם יש זמן".
+  anchors?: Attraction[];
+  fillers?: Attraction[];
 };
 
 function emphasisBlock(e?: string): string {
   return e ? `\nהעדפות מודגשות של הקבוצה (תן להן משקל רב — בנה את הטיול סביבן): ${e}.\n` : "";
+}
+
+// The Explore selection turns the attraction list into two tiers: anchors the
+// traveler explicitly chose (schedule all of them — each opens/anchors a day)
+// and "אם יש זמן" fillers to place around them only if the pace allows.
+function tieredBlock(anchors: Attraction[], fillers: Attraction[]): string {
+  return `עוגני הטיול — המטייל בחר אותם במפורש. שבץ את כולם לאורך הימים, ופתח כל יום בעוגן (או שניים ליום ארוך). אלה לב הטיול:
+${attractionsBlock(anchors)}
+
+"אם יש זמן" — פריטי מילוי אופציונליים. שבץ אותם סביב העוגנים רק אם הקצב מתיר, ובשדה note סמן אותם כ"אם יש זמן". אל תדחוס אותם על חשבון עוגן:
+${fillers.length ? attractionsBlock(fillers) : "(אין)"}`;
 }
 
 const MONTHS_HE = ["", "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני",
@@ -149,12 +164,14 @@ function hotelsBlock(hotels?: TripHotel[]): string {
 }
 
 export async function generateItinerary(p: GenerateParams): Promise<Itinerary> {
+  const attractionsSection = p.anchors && p.anchors.length
+    ? tieredBlock(p.anchors, p.fillers ?? [])
+    : `אטרקציות זמינות (בחר מתוכן בלבד):\n${attractionsBlock(p.attractions)}`;
   const userText = `בנה לו"ז טיול ל${p.city}, ${p.country}.
 מספר ימים: ${p.days}
 פרופיל המשפחה: ${p.profileText}
 ${emphasisBlock(p.emphasis)}${seasonHint(p.month)}${hotelsBlock(p.hotels)}${verifiedBlock(p.insights, p.attractions)}
-אטרקציות זמינות (בחר מתוכן בלבד):
-${attractionsBlock(p.attractions)}`;
+${attractionsSection}`;
   return callClaude(userText);
 }
 
