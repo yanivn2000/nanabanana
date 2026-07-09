@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Star, Search } from "lucide-react";
+import { ChevronRight, Star, Search, Compass } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
 import { descriptor, catColor, bigImage, mergeCat } from "@/lib/labels";
 import { passUrl, type Pass } from "@/lib/passes";
@@ -107,6 +107,12 @@ export function DestinationView({
         <p className="mt-3 text-[13px] text-[var(--text-2)]">
           {dest.attraction_count.toLocaleString("he")} מקומות במאגר
         </p>
+
+        {/* חקירת יעד — the guided, personalized exploration flow */}
+        <Link href={`/explore/${dest.id}`}
+          className="mt-3 inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-4 py-2.5 text-[13.5px] font-medium text-white shadow-[var(--shadow)]">
+          <Compass size={16} /> חקרו את היעד לפי מי שאתם
+        </Link>
 
         {/* money-saving pass badge (#16) */}
         {passes.length > 0 && (

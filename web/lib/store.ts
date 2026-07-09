@@ -159,6 +159,9 @@ export type Trip = {
     custom: { id: string; label: string }[];
   };
   budget?: { dailyTarget?: number }; // per-trip daily budget target, € (#15)
+  selection?: {            // from the Explore flow: yes = anchors, maybe = "if time"
+    yes: number[]; maybe: number[]; no: number[];
+  };
   itinerary?: Itinerary;
   createdAt: number;
 };
