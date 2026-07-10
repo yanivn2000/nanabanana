@@ -160,10 +160,38 @@ persisted; taste flows via `trip.profile.taste`). It does NOT yet build strictly
 
 ---
 
+## Step 2 refinements (shipped after slice 1)
+Two changes to the category cards, so step 2 reads as *calibrating a loaded profile*, not filling one:
+- **Composition filter** — `categoriesFor(attractions, taste, profile, max)` now drops categories the
+  traveler composition makes irrelevant. Rules live in `CAT_RELEVANCE` (`explore.ts`), keyed by
+  tag → predicate over the profile (today: `family` needs `kids.length > 0`). Derived from live step-1
+  state, never a static exclude list — editing "who's travelling" re-filters step 2 on re-entry.
+- **Calibration framing** — step 2 seeds `likes`/`dislikes` from the profile once it hydrates
+  (interest tags ≥3 → pre-liked, dislikes <0 → pre-disliked), shows a banner ("ההעדפות שלכם כבר טעונות
+  מהפרופיל — כאן רק מכווננים…, לא משנה את הפרופיל הכללי"), and splits cards into a prominent
+  *"מה מיוחד ב<city>"* list (non-profile categories) + a collapsed *"N העדפות מהפרופיל שלכם"* section
+  (the seeded ones, pre-marked). Calibration stays per-trip: it only writes `trip.profile.taste` on
+  build and never calls the global-profile setter.
+
+## Step 3 refinements (shipped after slice 1)
+Progressive disclosure so a card carries enough to decide כן/אולי/לא without bloating the ~50-item
+triage. Compact card is unchanged; a chevron expands an accordion (one open at a time, `openCard`
+state). Expansion (all from existing DB fields + insights → **no API cost**):
+- **"למה מתאים לכם"** (`whyItFits`) — the ≤2 taste tags this attraction matches in the *calibrated*
+  trip taste (`landmark` excluded — it's a must-see marker, not a taste); falls back to a must-see line
+  so iconic spots still get a reason.
+- **Full `description_he`** (unclamped; skipped if it only repeats the one-line tagline).
+- **Practical facts** (`attractionFacts`) — duration (`durationHe`), best time, indoor/outdoor
+  (`indoorHe`, maps `both`/`mixed`), dress. Cost stays a compact chip.
+- **Verified-traveller insights** — up to 2 from `insightsForDestination` (now loaded in `page.tsx` and
+  passed as `insights` to `ExploreFlow`), grouped by `attraction_id`, labelled via `INSIGHT_KIND_HE`.
+  London (dest 14) has **zero** attraction-linked approved insights today, so this block only shows once
+  the admin adds them (verified on dest 8 / Amsterdam, which has 109).
+
 ## Fast-follows (after slice 1)
-- **F1 — anchors build**: route change so the day is built strictly from the selection — accept
-  `selectionIds?: number[]` (or anchor names) in the itinerary POST; anchors first, "אם יש זמן"
-  fillers from the rest. Two-tier day model + display.
+- **F1 — anchors build** ✅ SHIPPED (commit 329ecbd): the itinerary POST accepts
+  `selection:{yes,maybe,no}`; `partitionBySelection` splits the pool into anchors (yes picks, else
+  must-see fallback, minus "לא") + "אם יש זמן" fillers; `Stop.anchor` drives the two-tier display.
 - **F2 — real macro**: AI-generated `destination brief` (narrative/history), then a reliable weather
   API for live/averages. (Decision 2.)
 - **F3 — learning recommender**: persist every like/dislike/selection keyed by taste vector; retrieve

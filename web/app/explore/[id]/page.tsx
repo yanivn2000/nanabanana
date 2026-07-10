@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getDestination, topAttractions } from "@/lib/db";
+import { getDestination, topAttractions, insightsForDestination } from "@/lib/db";
 import { ExploreFlow } from "./ExploreFlow";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +15,9 @@ export default async function ExploreDestinationPage({
   const { id } = await params;
   const dest = await getDestination(Number(id));
   if (!dest) notFound();
-  const attractions = await topAttractions(dest.id, 200);
-  return <ExploreFlow dest={dest} attractions={attractions} />;
+  const [attractions, insights] = await Promise.all([
+    topAttractions(dest.id, 200),
+    insightsForDestination(dest.id), // verified traveller knowledge for step-3 detail
+  ]);
+  return <ExploreFlow dest={dest} attractions={attractions} insights={insights} />;
 }

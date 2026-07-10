@@ -1,19 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ChevronRight, ChevronLeft, Heart, X, Check, HelpCircle, CloudRain, Route,
+  ChevronRight, ChevronLeft, ChevronDown, Heart, X, Check, HelpCircle, CloudRain, Route,
   Users, Star, Music, Shirt, Wine, Ticket, Drama, Image as ImageIcon,
-  Landmark, Trees, UtensilsCrossed, Gem, Trophy, Baby, ExternalLink, Globe,
+  Landmark, Trees, UtensilsCrossed, Gem, Trophy, Baby, ExternalLink, Globe, Sparkles, BadgeCheck,
   type LucideIcon,
 } from "lucide-react";
-import type { Attraction, Destination } from "@/lib/db";
+import type { Attraction, Destination, Insight } from "@/lib/db";
 import { useProfile, useTrips, MONTHS_HE } from "@/lib/store";
 import { deriveTaste, rankByTaste } from "@/lib/taste";
 import {
   briefFor, seasonalWeather, categoriesFor, calibrate, attractionChips,
+  whyItFits, attractionFacts, INSIGHT_KIND_HE, type CatCard,
 } from "@/lib/explore";
 
 const ICONS: Record<string, LucideIcon> = {
@@ -25,23 +26,58 @@ const RADIUS_HE = ["קרוב מאוד", "עד שעה", "עד שעתיים", "ג�
 const RADIUS_HOURS = [0.5, 1, 2, 3]; // slider index → per-trip dailyDriveHours
 type Choice = "yes" | "maybe" | "no";
 
-export function ExploreFlow({ dest, attractions }: { dest: Destination; attractions: Attraction[] }) {
+export function ExploreFlow(
+  { dest, attractions, insights = [] }:
+  { dest: Destination; attractions: Attraction[]; insights?: Insight[] }
+) {
   const router = useRouter();
-  const [profile] = useProfile();
+  const [profile, , profileLoaded] = useProfile();
   const { create } = useTrips();
 
   const [step, setStep] = useState(1);
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [likes, setLikes] = useState<Set<string>>(new Set());
   const [dislikes, setDislikes] = useState<Set<string>>(new Set());
+  const [seeded, setSeeded] = useState(false);           // profile prefs pre-loaded?
+  const [showProfilePrefs, setShowProfilePrefs] = useState(false); // collapsed loaded-prefs section
   const [sel, setSel] = useState<Record<number, Choice>>({});
+  const [openCard, setOpenCard] = useState<number | null>(null); // step-3 expanded attraction
   const [days, setDays] = useState(4);
   const [radius, setRadius] = useState(1);
+
+  // Verified traveller insights grouped by attraction (for the step-3 detail).
+  const insightsById = useMemo(() => {
+    const m = new Map<number, Insight[]>();
+    for (const i of insights) {
+      if (i.attraction_id == null) continue;
+      const arr = m.get(i.attraction_id) ?? [];
+      arr.push(i);
+      m.set(i.attraction_id, arr);
+    }
+    return m;
+  }, [insights]);
 
   const cityHe = dest.city_he ?? dest.city;
   const base = useMemo(() => deriveTaste(profile), [profile]);
   const calibrated = useMemo(() => calibrate(base, likes, dislikes), [base, likes, dislikes]);
-  const cats = useMemo(() => categoriesFor(attractions, base, 12), [attractions, base]);
+  const cats = useMemo(() => categoriesFor(attractions, base, profile, 12), [attractions, base, profile]);
+
+  // A category "comes from the profile" when the profile already weights it —
+  // an interest (≥3) pre-likes it, a dislike (<0) pre-dislikes it. Baseline-only
+  // tags (weight 1) are neutral and stay in the destination-focus list.
+  const fromProfile = (tag: string) => (base[tag] ?? 0) >= 3 || (base[tag] ?? 0) < 0;
+  const focusCats = useMemo(() => cats.filter((c) => !fromProfile(c.tag)), [cats, base]);
+  const profileCats = useMemo(() => cats.filter((c) => fromProfile(c.tag)), [cats, base]);
+
+  // Seed step 2 from the profile once it has hydrated: the user is CALIBRATING
+  // their loaded preferences for this trip, not starting from a blank slate.
+  // Runs once; later back-and-forth navigation keeps the user's adjustments.
+  useEffect(() => {
+    if (!profileLoaded || seeded) return;
+    setLikes(new Set(cats.filter((c) => (base[c.tag] ?? 0) >= 3).map((c) => c.tag)));
+    setDislikes(new Set(cats.filter((c) => (base[c.tag] ?? 0) < 0).map((c) => c.tag)));
+    setSeeded(true);
+  }, [profileLoaded, seeded, cats, base]);
   const ranked = useMemo(() => rankByTaste(attractions, calibrated, 50), [attractions, calibrated]);
   const rankedIds = useMemo(() => new Set(ranked.map((a) => a.id)), [ranked]);
   const weather = seasonalWeather(month);
@@ -67,6 +103,34 @@ export function ExploreFlow({ dest, attractions }: { dest: Destination; attracti
       if (dir === "dislike") { n.has(tag) ? n.delete(tag) : n.add(tag); } else { n.delete(tag); }
       return n;
     });
+  };
+
+  const renderCat = (c: CatCard) => {
+    const Icon = ICONS[c.icon] ?? Star;
+    const liked = likes.has(c.tag);
+    const disliked = dislikes.has(c.tag);
+    return (
+      <div key={c.tag} className="flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
+        <Icon size={19} className="shrink-0 text-[var(--brand)]" />
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1.5 text-[14px] font-medium">
+            {c.label_he}
+            {c.hot && <span className="rounded-full bg-[#FAEEDA] px-1.5 py-0.5 text-[10px] text-[#854F0B]">בולט</span>}
+          </p>
+          <p className="text-[12px] text-[var(--text-3)]">{c.vibe_he}</p>
+        </div>
+        <button onClick={() => rate(c.tag, "like")} aria-label="אהבתי"
+          className="grid size-8 place-items-center rounded-full border transition"
+          style={{ background: liked ? "var(--brand)" : "var(--surface)", color: liked ? "#fff" : "var(--text-3)", borderColor: liked ? "var(--brand)" : "var(--border)" }}>
+          <Heart size={15} />
+        </button>
+        <button onClick={() => rate(c.tag, "dislike")} aria-label="פחות"
+          className="grid size-8 place-items-center rounded-full border transition"
+          style={{ background: disliked ? "var(--surface-2)" : "var(--surface)", color: disliked ? "var(--text-2)" : "var(--text-3)", borderColor: "var(--border)" }}>
+          <X size={15} />
+        </button>
+      </div>
+    );
   };
 
   const pick = (id: number, c: Choice) =>
@@ -166,37 +230,37 @@ export function ExploreFlow({ dest, attractions }: { dest: Destination; attracti
           {brief.history_he && <p className="mb-1 text-[12.5px] leading-relaxed text-[var(--text-3)]">{brief.history_he}</p>}
           {brief.language_he && <p className="mb-4 text-[12px] text-[var(--text-3)]">שפה: {brief.language_he}</p>}
 
-          <p className="mb-1 text-[15px] font-bold">מה יש כאן בשבילכם</p>
-          <p className="mb-3 text-[12px] text-[var(--text-3)]">דרגו כדי לחדד — זה יעצב את רשימת האטרקציות</p>
-          <div className="flex flex-col gap-2">
-            {cats.map((c) => {
-              const Icon = ICONS[c.icon] ?? Star;
-              const liked = likes.has(c.tag);
-              const disliked = dislikes.has(c.tag);
-              return (
-                <div key={c.tag} className="flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
-                  <Icon size={19} className="shrink-0 text-[var(--brand)]" />
-                  <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-1.5 text-[14px] font-medium">
-                      {c.label_he}
-                      {c.hot && <span className="rounded-full bg-[#FAEEDA] px-1.5 py-0.5 text-[10px] text-[#854F0B]">בולט</span>}
-                    </p>
-                    <p className="text-[12px] text-[var(--text-3)]">{c.vibe_he}</p>
-                  </div>
-                  <button onClick={() => rate(c.tag, "like")} aria-label="אהבתי"
-                    className="grid size-8 place-items-center rounded-full border transition"
-                    style={{ background: liked ? "var(--brand)" : "var(--surface)", color: liked ? "#fff" : "var(--text-3)", borderColor: liked ? "var(--brand)" : "var(--border)" }}>
-                    <Heart size={15} />
-                  </button>
-                  <button onClick={() => rate(c.tag, "dislike")} aria-label="פחות"
-                    className="grid size-8 place-items-center rounded-full border transition"
-                    style={{ background: disliked ? "var(--surface-2)" : "var(--surface)", color: disliked ? "var(--text-2)" : "var(--text-3)", borderColor: "var(--border)" }}>
-                    <X size={15} />
-                  </button>
-                </div>
-              );
-            })}
+          {/* Calibration framing: preferences are pre-loaded from the profile —
+              the user only fine-tunes for THIS destination, and never touches the
+              global profile (per-trip calibration, decision 5). */}
+          <div className="mb-3 flex items-start gap-1.5 rounded-[var(--radius-card)] border border-[#bfe6d8] bg-[#E1F5EE] p-3 text-[12.5px] leading-relaxed text-[#0F6E56]">
+            <Sparkles size={15} className="mt-0.5 shrink-0" />
+            <span>ההעדפות שלכם כבר טעונות מהפרופיל — כאן רק מכווננים ל{cityHe}. שנו רק מה שמיוחד ליעד. זה לא משנה את הפרופיל הכללי.</span>
           </div>
+
+          <p className="mb-1 text-[15px] font-bold">מה מיוחד ב{cityHe} בשבילכם</p>
+          <p className="mb-3 text-[12px] text-[var(--text-3)]">דרגו כדי לחדד — זה יעצב את רשימת האטרקציות</p>
+          {focusCats.length > 0 ? (
+            <div className="flex flex-col gap-2">{focusCats.map(renderCat)}</div>
+          ) : (
+            <p className="text-[13px] text-[var(--text-3)]">ההעדפות שלכם כבר מכסות את היעד — אפשר להמשיך, או לכוונן למטה.</p>
+          )}
+
+          {profileCats.length > 0 && (
+            <div className="mt-4">
+              <button onClick={() => setShowProfilePrefs((v) => !v)}
+                className="flex w-full items-center gap-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5 text-right">
+                <Heart size={15} className="shrink-0 text-[var(--brand)]" fill="currentColor" />
+                <span className="min-w-0 flex-1 text-[13px] text-[var(--text-2)]">
+                  {profileCats.length} העדפות מהפרופיל שלכם כבר נכללות — הקישו לכוונון
+                </span>
+                <ChevronDown size={17} className={`shrink-0 text-[var(--text-3)] transition-transform ${showProfilePrefs ? "rotate-180" : ""}`} />
+              </button>
+              {showProfilePrefs && (
+                <div className="mt-2 flex flex-col gap-2">{profileCats.map(renderCat)}</div>
+              )}
+            </div>
+          )}
         </section>
       )}
 
@@ -209,40 +273,86 @@ export function ExploreFlow({ dest, attractions }: { dest: Destination; attracti
             {ranked.map((a) => {
               const chips = attractionChips(a, calibrated);
               const c = sel[a.id];
+              const open = openCard === a.id;
+              const why = whyItFits(a, calibrated);
+              const facts = attractionFacts(a);
+              const notes = insightsById.get(a.id) ?? [];
+              // full (unclamped) description for the expansion; skip if it just
+              // repeats the one-line tagline already shown in the compact card.
+              const desc = a.description_he && a.description_he !== a.tagline_he ? a.description_he : null;
+              const hasMore = !!(why || desc || facts.length || notes.length);
               return (
-                <div key={a.id} className="flex gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-2.5">
-                  <div className="size-16 shrink-0 overflow-hidden rounded-lg bg-[var(--brand-soft)]">
-                    {a.image_url
-                      ? <img src={a.image_url} alt="" loading="lazy" className="size-full object-cover" />
-                      : <span className="grid size-full place-items-center text-[var(--brand-ink)]"><ImageIcon size={20} /></span>}
+                <div key={a.id} className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-2.5">
+                  <div className="flex gap-3">
+                    <div className="size-16 shrink-0 overflow-hidden rounded-lg bg-[var(--brand-soft)]">
+                      {a.image_url
+                        ? <img src={a.image_url} alt="" loading="lazy" className="size-full object-cover" />
+                        : <span className="grid size-full place-items-center text-[var(--brand-ink)]"><ImageIcon size={20} /></span>}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <button type="button" disabled={!hasMore}
+                        onClick={() => setOpenCard(open ? null : a.id)}
+                        className="flex w-full items-start justify-between gap-2 text-right">
+                        <span className="min-w-0">
+                          <span className="block truncate text-[14px] font-medium">{a.name_he ?? a.name_en}</span>
+                          {(a.tagline_he || a.description_he) && (
+                            <span className="mt-0.5 block line-clamp-1 text-[12px] text-[var(--text-3)]">{a.tagline_he ?? a.description_he}</span>
+                          )}
+                        </span>
+                        {hasMore && (
+                          <ChevronDown size={16}
+                            className={`mt-0.5 shrink-0 text-[var(--text-3)] transition-transform ${open ? "rotate-180" : ""}`} />
+                        )}
+                      </button>
+                      <div className="mb-1.5 mt-1 flex flex-wrap gap-1">
+                        {chips.map((ch, i) => (
+                          <span key={i} className="rounded-full px-1.5 py-0.5 text-[10.5px]"
+                            style={
+                              ch.kind === "nudge" ? { background: "#FAEEDA", color: "#854F0B" }
+                              : ch.kind === "must" ? { background: "var(--brand-soft)", color: "var(--brand-ink)" }
+                              : { background: "var(--surface-2)", color: "var(--text-2)" }
+                            }>{ch.label_he}</span>
+                        ))}
+                        {a.website && (
+                          <a href={a.website} target="_blank" rel="noreferrer"
+                            className="inline-flex items-center gap-0.5 rounded-full bg-[var(--surface-2)] px-1.5 py-0.5 text-[10.5px] text-[var(--text-2)]">
+                            קישור <ExternalLink size={9} />
+                          </a>
+                        )}
+                      </div>
+                      <div className="flex gap-1.5">
+                        <ChoiceBtn active={c === "yes"} onClick={() => pick(a.id, "yes")} tone="yes" icon={<Check size={13} />} label="כן" />
+                        <ChoiceBtn active={c === "maybe"} onClick={() => pick(a.id, "maybe")} tone="maybe" icon={<HelpCircle size={13} />} label="אולי" />
+                        <ChoiceBtn active={c === "no"} onClick={() => pick(a.id, "no")} tone="no" icon={<X size={13} />} label="לא" />
+                      </div>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14px] font-medium">{a.name_he ?? a.name_en}</p>
-                    {(a.tagline_he || a.description_he) && (
-                      <p className="mb-1 line-clamp-1 text-[12px] text-[var(--text-3)]">{a.tagline_he ?? a.description_he}</p>
-                    )}
-                    <div className="mb-1.5 flex flex-wrap gap-1">
-                      {chips.map((ch, i) => (
-                        <span key={i} className="rounded-full px-1.5 py-0.5 text-[10.5px]"
-                          style={
-                            ch.kind === "nudge" ? { background: "#FAEEDA", color: "#854F0B" }
-                            : ch.kind === "must" ? { background: "var(--brand-soft)", color: "var(--brand-ink)" }
-                            : { background: "var(--surface-2)", color: "var(--text-2)" }
-                          }>{ch.label_he}</span>
-                      ))}
-                      {a.website && (
-                        <a href={a.website} target="_blank" rel="noreferrer"
-                          className="inline-flex items-center gap-0.5 rounded-full bg-[var(--surface-2)] px-1.5 py-0.5 text-[10.5px] text-[var(--text-2)]">
-                          קישור <ExternalLink size={9} />
-                        </a>
+
+                  {open && (
+                    <div className="mt-2.5 border-t border-[var(--border)] pt-2.5">
+                      {why && (
+                        <p className="mb-2 flex items-start gap-1.5 text-[12.5px] font-medium text-[var(--brand-ink)]">
+                          <Sparkles size={14} className="mt-0.5 shrink-0" />{why}
+                        </p>
                       )}
+                      {desc && <p className="mb-2 text-[12.5px] leading-relaxed text-[var(--text-2)]">{desc}</p>}
+                      {facts.length > 0 && (
+                        <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-[var(--text-2)]">
+                          {facts.map((f, i) => (
+                            <span key={i}><span className="text-[var(--text-3)]">{f.label_he}: </span>{f.value_he}</span>
+                          ))}
+                        </div>
+                      )}
+                      {notes.slice(0, 2).map((ins) => (
+                        <div key={ins.id} className="mb-1.5 flex items-start gap-1.5 rounded-lg bg-[var(--brand-soft)] px-2.5 py-1.5">
+                          <BadgeCheck size={14} className="mt-0.5 shrink-0 text-[var(--brand-ink)]" />
+                          <p className="text-[12px] leading-snug text-[var(--brand-ink)]">
+                            <span className="font-medium">{INSIGHT_KIND_HE[ins.kind] ?? "טיפ ממטיילים"}: </span>{ins.text_he}
+                          </p>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex gap-1.5">
-                      <ChoiceBtn active={c === "yes"} onClick={() => pick(a.id, "yes")} tone="yes" icon={<Check size={13} />} label="כן" />
-                      <ChoiceBtn active={c === "maybe"} onClick={() => pick(a.id, "maybe")} tone="maybe" icon={<HelpCircle size={13} />} label="אולי" />
-                      <ChoiceBtn active={c === "no"} onClick={() => pick(a.id, "no")} tone="no" icon={<X size={13} />} label="לא" />
-                    </div>
-                  </div>
+                  )}
                 </div>
               );
             })}

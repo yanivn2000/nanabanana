@@ -1,4 +1,5 @@
 import type { Attraction } from "./db";
+import type { FamilyProfile } from "./store";
 
 // ---------------------------------------------------------------------------
 // Explore flow ("חקירת יעד") — logic for the 4-step destination-exploration
@@ -92,20 +93,38 @@ export type CatCard = {
   count: number; vibe_he: string; hot: boolean;
 };
 
+// Categories that only make sense for a given traveler composition (step 1).
+// Keyed by tag → predicate over the profile. A tag NOT listed here is always
+// relevant. This is the single, extensible home for composition rules — the
+// decision is derived from live step-1 state, never from a hardcoded exclude
+// list, so editing "who's travelling" re-filters step 2 immediately.
+const CAT_RELEVANCE: Record<string, (p: FamilyProfile) => boolean> = {
+  family: (p) => p.kids.length > 0, // "לילדים" only surfaces when kids are aboard
+};
+
+export function relevantForProfile(tag: string, p: FamilyProfile): boolean {
+  const pred = CAT_RELEVANCE[tag];
+  return pred ? pred(p) : true;
+}
+
 // Aggregate the destination's attractions by taste tag → 5–15 category cards,
 // ordered by how relevant they are to the profile (taste weight) then by how
 // alive they are here. `hot` marks a standout the profile didn't ask for — the
-// gentle "must-see" nudge (decision 3), shown as a "בולט" chip.
+// gentle "must-see" nudge (decision 3), shown as a "בולט" chip. Categories that
+// don't fit the traveler composition (e.g. "לילדים" with no kids) are dropped.
 export function categoriesFor(
   attractions: Attraction[],
   taste: Record<string, number>,
+  profile: FamilyProfile,
   max = 12
 ): CatCard[] {
   const counts: Record<string, number> = {};
   for (const a of attractions) {
     for (const t of a.taste_tags ?? []) counts[t] = (counts[t] ?? 0) + 1;
   }
-  const cards = EXPLORE_CATS.filter((c) => (counts[c.tag] ?? 0) > 0).map((c) => {
+  const cards = EXPLORE_CATS
+    .filter((c) => (counts[c.tag] ?? 0) > 0 && relevantForProfile(c.tag, profile))
+    .map((c) => {
     const count = counts[c.tag] ?? 0;
     return {
       tag: c.tag, label_he: c.label_he, icon: c.icon, count,
@@ -158,3 +177,57 @@ export function attractionChips(a: Attraction, taste: Record<string, number>): C
   }
   return chips;
 }
+
+// --- Step 3: expandable detail — enough to decide כן/אולי/לא, no API cost. ----
+// The personalization hook: which of the tags THIS trip weights positively does
+// the attraction match? Positive framing, ≤2 labels. Falls back to the must-see
+// nudge so iconic spots still get a reason. Null → no line (keeps it honest).
+export function whyItFits(a: Attraction, taste: Record<string, number>): string | null {
+  // Exclude "landmark" — it's a structural must-see marker (already a chip),
+  // not a taste the user "likes"; "אוהבים אתר חובה" reads wrong.
+  const liked = [...new Set((a.taste_tags ?? [])
+    .filter((t) => t !== "landmark" && (taste[t] ?? 0) >= 3 && TAG_LABEL[t]))];
+  liked.sort((x, y) => (taste[y] ?? 0) - (taste[x] ?? 0));
+  const labels = liked.slice(0, 2).map((t) => TAG_LABEL[t]);
+  if (labels.length) return `מתאים לכם כי אתם אוהבים ${labels.join(" ו")}`;
+  if (a.must_see === 1) return "מאיקוני העיר — שווה הצצה גם אם זה לא בראש שלכם";
+  return null;
+}
+
+function durationHe(min: number): string {
+  if (min < 60) return `כ-${min} דק'`;
+  const whole = Math.floor(min / 60);
+  const rem = min % 60;
+  const hrs = whole === 1 ? "שעה" : `${whole} שעות`;
+  if (rem === 0) return whole === 1 ? "כשעה" : `כ-${whole} שעות`;
+  if (rem === 30) return whole === 1 ? "כשעה וחצי" : `כ-${hrs} וחצי`;
+  return `כ-${hrs} ו-${rem} דק'`;
+}
+
+function indoorHe(io: string): string {
+  const v = io.toLowerCase();
+  if (v.includes("both") || v.includes("mixed")) return "מקורה ופתוח";
+  const inside = v.includes("indoor") || v.includes("מקור");
+  const outside = v.includes("outdoor") || v.includes("open") || v.includes("פתוח");
+  if (inside && outside) return "מקורה ופתוח";
+  if (inside) return "מקום מקורה";
+  if (outside) return "בחוץ (פתוח)";
+  return io;
+}
+
+// Practical facts that can make or break the decision (time budget, timing,
+// weather fit, dress). Cost stays a chip in the compact card, so it's omitted.
+export function attractionFacts(a: Attraction): { label_he: string; value_he: string }[] {
+  const f: { label_he: string; value_he: string }[] = [];
+  if (a.duration_minutes) f.push({ label_he: "משך", value_he: durationHe(a.duration_minutes) });
+  if (a.best_time_he) f.push({ label_he: "מתי", value_he: a.best_time_he });
+  if (a.indoor_outdoor) f.push({ label_he: "היכן", value_he: indoorHe(a.indoor_outdoor) });
+  if (a.dress_he) f.push({ label_he: "לבוש", value_he: a.dress_he });
+  return f;
+}
+
+// Verified-traveller insight kinds → Hebrew labels (matches the admin taxonomy).
+export const INSIGHT_KIND_HE: Record<string, string> = {
+  tip: "טיפ ממטיילים", warning: "לתשומת לב", verdict: "שורה תחתונה",
+  food: "אוכל", season: "עונה", access: "נגישות",
+};
