@@ -33,6 +33,9 @@ export function deriveTaste(p: FamilyProfile): Record<string, number> {
   };
   for (const it of p.interests) bump(INTEREST_TASTE[it] ?? [], 3);
   for (const it of p.dislikes) bump(INTEREST_TASTE[it] ?? [], -3);
+  // Kids aboard → family-tagged attractions matter, even if no one thought to
+  // pick a "kids" interest chip (they rarely do — the kids ARE the context).
+  if (p.kids.length > 0) bump(["family"], 3);
   for (const t of ["landmark", "art", "history", "nature"]) w[t] = (w[t] ?? 0) + 1;
   return { ...w, ...(p.taste ?? {}) };
 }

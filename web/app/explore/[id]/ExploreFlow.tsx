@@ -4,14 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ChevronRight, ChevronLeft, ChevronDown, Heart, X, Check, HelpCircle, CloudRain, Route,
-  Users, Star, Music, Shirt, Wine, Ticket, Drama, Image as ImageIcon,
+  ChevronRight, ChevronLeft, ChevronDown, Heart, X, Check, HelpCircle, CloudRain,
+  Star, Music, Shirt, Wine, Ticket, Drama, Image as ImageIcon,
   Landmark, Trees, UtensilsCrossed, Gem, Trophy, Baby, ExternalLink, Globe, Sparkles, Sun,
   type LucideIcon,
 } from "lucide-react";
 import { WhyFits, TravelersSay } from "@/components/Signature";
+import { CategoryTile } from "@/components/CategoryTiles";
+import { MapArt } from "@/components/Illustrations";
 import type { Attraction, Destination, Insight } from "@/lib/db";
-import { useProfile, useTrips, MONTHS_HE } from "@/lib/store";
+import { useProfile, useTrips, MONTHS_HE, type FamilyProfile } from "@/lib/store";
 import { deriveTaste, rankByTaste } from "@/lib/taste";
 import {
   briefFor, seasonalWeather, categoriesFor, calibrate, attractionChips,
@@ -27,6 +29,17 @@ const RADIUS_HE = ["קרוב מאוד", "עד שעה", "עד שעתיים", "ג�
 const RADIUS_HOURS = [0.5, 1, 2, 3]; // slider index → per-trip dailyDriveHours
 type Choice = "yes" | "maybe" | "no";
 
+// Step 1 (board mock): who's travelling THIS trip — composition, kid ages, and
+// interests — a per-trip draft over the global profile (locked decision 5).
+const COMPS = ["זוג", "משפחה", "חברים", "עם ילדים"] as const;
+type Comp = (typeof COMPS)[number];
+const AGE_BANDS = ["0-3", "4-8", "9-12", "13+"] as const;
+const BAND_AGE: Record<string, number> = { "0-3": 2, "4-8": 6, "9-12": 10, "13+": 14 };
+const bandOf = (age: number) => (age <= 3 ? "0-3" : age <= 8 ? "4-8" : age <= 12 ? "9-12" : "13+");
+const STEP1_INTERESTS = ["טבע", "אוכל", "תרבות", "קניות", "ספורט", "חופים",
+  "פארקי שעשועים", "היסטוריה", "חיי לילה"];
+const hasKids = (c: Comp) => c === "משפחה" || c === "עם ילדים";
+
 export function ExploreFlow(
   { dest, attractions, insights = [] }:
   { dest: Destination; attractions: Attraction[]; insights?: Insight[] }
@@ -37,14 +50,29 @@ export function ExploreFlow(
 
   const [step, setStep] = useState(1);
   const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const [comp, setComp] = useState<Comp>("זוג");                 // step-1: who's travelling
+  const [bands, setBands] = useState<Set<string>>(new Set());    // step-1: kid age bands
+  const [interests, setInterests] = useState<Set<string>>(new Set()); // step-1: trip interests
   const [likes, setLikes] = useState<Set<string>>(new Set());
   const [dislikes, setDislikes] = useState<Set<string>>(new Set());
   const [seeded, setSeeded] = useState(false);           // profile prefs pre-loaded?
   const [showProfilePrefs, setShowProfilePrefs] = useState(false); // collapsed loaded-prefs section
   const [sel, setSel] = useState<Record<number, Choice>>({});
+  const [filt, setFilt] = useState<"all" | Choice>("all");       // step-3 status filter
   const [openCard, setOpenCard] = useState<number | null>(null); // step-3 expanded attraction
   const [days, setDays] = useState(4);
   const [radius, setRadius] = useState(1);
+
+  // The per-trip traveler draft: step-1 edits layered over the global profile.
+  // Saved onto the trip at build; the global profile is never touched.
+  const draftProfile = useMemo<FamilyProfile>(() => ({
+    ...profile,
+    adults: comp === "חברים" ? 4 : 2,
+    kids: hasKids(comp)
+      ? [...bands].sort().map((b) => ({ name: "", age: BAND_AGE[b] ?? 8, loves: "" }))
+      : [],
+    interests: [...interests],
+  }), [profile, comp, bands, interests]);
 
   // Verified traveller insights grouped by attraction (for the step-3 detail).
   const insightsById = useMemo(() => {
@@ -59,9 +87,9 @@ export function ExploreFlow(
   }, [insights]);
 
   const cityHe = dest.city_he ?? dest.city;
-  const base = useMemo(() => deriveTaste(profile), [profile]);
+  const base = useMemo(() => deriveTaste(draftProfile), [draftProfile]);
   const calibrated = useMemo(() => calibrate(base, likes, dislikes), [base, likes, dislikes]);
-  const cats = useMemo(() => categoriesFor(attractions, base, profile, 12), [attractions, base, profile]);
+  const cats = useMemo(() => categoriesFor(attractions, base, draftProfile, 12), [attractions, base, draftProfile]);
 
   // A category "comes from the profile" when the profile already weights it —
   // an interest (≥3) pre-likes it, a dislike (<0) pre-dislikes it. Baseline-only
@@ -75,15 +103,20 @@ export function ExploreFlow(
   const discoverCats = useMemo(() => cats.filter((c) => !fromProfile(c.tag) && c.hot), [cats, base]);
   const profileCats = useMemo(() => cats.filter((c) => fromProfile(c.tag)), [cats, base]);
 
-  // Seed step 2 from the profile once it has hydrated: the user is CALIBRATING
-  // their loaded preferences for this trip, not starting from a blank slate.
-  // Runs once; later back-and-forth navigation keeps the user's adjustments.
+  // Seed the flow from the global profile once it hydrates: step-1 draft
+  // (composition / ages / interests) + step-2 likes/dislikes. The user is
+  // CALIBRATING loaded preferences, not starting blank. Runs once; later
+  // navigation keeps their adjustments.
   useEffect(() => {
     if (!profileLoaded || seeded) return;
-    setLikes(new Set(cats.filter((c) => (base[c.tag] ?? 0) >= 3).map((c) => c.tag)));
-    setDislikes(new Set(cats.filter((c) => (base[c.tag] ?? 0) < 0).map((c) => c.tag)));
+    setComp(profile.kids.length ? "עם ילדים" : profile.adults >= 3 ? "חברים" : "זוג");
+    setBands(new Set(profile.kids.map((k) => bandOf(k.age))));
+    setInterests(new Set(profile.interests));
+    const b = deriveTaste(profile);
+    setLikes(new Set(Object.keys(b).filter((t) => b[t] >= 3)));
+    setDislikes(new Set(Object.keys(b).filter((t) => b[t] < 0)));
     setSeeded(true);
-  }, [profileLoaded, seeded, cats, base]);
+  }, [profileLoaded, seeded, profile]);
   const ranked = useMemo(() => rankByTaste(attractions, calibrated, 50), [attractions, calibrated]);
   const rankedIds = useMemo(() => new Set(ranked.map((a) => a.id)), [ranked]);
   const weather = seasonalWeather(month);
@@ -163,7 +196,7 @@ export function ExploreFlow(
       destinationId: dest.id,
       days,
       month,
-      profile: { ...profile, taste: calibrated, dailyDriveHours: RADIUS_HOURS[radius] },
+      profile: { ...draftProfile, taste: calibrated, dailyDriveHours: RADIUS_HOURS[radius] },
       selection: { yes, maybe, no },
     });
     router.push(`/trip/${trip.id}`);
@@ -191,20 +224,43 @@ export function ExploreFlow(
         </div>
       </header>
 
-      {/* -------- Step 1: profile / trip context -------- */}
+      {/* -------- Step 1: who's travelling THIS trip (board mock 1) -------- */}
       {step === 1 && (
         <section className="rise">
-          <p className="eyebrow mb-2">שלב 1 · מי נוסע</p>
-          <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
-            <p className="mb-2 flex items-center gap-2 text-[14px] font-medium">
-              <Users size={16} className="text-[var(--brand-ink)]" />
-              {profile.adults} מבוגרים · {profile.kids.length ? `${profile.kids.length} ילדים` : "בלי ילדים"}
-            </p>
-            <div className="mb-3 flex flex-wrap gap-1.5">
-              {profile.interests.map((it) => (
-                <span key={it} className="rounded-full bg-[var(--brand-soft)] px-2.5 py-1 text-[12px] text-[var(--brand-ink)]">{it}</span>
+          <p className="eyebrow mb-2">שלב 1 · פרופיל</p>
+          <div className="rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
+            <h2 className="serif text-[20px] font-semibold">מי יוצא לטיול?</h2>
+            <p className="mb-4 mt-0.5 text-[12.5px] text-[var(--text-3)]">זה יעזור לנו לבנות לכם טיול שמתאים בול לכם</p>
+
+            <p className="mb-2 text-[14px] font-medium">מי נוסע?</p>
+            <div className="mb-4 flex flex-wrap gap-1.5">
+              {COMPS.map((c) => (
+                <SelChip key={c} on={comp === c} onClick={() => setComp(c)}>{c}</SelChip>
               ))}
             </div>
+
+            {hasKids(comp) && (
+              <>
+                <p className="mb-2 text-[14px] font-medium">גילאי ילדים</p>
+                <div className="mb-4 flex flex-wrap gap-1.5">
+                  {AGE_BANDS.map((b) => (
+                    <SelChip key={b} on={bands.has(b)}
+                      onClick={() => setBands((prev) => { const n = new Set(prev); n.has(b) ? n.delete(b) : n.add(b); return n; })}>
+                      {b}
+                    </SelChip>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <p className="mb-2 text-[14px] font-medium">מה אתם אוהבים?</p>
+            <div className="mb-4 grid grid-cols-3 gap-2">
+              {STEP1_INTERESTS.map((v) => (
+                <CategoryTile key={v} label={v} selected={interests.has(v)}
+                  onClick={() => setInterests((prev) => { const n = new Set(prev); n.has(v) ? n.delete(v) : n.add(v); return n; })} />
+              ))}
+            </div>
+
             <label className="flex items-center justify-between gap-2 text-[13px] text-[var(--text-2)]">
               מתי הטיול?
               <select value={month} onChange={(e) => setMonth(Number(e.target.value))}
@@ -213,7 +269,7 @@ export function ExploreFlow(
               </select>
             </label>
             <p className="mt-3 text-[12px] text-[var(--text-3)]">
-              הכיול כאן שייך לטיול הזה בלבד — טיול עם הילדים ייראה אחרת.{" "}
+              הבחירות כאן שייכות לטיול הזה בלבד — הפרופיל הכללי לא משתנה.{" "}
               <Link href="/profile" className="underline">עריכת פרופיל</Link>
             </p>
           </div>
@@ -273,10 +329,31 @@ export function ExploreFlow(
       {/* -------- Step 3: taste-ranked attractions, 3-way -------- */}
       {step === 3 && (
         <section className="rise">
-          <p className="eyebrow mb-2"><Star size={12} className="inline" /> שלב 3 · האטרקציות שלכם</p>
-          <p className="mb-3 text-[12px] text-[var(--text-3)]">רשימה קצרה, לפי מי שאתם. סמנו כן / אולי / לא.</p>
+          <p className="eyebrow mb-2"><Star size={12} className="inline" /> שלב 3 · איך נשמע לכם?</p>
+          <p className="mb-3 text-[12px] text-[var(--text-3)]">סמנו מה מתאים במיוחד — כן / אולי / לא.</p>
+          {/* status filter (board mock 3): revisit what you marked */}
+          <div className="mb-3 flex flex-wrap gap-1.5">
+            {([
+              { k: "all", label: "הכל" },
+              { k: "yes", label: `כן${yesCount ? ` · ${yesCount}` : ""}` },
+              { k: "maybe", label: `אולי${maybeCount ? ` · ${maybeCount}` : ""}` },
+              { k: "no", label: "לא" },
+            ] as { k: "all" | Choice; label: string }[]).map((f) => (
+              <button key={f.k} onClick={() => setFilt(f.k)}
+                className="rounded-full px-3.5 py-1.5 text-[12.5px] font-medium transition"
+                style={filt === f.k
+                  ? f.k === "maybe"
+                    ? { background: "var(--amber-fill)", color: "var(--text)", border: "1.5px solid var(--amber-fill)" }
+                    : f.k === "no"
+                      ? { background: "var(--accent)", color: "#fff", border: "1.5px solid var(--accent)" }
+                      : { background: "var(--brand)", color: "#fff", border: "1.5px solid var(--brand)" }
+                  : { background: "var(--surface)", color: "var(--text-2)", border: "1.5px solid var(--border)" }}>
+                {f.label}
+              </button>
+            ))}
+          </div>
           <div className="flex flex-col gap-2.5">
-            {ranked.map((a) => {
+            {ranked.filter((a) => filt === "all" || sel[a.id] === filt).map((a) => {
               const chips = attractionChips(a, calibrated);
               const c = sel[a.id];
               const open = openCard === a.id;
@@ -371,6 +448,8 @@ export function ExploreFlow(
       {step === 4 && (
         <section className="rise">
           <p className="eyebrow mb-2">שלב 4 · בונים טיול</p>
+          <div className="mb-2 flex justify-center"><MapArt width={190} /></div>
+          <h2 className="serif mb-4 text-center text-[20px] font-semibold">בונים לכם את הטיול המושלם</h2>
           <div className="mb-4">
             <div className="mb-1 flex justify-between text-[13px] text-[var(--text-2)]">
               <span>כמה ימים?</span><span className="font-medium text-[var(--brand-ink)]">{days} ימים</span>
@@ -385,11 +464,18 @@ export function ExploreFlow(
             <input type="range" min={0} max={3} value={radius} onChange={(e) => setRadius(Number(e.target.value))}
               className="w-full" style={{ accentColor: "var(--brand)" }} />
           </div>
-          <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--brand-soft)] p-3">
-            <p className="flex items-start gap-1.5 text-[12.5px] leading-relaxed text-[var(--brand-ink)]">
-              <Route size={15} className="mt-0.5 shrink-0" />
-              נפתח כל יום ב<b>עוגן</b> (מה שסימנתם ״כן״ + חובות), ונשלב על הדרך את ה״אולי״ אם יישאר זמן.
-            </p>
+          {/* what the builder takes into account (board mock 4) — all true */}
+          <div className="rounded-[var(--radius-card)] bg-[var(--brand-soft)] p-4">
+            <div className="flex flex-col gap-1.5 text-[13px] leading-relaxed text-[var(--brand-ink)]">
+              {["מתאים להעדפות ולכיול שסימנתם",
+                "כל יום נפתח בעוגן שבחרתם ב״כן״ — וה״אולי״ משתלב אם יש זמן",
+                `לפי מרחק הנסיעה שבחרתם (${RADIUS_HE[radius]})`,
+                "מאוזן — עם הפסקות אוכל, מנוחה וקצב נכון"].map((t) => (
+                <p key={t} className="flex items-start gap-1.5">
+                  <Check size={15} className="mt-0.5 shrink-0" /> {t}
+                </p>
+              ))}
+            </div>
           </div>
           <button onClick={build}
             className="mt-4 w-full rounded-full bg-[var(--brand)] py-3 text-[15px] font-medium text-white">
@@ -408,11 +494,26 @@ export function ExploreFlow(
           </button>
           <button onClick={next}
             className="inline-flex items-center gap-1 rounded-full bg-[var(--brand)] px-5 py-2.5 text-[14px] font-medium text-white">
-            הבא <ChevronLeft size={15} />
+            {step === 3 ? "לבניית הטיול" : "הבא"} <ChevronLeft size={15} />
           </button>
         </div>
       )}
     </main>
+  );
+}
+
+// Small single/multi-select pill (step-1 composition + age bands).
+function SelChip({ on, children, onClick }: { on: boolean; children: React.ReactNode; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick}
+      className="rounded-full px-3.5 py-1.5 text-[13px] font-medium transition"
+      style={{
+        background: on ? "var(--brand)" : "var(--surface)",
+        color: on ? "#fff" : "var(--text-2)",
+        border: `1.5px solid ${on ? "var(--brand)" : "var(--border)"}`,
+      }}>
+      {children}
+    </button>
   );
 }
 

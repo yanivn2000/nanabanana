@@ -16,6 +16,7 @@ import { useTrips, useProfile, useHotels, profileText, profileSummary, MONTHS_HE
 import { deriveTaste } from "@/lib/taste";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { WhyFits } from "@/components/Signature";
+import { MapArt } from "@/components/Illustrations";
 import { PackingList } from "@/components/PackingList";
 import { TravelChecklist } from "@/components/TravelChecklist";
 import { BudgetPanel } from "@/components/BudgetPanel";
@@ -467,6 +468,27 @@ export function TripView({ tripId }: { tripId: string }) {
       {error && (
         <div className="mx-5 mt-4 rounded-[var(--radius-card)] bg-[var(--amber-soft)] px-4 py-3 text-[13px] text-[var(--amber)] lg:mx-0">
           {error}
+        </div>
+      )}
+
+      {/* branded building moment — generation really takes ~a minute */}
+      {busy === "generate" && (
+        <div className="mx-5 mt-5 flex flex-col items-center rounded-[var(--radius-card)] bg-[var(--surface)] px-5 py-8 text-center shadow-[var(--shadow)] lg:mx-0">
+          <MapArt width={200} />
+          <p className="serif mt-3 text-[20px] font-semibold">בונים לכם את הטיול המושלם…</p>
+          <div className="mt-3 flex flex-col items-start gap-1.5 text-[13px] text-[var(--text-2)]">
+            {["מתאים להעדפות ולטעם שלכם",
+              ...(trip?.selection ? ["כל יום נפתח בעוגן שבחרתם"] : []),
+              "בונים לפי מרחק וזמן",
+              "מאוזן ומגוון נכון"].map((t) => (
+              <p key={t} className="flex items-center gap-1.5">
+                <span className="grid size-4 place-items-center rounded-full bg-[var(--brand)] text-[10px] text-white">✓</span> {t}
+              </p>
+            ))}
+          </div>
+          <div className="mt-5 h-2 w-56 overflow-hidden rounded-full bg-[var(--surface-2)]" dir="ltr">
+            <div className="progress-slide h-full w-1/3 rounded-full bg-[var(--brand)]" />
+          </div>
         </div>
       )}
 

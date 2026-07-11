@@ -2,6 +2,33 @@
 // mode automatically). Used for empty states / onboarding / loading, per the
 // brand rule: illustration for moments, real photos for content.
 
+// A folded paper map with a dashed route and a terracotta pin — the "building
+// your trip" moment (board mock 4).
+export function MapArt({ width = 220 }: { width?: number }) {
+  return (
+    <svg width={width} viewBox="0 0 240 150" fill="none" aria-hidden>
+      <ellipse cx="120" cy="134" rx="86" ry="11" fill="var(--brand-soft)" />
+      {/* folded map: three panels */}
+      <path d="M28 48 L76 36 V118 L28 130 Z" fill="var(--blue-soft)" />
+      <path d="M76 36 L124 48 V130 L76 118 Z" fill="#EAF3EE" />
+      <path d="M124 48 L172 36 V118 L124 130 Z" fill="var(--blue-soft)" />
+      <path d="M28 48 L76 36 L124 48 L172 36 V118 L124 130 L76 118 L28 130 Z"
+        stroke="var(--brand)" strokeWidth="2" strokeLinejoin="round" opacity="0.5" />
+      {/* terrain hints */}
+      <path d="M40 105 c8-10 16-8 24-16 M132 108 c10-8 18-6 28-14" stroke="var(--brand)" strokeWidth="2" opacity="0.35" strokeLinecap="round" />
+      {/* dashed route */}
+      <path d="M44 116 C 70 92, 96 108, 118 84 S 150 62, 158 56" stroke="var(--accent)" strokeWidth="2.6" strokeDasharray="2 7" strokeLinecap="round" />
+      {/* pin above the destination */}
+      <path d="M158 14 c-11 0-20 9-20 20 0 13.5 16.4 30.5 18.9 33a1.6 1.6 0 0 0 2.2 0 c2.5-2.5 18.9-19.5 18.9-33 0-11-9-20-20-20z" fill="var(--accent-bright)" />
+      <circle cx="158" cy="34.5" r="7.6" fill="#fff8ee" />
+      {/* sparkles */}
+      <g fill="var(--amber-fill)">
+        <circle cx="52" cy="24" r="2.2" /><circle cx="196" cy="70" r="2.6" /><circle cx="208" cy="30" r="1.8" /><circle cx="24" cy="80" r="1.9" />
+      </g>
+    </svg>
+  );
+}
+
 // A packed suitcase with travel stickers, a standing pin, and a dashed flight
 // path — "the suitcase is ready, where to?".
 export function SuitcaseArt({ width = 210 }: { width?: number }) {

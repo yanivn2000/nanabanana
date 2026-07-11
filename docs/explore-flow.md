@@ -193,6 +193,20 @@ state). Expansion (all from existing DB fields + insights → **no API cost**):
   London (dest 14) has **zero** attraction-linked approved insights today, so this block only shows once
   the admin adds them (verified on dest 8 / Amsterdam, which has 109).
 
+## Flow UX upgrade (brand direction B, 2026-07-11)
+The 4 steps were restyled to the designer board's mocks — and step 1 gained real controls:
+- **Step 1 "מי יוצא לטיול?"** now edits a **per-trip traveler draft** (composition זוג/משפחה/חברים/
+  עם-ילדים → adults+kids, kid **age bands** 0-3/4-8/9-12/13+, and interest **category tiles**), seeded
+  from the global profile on load, saved onto `trip.profile` at build. The global profile is never
+  touched. All of steps 2–4 derive from this draft (`deriveTaste(draftProfile)`), so choosing
+  "עם ילדים" here makes "לילדים" appear downstream. `deriveTaste` also bumps `family` +3 when
+  `kids.length>0` (the kids ARE the context; users rarely pick a "kids" interest chip).
+- **Step 3** got a status **filter** (הכל / כן·N / אולי·N / לא) and the board's portrait attraction
+  cards; the primary nav button reads **"לבניית הטיול"** on step 3.
+- **Step 4** shows the `MapArt` illustration + "בונים לכם את הטיול המושלם" + an all-true checklist.
+- **Trip page** now shows a branded **building moment** (MapArt + checklist + indeterminate bar) while
+  the generator runs (~a minute) instead of a bare spinner.
+
 ## Fast-follows (after slice 1)
 - **F1 — anchors build** ✅ SHIPPED (commit 329ecbd): the itinerary POST accepts
   `selection:{yes,maybe,no}`; `partitionBySelection` splits the pool into anchors (yes picks, else
