@@ -1,4 +1,4 @@
-import { Frank_Ruhl_Libre, Suez_One, Secular_One } from "next/font/google";
+import { Fredoka, Rubik, IBM_Plex_Sans_Hebrew } from "next/font/google";
 import { WhyFits, TravelersSay } from "@/components/Signature";
 
 // -----------------------------------------------------------------------------
@@ -7,9 +7,9 @@ import { WhyFits, TravelersSay } from "@/components/Signature";
 // the direction is approved; the app's globals.css is untouched.
 // -----------------------------------------------------------------------------
 
-const frank = Frank_Ruhl_Libre({ subsets: ["hebrew", "latin"], weight: ["500", "700", "900"], variable: "--f-frank" });
-const suez = Suez_One({ subsets: ["hebrew", "latin"], weight: "400", variable: "--f-suez" });
-const secular = Secular_One({ subsets: ["hebrew", "latin"], weight: "400", variable: "--f-secular" });
+const fredoka = Fredoka({ subsets: ["hebrew", "latin"], weight: ["400", "500", "600", "700"], variable: "--f-fred" });
+const rubik = Rubik({ subsets: ["hebrew", "latin"], weight: ["500", "700", "800"], variable: "--f-rubik" });
+const plex = IBM_Plex_Sans_Hebrew({ subsets: ["hebrew", "latin"], weight: ["500", "700"], variable: "--f-plex" });
 
 // --- palette (AA-verified; contrast vs white / vs its soft pair) -------------
 const C = {
@@ -61,7 +61,7 @@ function Tile({ bg, fg, pin, label }: { bg: string; fg: string; pin: string; lab
     <div className="flex flex-col items-center gap-2">
       <div className="relative grid size-20 place-items-center rounded-[22px]"
         style={{ background: bg, boxShadow: "0 2px 6px rgba(16,29,43,.08), 0 12px 28px rgba(16,29,43,.10)" }}>
-        <span className="frank text-[44px] font-black leading-none" style={{ color: fg }}>Y</span>
+        <span className="disp text-[44px] font-black leading-none" style={{ color: fg }}>Y</span>
         <span className="absolute" style={{ top: 10, insetInlineEnd: 12 }}><Pin size={16} fill={pin} /></span>
       </div>
       <span className="text-[11px]" style={{ color: C.ink3 }}>{label}</span>
@@ -75,8 +75,8 @@ function Stamp() {
     <svg width="120" height="120" viewBox="0 0 120 120" aria-hidden style={{ transform: "rotate(-8deg)" }}>
       <circle cx="60" cy="60" r="54" fill="none" stroke={C.green} strokeWidth="3" strokeDasharray="2.5 5" strokeLinecap="round" />
       <circle cx="60" cy="60" r="43" fill="none" stroke={C.green} strokeWidth="1.5" />
-      <text x="60" y="52" textAnchor="middle" fontFamily="var(--f-frank)" fontWeight="900" fontSize="26" fill={C.green}>Yalle</text>
-      <text x="60" y="74" textAnchor="middle" fontFamily="var(--f-frank)" fontWeight="500" fontSize="12" fill={C.green}>בול בשבילך</text>
+      <text x="60" y="52" textAnchor="middle" fontFamily="var(--f-fred)" fontWeight="900" fontSize="26" fill={C.green}>Yalle</text>
+      <text x="60" y="74" textAnchor="middle" fontFamily="var(--f-fred)" fontWeight="500" fontSize="12" fill={C.green}>בול בשבילך</text>
       <g stroke={C.green} strokeWidth="1.5" strokeLinecap="round">
         <path d="M28 60h-8" /><path d="M100 60h-8" />
       </g>
@@ -88,7 +88,7 @@ function Section({ n, title, children }: { n: string; title: string; children: R
   return (
     <section className="mt-14">
       <p className="mb-1 text-[11px] font-semibold tracking-[0.18em]" style={{ color: C.terra }}>{n}</p>
-      <h2 className="frank mb-5 text-[26px] font-black" style={{ color: C.ink }}>{title}</h2>
+      <h2 className="disp mb-5 text-[26px] font-black" style={{ color: C.ink }}>{title}</h2>
       {children}
     </section>
   );
@@ -96,9 +96,9 @@ function Section({ n, title, children }: { n: string; title: string; children: R
 
 export default function BrandBoard() {
   return (
-    <main dir="rtl" className={`${frank.variable} ${suez.variable} ${secular.variable} min-h-screen pb-32`}
+    <main dir="rtl" className={`${fredoka.variable} ${rubik.variable} ${plex.variable} min-h-screen pb-32`}
       style={{ background: C.bg, color: C.ink }}>
-      <style>{`.frank{font-family:var(--f-frank)} .suez{font-family:var(--f-suez)} .secular{font-family:var(--f-secular)}`}</style>
+      <style>{`.disp{font-family:var(--f-fred)} .rubik{font-family:var(--f-rubik)} .plex{font-family:var(--f-plex)}`}</style>
       <div className="mx-auto max-w-[760px] px-6 pt-14">
 
         <p className="text-[11px] font-semibold tracking-[0.2em]" style={{ color: C.ink3 }}>YALLE · BRAND BOARD · כיוון B · פנימי</p>
@@ -108,10 +108,10 @@ export default function BrandBoard() {
           <div className="rounded-[24px] p-10 text-center"
             style={{ background: C.surface, boxShadow: "0 2px 6px rgba(16,29,43,.05), 0 18px 44px rgba(16,29,43,.08)" }}>
             <div className="inline-flex items-start justify-center" dir="ltr">
-              <span className="frank font-black leading-none" style={{ fontSize: 92, color: C.green, letterSpacing: "-0.02em" }}>Yalle</span>
+              <span className="disp font-black leading-none" style={{ fontSize: 92, color: C.green, letterSpacing: "-0.02em" }}>Yalle</span>
               <span className="-ms-2 mt-1"><PinSpark size={40} /></span>
             </div>
-            <p className="frank mt-3 text-[22px] font-700" style={{ color: C.ink, fontWeight: 700 }}>הטיול שלך. בול בשבילך.</p>
+            <p className="disp mt-3 text-[22px] font-700" style={{ color: C.ink, fontWeight: 700 }}>הטיול שלך. בול בשבילך.</p>
             <p className="mt-1 text-[13px]" style={{ color: C.ink2 }}>וורדמארק ירוק-יער · פין טרקוטה עם ניצוץ — האנרגיה של "יאללה, יוצאים"</p>
           </div>
           <div className="mt-6 flex flex-wrap items-end justify-center gap-7">
@@ -145,21 +145,21 @@ export default function BrandBoard() {
         </Section>
 
         {/* ---------- 3 · typography ---------- */}
-        <Section n="03" title="טיפוגרפיה — 3 הצעות לכותרות">
+        <Section n="03" title="טיפוגרפיה — סן-סריף לכותרות (הוחלף 2026-07-11)">
           <div className="flex flex-col gap-4">
             {[
-              { cls: "frank", name: "Frank Ruhl Libre", tag: "המומלץ", weight: 900,
-                why: "סריף עברי-קלאסי במשקל מודרני — editorial, פרימיום, קריא. מתכתב עם עולם המגזינים ולא עם עוד אפליקציה." },
-              { cls: "suez", name: "Suez One", tag: "נועז", weight: 400,
-                why: "סלאב כבד עם המון אישיות — רטרו-עכשווי, בולט מאוד. מסתכן בלהרגיש כבד בכותרות ארוכות." },
-              { cls: "secular", name: "Secular One", tag: "גיאומטרי", weight: 400,
-                why: "עגול, ידידותי, טכנולוגי. הכי \"אפליקציה\", הכי פחות ייחודי מהשלושה." },
+              { cls: "disp", name: "Fredoka", tag: "הנבחר", weight: 600,
+                why: "סן-סריף גיאומטרי-מעוגל — חם, ידידותי ומודרני. שומר על האנושיות של המותג בלי רטרו, ונבדל מ-Assistant של הטקסט הרץ." },
+              { cls: "rubik", name: "Rubik", tag: "חלופה", weight: 800,
+                why: "גיאומטרי מאוזן במשקל כבד — מודרני ובטוח. נפוץ יחסית בעברית, פחות ייחודי." },
+              { cls: "plex", name: "IBM Plex Sans Hebrew", tag: "חלופה", weight: 700,
+                why: "תחושת פרודקט פרימיום, נקי וטכנולוגי — אבל קר יותר מרוח המותג." },
             ].map((f) => (
               <div key={f.name} className="rounded-[20px] p-6"
                 style={{ background: C.surface, boxShadow: "0 1px 3px rgba(16,29,43,.05), 0 10px 26px rgba(16,29,43,.07)" }}>
                 <div className="mb-2 flex items-center gap-2">
                   <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold"
-                    style={{ background: f.tag === "המומלץ" ? C.greenSoft : C.surface2, color: f.tag === "המומלץ" ? C.greenInk : C.ink2 }}>{f.tag}</span>
+                    style={{ background: f.tag === "הנבחר" ? C.greenSoft : C.surface2, color: f.tag === "הנבחר" ? C.greenInk : C.ink2 }}>{f.tag}</span>
                   <span className="font-mono text-[11px]" dir="ltr" style={{ color: C.ink3 }}>{f.name}</span>
                 </div>
                 <p className={f.cls} style={{ fontSize: 30, fontWeight: f.weight, lineHeight: 1.25, color: C.ink }}>

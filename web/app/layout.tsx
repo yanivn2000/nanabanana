@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Assistant, Frank_Ruhl_Libre } from "next/font/google";
+import { Assistant, Fredoka } from "next/font/google";
 import "./globals.css";
 import { BottomNav } from "@/components/BottomNav";
 import { TopNav } from "@/components/TopNav";
@@ -10,11 +10,12 @@ const assistant = Assistant({
   weight: ["300", "400", "500", "600", "700"],
 });
 
-// Brand headline face (direction B) — editorial Hebrew serif for .serif headings.
-const frank = Frank_Ruhl_Libre({
-  variable: "--font-frank",
+// Brand headline face — Fredoka: rounded geometric sans, warm + modern, with
+// full Hebrew support. Drives the .serif display class (headings, wordmark).
+const fredoka = Fredoka({
+  variable: "--font-fredoka",
   subsets: ["hebrew", "latin"],
-  weight: ["500", "700", "900"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -36,7 +37,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="he" dir="rtl" className={`${assistant.variable} ${frank.variable} h-full antialiased`}>
+    <html lang="he" dir="rtl" className={`${assistant.variable} ${fredoka.variable} h-full antialiased`}>
       <body className="min-h-full">
         <TopNav />
         {children}
