@@ -168,10 +168,15 @@ Two changes to the category cards, so step 2 reads as *calibrating a loaded prof
   state, never a static exclude list — editing "who's travelling" re-filters step 2 on re-entry.
 - **Calibration framing** — step 2 seeds `likes`/`dislikes` from the profile once it hydrates
   (interest tags ≥3 → pre-liked, dislikes <0 → pre-disliked), shows a banner ("ההעדפות שלכם כבר טעונות
-  מהפרופיל — כאן רק מכווננים…, לא משנה את הפרופיל הכללי"), and splits cards into a prominent
-  *"מה מיוחד ב<city>"* list (non-profile categories) + a collapsed *"N העדפות מהפרופיל שלכם"* section
-  (the seeded ones, pre-marked). Calibration stays per-trip: it only writes `trip.profile.taste` on
-  build and never calls the global-profile setter.
+  מהפרופיל — כאן רק מכווננים…, לא משנה את הפרופיל הכללי"), and organises cards into a **discovery**
+  section *"שווה לגלות ב<city>"* + a collapsed *"N העדפות מהפרופיל שלכם"* (the seeded ones, pre-marked).
+  Calibration stays per-trip: only writes `trip.profile.taste` on build, never the global setter.
+  - **Discovery = `!fromProfile && hot` only.** A category is surfaced in the discovery section ONLY if
+    it stands out in the city (`hot`: big count + not the traveler's top-of-mind) AND isn't already a
+    profile pref. This is the locked "gentle nudge" (decision 3) — framed honestly as "בולטים כאן, לא
+    ביקשתם, אבל אולי תאהבו", **never** "מיוחד בשבילכם" (that falsely claimed an un-chosen category like
+    "טבע ופארקים" was the user's preference). Non-profile & non-hot categories are neither a preference
+    nor special → not shown at all (positive framing: never surface "not for you").
 
 ## Step 3 refinements (shipped after slice 1)
 Progressive disclosure so a card carries enough to decide כן/אולי/לא without bloating the ~50-item

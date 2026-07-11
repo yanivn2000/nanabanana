@@ -64,9 +64,14 @@ export function ExploreFlow(
 
   // A category "comes from the profile" when the profile already weights it —
   // an interest (≥3) pre-likes it, a dislike (<0) pre-dislikes it. Baseline-only
-  // tags (weight 1) are neutral and stay in the destination-focus list.
+  // tags (weight 1) are neutral.
   const fromProfile = (tag: string) => (base[tag] ?? 0) >= 3 || (base[tag] ?? 0) < 0;
-  const focusCats = useMemo(() => cats.filter((c) => !fromProfile(c.tag)), [cats, base]);
+  // Discovery nudge — categories that STAND OUT in this city (`hot`) that the
+  // traveler didn't ask for. NOT "for you" (they never picked these); a gentle
+  // "you might not have thought of it" push (locked decision 3). A non-profile
+  // category that isn't hot is neither a preference nor special → not shown
+  // (positive framing: we never surface "not for you").
+  const discoverCats = useMemo(() => cats.filter((c) => !fromProfile(c.tag) && c.hot), [cats, base]);
   const profileCats = useMemo(() => cats.filter((c) => fromProfile(c.tag)), [cats, base]);
 
   // Seed step 2 from the profile once it has hydrated: the user is CALIBRATING
@@ -238,12 +243,12 @@ export function ExploreFlow(
             <span>ההעדפות שלכם כבר טעונות מהפרופיל — כאן רק מכווננים ל{cityHe}. שנו רק מה שמיוחד ליעד. זה לא משנה את הפרופיל הכללי.</span>
           </div>
 
-          <p className="mb-1 text-[15px] font-bold">מה מיוחד ב{cityHe} בשבילכם</p>
-          <p className="mb-3 text-[12px] text-[var(--text-3)]">דרגו כדי לחדד — זה יעצב את רשימת האטרקציות</p>
-          {focusCats.length > 0 ? (
-            <div className="flex flex-col gap-2">{focusCats.map(renderCat)}</div>
-          ) : (
-            <p className="text-[13px] text-[var(--text-3)]">ההעדפות שלכם כבר מכסות את היעד — אפשר להמשיך, או לכוונן למטה.</p>
+          {discoverCats.length > 0 && (
+            <>
+              <p className="mb-1 text-[15px] font-bold">שווה לגלות ב{cityHe}</p>
+              <p className="mb-3 text-[12px] text-[var(--text-3)]">בולטים כאן — לא ביקשתם, אבל אולי תאהבו. סמנו מה שמסקרן.</p>
+              <div className="flex flex-col gap-2">{discoverCats.map(renderCat)}</div>
+            </>
           )}
 
           {profileCats.length > 0 && (
