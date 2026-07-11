@@ -106,7 +106,7 @@ export function Hotels({
           </div>
           {err && <p className="mb-2 text-[12.5px] text-[var(--amber)]">{err}</p>}
           <button onClick={save} disabled={busy}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--accent)] py-2.5 text-[14px] font-medium text-white disabled:opacity-60">
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-2.5 text-[14px] font-medium text-white disabled:opacity-60">
             {busy ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
             {busy ? "מאתר…" : "הוסף ואתר במפה"}
           </button>

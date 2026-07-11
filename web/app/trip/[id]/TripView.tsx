@@ -285,22 +285,22 @@ export function TripView({ tripId }: { tripId: string }) {
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <button onClick={generate} disabled={!!busy || !canBuild}
-            className="flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-5 py-2.5 text-[14px] font-medium text-white disabled:opacity-50">
+            className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-5 py-2.5 text-[14px] font-medium text-white disabled:opacity-50">
             {busy === "generate" ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
             {busy === "generate" ? "בונה לו\"ז…" : itinerary ? "בנה מחדש" : "בנה לו\"ז עם AI"}
           </button>
           {itinerary && (
             <button onClick={() => setEditing((v) => !v)}
-              className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-4 py-2.5 text-[14px] font-medium"
-              style={{ background: editing ? "var(--accent-soft)" : "transparent",
-                       color: editing ? "var(--accent-ink)" : "var(--text-2)" }}>
+              className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-4 py-2.5 text-[14px] font-medium"
+              style={{ background: editing ? "var(--brand-soft)" : "var(--surface)",
+                       color: "var(--brand-ink)" }}>
               <Pencil size={14} /> {editing ? "סיום עריכה" : "עריכה ידנית"}
             </button>
           )}
           <button onClick={() => setEditTravelers((v) => !v)}
-            className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-4 py-2.5 text-[14px] font-medium"
-            style={{ background: editTravelers ? "var(--brand-soft)" : "transparent",
-                     color: editTravelers ? "var(--brand-ink)" : "var(--text-2)" }}>
+            className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-4 py-2.5 text-[14px] font-medium"
+            style={{ background: editTravelers ? "var(--brand-soft)" : "var(--surface)",
+                     color: "var(--brand-ink)" }}>
             <Users size={14} /> מי נוסע
           </button>
         </div>

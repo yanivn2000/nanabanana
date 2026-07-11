@@ -59,7 +59,7 @@ export default function LoginPage() {
           </div>
           {status === "error" && <p className="mt-2 text-[12.5px] text-[var(--amber)]">{msg}</p>}
           <button onClick={sendLink} disabled={status === "sending"}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-[var(--accent)] py-3 text-[15px] font-medium text-white disabled:opacity-50">
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-3 text-[15px] font-medium text-white disabled:opacity-50">
             {status === "sending" ? <Loader2 size={17} className="animate-spin" /> : <Mail size={17} />}
             שלחו לי קישור כניסה
           </button>

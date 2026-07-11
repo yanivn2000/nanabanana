@@ -22,6 +22,7 @@
   /* warm amber — "בולט" / gentle-nudge highlights + warnings */
   --amber: #8a5a0b;
   --amber-soft: #f7e9c8;
+  --amber-fill: #ef9f27; /* filled "אולי" chips — pair with dark ink text (AA) */
   --blue: #2e7a96;
   --blue-soft: #e1eef3;
   --radius: 16px;
@@ -47,6 +48,7 @@
     --brand-soft: #12332c;
     --amber: #e8a33b;
     --amber-soft: #2f2611;
+    --amber-fill: #e8a33b;
     --blue: #59b6c8;
     --blue-soft: #0e2a33;
     --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 10px 30px rgba(0,0,0,0.5);

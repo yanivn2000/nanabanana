@@ -110,7 +110,7 @@ export function DestinationView({
 
         {/* חקירת יעד — the guided, personalized exploration flow */}
         <Link href={`/explore/${dest.id}`}
-          className="mt-3 inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-4 py-2.5 text-[13.5px] font-medium text-white shadow-[var(--shadow)]">
+          className="mt-3 inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-4 py-2.5 text-[13.5px] font-medium text-white shadow-[var(--shadow)]">
           <Compass size={16} /> חקרו את היעד לפי מי שאתם
         </Link>
 

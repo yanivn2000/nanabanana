@@ -24,7 +24,7 @@ export default function TripsPage() {
 
       {!creating && (
         <button onClick={() => setCreating(true)}
-          className="rise rise-1 mb-5 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[var(--accent)] py-4 text-[15px] font-medium text-white shadow-[var(--shadow)] lg:max-w-xs">
+          className="rise rise-1 mb-5 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[var(--brand)] py-4 text-[15px] font-medium text-white shadow-[var(--shadow)] lg:max-w-xs">
           <Plus size={18} /> טיול חדש
         </button>
       )}

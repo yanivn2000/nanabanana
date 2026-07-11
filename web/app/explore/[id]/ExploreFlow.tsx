@@ -383,7 +383,7 @@ export function ExploreFlow(
             </p>
           </div>
           <button onClick={build}
-            className="mt-4 w-full rounded-full bg-[var(--accent)] py-3 text-[15px] font-medium text-white">
+            className="mt-4 w-full rounded-full bg-[var(--brand)] py-3 text-[15px] font-medium text-white">
             בנו לי טיול
           </button>
           <p className="mt-2 text-center text-[11px] text-[var(--text-3)]">כל דירוג ובחירה מלמדים אותנו — ונשתפר לפרופילים דומים</p>
@@ -394,11 +394,11 @@ export function ExploreFlow(
       {step < 4 && (
         <div className="mt-6 flex items-center justify-between">
           <button onClick={back} disabled={step === 1}
-            className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-[14px] text-[var(--text-2)] disabled:opacity-0">
+            className="inline-flex items-center gap-1 rounded-full border-[1.5px] border-[var(--brand)] bg-[var(--surface)] px-4 py-2.5 text-[14px] font-medium text-[var(--brand-ink)] disabled:opacity-0">
             <ChevronRight size={15} /> חזרה
           </button>
           <button onClick={next}
-            className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-ink)] px-5 py-2.5 text-[14px] font-medium text-white">
+            className="inline-flex items-center gap-1 rounded-full bg-[var(--brand)] px-5 py-2.5 text-[14px] font-medium text-white">
             הבא <ChevronLeft size={15} />
           </button>
         </div>
@@ -410,14 +410,16 @@ export function ExploreFlow(
 function ChoiceBtn({ active, onClick, tone, icon, label }: {
   active: boolean; onClick: () => void; tone: "yes" | "maybe" | "no"; icon: React.ReactNode; label: string;
 }) {
+  // Board language: selected chips are FILLED — green / amber / terracotta.
+  // Amber pairs with dark ink (white on amber fails AA).
   const on = {
     yes: { background: "var(--brand)", color: "#fff", borderColor: "var(--brand)" },
-    maybe: { background: "var(--amber-soft)", color: "var(--amber)", borderColor: "var(--amber)" },
-    no: { background: "var(--surface-2)", color: "var(--text-2)", borderColor: "var(--border)" },
+    maybe: { background: "var(--amber-fill)", color: "var(--text)", borderColor: "var(--amber-fill)" },
+    no: { background: "var(--accent)", color: "#fff", borderColor: "var(--accent)" },
   }[tone];
   return (
     <button onClick={onClick}
-      className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border py-1.5 text-[12px] transition"
+      className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border py-1.5 text-[12px] font-medium transition"
       style={active ? on : { background: "var(--surface)", color: "var(--text-3)", borderColor: "var(--border)" }}>
       {icon} {label}
     </button>

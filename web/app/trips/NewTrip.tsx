@@ -160,7 +160,7 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
                 const d = destOf(s.destId);
                 return (
                   <div key={s.destId} className="flex items-center gap-2 rounded-lg bg-[var(--surface-2)] px-2.5 py-2">
-                    <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--accent)] text-[11px] font-bold text-white">{i + 1}</span>
+                    <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-bold text-white">{i + 1}</span>
                     {segs.length > 1 && (
                       <span className="flex shrink-0 flex-col">
                         <button onClick={() => moveSeg(i, -1)} disabled={i === 0} aria-label="העלה"
@@ -246,7 +246,7 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
       </div>
 
       <button onClick={go} disabled={!canGo || creating}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--accent)] py-3 text-[15px] font-medium text-white disabled:opacity-50">
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-3 text-[15px] font-medium text-white disabled:opacity-50">
         {creating ? <Loader2 size={17} className="animate-spin" /> : <Sparkles size={17} />}
         צור טיול
       </button>

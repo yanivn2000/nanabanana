@@ -70,7 +70,7 @@ export default function RecommendPage() {
       </div>
 
       <button onClick={recommend} disabled={status === "loading"}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-[var(--accent)] py-3 text-[15px] font-medium text-white disabled:opacity-50">
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-3 text-[15px] font-medium text-white disabled:opacity-50">
         {status === "loading" ? <Loader2 size={17} className="animate-spin" /> : <Sparkles size={17} />}
         {status === "loading" ? "חושב לאן…" : "המליצו לי יעד"}
       </button>

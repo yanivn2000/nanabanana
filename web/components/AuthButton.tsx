@@ -22,7 +22,7 @@ export function AuthButton() {
   if (!email) {
     return (
       <Link href="/login"
-        className="flex items-center gap-1.5 rounded-full bg-[var(--accent)] px-4 py-2 text-[14px] font-medium text-white">
+        className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-[14px] font-medium text-white">
         <LogIn size={16} /> התחברות
       </Link>
     );

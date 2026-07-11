@@ -49,7 +49,7 @@ export default function ProfilePage() {
             <button onClick={() => save(DEFAULT_PROFILE)} className="text-[12px] text-[var(--brand-ink)] underline">אפס</button>
           </div>
           <button onClick={() => router.back()}
-            className="mt-3 w-full rounded-full bg-[var(--accent)] py-3 text-[15px] font-medium text-white">
+            className="mt-3 w-full rounded-full bg-[var(--brand)] py-3 text-[15px] font-medium text-white">
             סיום
           </button>
         </>

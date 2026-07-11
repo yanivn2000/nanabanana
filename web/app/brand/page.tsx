@@ -181,25 +181,27 @@ export default function BrandBoard() {
         {/* ---------- 4 · depth & components ---------- */}
         <Section n="04" title="עומק, כפתורים וצ'יפים">
           <div className="rounded-[24px] p-7" style={{ background: C.surface, boxShadow: "0 2px 6px rgba(16,29,43,.05), 0 18px 44px rgba(16,29,43,.08)" }}>
+            {/* buttons — locked 2026-07-11: primary=green fill, secondary=green outline, tertiary=link */}
             <div className="flex flex-wrap items-center gap-3">
               <button className="rounded-full px-6 py-3 text-[14.5px] font-bold text-white transition"
-                style={{ background: C.green, boxShadow: "0 6px 16px rgba(14,107,94,.35)" }}>בנו לי טיול</button>
-              <button className="rounded-full px-6 py-3 text-[14.5px] font-bold text-white"
-                style={{ background: C.terra, boxShadow: "0 6px 16px rgba(198,79,38,.30)" }}>המשך לאטרקציות</button>
-              <button className="rounded-full px-5 py-3 text-[14px] font-medium"
-                style={{ background: "transparent", color: C.ink2, border: `1.5px solid ${C.ink}22` }}>חזרה</button>
+                style={{ background: C.green, boxShadow: "0 6px 16px rgba(14,107,94,.35)" }}>כפתור ראשי</button>
+              <button className="rounded-full px-6 py-3 text-[14.5px] font-medium"
+                style={{ background: C.surface, color: C.greenInk, border: `1.5px solid ${C.green}` }}>כפתור משני</button>
+              <a className="text-[14px] font-medium" style={{ color: C.greenInk }}>קישור משני ‹</a>
             </div>
+            {/* choice chips — FILLED (board): green / amber(+ink text, AA) / terracotta */}
             <div className="mt-5 flex flex-wrap gap-2">
               <span className="rounded-full px-3.5 py-1.5 text-[13px] font-bold text-white" style={{ background: C.green }}>✓ כן</span>
-              <span className="rounded-full px-3.5 py-1.5 text-[13px] font-bold" style={{ background: C.amberSoft, color: C.amberInk }}>? אולי</span>
-              <span className="rounded-full px-3.5 py-1.5 text-[13px] font-medium" style={{ background: C.surface2, color: C.ink2 }}>✕ לא</span>
+              <span className="rounded-full px-3.5 py-1.5 text-[13px] font-bold" style={{ background: "#EF9F27", color: C.ink }}>? אולי</span>
+              <span className="rounded-full px-3.5 py-1.5 text-[13px] font-bold text-white" style={{ background: C.terra }}>✕ לא</span>
               <span className="rounded-full px-3 py-1.5 text-[12px]" style={{ background: C.greenSoft, color: C.greenInk }}>חובה</span>
               <span className="rounded-full px-3 py-1.5 text-[12px]" style={{ background: C.amberSoft, color: C.amberInk }}>בולט</span>
               <span className="rounded-full px-3 py-1.5 text-[12px]" style={{ background: C.blueSoft, color: C.blue }}>מקורה</span>
+              <span className="rounded-full px-3 py-1.5 text-[12px]" style={{ background: C.surface2, color: C.amberInk }}>★ מועדף</span>
             </div>
             <p className="mt-5 text-[12.5px] leading-relaxed" style={{ color: C.ink2 }}>
               שפת העומק: משטחים לבנים על קרם, צל כפול (קרוב + רחוק) במקום מסגרות, פינות 16–24,
-              והרבה אוויר. מיקרו-אנימציית rise קיימת — נשמרת ומורחבת.
+              והרבה אוויר. הערת נגישות: "אולי" מלא בענבר מקבל טקסט כהה — לבן על ענבר נכשל ב-AA.
             </p>
           </div>
         </Section>
