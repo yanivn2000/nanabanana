@@ -223,7 +223,7 @@ export default function AttractionsMap({
 
       {ordered && routePts.length > 1 && (
         <Polyline positions={routePts}
-          pathOptions={{ color: "#d85a30", weight: 2.5, opacity: 0.65, dashArray: "5 7" }} />
+          pathOptions={{ color: "#c64f26", weight: 2.5, opacity: 0.65, dashArray: "5 7" }} />
       )}
 
       {ordered

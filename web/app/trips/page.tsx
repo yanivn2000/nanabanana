@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useProfile, profileSummary, useTrips } from "@/lib/store";
 import { Plus, ArrowLeft, Trash2, Sparkles, BedDouble } from "lucide-react";
 import { NewTrip } from "./NewTrip";
+import { SuitcaseArt } from "@/components/Illustrations";
 
 export default function TripsPage() {
   const [p, , profileLoaded] = useProfile();
@@ -31,8 +32,9 @@ export default function TripsPage() {
       {creating && <NewTrip onClose={() => setCreating(false)} />}
 
       {loaded && trips.length === 0 && !creating && (
-        <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--border)] bg-[var(--surface)] px-5 py-10 text-center">
-          <p className="text-[15px] font-medium">עוד אין טיולים</p>
+        <div className="flex flex-col items-center rounded-[var(--radius-card)] bg-[var(--surface)] px-5 py-10 text-center shadow-[var(--shadow)]">
+          <SuitcaseArt width={210} />
+          <p className="serif mt-4 text-[20px] font-bold">המזוודה מוכנה. לאן טסים?</p>
           <p className="mt-1 text-[13px] text-[var(--text-2)]">צרו טיול ראשון — לפי העדפות או לפי מלונות שכבר הזמנתם.</p>
         </div>
       )}

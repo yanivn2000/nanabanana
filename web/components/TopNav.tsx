@@ -22,7 +22,7 @@ export function TopNav() {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-8 py-3">
         <Link href="/" className="flex items-center gap-2">
           <YalleMark size={28} />
-          <span className="text-[20px] font-bold tracking-tight">Yalle</span>
+          <span className="serif text-[22px] font-black leading-none text-[var(--brand)]">Yalle</span>
         </Link>
         <nav className="flex items-center gap-1">
           {ITEMS.map(({ href, label, Icon }) => {
