@@ -1,5 +1,6 @@
 import { Fredoka, Rubik, IBM_Plex_Sans_Hebrew } from "next/font/google";
 import { WhyFits, TravelersSay } from "@/components/Signature";
+import { CategoryTile } from "@/components/CategoryTiles";
 
 // -----------------------------------------------------------------------------
 // Yalle — internal brand board (direction B: warm editorial × modern product).
@@ -198,6 +199,13 @@ export default function BrandBoard() {
               <span className="rounded-full px-3 py-1.5 text-[12px]" style={{ background: C.amberSoft, color: C.amberInk }}>בולט</span>
               <span className="rounded-full px-3 py-1.5 text-[12px]" style={{ background: C.blueSoft, color: C.blue }}>מקורה</span>
               <span className="rounded-full px-3 py-1.5 text-[12px]" style={{ background: C.surface2, color: C.amberInk }}>★ מועדף</span>
+            </div>
+            {/* category tiles — two-tone filled icon set (live component) */}
+            <p className="mb-2 mt-6 text-[13px] font-bold" style={{ color: C.ink }}>קטגוריות</p>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {["תרבות", "טבע", "לילדים", "אוכל", "קניות", "חופים"].map((l, i) => (
+                <CategoryTile key={l} label={l} selected={i === 1} />
+              ))}
             </div>
             <p className="mt-5 text-[12.5px] leading-relaxed" style={{ color: C.ink2 }}>
               שפת העומק: משטחים לבנים על קרם, צל כפול (קרוב + רחוק) במקום מסגרות, פינות 16–24,

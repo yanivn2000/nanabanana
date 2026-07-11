@@ -2,6 +2,7 @@
 
 import { Minus, Plus, Trash2 } from "lucide-react";
 import type { FamilyProfile, Kid } from "@/lib/store";
+import { CategoryTile } from "@/components/CategoryTiles";
 
 const INTERESTS = ["טבע", "אוכל", "תרבות", "קניות", "ספורט", "חופים", "פארקי שעשועים", "היסטוריה",
   "מוזיקה חיה", "חיי לילה", "מחזמר ותיאטרון", "בלט ואופרה", "וינטג'", "יוקרה", "מוזיאונים"];
@@ -104,9 +105,11 @@ export function ProfileEditor({ value: p, onChange: save }: {
 
       <section>
         <label className="mb-2 block text-[14px] font-medium">מה אוהבים</label>
-        <div className="flex flex-wrap gap-2">
+        {/* Category tiles (brand board): two-tone filled icon + label. */}
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
           {INTERESTS.map((v) => (
-            <Chip key={v} on={p.interests.includes(v)} onClick={() => save({ ...p, interests: toggle(p.interests, v) })}>{v}</Chip>
+            <CategoryTile key={v} label={v} selected={p.interests.includes(v)}
+              onClick={() => save({ ...p, interests: toggle(p.interests, v) })} />
           ))}
         </div>
       </section>
