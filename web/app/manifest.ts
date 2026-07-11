@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "תבנה לי טיול — האפליקציה שבונה את הטיול המשפחתי שלכם, בעברית.",
     start_url: "/",
     display: "standalone",
-    background_color: "#faf6ee",
-    theme_color: "#f4685e",
+    background_color: "#faf6ec",
+    theme_color: "#0e6b5e",
     lang: "he",
     dir: "rtl",
     icons: [

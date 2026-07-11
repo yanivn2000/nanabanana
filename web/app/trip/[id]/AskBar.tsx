@@ -82,7 +82,7 @@ export function AskBar({
       <div className="mb-2.5 flex gap-2 overflow-x-auto pb-1">
         {live.map((s) => (
           <button key={s.text} disabled={busy} onClick={() => send(s.text, s.dayIdx ?? null)}
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#0d9488] bg-[rgba(13,148,136,.08)] px-3 py-1.5 text-[12px] text-[#0d7a70] disabled:opacity-50">
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--brand)] bg-[rgba(13,148,136,.08)] px-3 py-1.5 text-[12px] text-[var(--brand-ink)] disabled:opacity-50">
             <s.icon size={13} /> {s.chip ?? s.text}
           </button>
         ))}

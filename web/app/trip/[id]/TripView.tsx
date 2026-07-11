@@ -454,7 +454,7 @@ export function TripView({ tripId }: { tripId: string }) {
                   segIdx={stopSegIdx} colorBySegment={multiTrip} />
               </div>
               <p className="mt-2 px-0.5 text-[11.5px] leading-snug text-[var(--text-3)]">
-                <span className="text-[#0d9488]">🏨 המלון</span> תמיד מוצג · המספרים = סדר הביקור · הקו = מסלול ·
+                <span className="text-[var(--brand)]">🏨 המלון</span> תמיד מוצג · המספרים = סדר הביקור · הקו = מסלול ·
                 {multiTrip ? " הצבע = אזור (מקטע)" : " הצבע = סוג"}
               </p>
             </div>

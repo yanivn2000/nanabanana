@@ -1,47 +1,50 @@
 @import "tailwindcss";
 
 :root {
-  /* Yalle palette — cream canvas, navy ink, coral hero accent */
-  --bg: #faf6ee;
+  /* Yalle brand (direction B, approved 2026-07-11) — cream canvas, navy ink,
+     forest-green primary, terracotta accent. All pairs AA-verified. */
+  --bg: #faf6ec;
   --surface: #ffffff;
-  --surface-2: #f2ece0;
-  --text: #16263f;
-  --text-2: #5a6475;
-  --text-3: #9aa1ad;
-  --border: rgba(22, 38, 63, 0.10);
-  /* coral — primary accent */
-  --accent: #f4685e;
-  --accent-ink: #cb4438;
-  --accent-soft: #fce4e1;
-  /* teal — secondary accent / nav cues */
-  --brand: #1fa8a0;
-  --brand-ink: #137e77;
-  --brand-soft: #ddf0ee;
-  /* warm yellow — sparing highlights + warnings */
-  --amber: #c9780a;
-  --amber-soft: #fbecd2;
-  --blue: #1f7a90;
-  --blue-soft: #e3f1f3;
-  --radius: 14px;
+  --surface-2: #f2ecdf;
+  --text: #101d2b;
+  --text-2: #4f5d6a;
+  --text-3: #8a94a0;
+  --border: rgba(16, 29, 43, 0.10);
+  /* terracotta — hero accent (CTA, highlights). 4.6:1 with white. */
+  --accent: #c64f26;
+  --accent-ink: #a63e1b;
+  --accent-soft: #fbe7dd;
+  --accent-bright: #e76f51; /* decorative only (illustration, motifs) — not for text */
+  /* forest green — primary (buttons, logo, nav). 6.4:1 with white. */
+  --brand: #0e6b5e;
+  --brand-ink: #0a5044;
+  --brand-soft: #e3f0ea;
+  /* warm amber — "בולט" / gentle-nudge highlights + warnings */
+  --amber: #8a5a0b;
+  --amber-soft: #f7e9c8;
+  --blue: #2e7a96;
+  --blue-soft: #e1eef3;
+  --radius: 16px;
   --radius-sm: 10px;
-  --shadow: 0 1px 2px rgba(22,38,63,0.04), 0 10px 30px rgba(22,38,63,0.07);
+  --shadow: 0 1px 3px rgba(16,29,43,0.05), 0 12px 30px rgba(16,29,43,0.08);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111d33;
-    --surface: #18253f;
-    --surface-2: #20304d;
-    --text: #f3f1ea;
-    --text-2: #9aa3b2;
-    --text-3: #6b7484;
-    --border: rgba(230, 238, 250, 0.12);
-    --accent: #f4685e;
-    --accent-ink: #f59288;
-    --accent-soft: #3a201d;
-    --brand: #2bb6ad;
-    --brand-ink: #7fd6cf;
-    --brand-soft: #123330;
+    --bg: #101d1a;
+    --surface: #172723;
+    --surface-2: #1f312c;
+    --text: #f2efe6;
+    --text-2: #a3aeab;
+    --text-3: #6f7b78;
+    --border: rgba(235, 242, 238, 0.12);
+    --accent: #e76f51;
+    --accent-ink: #f0906f;
+    --accent-soft: #3a2018;
+    --accent-bright: #e76f51;
+    --brand: #35a08f;
+    --brand-ink: #8ed4c7;
+    --brand-soft: #12332c;
     --amber: #e8a33b;
     --amber-soft: #2f2611;
     --blue: #59b6c8;
@@ -69,12 +72,12 @@
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
   --font-sans: var(--font-assistant), system-ui, sans-serif;
-  --font-serif: var(--font-assistant), system-ui, sans-serif;
+  --font-serif: var(--font-frank), var(--font-assistant), serif;
   --radius-card: var(--radius);
 }
 
-/* Display headings — minimalist sans (Assistant), tight + bold */
-.serif { font-family: var(--font-sans); font-weight: 700; letter-spacing: -0.015em; }
+/* Display headings — Frank Ruhl Libre (editorial Hebrew serif, brand voice) */
+.serif { font-family: var(--font-serif); font-weight: 700; letter-spacing: 0; }
 .eyebrow { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--text-3); font-weight: 500; }
 .rule { height: 2px; width: 32px; background: var(--accent); border-radius: 2px; }

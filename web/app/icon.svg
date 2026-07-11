@@ -1,6 +1,7 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" rx="112" fill="#faf6ee"/>
-  <path d="M168,196 L256,284 L344,196 M256,284 L256,392" fill="none" stroke="#f4685e" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M256,284 C210,196 196,178 196,146 a60,60 0 1,1 120,0 c0,32 -14,50 -60,138 z" fill="#1fa8a0"/>
-  <circle cx="256" cy="142" r="23" fill="#ffffff"/>
+  <!-- Yalle app icon — forest-green tile, white Y, terracotta pin (brand B) -->
+  <rect width="512" height="512" rx="118" fill="#0e6b5e"/>
+  <path d="M158,150 L256,272 M354,150 L256,272 M256,272 L256,398" fill="none" stroke="#ffffff" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M388,74c-30,0-54,24-54,54 0,38 45,87 51,93a4.2,4.2 0 0 0 6,0c6-6 51-55 51-93 0-30-24-54-54-54z" fill="#e76f51"/>
+  <circle cx="388" cy="129" r="21" fill="#fff8ee"/>
 </svg>

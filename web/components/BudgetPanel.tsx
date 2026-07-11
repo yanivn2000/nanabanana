@@ -55,7 +55,7 @@ export function BudgetPanel({
               <span>אוכל ותחבורה: {eur(est.allowanceTotal)}</span>
             </div>
             {target != null && (
-              <p className="mt-2 text-[12px]" style={{ color: over ? "var(--amber)" : "#0d9488" }}>
+              <p className="mt-2 text-[12px]" style={{ color: over ? "var(--amber)" : "var(--brand)" }}>
                 {over
                   ? `מעל התקציב בכ-€${(est.avgDaily - target).toLocaleString("he")} ליום`
                   : "בתוך התקציב היומי 👍"}

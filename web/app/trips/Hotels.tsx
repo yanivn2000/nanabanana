@@ -129,7 +129,7 @@ export function Hotels({
             <button onClick={() => canFocus && onFocus!(h)} disabled={!canFocus}
               className={`flex min-w-0 flex-1 items-center gap-3 text-right ${canFocus ? "lg:cursor-pointer" : ""}`}>
               <div className="grid size-10 shrink-0 place-items-center rounded-[var(--radius-sm)]"
-                style={{ background: "rgba(13,148,136,.12)", color: "#0d9488" }}>
+                style={{ background: "rgba(13,148,136,.12)", color: "var(--brand)" }}>
                 <BedDouble size={19} />
               </div>
               <div className="min-w-0 flex-1">
@@ -139,7 +139,7 @@ export function Hotels({
                   {(h.checkIn || h.checkOut) ? ` · ${h.checkIn || ""}${h.checkOut ? "→" + h.checkOut : ""}` : ""}
                 </p>
                 {canFocus && (
-                  <span className="mt-0.5 hidden items-center gap-1 text-[11.5px] text-[#0d9488] lg:inline-flex">
+                  <span className="mt-0.5 hidden items-center gap-1 text-[11.5px] text-[var(--brand)] lg:inline-flex">
                     <MapPin size={11} /> הצג במפה
                   </span>
                 )}

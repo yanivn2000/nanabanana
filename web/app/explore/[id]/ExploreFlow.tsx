@@ -120,7 +120,7 @@ export function ExploreFlow(
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-1.5 text-[14px] font-medium">
             {c.label_he}
-            {c.hot && <span className="rounded-full bg-[#FAEEDA] px-1.5 py-0.5 text-[10px] text-[#854F0B]">בולט</span>}
+            {c.hot && <span className="rounded-full bg-[var(--amber-soft)] px-1.5 py-0.5 text-[10px] text-[var(--amber)]">בולט</span>}
           </p>
           <p className="text-[12px] text-[var(--text-3)]">{c.vibe_he}</p>
         </div>
@@ -225,7 +225,7 @@ export function ExploreFlow(
           <p className="eyebrow mb-2 flex items-center gap-1"><Globe size={12} /> שלב 2 · היכרות עם {cityHe}</p>
 
           <div className="mb-2 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3">
-            <CloudRain size={26} className="shrink-0 text-[#378add]" />
+            <CloudRain size={26} className="shrink-0 text-[var(--blue)]" />
             <div>
               <p className="text-[13px] font-medium">{MONTHS_HE[month - 1]} · {weather.he}</p>
               <p className="text-[12px] text-[var(--text-3)]">{weather.hint_he}</p>
@@ -238,7 +238,7 @@ export function ExploreFlow(
           {/* Calibration framing: preferences are pre-loaded from the profile —
               the user only fine-tunes for THIS destination, and never touches the
               global profile (per-trip calibration, decision 5). */}
-          <div className="mb-3 flex items-start gap-1.5 rounded-[var(--radius-card)] border border-[#bfe6d8] bg-[#E1F5EE] p-3 text-[12.5px] leading-relaxed text-[#0F6E56]">
+          <div className="mb-3 flex items-start gap-1.5 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--brand-soft)] p-3 text-[12.5px] leading-relaxed text-[var(--brand-ink)]">
             <Sparkles size={15} className="mt-0.5 shrink-0" />
             <span>ההעדפות שלכם כבר טעונות מהפרופיל — כאן רק מכווננים ל{cityHe}. שנו רק מה שמיוחד ליעד. זה לא משנה את הפרופיל הכללי.</span>
           </div>
@@ -313,7 +313,7 @@ export function ExploreFlow(
                         {chips.map((ch, i) => (
                           <span key={i} className="rounded-full px-1.5 py-0.5 text-[10.5px]"
                             style={
-                              ch.kind === "nudge" ? { background: "#FAEEDA", color: "#854F0B" }
+                              ch.kind === "nudge" ? { background: "var(--amber-soft)", color: "var(--amber)" }
                               : ch.kind === "must" ? { background: "var(--brand-soft)", color: "var(--brand-ink)" }
                               : { background: "var(--surface-2)", color: "var(--text-2)" }
                             }>{ch.label_he}</span>
@@ -384,8 +384,8 @@ export function ExploreFlow(
             <input type="range" min={0} max={3} value={radius} onChange={(e) => setRadius(Number(e.target.value))}
               className="w-full" style={{ accentColor: "var(--brand)" }} />
           </div>
-          <div className="rounded-[var(--radius-card)] border border-[#bfe6d8] bg-[#E1F5EE] p-3">
-            <p className="flex items-start gap-1.5 text-[12.5px] leading-relaxed text-[#0F6E56]">
+          <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--brand-soft)] p-3">
+            <p className="flex items-start gap-1.5 text-[12.5px] leading-relaxed text-[var(--brand-ink)]">
               <Route size={15} className="mt-0.5 shrink-0" />
               נפתח כל יום ב<b>עוגן</b> (מה שסימנתם ״כן״ + חובות), ונשלב על הדרך את ה״אולי״ אם יישאר זמן.
             </p>
@@ -420,7 +420,7 @@ function ChoiceBtn({ active, onClick, tone, icon, label }: {
 }) {
   const on = {
     yes: { background: "var(--brand)", color: "#fff", borderColor: "var(--brand)" },
-    maybe: { background: "#FAEEDA", color: "#854F0B", borderColor: "#EF9F27" },
+    maybe: { background: "var(--amber-soft)", color: "var(--amber)", borderColor: "var(--amber)" },
     no: { background: "var(--surface-2)", color: "var(--text-2)", borderColor: "var(--border)" },
   }[tone];
   return (
