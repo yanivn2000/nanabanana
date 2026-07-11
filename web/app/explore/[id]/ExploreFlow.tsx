@@ -6,9 +6,10 @@ import Link from "next/link";
 import {
   ChevronRight, ChevronLeft, ChevronDown, Heart, X, Check, HelpCircle, CloudRain, Route,
   Users, Star, Music, Shirt, Wine, Ticket, Drama, Image as ImageIcon,
-  Landmark, Trees, UtensilsCrossed, Gem, Trophy, Baby, ExternalLink, Globe, Sparkles, BadgeCheck,
+  Landmark, Trees, UtensilsCrossed, Gem, Trophy, Baby, ExternalLink, Globe, Sparkles,
   type LucideIcon,
 } from "lucide-react";
+import { WhyFits, TravelersSay } from "@/components/Signature";
 import type { Attraction, Destination, Insight } from "@/lib/db";
 import { useProfile, useTrips, MONTHS_HE } from "@/lib/store";
 import { deriveTaste, rankByTaste } from "@/lib/taste";
@@ -334,27 +335,18 @@ export function ExploreFlow(
                   </div>
 
                   {open && (
-                    <div className="mt-2.5 border-t border-[var(--border)] pt-2.5">
-                      {why && (
-                        <p className="mb-2 flex items-start gap-1.5 text-[12.5px] font-medium text-[var(--brand-ink)]">
-                          <Sparkles size={14} className="mt-0.5 shrink-0" />{why}
-                        </p>
-                      )}
-                      {desc && <p className="mb-2 text-[12.5px] leading-relaxed text-[var(--text-2)]">{desc}</p>}
+                    <div className="mt-2.5 flex flex-col gap-2 border-t border-[var(--border)] pt-2.5">
+                      {why && <WhyFits>{why}</WhyFits>}
+                      {desc && <p className="text-[12.5px] leading-relaxed text-[var(--text-2)]">{desc}</p>}
                       {facts.length > 0 && (
-                        <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-[var(--text-2)]">
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-[var(--text-2)]">
                           {facts.map((f, i) => (
                             <span key={i}><span className="text-[var(--text-3)]">{f.label_he}: </span>{f.value_he}</span>
                           ))}
                         </div>
                       )}
                       {notes.slice(0, 2).map((ins) => (
-                        <div key={ins.id} className="mb-1.5 flex items-start gap-1.5 rounded-lg bg-[var(--brand-soft)] px-2.5 py-1.5">
-                          <BadgeCheck size={14} className="mt-0.5 shrink-0 text-[var(--brand-ink)]" />
-                          <p className="text-[12px] leading-snug text-[var(--brand-ink)]">
-                            <span className="font-medium">{INSIGHT_KIND_HE[ins.kind] ?? "טיפ ממטיילים"}: </span>{ins.text_he}
-                          </p>
-                        </div>
+                        <TravelersSay key={ins.id} quote={ins.text_he} kind={INSIGHT_KIND_HE[ins.kind]} />
                       ))}
                     </div>
                   )}

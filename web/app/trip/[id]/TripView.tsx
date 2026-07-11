@@ -15,6 +15,7 @@ import type { Attraction } from "@/lib/db";
 import { useTrips, useProfile, useHotels, profileText, profileSummary, MONTHS_HE, datesToInfo } from "@/lib/store";
 import { deriveTaste } from "@/lib/taste";
 import { ProfileEditor } from "@/components/ProfileEditor";
+import { WhyFits } from "@/components/Signature";
 import { PackingList } from "@/components/PackingList";
 import { TravelChecklist } from "@/components/TravelChecklist";
 import { BudgetPanel } from "@/components/BudgetPanel";
@@ -599,11 +600,8 @@ export function TripView({ tripId }: { tripId: string }) {
                 })}
               </div>
               {day.why && (
-                <div className="mt-3 flex gap-2.5 rounded-[var(--radius-card)] bg-[var(--accent-soft)] p-3.5">
-                  <Sparkles size={17} className="mt-0.5 shrink-0 text-[var(--accent-ink)]" />
-                  <p className="text-[13px] leading-snug text-[var(--accent-ink)]">
-                    <span className="font-bold">למה ככה: </span>{day.why}
-                  </p>
+                <div className="mt-3">
+                  <WhyFits title="למה בנינו את היום ככה">{day.why}</WhyFits>
                 </div>
               )}
             </section>

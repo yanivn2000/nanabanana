@@ -1,4 +1,5 @@
 import { Frank_Ruhl_Libre, Suez_One, Secular_One } from "next/font/google";
+import { WhyFits, TravelersSay } from "@/components/Signature";
 
 // -----------------------------------------------------------------------------
 // Yalle — internal brand board (direction B: warm editorial × modern product).
@@ -203,25 +204,21 @@ export default function BrandBoard() {
           </div>
         </Section>
 
-        {/* ---------- 5 · signature teaser ---------- */}
-        <Section n="05" title='חתימת המוצר — "שפת ההסבר" (טיזר)'>
+        {/* ---------- 5 · signature components (the LIVE ones) ---------- */}
+        <Section n="05" title='חתימת המוצר — "שפת ההסבר"'>
           <div className="flex flex-col gap-3">
-            <div className="rounded-[20px] p-5" style={{ background: C.greenSoft, border: `1px solid ${C.green}22` }}>
-              <p className="text-[14px] font-bold" style={{ color: C.greenInk }}>✨ למה זה מתאים לכם</p>
-              <p className="mt-1 text-[13.5px] leading-relaxed" style={{ color: C.greenInk }}>
-                כי אתם אוהבים אוכל ווינטג׳ · בלי ילדים · קצב רגוע — פתחנו את היום בשוק קמדן.
-              </p>
-            </div>
-            <div className="rounded-[20px] p-5" style={{ background: C.surface, boxShadow: "0 1px 3px rgba(16,29,43,.05), 0 10px 26px rgba(16,29,43,.07)" }}>
-              <p className="flex items-center gap-1.5 text-[14px] font-bold" style={{ color: C.ink }}>
-                💬 מטיילים כמוכם אומרים <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: C.greenSoft, color: C.greenInk }}>✓ מאומת</span>
-              </p>
-              <p className="mt-1.5 text-[13.5px] italic leading-relaxed" style={{ color: C.ink2 }}>
-                "הגענו ב-16:00 ולא היה תור בכלל. אל תפספסו את הדוכן מאחורי הכנסייה."
-              </p>
-            </div>
+            <WhyFits>
+              כי אתם אוהבים אוכל ווינטג׳ · בלי ילדים · קצב רגוע — פתחנו את היום בשוק קמדן.
+            </WhyFits>
+            <WhyFits title="למה בנינו את היום ככה">
+              ריכזנו את דרום קנזינגטון ביום אחד — שלושת המוזיאונים במרחק הליכה, והפארק ביניהם לאוויר.
+            </WhyFits>
+            <TravelersSay
+              quote="הגענו ב-16:00 ולא היה תור בכלל. אל תפספסו את הדוכן מאחורי הכנסייה."
+              kind="טיפ" />
             <p className="text-[12px]" style={{ color: C.ink3 }}>
-              * שני הרכיבים נשענים על דאטה שכבר קיים במוצר (טעמים מכוילים + תובנות מאומתות). עיצוב מלא — שלב 3.
+              * רכיבי מערכת חיים (components/Signature.tsx) — אלה בדיוק הרכיבים שרצים במוצר, על דאטה אמיתי
+              (טעמים מכוילים, שדה ה-"למה" של כל יום, תובנות מאומתות).
             </p>
           </div>
         </Section>
