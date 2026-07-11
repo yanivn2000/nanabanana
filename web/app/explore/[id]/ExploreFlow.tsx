@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   ChevronRight, ChevronLeft, ChevronDown, Heart, X, Check, HelpCircle, CloudRain, Route,
   Users, Star, Music, Shirt, Wine, Ticket, Drama, Image as ImageIcon,
-  Landmark, Trees, UtensilsCrossed, Gem, Trophy, Baby, ExternalLink, Globe, Sparkles,
+  Landmark, Trees, UtensilsCrossed, Gem, Trophy, Baby, ExternalLink, Globe, Sparkles, Sun,
   type LucideIcon,
 } from "lucide-react";
 import { WhyFits, TravelersSay } from "@/components/Signature";
@@ -288,19 +288,17 @@ export function ExploreFlow(
               const desc = a.description_he && a.description_he !== a.tagline_he ? a.description_he : null;
               const hasMore = !!(why || desc || facts.length || notes.length);
               return (
-                <div key={a.id} className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-2.5">
+                <div key={a.id} className="rounded-[var(--radius-card)] bg-[var(--surface)] p-3 shadow-[var(--shadow)]">
+                  {/* Board card language: portrait image on the inline-end side,
+                      strong title, sun+fit-score (honest — our family_score, not
+                      invented ratings), chips, and the 3-way choice. */}
                   <div className="flex gap-3">
-                    <div className="size-16 shrink-0 overflow-hidden rounded-lg bg-[var(--brand-soft)]">
-                      {a.image_url
-                        ? <img src={a.image_url} alt="" loading="lazy" className="size-full object-cover" />
-                        : <span className="grid size-full place-items-center text-[var(--brand-ink)]"><ImageIcon size={20} /></span>}
-                    </div>
                     <div className="min-w-0 flex-1">
                       <button type="button" disabled={!hasMore}
                         onClick={() => setOpenCard(open ? null : a.id)}
                         className="flex w-full items-start justify-between gap-2 text-right">
                         <span className="min-w-0">
-                          <span className="block truncate text-[14px] font-medium">{a.name_he ?? a.name_en}</span>
+                          <span className="serif block truncate text-[15.5px] font-semibold leading-tight">{a.name_he ?? a.name_en}</span>
                           {(a.tagline_he || a.description_he) && (
                             <span className="mt-0.5 block line-clamp-1 text-[12px] text-[var(--text-3)]">{a.tagline_he ?? a.description_he}</span>
                           )}
@@ -310,6 +308,11 @@ export function ExploreFlow(
                             className={`mt-0.5 shrink-0 text-[var(--text-3)] transition-transform ${open ? "rotate-180" : ""}`} />
                         )}
                       </button>
+                      {a.family_score != null && (
+                        <span className="mt-1 flex items-center gap-1 text-[12.5px] font-semibold text-[var(--amber)]">
+                          <Sun size={14} fill="var(--amber-fill)" stroke="var(--amber-fill)" /> {a.family_score}/10 התאמה
+                        </span>
+                      )}
                       <div className="mb-1.5 mt-1 flex flex-wrap gap-1">
                         {chips.map((ch, i) => (
                           <span key={i} className="rounded-full px-1.5 py-0.5 text-[10.5px]"
@@ -331,6 +334,12 @@ export function ExploreFlow(
                         <ChoiceBtn active={c === "maybe"} onClick={() => pick(a.id, "maybe")} tone="maybe" icon={<HelpCircle size={13} />} label="אולי" />
                         <ChoiceBtn active={c === "no"} onClick={() => pick(a.id, "no")} tone="no" icon={<X size={13} />} label="לא" />
                       </div>
+                    </div>
+                    {/* portrait image, board-style (inline-end = left in RTL) */}
+                    <div className="w-[86px] shrink-0 self-stretch overflow-hidden rounded-[12px] bg-[var(--brand-soft)]" style={{ minHeight: 104 }}>
+                      {a.image_url
+                        ? <img src={a.image_url} alt="" loading="lazy" className="size-full object-cover" />
+                        : <span className="grid size-full place-items-center text-[var(--brand-ink)]"><ImageIcon size={22} /></span>}
                     </div>
                   </div>
 
