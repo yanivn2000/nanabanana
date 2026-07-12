@@ -251,16 +251,19 @@ export function TripView({ tripId }: { tripId: string }) {
 
   return (
     <main className="mx-auto w-full max-w-[440px] pb-32 lg:max-w-6xl">
-      {/* poster band */}
-      <CityPoster destinationId={trip?.destinationId} cityHe={cityHe} overlay
-        orientation="banner" position="50% 46%" className="h-[170px] lg:h-[240px]">
-        <Link href="/trips" className="eyebrow absolute right-5 top-5 inline-flex items-center gap-1 text-white/85 lg:right-8">
-          <ChevronRight size={14} /> הטיולים שלי
-        </Link>
-        <div className="absolute inset-x-0 bottom-0 px-5 pb-5 lg:px-8 lg:pb-6">
-          <h1 className="serif text-[32px] font-bold leading-none text-white lg:text-[42px]">{trip?.title ?? "…"}</h1>
+      {/* ambient poster band */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0">
+          <CityPoster destinationId={trip?.destinationId} cityHe={cityHe} ambient
+            orientation="banner" position="50% 50%" className="size-full" />
         </div>
-      </CityPoster>
+        <div className="relative mx-auto flex min-h-[150px] w-full max-w-6xl flex-col justify-between px-5 pb-5 pt-6 lg:min-h-[210px] lg:px-8">
+          <Link href="/trips" className="eyebrow inline-flex items-center gap-1 self-start text-[var(--text-2)]">
+            <ChevronRight size={14} /> הטיולים שלי
+          </Link>
+          <h1 className="serif text-[32px] font-bold leading-none text-[var(--text)] lg:text-[46px]">{trip?.title ?? "…"}</h1>
+        </div>
+      </div>
 
       <header className="rise bg-[var(--surface)] px-5 pb-6 pt-5 lg:px-8">
         <p className="text-[13px] text-[var(--text-2)]">

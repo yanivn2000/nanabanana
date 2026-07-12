@@ -282,13 +282,16 @@ export function ExploreFlow(
         <section className="rise">
           <p className="eyebrow mb-2 flex items-center gap-1"><Globe size={12} /> שלב 2 · היכרות עם {cityHe}</p>
 
-          <CityPoster destinationId={dest.id} cityHe={cityHe} overlay
-            orientation="banner" position="50% 46%" className="mb-3 h-[150px] rounded-[var(--radius-card)]">
-            <div className="absolute inset-x-0 bottom-0 p-4">
-              <h2 className="serif text-[28px] font-bold leading-none text-white">{cityHe}</h2>
-              <p className="text-[12.5px] text-white/85">{dest.country_he ?? dest.country}</p>
+          <div className="relative mb-3 overflow-hidden rounded-[var(--radius-card)]">
+            <div className="absolute inset-0">
+              <CityPoster destinationId={dest.id} cityHe={cityHe} ambient
+                orientation="banner" position="50% 50%" className="size-full" />
             </div>
-          </CityPoster>
+            <div className="relative flex min-h-[130px] flex-col justify-end p-4">
+              <h2 className="serif text-[28px] font-bold leading-none text-[var(--text)]">{cityHe}</h2>
+              <p className="text-[12.5px] text-[var(--text-2)]">{dest.country_he ?? dest.country}</p>
+            </div>
+          </div>
 
           <div className="mb-2 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3">
             <CloudRain size={26} className="shrink-0 text-[var(--blue)]" />
