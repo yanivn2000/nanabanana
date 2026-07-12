@@ -261,20 +261,16 @@ export function TripView({ tripId }: { tripId: string }) {
 
   return (
     <main className="mx-auto w-full max-w-[440px] pb-16 lg:max-w-6xl">
-      {/* ambient poster hero — title, meta, dates and actions all sit on the poster */}
-      <header className="rise relative overflow-hidden">
-        <div className="absolute inset-0">
-          <CityPoster destinationId={trip?.destinationId} cityHe={cityHe} ambient
-            orientation="banner" position="50% 42%" className="size-full" />
-        </div>
-        <div className="relative mx-auto flex min-h-[300px] w-full max-w-6xl flex-col justify-between px-5 pb-6 pt-6 lg:min-h-[380px] lg:px-8 lg:pb-9 lg:pt-8">
-          <Link href="/trips" className="eyebrow inline-flex items-center gap-1 self-start text-[var(--text-2)]">
-            <ChevronRight size={14} /> הטיולים שלי
-          </Link>
-          <div>
-            <h1 className="serif text-[32px] font-bold leading-none text-[var(--text)] lg:text-[46px]">{trip?.title ?? "…"}</h1>
+      {/* compact header card — data beside a square poster; map + days stay above the fold */}
+      <div className="px-5 pt-3 lg:px-8 lg:pt-4">
+        <Link href="/trips" className="eyebrow mb-2 inline-flex items-center gap-1 text-[var(--text-2)]">
+          <ChevronRight size={14} /> הטיולים שלי
+        </Link>
+        <header className="rise grid grid-cols-[minmax(0,1fr)_110px] overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[var(--shadow)] sm:grid-cols-[minmax(0,1fr)_150px] lg:grid-cols-[minmax(0,1fr)_220px]">
+          <div className="min-w-0 p-4 pb-0 lg:p-6 lg:pb-0">
+            <h1 className="serif text-[24px] font-bold leading-tight lg:text-[32px]">{trip?.title ?? "…"}</h1>
 
-            <p className="mt-2.5 text-[13px] text-[var(--text-2)]">
+            <p className="mt-1 text-[13px] text-[var(--text-2)]">
               {trip?.segments && trip.segments.length > 1
                 ? `${trip.segments.map((s) => s.cityHe || s.city).join(" → ")} · `
                 : cityHe ? `${cityHe} · ` : ""}
@@ -283,9 +279,19 @@ export function TripView({ tripId }: { tripId: string }) {
               {trip?.segments && trip.segments.length > 1 ? ` · ${trip.segments.length} ערים` : ""}
               {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
             </p>
+          </div>
 
+          {/* square-ish poster: beside the title on mobile, full card height on desktop */}
+          <div className="relative lg:row-span-2">
+            <div className="absolute inset-0">
+              <CityPoster destinationId={trip?.destinationId} cityHe={cityHe}
+                orientation="portrait" position="50% 40%" className="size-full" />
+            </div>
+          </div>
+
+          <div className="col-span-2 min-w-0 p-4 pt-3 lg:col-span-1 lg:p-6 lg:pt-3">
             {/* exact dates → powers season, length and (soon) the live-events feed (#64) */}
-            <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[12.5px] text-[var(--text-2)]">
+            <div className="flex flex-wrap items-center gap-1.5 text-[12.5px] text-[var(--text-2)]">
               <CalendarDays size={14} className="text-[var(--text-3)]" />
               <span>תאריכים:</span>
               <input type="date" value={trip?.startDate ?? ""}
@@ -293,44 +299,44 @@ export function TripView({ tripId }: { tripId: string }) {
                   const info = datesToInfo(e.target.value, trip?.endDate);
                   update(tripId, { startDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
                 }}
-                className="rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2 py-1 text-[12.5px] text-[var(--text)] outline-none backdrop-blur" />
+                className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[12.5px] text-[var(--text)] outline-none" />
               <span>–</span>
               <input type="date" value={trip?.endDate ?? ""} min={trip?.startDate}
                 onChange={(e) => {
                   const info = datesToInfo(trip?.startDate, e.target.value);
                   update(tripId, { endDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
                 }}
-                className="rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2 py-1 text-[12.5px] text-[var(--text)] outline-none backdrop-blur" />
+                className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[12.5px] text-[var(--text)] outline-none" />
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-2">
+            <div className="mt-3.5 flex flex-wrap items-center gap-2">
               <button onClick={generate} disabled={!!busy || !canBuild}
-                className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-5 py-2.5 text-[14px] font-medium text-white shadow-sm disabled:opacity-50">
+                className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-5 py-2.5 text-[14px] font-medium text-white disabled:opacity-50">
                 {busy === "generate" ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
                 {busy === "generate" ? "בונה לו\"ז…" : itinerary ? "בנה מחדש" : "בנה לו\"ז עם AI"}
               </button>
               {itinerary && (
                 <button onClick={() => setEditing((v) => !v)}
-                  className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-4 py-2.5 text-[14px] font-medium backdrop-blur"
+                  className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-4 py-2.5 text-[14px] font-medium"
                   style={{ background: editing ? "var(--brand-soft)" : "var(--surface)",
                            color: "var(--brand-ink)" }}>
                   <Pencil size={14} /> {editing ? "סיום עריכה" : "עריכה ידנית"}
                 </button>
               )}
               <button onClick={() => setEditTravelers((v) => !v)}
-                className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-4 py-2.5 text-[14px] font-medium backdrop-blur"
+                className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-4 py-2.5 text-[14px] font-medium"
                 style={{ background: editTravelers ? "var(--brand-soft)" : "var(--surface)",
                          color: "var(--brand-ink)" }}>
                 <Users size={14} /> מי נוסע
               </button>
             </div>
 
-            <p className="mt-2.5 text-[12px] text-[var(--text-3)]">
+            <p className="mt-2 text-[12px] text-[var(--text-3)]">
               נוסעים: {profileSummary(tripProfile)}{trip?.profile ? "" : " · ברירת מחדל מהפרופיל הכללי"}
             </p>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
       {/* expandable panels — sit below the hero on the page canvas */}
       {(editTravelers || (!canBuild && !multiTrip)) && (
