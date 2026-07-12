@@ -81,11 +81,6 @@ export function DestinationView({
     [attractions, activeCat, query, flags, insights]
   );
 
-  const mustSee = useMemo(
-    () => attractions.filter((a) => a.must_see === 1 && a.image_url).slice(0, 12),
-    [attractions]
-  );
-
   // The list shows the filtered set, optionally narrowed to the map viewport.
   const listItems = useMemo(() => {
     if (!mapOnly || !bounds) return filtered;
@@ -162,30 +157,7 @@ export function DestinationView({
         </div>
       )}
 
-      {/* editor's picks rail (must-see) */}
-      {mustSee.length > 0 && (
-        <section className="rise rise-1 border-y border-[var(--border)] bg-[var(--surface-2)] py-5">
-          <p className="eyebrow mb-3 px-5 lg:px-8">בחירת העורך · חובה לביקור</p>
-          <div className="flex gap-3 overflow-x-auto px-5 pb-1 lg:px-8">
-            {mustSee.map((a) => (
-              <button key={a.id} onClick={() => setSelected(a)}
-                className="group w-[200px] shrink-0 overflow-hidden rounded-[var(--radius-sm)] bg-[var(--surface)] text-right shadow-[var(--shadow)]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={bigImage(a.image_url, 480)} alt="" loading="lazy"
-                  onError={(e) => { const t = e.currentTarget; if (t.src !== a.image_url) t.src = a.image_url as string; }}
-                  className="h-[150px] w-full object-cover" />
-                <div className="p-3">
-                  <p className="eyebrow">{meta(a)}</p>
-                  <p className="serif mt-1 text-[16px] leading-tight">{a.name_he || a.name_en}</p>
-                  {a.tagline_he && (
-                    <p className="mt-1 text-[12.5px] italic text-[var(--text-2)]">{a.tagline_he}</p>
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* (Editor's-picks rail removed — the list below has a "חובה לביקור" filter.) */}
 
       {/* Recommended specific places we don't have as attractions (hotels,
           restaurants, tours, day-trips) — from travelers, grouped by place. */}
