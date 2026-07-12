@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Navigation, MapPin, Compass, Loader2, ChevronRight, Star } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
 import { descriptor } from "@/lib/labels";
+import { useProfile } from "@/lib/store";
 import { formatDistance, wazeUrl, googleMapsUrl } from "@/lib/geo";
 import type { Attraction, Destination } from "@/lib/db";
 
@@ -18,6 +19,8 @@ type State =
 export default function NowPage() {
   const [state, setState] = useState<State>({ phase: "idle" });
   const [openId, setOpenId] = useState<number | null>(null);
+  const [profile] = useProfile();
+  const isFamily = profile.kids.length > 0; // family_score star only for families
 
   async function locate() {
     if (!("geolocation" in navigator)) {
@@ -108,7 +111,7 @@ export default function NowPage() {
                     className="block w-full text-right">
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-[15px] font-medium leading-tight">{a.name_he || a.name_en}</p>
-                      {!!a.family_score && (
+                      {isFamily && !!a.family_score && (
                         <span className="flex shrink-0 items-center gap-0.5 text-[12px] font-medium text-[var(--brand-ink)]">
                           <Star size={12} fill="currentColor" /> {a.family_score}
                         </span>

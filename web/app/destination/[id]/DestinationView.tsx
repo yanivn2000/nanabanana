@@ -7,6 +7,7 @@ import { MapClient } from "@/components/MapClient";
 import { CityPoster } from "@/components/CityPoster";
 import { descriptor, catColor, bigImage, mergeCat } from "@/lib/labels";
 import { passUrl, type Pass } from "@/lib/passes";
+import { useProfile } from "@/lib/store";
 import type { Attraction, Destination, Insight } from "@/lib/db";
 
 // Emoji per insight kind — quick visual cue for the source of the tip.
@@ -45,6 +46,10 @@ export function DestinationView({
   coveredIds?: number[];
 }) {
   const covered = new Set(coveredIds);
+  // family_score is a family-friendliness metric — only surface it (the
+  // "מומלץ למשפחות" filter, the score star) when the traveler has kids.
+  const [profile] = useProfile();
+  const isFamily = profile.kids.length > 0;
   const [selected, setSelected] = useState<Attraction | null>(null);
   const [query, setQuery] = useState("");
   const [showPlaces, setShowPlaces] = useState(false);
@@ -245,8 +250,9 @@ export function DestinationView({
               ["mustSee", "⭐ חובה לביקור"],
               ["free", "חינם"],
               ["indoor", "מקורה"],
-              ["top", "מומלץ במיוחד"],
-            ] as const).map(([k, label]) => {
+              // "מומלץ למשפחות" = family_score filter — only when there are kids.
+              ...(isFamily ? [["top", "מומלץ למשפחות"]] : []),
+            ] as [keyof typeof flags, string][]).map(([k, label]) => {
               const on = flags[k];
               return (
                 <button key={k} onClick={() => toggleFlag(k)}
@@ -361,8 +367,8 @@ export function DestinationView({
                       )
                     ) : null}
                     <div className="mt-1.5 flex items-center gap-2.5 text-[12px] text-[var(--text-3)]">
-                      {!!a.family_score && (
-                        <span className="inline-flex items-center gap-0.5 text-[var(--accent-ink)]">
+                      {isFamily && !!a.family_score && (
+                        <span className="inline-flex items-center gap-0.5 text-[var(--accent-ink)]" title="ציון התאמה למשפחות">
                           <Star size={11} fill="currentColor" /> {a.family_score}
                         </span>
                       )}

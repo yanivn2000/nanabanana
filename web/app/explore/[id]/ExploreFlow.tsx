@@ -118,7 +118,8 @@ export function ExploreFlow(
     setDislikes(new Set(Object.keys(b).filter((t) => b[t] < 0)));
     setSeeded(true);
   }, [profileLoaded, seeded, profile]);
-  const ranked = useMemo(() => rankByTaste(attractions, calibrated, 50), [attractions, calibrated]);
+  const isFamily = draftProfile.kids.length > 0;
+  const ranked = useMemo(() => rankByTaste(attractions, calibrated, 50, isFamily), [attractions, calibrated, isFamily]);
   const rankedIds = useMemo(() => new Set(ranked.map((a) => a.id)), [ranked]);
   const weather = seasonalWeather(month);
   const brief = briefFor(dest.city);
@@ -397,9 +398,11 @@ export function ExploreFlow(
                             className={`mt-0.5 shrink-0 text-[var(--text-3)] transition-transform ${open ? "rotate-180" : ""}`} />
                         )}
                       </button>
-                      {a.family_score != null && (
+                      {/* family_score is a family-friendliness score → only shown
+                          as a "fit" badge for trips with kids. */}
+                      {isFamily && a.family_score != null && (
                         <span className="mt-1 flex items-center gap-1 text-[12.5px] font-semibold text-[var(--amber)]">
-                          <Sun size={14} fill="var(--amber-fill)" stroke="var(--amber-fill)" /> {a.family_score}/10 התאמה
+                          <Sun size={14} fill="var(--amber-fill)" stroke="var(--amber-fill)" /> {a.family_score}/10 לילדים
                         </span>
                       )}
                       <div className="mb-1.5 mt-1 flex flex-wrap gap-1">

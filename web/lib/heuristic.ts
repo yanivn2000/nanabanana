@@ -20,19 +20,21 @@ export function buildHeuristicItinerary(
   city: string,
   country: string,
   days: number,
-  attractions: Attraction[]
+  attractions: Attraction[],
+  isFamily = false
 ): Itinerary {
-  // Rank by family score, keep ones with coordinates, dedupe by name.
+  // Keep ones with coordinates, dedupe by name. The input is already
+  // taste-ranked; only re-sort by family_score for trips with kids.
   const seen = new Set<string>();
-  const pool = attractions
+  let pool = attractions
     .filter((a) => a.lat && a.lng)
     .filter((a) => {
       const n = a.name_he || a.name_en;
       if (seen.has(n)) return false;
       seen.add(n);
       return true;
-    })
-    .sort((a, b) => (b.family_score ?? 0) - (a.family_score ?? 0));
+    });
+  if (isFamily) pool = [...pool].sort((a, b) => (b.family_score ?? 0) - (a.family_score ?? 0));
 
   const perDay = 3;
   const dayList = [];
@@ -59,7 +61,7 @@ export function buildHeuristicItinerary(
         kind: kindOf(a),
         time: SLOT_TIMES[Math.min(i, SLOT_TIMES.length - 1)],
         duration: a.duration_minutes ? `${Math.round(a.duration_minutes / 60)} שעות` : "1.5 שעות",
-        score: a.family_score ?? undefined,
+        score: isFamily ? (a.family_score ?? undefined) : undefined,
         note: a.tips_he || descriptor(a),
       });
     });
@@ -73,13 +75,13 @@ export function buildHeuristicItinerary(
       label: `יום ${d + 1}`,
       date: "",
       base: city,
-      why: `${mix}, עם הפסקת צהריים באמצע. סידרנו לפי הדירוג המשפחתי הגבוה ב${city}. הוסיפו מפתח AI לתכנון חכם שמתחשב במרחקים ובפרופיל המשפחה.`,
+      why: `${mix}, עם הפסקת צהריים באמצע. סידרנו לפי מה שהכי מתאים לכם ב${city}. הוסיפו מפתח AI לתכנון חכם שמתחשב במרחקים ובפרופיל שלכם.`,
       stops,
     });
   }
 
   return {
-    title: `${city} עם המשפחה`,
+    title: `טיול ב${city}`,
     subtitle: `${days} ימים · ${country}`,
     days: dayList,
   };
@@ -88,18 +90,19 @@ export function buildHeuristicItinerary(
 // Multi-city fallback: build each segment, concatenate with continuous day
 // numbering. Used when AI is unavailable for a multi-city trip.
 export function buildMultiHeuristicItinerary(
-  segments: { city: string; country: string; days: number; attractions: Attraction[] }[]
+  segments: { city: string; country: string; days: number; attractions: Attraction[] }[],
+  isFamily = false
 ): Itinerary {
   const days: Itinerary["days"] = [];
   for (const s of segments) {
-    const part = buildHeuristicItinerary(s.city, s.country, s.days, s.attractions);
+    const part = buildHeuristicItinerary(s.city, s.country, s.days, s.attractions, isFamily);
     for (const d of part.days) {
       days.push({ ...d, label: `יום ${days.length + 1}`, base: s.city });
     }
   }
   const cities = segments.map((s) => s.city).join(" → ");
   return {
-    title: `${segments.map((s) => s.city).join(" + ")} עם המשפחה`,
+    title: `טיול: ${segments.map((s) => s.city).join(" + ")}`,
     subtitle: `${days.length} ימים · ${cities}`,
     days,
   };

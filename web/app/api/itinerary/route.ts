@@ -47,16 +47,17 @@ function normName(s: string): string {
 function partitionBySelection(
   pool: Attraction[],
   taste: Record<string, number> | undefined,
-  selection: { yes: number[]; maybe: number[]; no: number[] }
+  selection: { yes: number[]; maybe: number[]; no: number[] },
+  isFamily: boolean
 ): { anchors: Attraction[]; fillers: Attraction[]; anchorIds: Set<number> } {
   const yes = new Set(selection.yes);
   const no = new Set(selection.no);
   const avail = pool.filter((a) => !no.has(a.id));
   let anchorPool = avail.filter((a) => yes.has(a.id));
   if (anchorPool.length === 0) anchorPool = avail.filter((a) => a.must_see === 1);
-  const anchors = rankByTaste(anchorPool, taste, 30);
+  const anchors = rankByTaste(anchorPool, taste, 30, isFamily);
   const anchorIds = new Set(anchors.map((a) => a.id));
-  const fillers = rankByTaste(avail.filter((a) => !anchorIds.has(a.id)), taste, 40);
+  const fillers = rankByTaste(avail.filter((a) => !anchorIds.has(a.id)), taste, 40, isFamily);
   return { anchors, fillers, anchorIds };
 }
 
@@ -109,6 +110,9 @@ export async function POST(req: NextRequest) {
     // Explore build (F1): the traveler's per-trip picks. Drives an anchors-first,
     // "אם יש זמן" fillers plan on the single-city generate path.
     selection?: { yes: number[]; maybe: number[]; no: number[] };
+    // Only when there are kids: apply the family-friendliness lens (family_score
+    // ranking). Adults-only trips (couple/friends) rank by taste + must-see only.
+    isFamily?: boolean;
   };
   try {
     body = await req.json();
@@ -124,11 +128,12 @@ export async function POST(req: NextRequest) {
   // Broad candidate pool, then narrow to the group's TASTE (#63): a music/
   // vintage couple and a sports/history couple get different attraction sets
   // fed to the builder → genuinely different trips. No taste → family order.
+  const isFamily = body.isFamily === true;
   const pool = await topAttractions(dest.id, 150);
-  const attractions = rankByTaste(pool, body.taste, 50);
+  const attractions = rankByTaste(pool, body.taste, 50, isFamily);
   // Explore build (F1): split into anchors + "אם יש זמן" fillers. Only used by
   // the single-city generate path below (details/revise/multi ignore it).
-  const sel = body.selection ? partitionBySelection(pool, body.taste, body.selection) : null;
+  const sel = body.selection ? partitionBySelection(pool, body.taste, body.selection, isFamily) : null;
   const buildList = sel ? [...sel.anchors, ...sel.fillers] : attractions;
   // Only tag tiers when there's a real anchor set — otherwise every stop would
   // read "אם יש זמן" (e.g. a click-through selection with no picks / no must-sees).
@@ -154,14 +159,14 @@ export async function POST(req: NextRequest) {
     const segAttrs = await Promise.all(
       segs.map(async (x) => ({
         ...x,
-        attractions: rankByTaste(await topAttractions(x.dest.id, 150), body.taste, 50),
+        attractions: rankByTaste(await topAttractions(x.dest.id, 150), body.taste, 50, isFamily),
         insights: await insightsForDestination(x.dest.id),
       })));
     const allAttractions = segAttrs.flatMap((x) => x.attractions);
     const heuristic = () => attachDetails(
       buildMultiHeuristicItinerary(segAttrs.map((x) => ({
         city: x.dest.city, country: x.dest.country, days: x.days, attractions: x.attractions,
-      }))), allAttractions);
+      })), isFamily), allAttractions);
 
     if (!aiConfigured()) {
       return NextResponse.json({ itinerary: heuristic(), engine: "heuristic" });
@@ -173,8 +178,9 @@ export async function POST(req: NextRequest) {
           attractions: x.attractions, hotels: x.hotels, insights: x.insights,
         })),
         month: body.month,
-        profileText: body.profileText ?? "משפחה · קצב רגוע",
+        profileText: body.profileText ?? "מטיילים · קצב רגוע",
         emphasis: tasteEmphasis(body.taste),
+        isFamily,
       });
       return NextResponse.json({ itinerary: attachDetails(itinerary, allAttractions) });
     } catch (e) {
@@ -192,7 +198,7 @@ export async function POST(req: NextRequest) {
   // buildList puts anchors first so the heuristic schedules them first too.
   if (body.mode !== "revise" && !aiConfigured()) {
     const itinerary = attachDetails(buildHeuristicItinerary(
-      dest.city, dest.country, body.days ?? 4, buildList), buildList, anchorIds);
+      dest.city, dest.country, body.days ?? 4, buildList, isFamily), buildList, anchorIds);
     return NextResponse.json({ itinerary, engine: "heuristic" });
   }
 
@@ -220,19 +226,20 @@ export async function POST(req: NextRequest) {
       country: dest.country,
       days: body.days ?? 4,
       month: body.month,
-      profileText: body.profileText ?? "משפחה · קצב רגוע",
+      profileText: body.profileText ?? "מטיילים · קצב רגוע",
       attractions: buildList,
       hotels: body.hotels,
       insights: await insightsForDestination(dest.id),
       emphasis: tasteEmphasis(body.taste),
       anchors: sel?.anchors,
       fillers: sel?.fillers,
+      isFamily,
     });
     return NextResponse.json({ itinerary: attachDetails(itinerary, buildList, anchorIds) });
   } catch (e) {
     console.warn(`[itinerary] AI generate failed, using heuristic: ${(e as Error).message}`);
     const itinerary = attachDetails(
-      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList), buildList, anchorIds);
+      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList, isFamily), buildList, anchorIds);
     return NextResponse.json({ itinerary, engine: "heuristic" });
   }
 }

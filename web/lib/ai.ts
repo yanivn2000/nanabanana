@@ -70,17 +70,18 @@ const ITINERARY_SCHEMA = {
   additionalProperties: false,
 };
 
-const SYSTEM = `אתה מתכנן טיולים מומחה לאפליקציה ישראלית למשפחות שטסות לחו"ל.
+const SYSTEM = `אתה מתכנן טיולים מומחה לאפליקציה ישראלית למטיילים בחו"ל — זוגות, חבורות חברים ומשפחות כאחד.
 אתה בונה לו"ז יומי מאוזן וריאליסטי — לא רשימה של אטרקציות, אלא תוכנית עם שעות, זמני נסיעה, ארוחות ופינות מנוחה.
 כל הטקסט בעברית טבעית (שמות מקומות: השם שישראלים משתמשים בו, עם השם הלועזי בסוגריים אם עוזר).
 חוקים:
-- כבד את פרופיל המשפחה: גילאי הילדים, תחומי עניין, מה שלא אוהבים, קצב, תקציב, מרחק נסיעה יומי מקסימלי.
-- אל תעמיס יותר מ-3-4 עצירות משמעותיות ביום עם ילדים. שלב מנוחה ואוכל.
+- כבד את פרופיל המטיילים: מי נוסע (זוג/חברים/משפחה), תחומי עניין, מה שלא אוהבים, קצב, תקציב, מרחק נסיעה יומי מקסימלי.
+- **התאם את האופי להרכב:** רק כשיש ילדים בפרופיל בנה סביבם (קצב, אטרקציות מתאימות-גיל). לזוג או חבורת חברים ללא ילדים — אל תשלב אטרקציות "לילדים"/משפחתיות אלא אם ביקשו במפורש; העדף את מה שמתאים למבוגרים לפי הטעם שלהם.
+- אל תעמיס יותר מ-3-4 עצירות משמעותיות ביום. שלב מנוחה ואוכל.
 - לכל יום כתוב שדה "why" קצר (משפט-שניים) שמסביר את ההיגיון: למה הסדר הזה, על מה דילגת ולמה. זה הערך המרכזי של האפליקציה.
-- kind: nature/food/culture/rest/shopping. score=1-10 כמה האטרקציה מתאימה למשפחה הזו. note=משפט קצר מעשי.
+- kind: nature/food/culture/rest/shopping. score=1-10 כמה האטרקציה מתאימה לקבוצה הזו (לפי הטעם וההרכב שלה). note=משפט קצר מעשי.
 - בחר רק מהאטרקציות שסופקו. אל תמציא מקומות.`;
 
-function attractionsBlock(attractions: Attraction[]): string {
+function attractionsBlock(attractions: Attraction[], isFamily = false): string {
   return attractions
     .map((a) =>
       JSON.stringify({
@@ -90,7 +91,9 @@ function attractionsBlock(attractions: Attraction[]): string {
         sub: a.subcategory,
         indoor_outdoor: a.indoor_outdoor,
         season: a.best_season,
-        score: a.family_score,
+        // family_score is a family-friendliness score — only hint it to the model
+        // for trips with kids, so adults-only plans aren't nudged toward it.
+        ...(isFamily ? { family_score: a.family_score } : {}),
         tip: a.tips_he,
       })
     )
@@ -129,6 +132,7 @@ export type GenerateParams = {
   // chosen "כן"/must-sees (each is a day's centerpiece), fillers = "אם יש זמן".
   anchors?: Attraction[];
   fillers?: Attraction[];
+  isFamily?: boolean;   // trip has kids → apply the family-friendliness lens
 };
 
 function emphasisBlock(e?: string): string {
@@ -138,12 +142,12 @@ function emphasisBlock(e?: string): string {
 // The Explore selection turns the attraction list into two tiers: anchors the
 // traveler explicitly chose (schedule all of them — each opens/anchors a day)
 // and "אם יש זמן" fillers to place around them only if the pace allows.
-function tieredBlock(anchors: Attraction[], fillers: Attraction[]): string {
+function tieredBlock(anchors: Attraction[], fillers: Attraction[], isFamily: boolean): string {
   return `עוגני הטיול — המטייל בחר אותם במפורש. שבץ את כולם לאורך הימים, ופתח כל יום בעוגן (או שניים ליום ארוך). אלה לב הטיול:
-${attractionsBlock(anchors)}
+${attractionsBlock(anchors, isFamily)}
 
 "אם יש זמן" — פריטי מילוי אופציונליים. שבץ אותם סביב העוגנים רק אם הקצב מתיר, ובשדה note סמן אותם כ"אם יש זמן". אל תדחוס אותם על חשבון עוגן:
-${fillers.length ? attractionsBlock(fillers) : "(אין)"}`;
+${fillers.length ? attractionsBlock(fillers, isFamily) : "(אין)"}`;
 }
 
 const MONTHS_HE = ["", "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני",
@@ -160,16 +164,17 @@ function seasonHint(month?: number): string {
 function hotelsBlock(hotels?: TripHotel[]): string {
   if (!hotels || hotels.length === 0) return "";
   const lines = hotels.map((h) => `- ${h.name} (${h.city}) [${h.lat},${h.lng}]`).join("\n");
-  return `\nהמשפחה כבר הזמינה את המלונות הבאים — בנה טיול כוכב: כל יום סובב סביב בסיס הלינה, עם טיולי-יום לאטרקציות בטווח הנסיעה היומי. סדר את הימים כדי למזער נסיעה:\n${lines}\n`;
+  return `\nהמטיילים כבר הזמינו את המלונות הבאים — בנה טיול כוכב: כל יום סובב סביב בסיס הלינה, עם טיולי-יום לאטרקציות בטווח הנסיעה היומי. סדר את הימים כדי למזער נסיעה:\n${lines}\n`;
 }
 
 export async function generateItinerary(p: GenerateParams): Promise<Itinerary> {
+  const isFamily = p.isFamily === true;
   const attractionsSection = p.anchors && p.anchors.length
-    ? tieredBlock(p.anchors, p.fillers ?? [])
-    : `אטרקציות זמינות (בחר מתוכן בלבד):\n${attractionsBlock(p.attractions)}`;
+    ? tieredBlock(p.anchors, p.fillers ?? [], isFamily)
+    : `אטרקציות זמינות (בחר מתוכן בלבד):\n${attractionsBlock(p.attractions, isFamily)}`;
   const userText = `בנה לו"ז טיול ל${p.city}, ${p.country}.
 מספר ימים: ${p.days}
-פרופיל המשפחה: ${p.profileText}
+פרופיל המטיילים: ${p.profileText}
 ${emphasisBlock(p.emphasis)}${seasonHint(p.month)}${hotelsBlock(p.hotels)}${verifiedBlock(p.insights, p.attractions)}
 ${attractionsSection}`;
   return callClaude(userText);
@@ -190,7 +195,9 @@ export async function generateMultiItinerary(p: {
   month?: number;
   profileText: string;
   emphasis?: string;
+  isFamily?: boolean;
 }): Promise<Itinerary> {
+  const isFamily = p.isFamily === true;
   const total = p.segments.reduce((a, s) => a + s.days, 0);
   const order = p.segments.map((s, i) => `${i + 1}) ${s.city} (${s.days} ימים)`).join(" ← ");
   const segBlocks = p.segments
@@ -201,11 +208,11 @@ export async function generateMultiItinerary(p: {
       return `### מקטע ${i + 1}: ${s.city}, ${s.country} — ${s.days} ימים\n` +
         base +
         verifiedBlock(s.insights, s.attractions) +
-        `אטרקציות זמינות במקטע זה (לימי מקטע זה בלבד):\n${attractionsBlock(s.attractions)}`;
+        `אטרקציות זמינות במקטע זה (לימי מקטע זה בלבד):\n${attractionsBlock(s.attractions, isFamily)}`;
     })
     .join("\n\n");
   const userText = `בנה לו"ז לטיול רב-ערים אחד ורציף של ${total} ימים, העובר בין האזורים לפי הסדר: ${order}.
-פרופיל המשפחה: ${p.profileText}
+פרופיל המטיילים: ${p.profileText}
 ${emphasisBlock(p.emphasis)}${seasonHint(p.month)}
 כללים למקטעים:
 - מספר את הימים ברצף 1..${total} (אל תתחיל ספירה מחדש בכל עיר). שדה base של כל יום = שם העיר/אזור של המקטע שאליו הוא שייך.
@@ -226,7 +233,7 @@ export async function reviseItinerary(
 ): Promise<Itinerary> {
   const userText = `זהו הלו"ז הנוכחי:
 ${JSON.stringify(current, null, 1)}
-${profileText ? `\nפרופיל המשפחה: ${profileText}\n` : ""}${dateContext ? `\nהקשר תאריכים:\n${dateContext}\n` : ""}
+${profileText ? `\nפרופיל המטיילים: ${profileText}\n` : ""}${dateContext ? `\nהקשר תאריכים:\n${dateContext}\n` : ""}
 בקשת המשתמש לשינוי: "${instruction}"
 
 ארגן מחדש את הלו"ז לפי הבקשה. אם הבקשה מתייחסת ליום ספציפי — שנה אך ורק את אותו יום והשאר את כל שאר הימים בדיוק כפי שהם. שמור על מה שעובד, שנה רק מה שצריך, ועדכן את שדה ה-"why" של הימים שהשתנו כדי להסביר את השינוי. אל תשנה את מספר הימים אלא אם התבקשת במפורש.
@@ -274,18 +281,18 @@ export async function recommendDestinations(p: {
   month?: number;
   summaries: DestinationSummary[];
 }): Promise<DestinationReco[]> {
-  const userText = `משפחה מתלבטת לאן לטוס — היא יודעת מי נוסע ומה מעדיפים, אבל לא לאן.
+  const userText = `מטיילים מתלבטים לאן לטוס — הם יודעים מי נוסע ומה מעדיפים, אבל לא לאן.
 המלץ על 3 יעדים מתוך הרשימה בלבד, מהמתאים ביותר ולמטה.
-פרופיל המשפחה: ${p.profileText}
+פרופיל המטיילים: ${p.profileText}
 ${seasonHint(p.month)}
-לכל המלצה: "reason" = משפט-שניים בעברית למה היעד מתאים *למשפחה הזו* (קשר להעדפות, לגילאי הילדים ולעונה); "highlights" = 2-4 מילות מפתח (למשל "מוזיאונים, פארקי מים, היסטוריה"). שדה "city" חייב להיות בדיוק אחד מהשמות (באנגלית) שברשימה.
+לכל המלצה: "reason" = משפט-שניים בעברית למה היעד מתאים *לקבוצה הזו* (קשר להעדפות, להרכב ולעונה); "highlights" = 2-4 מילות מפתח (למשל "מוזיאונים, פארקי מים, היסטוריה"). שדה "city" חייב להיות בדיוק אחד מהשמות (באנגלית) שברשימה.
 היעדים האפשריים (המספרים = כמה אטרקציות מכל סוג במאגר):
 ${summariesBlock(p.summaries)}`;
 
   const resp = await client().messages.create({
     model: await getModel(),
     max_tokens: 2000,
-    system: "אתה יועץ טיולים למשפחות ישראליות. ענה בעברית טבעית, התאם להעדפות ולעונה, ואל תמליץ על יעד שאינו ברשימה שסופקה.",
+    system: "אתה יועץ טיולים למטיילים ישראלים. ענה בעברית טבעית, התאם להעדפות ולעונה, ואל תמליץ על יעד שאינו ברשימה שסופקה.",
     thinking: { type: "adaptive" },
     output_config: { format: { type: "json_schema", schema: RECO_SCHEMA } },
     messages: [{ role: "user", content: userText }],

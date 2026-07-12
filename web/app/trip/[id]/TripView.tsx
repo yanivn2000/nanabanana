@@ -158,7 +158,7 @@ export function TripView({ tripId }: { tripId: string }) {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ city, profileText: profileText(tripProfile),
-          taste: deriveTaste(tripProfile), ...payload }),
+          taste: deriveTaste(tripProfile), isFamily: tripProfile.kids.length > 0, ...payload }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) {

@@ -45,19 +45,22 @@ export function tasteScore(tags: string[] | null, w: Record<string, number>): nu
   return tags.reduce((s, t) => s + (w[t] ?? 0), 0);
 }
 
-// Re-rank attractions by taste (primary) then family_score/must-see (tiebreak),
-// and return the top `n`. Falls back to family-order when no taste signal
-// (e.g. a city not taste-tagged yet, or an empty taste model).
+// Re-rank attractions by taste (primary), then must-see, and — ONLY for trips
+// with kids — family_score. `family_score` is a family-friendliness score (how
+// much a family with kids would enjoy it), so applying it to a couples'/friends'
+// trip pushes kid-oriented places; it's gated on `isFamily`. Returns the top `n`;
+// falls back to source order when there's no taste signal.
 export function rankByTaste(
   attractions: Attraction[],
   taste: Record<string, number> | undefined,
-  n: number
+  n: number,
+  isFamily = false
 ): Attraction[] {
   if (!taste || Object.keys(taste).length === 0) return attractions.slice(0, n);
   const scored = attractions.map((a) => ({
     a,
     s: tasteScore(a.taste_tags, taste) * 3
-      + (a.family_score ?? 0)
+      + (isFamily ? (a.family_score ?? 0) : 0)
       + (a.must_see === 1 ? 2 : 0),
   }));
   scored.sort((x, y) => y.s - x.s);
