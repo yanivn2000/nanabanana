@@ -120,16 +120,25 @@ export function DestinationView({
             <Compass size={16} /> חקרו את היעד לפי מי שאתם
           </Link>
 
-          {/* money-saving pass badge (#16) */}
+          {/* money-saving pass toggle (#16) — the panel opens BELOW the hero */}
           {passes.length > 0 && (
-          <div className="mt-3">
             <button onClick={() => setShowPasses((v) => !v)}
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition"
+              className="mt-3 inline-flex items-center gap-1.5 self-start rounded-full px-3 py-1.5 text-[12.5px] font-medium transition"
               style={{ background: "var(--brand-soft)", color: "var(--brand-ink)", border: "1px solid var(--brand)" }}>
               💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
             </button>
-            {showPasses && (
-              <div className="mt-2 flex flex-col gap-2 lg:max-w-md">
+          )}
+          </div>
+        </div>
+      </header>
+
+      {/* pass panel — reveals smoothly under the hero so the poster never jumps */}
+      {passes.length > 0 && (
+        <div className="grid transition-[grid-template-rows] duration-300 ease-out"
+          style={{ gridTemplateRows: showPasses ? "1fr" : "0fr" }}>
+          <div className="overflow-hidden">
+            <div className="mx-auto max-w-6xl px-5 pb-1 pt-3 lg:px-8">
+              <div className="flex flex-col gap-2 lg:max-w-md">
                 {passes.map((p) => (
                   <a key={p.name} href={passUrl(p.name)} target="_blank" rel="noreferrer"
                     className="flex items-start gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-2.5 shadow-[var(--shadow)]">
@@ -148,12 +157,10 @@ export function DestinationView({
                 )}
                 <p className="text-[11px] text-[var(--text-3)]">כרטיס אזורי/עירוני שיכול לחסוך על תחבורה וכניסות. הכיסוי משתנה מעת לעת — אמתו את הרשימה המלאה באתר הרשמי.</p>
               </div>
-            )}
-          </div>
-          )}
+            </div>
           </div>
         </div>
-      </header>
+      )}
 
       {/* editor's picks rail (must-see) */}
       {mustSee.length > 0 && (
