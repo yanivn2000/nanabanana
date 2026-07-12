@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, Briefcase, User } from "lucide-react";
+import { Home, Briefcase, User } from "lucide-react";
 
 const ITEMS = [
   { href: "/", label: "בית", Icon: Home },
-  { href: "/explore", label: "גלה", Icon: Compass },
   { href: "/trips", label: "הטיולים", Icon: Briefcase },
   { href: "/profile", label: "פרופיל", Icon: User },
 ];

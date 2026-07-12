@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listDestinations } from "@/lib/db";
 import { ArrowLeft, Plus, Sparkles, Compass } from "lucide-react";
 import { YalleMark } from "@/components/YalleMark";
-import { DestinationsGrid } from "./DestinationsGrid";
+import { ExploreList } from "./explore/ExploreList";
 
 export const dynamic = "force-dynamic";
 
@@ -74,16 +74,19 @@ export default async function Home() {
         <ArrowLeft size={18} className="text-[var(--text-3)]" />
       </Link>
 
-      {/* destinations from the real DB */}
-      <section className="rise rise-3 mt-8">
-        <div className="mb-3 flex items-baseline justify-between">
-          <h2 className="text-[17px] font-bold">יעדים פופולריים לישראלים</h2>
+      {/* discover destinations — search + region-divided list */}
+      <section className="rise rise-3 mt-10">
+        <div className="mb-4 flex items-baseline justify-between gap-3">
+          <div>
+            <h2 className="serif text-[24px] font-bold leading-tight lg:text-[30px]">גלו יעדים</h2>
+            <p className="mt-0.5 text-[13.5px] text-[var(--text-2)]">יעדים אהובים על משפחות ישראליות</p>
+          </div>
           {destinations.length > 0 && (
-            <span className="text-xs text-[var(--text-3)]">{destinations.length} יעדים</span>
+            <span className="shrink-0 text-xs text-[var(--text-3)]">{destinations.length} יעדים</span>
           )}
         </div>
 
-        <DestinationsGrid destinations={destinations} />
+        <ExploreList destinations={destinations} />
       </section>
     </main>
   );
