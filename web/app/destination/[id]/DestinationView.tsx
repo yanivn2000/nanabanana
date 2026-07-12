@@ -207,7 +207,10 @@ export function DestinationView({
 
         {/* list */}
         <section className="px-5 lg:order-1 lg:w-[500px] lg:shrink-0 lg:px-8 lg:pb-16">
-          <div className="mb-3 mt-5 flex items-center gap-2 border-b border-[var(--border)] pb-2">
+          {/* sticky filter header — stays visible while the list scrolls
+              (below the map on mobile, below the top nav on desktop) */}
+          <div className="sticky top-[240px] z-20 -mx-5 bg-[var(--bg)] px-5 pb-2 pt-4 shadow-[0_8px_10px_-10px_rgba(16,29,43,0.2)] lg:top-[57px] lg:-mx-8 lg:px-8">
+          <div className="mb-3 flex items-center gap-2 border-b border-[var(--border)] pb-2">
             <Search size={17} className="text-[var(--text-3)]" />
             <input value={query} onChange={(e) => setQuery(e.target.value)}
               placeholder="חיפוש אטרקציה…"
@@ -272,6 +275,7 @@ export function DestinationView({
               }}>
               📍 רק מה שעל המפה
             </button>
+          </div>
           </div>
 
           {flags.withInsights && (
