@@ -1,32 +1,36 @@
 "use client";
 
 import { useState } from "react";
-import { posterSrc } from "@/lib/posters";
+import { posterSrcs } from "@/lib/posters";
 
 // City poster with a graceful brand-gradient fallback. Fills its container
-// (object-cover); the poster art keeps the landmark centered with sky headroom,
-// so `position` can bias the crop for wide bands. `overlay` adds a bottom scrim
-// so overlaid Hebrew titles stay legible; `children` render on top.
+// (object-cover); poster art keeps the landmark centered with sky headroom, so
+// `position` can bias the crop. `orientation` picks the crop that fits the slot
+// (landscape for wide bands, portrait for tall cards) and falls back to the
+// other crop if the preferred one is missing, then to the gradient. `overlay`
+// adds a bottom scrim so overlaid Hebrew titles stay legible.
 export function CityPoster({
-  destinationId, cityHe, className, position = "50% 36%", overlay = false, children,
+  destinationId, cityHe, className, orientation = "landscape",
+  position = "50% 34%", overlay = false, children,
 }: {
   destinationId?: number | null;
   cityHe?: string | null;
   className?: string;
+  orientation?: "landscape" | "portrait";
   position?: string;
   overlay?: boolean;
   children?: React.ReactNode;
 }) {
-  const src = posterSrc(destinationId);
-  const [failed, setFailed] = useState(false);
-  const showImg = !!src && !failed;
+  const srcs = posterSrcs(destinationId, orientation);
+  const [idx, setIdx] = useState(0);
+  const src = srcs[idx];
 
   return (
     <div className={`relative overflow-hidden bg-[var(--brand-soft)] ${className ?? ""}`}>
-      {showImg ? (
+      {src ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src!} alt={cityHe ? `פוסטר ${cityHe}` : ""} loading="lazy"
-          onError={() => setFailed(true)}
+        <img src={src} alt={cityHe ? `פוסטר ${cityHe}` : ""} loading="lazy"
+          onError={() => setIdx((i) => i + 1)}
           className="absolute inset-0 size-full object-cover"
           style={{ objectPosition: position }} />
       ) : (

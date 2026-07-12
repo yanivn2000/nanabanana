@@ -45,7 +45,7 @@ export function DestinationsGrid({ destinations }: { destinations: Destination[]
         {list.map((d) => (
           <Link href={`/destination/${d.id}`} key={d.id}
             className="flex items-center gap-3 overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] p-2.5 shadow-[var(--shadow)]">
-            <CityPoster destinationId={d.id} cityHe={d.city_he || d.city}
+            <CityPoster destinationId={d.id} cityHe={d.city_he || d.city} orientation="portrait"
               className="h-16 w-[58px] shrink-0 rounded-[var(--radius-sm)]" />
             <div className="min-w-0 flex-1">
               <p className="serif truncate text-[16px] font-semibold">{d.city_he || d.city}</p>
