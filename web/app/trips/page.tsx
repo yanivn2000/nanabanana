@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useProfile, profileSummary, useTrips } from "@/lib/store";
 import { Plus, ArrowLeft, Trash2, Sparkles, BedDouble } from "lucide-react";
@@ -12,6 +12,11 @@ export default function TripsPage() {
   const [p, , profileLoaded] = useProfile();
   const { trips, remove, loaded } = useTrips();
   const [creating, setCreating] = useState(false);
+
+  // Open the new-trip form straight away when arrived via "טיול חדש" (?new=1).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("new") === "1") setCreating(true);
+  }, []);
 
   return (
     <main className="mx-auto w-full max-w-[440px] px-5 pb-28 pt-8 lg:max-w-5xl lg:px-8 lg:pb-12">
