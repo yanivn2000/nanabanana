@@ -210,8 +210,11 @@ export function DestinationView({
           {/* sticky filter header — stays visible while the list scrolls
               (below the map on mobile, below the top nav on desktop) */}
           <div className="sticky top-[240px] z-20 -mx-5 bg-[var(--bg)] px-5 pb-2 pt-4 shadow-[0_8px_10px_-10px_rgba(16,29,43,0.2)] lg:top-[57px] lg:-mx-8 lg:px-8">
-          <div className="mb-3 flex items-center gap-2 border-b border-[var(--border)] pb-2">
-            <Search size={17} className="text-[var(--text-3)]" />
+          <div className="mb-3 flex items-center gap-2.5 border-b border-[var(--border)] pb-2">
+            {/* city name — keeps context once the hero has scrolled away */}
+            <span className="serif shrink-0 text-[16px] font-bold text-[var(--text)]">{dest.city_he || dest.city}</span>
+            <span className="h-4 w-px shrink-0 bg-[var(--border)]" />
+            <Search size={16} className="shrink-0 text-[var(--text-3)]" />
             <input value={query} onChange={(e) => setQuery(e.target.value)}
               placeholder="חיפוש אטרקציה…"
               className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[var(--text-3)]" />
