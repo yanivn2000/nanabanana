@@ -53,6 +53,16 @@ export function ProfileEditor({ value: p, onChange: save }: {
 }) {
   const toggle = (list: string[], v: string) =>
     list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
+  // One tri-state preference list (no more separate likes/dislikes):
+  // ניטרלי → מעוניין → לא מעוניין → ניטרלי.
+  const catState = (v: string): "yes" | "no" | "none" =>
+    p.interests.includes(v) ? "yes" : p.dislikes.includes(v) ? "no" : "none";
+  const cycleCat = (v: string) => {
+    const s = catState(v);
+    if (s === "none") save({ ...p, interests: [...p.interests, v], dislikes: p.dislikes.filter((x) => x !== v) });
+    else if (s === "yes") save({ ...p, interests: p.interests.filter((x) => x !== v), dislikes: [...p.dislikes, v] });
+    else save({ ...p, dislikes: p.dislikes.filter((x) => x !== v) });
+  };
   const addKid = () => save({ ...p, kids: [...p.kids, { name: "", age: 6, loves: "" }] });
   const setKid = (i: number, k: Partial<Kid>) =>
     save({ ...p, kids: p.kids.map((kid, idx) => (idx === i ? { ...kid, ...k } : kid)) });
@@ -104,21 +114,21 @@ export function ProfileEditor({ value: p, onChange: save }: {
       </section>
 
       <section>
-        <label className="mb-2 block text-[14px] font-medium">מה אוהבים</label>
-        {/* Category tiles (brand board): two-tone filled icon + label. */}
+        <label className="mb-1 block text-[14px] font-medium">מה מעניין אתכם?</label>
+        <p className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-[var(--text-3)]">
+          <span>הקישו כדי לעבור בין:</span>
+          <span className="inline-flex items-center gap-1">
+            <span className="grid size-4 place-items-center rounded-full bg-[var(--brand)] text-[9px] font-bold text-white">✓</span> מעוניין
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="grid size-4 place-items-center rounded-full bg-[var(--text-3)] text-[9px] font-bold text-white">✕</span> לא מעוניין
+          </span>
+          <span>· ריק = ניטרלי</span>
+        </p>
+        {/* Single tri-state preference list — category tiles (brand board). */}
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
           {INTERESTS.map((v) => (
-            <CategoryTile key={v} label={v} selected={p.interests.includes(v)}
-              onClick={() => save({ ...p, interests: toggle(p.interests, v) })} />
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <label className="mb-2 block text-[14px] font-medium">מה פחות</label>
-        <div className="flex flex-wrap gap-2">
-          {INTERESTS.map((v) => (
-            <Chip key={v} on={p.dislikes.includes(v)} onClick={() => save({ ...p, dislikes: toggle(p.dislikes, v) })}>{v}</Chip>
+            <CategoryTile key={v} label={v} state={catState(v)} onClick={() => cycleCat(v)} />
           ))}
         </div>
       </section>

@@ -127,24 +127,42 @@ export const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   ),
 };
 
-export function CategoryTile({ label, selected, onClick }: {
-  label: string; selected: boolean; onClick?: () => void;
+// A category tile. `selected` = binary (interested / not) for simple pickers;
+// `state` = tri-state (yes / no / none) for the profile's single preference list.
+export type TileState = "yes" | "no" | "none";
+
+export function CategoryTile({ label, selected, state, onClick }: {
+  label: string; selected?: boolean; state?: TileState; onClick?: () => void;
 }) {
   const icon = CATEGORY_ICONS[label];
+  const s: TileState = state ?? (selected ? "yes" : "none");
+  const box =
+    s === "yes" ? { background: "var(--brand-soft)", border: "1.5px solid var(--brand)" }
+    : s === "no" ? { background: "var(--surface-2)", border: "1.5px solid var(--border)" }
+    : { background: "var(--surface)", border: "1.5px solid var(--border)" };
   return (
-    <button type="button" onClick={onClick} aria-pressed={selected}
-      className="flex flex-col items-center justify-center gap-1.5 rounded-[18px] px-1 py-3 transition"
-      style={{
-        background: selected ? "var(--brand-soft)" : "var(--surface)",
-        border: `1.5px solid ${selected ? "var(--brand)" : "var(--border)"}`,
-      }}>
-      {icon ? (
-        <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden>{icon}</svg>
-      ) : (
-        <span className="grid size-[30px] place-items-center text-[20px]">✦</span>
+    <button type="button" onClick={onClick} aria-pressed={s === "yes"}
+      className="relative flex flex-col items-center justify-center gap-1.5 rounded-[18px] px-1 py-3 transition"
+      style={box}>
+      {s !== "none" && (
+        <span className="absolute end-1.5 top-1.5 grid size-[18px] place-items-center rounded-full text-[10px] font-bold leading-none text-white"
+          style={{ background: s === "yes" ? "var(--brand)" : "var(--text-3)" }}>
+          {s === "yes" ? "✓" : "✕"}
+        </span>
       )}
+      <span style={{ opacity: s === "no" ? 0.5 : 1 }}>
+        {icon ? (
+          <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden>{icon}</svg>
+        ) : (
+          <span className="grid size-[30px] place-items-center text-[20px]">✦</span>
+        )}
+      </span>
       <span className="text-[12px] font-medium leading-tight"
-        style={{ color: selected ? "var(--brand-ink)" : "var(--text-2)" }}>{label}</span>
+        style={{
+          color: s === "yes" ? "var(--brand-ink)" : "var(--text-2)",
+          textDecoration: s === "no" ? "line-through" : "none",
+          opacity: s === "no" ? 0.6 : 1,
+        }}>{label}</span>
     </button>
   );
 }
