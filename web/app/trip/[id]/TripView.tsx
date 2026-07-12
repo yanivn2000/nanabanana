@@ -5,10 +5,10 @@ import Link from "next/link";
 import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, Pencil, ChevronUp, ChevronDown,
-  ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon, Users, Luggage, ListChecks, Wallet, CalendarDays,
+  ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon, Route, Users, Luggage, ListChecks, Wallet, CalendarDays,
 } from "lucide-react";
 import { googleMapsUrl } from "@/lib/geo";
-import { bigImage, segColor } from "@/lib/labels";
+import { bigImage } from "@/lib/labels";
 import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
 import type { Attraction } from "@/lib/db";
@@ -34,6 +34,14 @@ const ICONS = {
   coffee: Coffee, "shopping-bag": ShoppingBag,
 } as const;
 
+// Trip tools (#15 #17 #18) — a compact submenu instead of three stacked cards.
+const TOOLS = [
+  { key: "packing", label: "מה לארוז", Icon: Luggage },
+  { key: "checklist", label: "לפני שיוצאים", Icon: ListChecks },
+  { key: "budget", label: "תקציב", Icon: Wallet },
+] as const;
+type ToolKey = (typeof TOOLS)[number]["key"];
+
 function StopIcon({ kind }: { kind: Stop["kind"] }) {
   const meta = KIND_META[kind];
   const Icon = ICONS[meta.icon as keyof typeof ICONS] ?? Coffee;
@@ -53,12 +61,10 @@ export function TripView({ tripId }: { tripId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editTravelers, setEditTravelers] = useState(false);
-  const [showPacking, setShowPacking] = useState(false);
-  const [showChecklist, setShowChecklist] = useState(false);
-  const [showBudget, setShowBudget] = useState(false);
+  const [tool, setTool] = useState<ToolKey | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [activeDay, setActiveDay] = useState<number | null>(null);
-  const [activeSegment, setActiveSegment] = useState<number | null>(null);
+  const [dayIdx, setDayIdx] = useState(0);                 // one day on screen — pager
+  const [mobileTab, setMobileTab] = useState<"plan" | "map">("plan");
   const [focus, setFocus] = useState<{ lat: number; lng: number; n: number } | null>(null);
   // Destinations, for picking a target city when there's no hotel yet.
   const [dests, setDests] = useState<{ id: number; city: string; country: string; city_he: string | null }[]>([]);
@@ -85,26 +91,18 @@ export function TripView({ tripId }: { tripId: string }) {
   // City for display: Hebrew (hotel city from geocode is already Hebrew).
   const cityHe = trip?.cityHe || tripHotels[0]?.city || trip?.city;
 
-  // Segments (legs) of a multi-city trip — used to colour/filter the map.
+  // Segments (legs) of a multi-city trip.
   const segs = trip?.segments ?? [];
   const multiTrip = segs.length > 1;
-  const segIndexOf = (base?: string): number => {
-    if (!base || !multiTrip) return 0;
-    const i = segs.findIndex((s) =>
-      s.city === base || s.cityHe === base ||
-      (s.city && base.includes(s.city)) || (s.cityHe && base.includes(s.cityHe)));
-    return i >= 0 ? i : 0;
-  };
 
-  // Map points = the selected day's stops, the selected segment's, or all.
+  // One day on screen at a time — pager index, clamped to the day count.
   const allDays = itinerary?.days ?? [];
-  const mapDays =
-    activeDay != null && allDays[activeDay] ? [allDays[activeDay]]
-    : multiTrip && activeSegment != null ? allDays.filter((d) => segIndexOf(d.base) === activeSegment)
-    : allDays;
-  const mapStops = mapDays.flatMap((d) =>
-    d.stops.filter((s) => s.lat != null && s.lng != null).map((s) => ({ s, seg: segIndexOf(d.base) })));
-  const stopPoints = mapStops.map(({ s }, i) => ({
+  const curIdx = Math.min(dayIdx, Math.max(0, allDays.length - 1));
+  const day = allDays.length ? allDays[curIdx] : null;
+
+  // The map shows only the selected day's stops — all days at once is noise.
+  const mapStops = (day?.stops ?? []).filter((s) => s.lat != null && s.lng != null);
+  const stopPoints = mapStops.map((s, i) => ({
     id: i, name_he: s.name, name_en: s.name, lat: s.lat!, lng: s.lng!,
     category: KIND_TO_CAT[s.kind] ?? "attraction", subcategory: null,
     indoor_outdoor: null, family_score: s.score ?? null, tips_he: null,
@@ -112,7 +110,6 @@ export function TripView({ tripId }: { tripId: string }) {
     tagline_he: s.tagline ?? null, best_season: null, best_time_he: s.bestTime ?? null,
     dress_he: null, cost_level: s.cost ?? null, must_see: null,
   })) as Attraction[];
-  const stopSegIdx = mapStops.map(({ seg }) => seg);
   // Hotels with coordinates — always shown on the map with a distinct marker.
   const hotelPoints = tripHotels
     .filter((h) => h.lat != null && h.lng != null)
@@ -138,6 +135,11 @@ export function TripView({ tripId }: { tripId: string }) {
   const isLive = !!(startDate && endDate && today >= startDate && today <= endDate);
   const todayIndex = isLive ? Math.round((today.getTime() - startDate!.getTime()) / 86400000) : null;
   const tomorrowIndex = todayIndex != null && todayIndex + 1 < dayCount ? todayIndex + 1 : null;
+
+  // Live trip → open on today's day.
+  useEffect(() => {
+    if (isLive && todayIndex != null) setDayIdx(todayIndex);
+  }, [isLive, todayIndex]);
 
   const fmtDate = (d: Date) => d.toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "numeric" });
   let dateContext = "";
@@ -227,7 +229,11 @@ export function TripView({ tripId }: { tripId: string }) {
     if (j < 0 || j >= arr.length) return;
     [arr[i], arr[j]] = [arr[j], arr[i]];
   };
-  const moveDay = (di: number, dir: -1 | 1) => mutate((it) => swap(it.days, di, di + dir));
+  const moveDay = (di: number, dir: -1 | 1) => {
+    mutate((it) => swap(it.days, di, di + dir));
+    const tgt = di + dir;                       // follow the day the user is moving
+    if (tgt >= 0 && tgt < allDays.length) setDayIdx(tgt);
+  };
   const moveStop = (di: number, si: number, dir: -1 | 1) =>
     mutate((it) => swap(it.days[di].stops, si, si + dir));
   const moveStopToDay = (di: number, si: number, dir: -1 | 1) =>
@@ -360,127 +366,8 @@ export function TripView({ tripId }: { tripId: string }) {
       )}
 
       <div className="lg:flex lg:items-start lg:gap-8 lg:px-8 lg:pt-6">
-        {/* aside: hotels + map of the trip (map on desktop only) */}
-        <aside className="lg:order-2 lg:w-[360px] lg:shrink-0 lg:sticky lg:top-[73px]">
-          <div className="px-5 pt-5 lg:px-0 lg:pt-0">
-            <Hotels tripId={tripId} segments={trip?.segments} countryHint={trip?.country}
-              onFocus={(h) => h.lat != null && h.lng != null && setFocus({ lat: h.lat, lng: h.lng, n: Date.now() })} />
-          </div>
-
-          {/* #18 — packing list */}
-          <div className="mt-4 px-5 lg:px-0">
-            <button onClick={() => setShowPacking((v) => !v)}
-              className="flex w-full items-center justify-between rounded-[var(--radius-card)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow)]">
-              <span className="flex items-center gap-2 text-[14px] font-medium">
-                <Luggage size={17} className="text-[var(--brand-ink)]" /> מה לארוז
-              </span>
-              {showPacking ? <ChevronUp size={17} className="text-[var(--text-3)]" /> : <ChevronDown size={17} className="text-[var(--text-3)]" />}
-            </button>
-            {showPacking && (
-              <div className="mt-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
-                <PackingList
-                  profile={tripProfile} month={trip?.month} days={trip?.days ?? 4} country={trip?.country}
-                  value={trip?.packing}
-                  onChange={(packing) => update(tripId, { packing })} />
-              </div>
-            )}
-          </div>
-
-          {/* #17 — pre-flight checklist */}
-          <div className="mt-3 px-5 lg:px-0">
-            <button onClick={() => setShowChecklist((v) => !v)}
-              className="flex w-full items-center justify-between rounded-[var(--radius-card)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow)]">
-              <span className="flex items-center gap-2 text-[14px] font-medium">
-                <ListChecks size={17} className="text-[var(--brand-ink)]" /> לפני שיוצאים
-              </span>
-              {showChecklist ? <ChevronUp size={17} className="text-[var(--text-3)]" /> : <ChevronDown size={17} className="text-[var(--text-3)]" />}
-            </button>
-            {showChecklist && (
-              <div className="mt-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
-                <TravelChecklist
-                  profile={tripProfile}
-                  value={trip?.checklist}
-                  onChange={(checklist) => update(tripId, { checklist })} />
-              </div>
-            )}
-          </div>
-
-          {/* #15 — budget */}
-          <div className="mt-3 px-5 lg:px-0">
-            <button onClick={() => setShowBudget((v) => !v)}
-              className="flex w-full items-center justify-between rounded-[var(--radius-card)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow)]">
-              <span className="flex items-center gap-2 text-[14px] font-medium">
-                <Wallet size={17} className="text-[var(--brand-ink)]" /> תקציב
-              </span>
-              {showBudget ? <ChevronUp size={17} className="text-[var(--text-3)]" /> : <ChevronDown size={17} className="text-[var(--text-3)]" />}
-            </button>
-            {showBudget && (
-              <div className="mt-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
-                <BudgetPanel
-                  itinerary={itinerary} profile={tripProfile}
-                  value={trip?.budget}
-                  onChange={(budget) => update(tripId, { budget })} />
-              </div>
-            )}
-          </div>
-          {(stopPoints.length > 0 || hotelPoints.length > 0) && (
-            <div className="mt-5 hidden lg:block">
-              {/* segment filter (multi-city): show a whole leg on the map */}
-              {multiTrip && (
-                <div className="mb-2 flex flex-wrap gap-1.5">
-                  <button onClick={() => { setActiveSegment(null); setActiveDay(null); }}
-                    className="rounded-full px-2.5 py-1 text-[12px] transition"
-                    style={{
-                      background: activeSegment == null ? "var(--accent)" : "var(--surface)",
-                      color: activeSegment == null ? "#fff" : "var(--text-2)",
-                      border: `1px solid ${activeSegment == null ? "var(--accent)" : "var(--border)"}`,
-                    }}>כל הטיול</button>
-                  {segs.map((s, i) => {
-                    const on = activeSegment === i;
-                    return (
-                      <button key={s.id} onClick={() => { setActiveSegment(i); setActiveDay(null); }}
-                        className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] transition"
-                        style={{
-                          background: on ? "var(--accent)" : "var(--surface)",
-                          color: on ? "#fff" : "var(--text-2)",
-                          border: `1px solid ${on ? "var(--accent)" : "var(--border)"}`,
-                        }}>
-                        <span className="size-2.5 rounded-full" style={{ background: segColor(i) }} />
-                        {s.cityHe || s.city}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div className="mb-2 flex items-center justify-between px-0.5">
-                <span className="text-[12.5px] text-[var(--text-2)]">
-                  {activeDay != null ? `מציג: ${itinerary?.days[activeDay]?.label}`
-                    : multiTrip && activeSegment != null ? `מציג: ${segs[activeSegment]?.cityHe || segs[activeSegment]?.city}`
-                    : "מציג: כל הטיול"}
-                  {" · "}{stopPoints.length} מקומות
-                  {hotelPoints.length > 0 ? ` · ${hotelPoints.length} מלון` : ""}
-                </span>
-                {activeDay != null && (
-                  <button onClick={() => setActiveDay(null)}
-                    className="text-[12px] font-medium text-[var(--accent-ink)]">כל הימים</button>
-                )}
-              </div>
-              <div className="h-[380px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
-                <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
-                  hotels={hotelPoints} focus={focus}
-                  segIdx={stopSegIdx} colorBySegment={multiTrip} />
-              </div>
-              <p className="mt-2 px-0.5 text-[11.5px] leading-snug text-[var(--text-3)]">
-                <span className="text-[var(--brand)]">🏨 המלון</span> תמיד מוצג · המספרים = סדר הביקור · הקו = מסלול ·
-                {multiTrip ? " הצבע = אזור (מקטע)" : " הצבע = סוג"}
-              </p>
-            </div>
-          )}
-        </aside>
-
-        {/* main column: error + days */}
-        <div className="lg:order-1 lg:min-w-0 lg:flex-1">
+        {/* main column (right on desktop): day pager + timeline */}
+        <div className="lg:min-w-0 lg:flex-1">
       {error && (
         <div className="mx-5 mt-4 rounded-[var(--radius-card)] bg-[var(--amber-soft)] px-4 py-3 text-[13px] text-[var(--amber)] lg:mx-0">
           {error}
@@ -508,50 +395,90 @@ export function TripView({ tripId }: { tripId: string }) {
         </div>
       )}
 
-      {itinerary && (
-        <div className={`px-5 transition-opacity lg:grid lg:grid-cols-2 lg:gap-x-6 lg:gap-y-8 lg:px-0 ${busy ? "opacity-50" : ""}`}>
-          {itinerary.days.map((day, di) => (
-            <section key={di} className="mt-7 lg:mt-0 lg:self-start">
-              <div className="mb-3 flex items-center gap-2">
-                <button onClick={() => setActiveDay(activeDay === di ? null : di)}
-                  className="flex min-w-0 flex-1 items-center gap-2 text-right">
-                  <span className="text-[15px] font-bold transition-colors"
-                    style={{ color: activeDay === di ? "var(--accent-ink)" : undefined }}>{day.label}</span>
-                  <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--text-3)]">· {day.date} · {day.base}</span>
+      {itinerary && day && (
+        <div className={`px-5 transition-opacity lg:px-0 ${busy ? "opacity-50" : ""}`}>
+          {/* day pager — one day on screen, flip between days */}
+          <div className="-mx-5 mt-5 flex gap-2 overflow-x-auto px-5 pb-1 lg:mx-0 lg:mt-0 lg:flex-wrap lg:px-0"
+               style={{ scrollbarWidth: "none" }}>
+            {allDays.map((d, i) => {
+              const on = i === curIdx;
+              return (
+                <button key={i} onClick={() => { setDayIdx(i); setExpanded(null); }}
+                  className="shrink-0 rounded-full px-4 py-2 text-[13px] font-medium shadow-[var(--shadow)] transition"
+                  style={{ background: on ? "var(--brand)" : "var(--surface)",
+                           color: on ? "#fff" : "var(--text-2)" }}>
+                  {dayLabels[i]}{i === todayIndex ? " · היום" : ""}
                 </button>
-                {!editing && (
-                  <button onClick={() => setActiveDay(activeDay === di ? null : di)}
-                    className="hidden shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium transition lg:flex"
-                    style={{
-                      background: activeDay === di ? "var(--accent)" : "var(--surface-2)",
-                      color: activeDay === di ? "#fff" : "var(--text-2)",
-                    }}>
-                    <MapIcon size={12} /> {activeDay === di ? "מוצג במפה" : "הצג במפה"}
-                  </button>
-                )}
-                {editing && (
-                  <span className="flex shrink-0 gap-1">
-                    <button onClick={() => moveDay(di, -1)} disabled={di === 0} aria-label="הזז יום למעלה"
-                      className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronUp size={15} /></button>
-                    <button onClick={() => moveDay(di, 1)} disabled={di === itinerary.days.length - 1} aria-label="הזז יום למטה"
-                      className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronDown size={15} /></button>
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-col gap-2.5">
-                {day.stops.map((s, si) => {
-                  const key = `${di}-${si}`;
-                  const isOpen = expanded === key;
-                  const hasDetails = !editing && !!(
-                    s.image || s.website || s.bestTime || s.dress ||
-                    s.cost != null || (s.tagline && s.tagline !== s.note)
-                  );
-                  return (
-                  <div key={si} className="overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[var(--shadow)]">
-                    <div className={`flex items-start gap-3 p-3.5 ${hasDetails ? "cursor-pointer" : ""}`}
+              );
+            })}
+          </div>
+
+          {/* mobile: route / map tabs (desktop shows the map beside) */}
+          <div className="mt-4 flex rounded-full bg-[var(--surface-2)] p-1 lg:hidden">
+            {([["plan", "מסלול", Route], ["map", "מפה", MapIcon]] as const).map(([k, l, I]) => (
+              <button key={k} onClick={() => setMobileTab(k)}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[13.5px] font-medium transition"
+                style={{ background: mobileTab === k ? "var(--surface)" : "transparent",
+                         color: mobileTab === k ? "var(--brand-ink)" : "var(--text-2)",
+                         boxShadow: mobileTab === k ? "var(--shadow)" : "none" }}>
+                <I size={15} /> {l}
+              </button>
+            ))}
+          </div>
+
+          {/* selected day header */}
+          <div className="mt-5 flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <h2 className="serif text-[22px] font-bold leading-tight">{dayLabels[curIdx]}</h2>
+              <p className="mt-0.5 text-[12.5px] text-[var(--text-3)]">{day.date} · {day.base}</p>
+            </div>
+            {editing && (
+              <span className="flex shrink-0 gap-1">
+                <button onClick={() => moveDay(curIdx, -1)} disabled={curIdx === 0} aria-label="הקדם את היום"
+                  className="grid size-8 place-items-center rounded-md bg-[var(--surface)] shadow-[var(--shadow)] disabled:opacity-30"><ChevronUp size={15} /></button>
+                <button onClick={() => moveDay(curIdx, 1)} disabled={curIdx === allDays.length - 1} aria-label="אחר את היום"
+                  className="grid size-8 place-items-center rounded-md bg-[var(--surface)] shadow-[var(--shadow)] disabled:opacity-30"><ChevronDown size={15} /></button>
+              </span>
+            )}
+          </div>
+
+          {/* mobile map tab — the selected day only */}
+          {mobileTab === "map" && (
+            <div className="mt-3 h-[420px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)] lg:hidden">
+              <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
+                hotels={hotelPoints} focus={focus} />
+            </div>
+          )}
+
+          {/* the day as a timeline — photo · stop · spine · time */}
+          <div className={mobileTab === "map" ? "hidden lg:block" : ""}>
+            <div className="mt-3 rounded-[var(--radius-card)] bg-[var(--surface)] px-4 shadow-[var(--shadow)]">
+              {day.stops.map((s, si) => {
+                const key = `${curIdx}-${si}`;
+                const isOpen = expanded === key;
+                const hasDetails = !editing && !!(
+                  s.image || s.website || s.bestTime || s.dress ||
+                  s.cost != null || (s.tagline && s.tagline !== s.note)
+                );
+                const first = si === 0;
+                const last = si === day.stops.length - 1;
+                const spine = "color-mix(in srgb, var(--brand) 30%, transparent)";
+                return (
+                  <div key={si}>
+                    <div className={`flex gap-3 ${hasDetails ? "cursor-pointer" : ""}`}
                          onClick={() => hasDetails && setExpanded(isOpen ? null : key)}>
-                      <StopIcon kind={s.kind} />
-                      <div className="min-w-0 flex-1">
+                      {/* photo (falls back to the kind icon) */}
+                      <div className="py-3.5">
+                        {s.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={s.image} alt="" loading="lazy"
+                            className="size-14 rounded-[12px] object-cover" />
+                        ) : (
+                          <StopIcon kind={s.kind} />
+                        )}
+                      </div>
+                      {/* name + details */}
+                      <div className="min-w-0 flex-1 py-3.5">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex min-w-0 items-center gap-1.5">
                             <p className="truncate text-[15px] font-medium leading-tight">{s.name}</p>
@@ -574,32 +501,42 @@ export function TripView({ tripId }: { tripId: string }) {
                             )}
                           </div>
                         </div>
-                        <p className="mt-0.5 text-[12px] text-[var(--text-3)]">{s.time} · {s.duration}</p>
-                        {s.note && <p className="mt-1.5 text-[13px] leading-snug text-[var(--text-2)]">{s.note}</p>}
+                        {s.duration && <p className="mt-0.5 text-[12px] text-[var(--text-3)]">{s.duration}</p>}
+                        {s.note && <p className={`mt-1 text-[12.5px] leading-snug text-[var(--text-2)] ${isOpen ? "" : "line-clamp-2"}`}>{s.note}</p>}
                         {editing && (
                           <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-[var(--border)] pt-2.5">
-                            <button onClick={() => moveStop(di, si, -1)} disabled={si === 0} aria-label="העלה"
+                            <button onClick={() => moveStop(curIdx, si, -1)} disabled={si === 0} aria-label="העלה"
                               className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronUp size={15} /></button>
-                            <button onClick={() => moveStop(di, si, 1)} disabled={si === day.stops.length - 1} aria-label="הורד"
+                            <button onClick={() => moveStop(curIdx, si, 1)} disabled={si === day.stops.length - 1} aria-label="הורד"
                               className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronDown size={15} /></button>
                             <span className="mx-1 h-4 w-px bg-[var(--border)]"></span>
-                            <button onClick={() => moveStopToDay(di, si, -1)} disabled={di === 0}
+                            <button onClick={() => moveStopToDay(curIdx, si, -1)} disabled={curIdx === 0}
                               className="flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 text-[11px] disabled:opacity-30">
                               <ChevronsUp size={13} /> ליום הקודם
                             </button>
-                            <button onClick={() => moveStopToDay(di, si, 1)} disabled={di === itinerary.days.length - 1}
+                            <button onClick={() => moveStopToDay(curIdx, si, 1)} disabled={curIdx === allDays.length - 1}
                               className="flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 text-[11px] disabled:opacity-30">
                               <ChevronsDown size={13} /> ליום הבא
                             </button>
-                            <button onClick={() => deleteStop(di, si)} aria-label="מחק"
+                            <button onClick={() => deleteStop(curIdx, si)} aria-label="מחק"
                               className="mr-auto grid size-7 place-items-center rounded-md text-[var(--text-3)]"><Trash2 size={15} /></button>
                           </div>
                         )}
                       </div>
+                      {/* timeline spine */}
+                      <div className="flex w-3 shrink-0 flex-col items-center">
+                        <div className="h-[26px] w-px" style={{ background: first ? "transparent" : spine }} />
+                        <span className="size-2.5 shrink-0 rounded-full bg-[var(--brand)]" />
+                        <div className="w-px flex-1" style={{ background: last ? "transparent" : spine }} />
+                      </div>
+                      {/* time */}
+                      <div className="w-11 shrink-0 py-3.5">
+                        <p className="text-[13px] font-semibold text-[var(--text-2)]" dir="ltr">{s.time}</p>
+                      </div>
                     </div>
 
                     {isOpen && (
-                      <div className="border-t border-[var(--border)] px-3.5 pb-4 pt-3">
+                      <div className="border-t border-[var(--border)] pb-4 pt-3">
                         {s.image && (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={bigImage(s.image)} alt="" loading="lazy"
@@ -634,19 +571,80 @@ export function TripView({ tripId }: { tripId: string }) {
                       </div>
                     )}
                   </div>
-                  );
-                })}
+                );
+              })}
+            </div>
+
+            {day.why && (
+              <div className="mt-3">
+                <WhyFits title="למה בנינו את היום ככה">{day.why}</WhyFits>
               </div>
-              {day.why && (
-                <div className="mt-3">
-                  <WhyFits title="למה בנינו את היום ככה">{day.why}</WhyFits>
-                </div>
-              )}
-            </section>
-          ))}
+            )}
+          </div>
         </div>
       )}
         </div>
+
+        {/* aside (left on desktop, ~46% wide): the day's map + hotels + trip tools */}
+        <aside className="lg:sticky lg:top-[73px] lg:w-[46%] lg:shrink-0">
+          {/* map of the selected day — desktop; mobile uses the מפה tab */}
+          {(stopPoints.length > 0 || hotelPoints.length > 0) && (
+            <div className="hidden lg:block">
+              <div className="h-[480px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
+                <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
+                  hotels={hotelPoints} focus={focus} />
+              </div>
+              <p className="mt-2 px-0.5 text-[11.5px] leading-snug text-[var(--text-3)]">
+                {day ? `מציג את ${dayLabels[curIdx]} · ${stopPoints.length} מקומות · ` : ""}
+                <span className="text-[var(--brand)]">🏨 המלון</span> תמיד מוצג · המספרים = סדר הביקור · הקו = מסלול
+              </p>
+            </div>
+          )}
+
+          <div className="px-5 pt-6 lg:px-0 lg:pt-5">
+            <Hotels tripId={tripId} segments={trip?.segments} countryHint={trip?.country}
+              onFocus={(h) => h.lat != null && h.lng != null && setFocus({ lat: h.lat, lng: h.lng, n: Date.now() })} />
+          </div>
+
+          {/* trip tools — a compact submenu; panels open only on demand */}
+          <div className="mt-5 px-5 lg:px-0">
+            <div className="flex flex-wrap gap-2">
+              {TOOLS.map(({ key, label, Icon }) => {
+                const on = tool === key;
+                return (
+                  <button key={key} onClick={() => setTool(on ? null : key)}
+                    className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-medium shadow-[var(--shadow)] transition"
+                    style={{ background: on ? "var(--brand-soft)" : "var(--surface)",
+                             color: on ? "var(--brand-ink)" : "var(--text-2)" }}>
+                    <Icon size={15} /> {label}
+                  </button>
+                );
+              })}
+            </div>
+            {tool && (
+              <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
+                {tool === "packing" && (
+                  <PackingList
+                    profile={tripProfile} month={trip?.month} days={trip?.days ?? 4} country={trip?.country}
+                    value={trip?.packing}
+                    onChange={(packing) => update(tripId, { packing })} />
+                )}
+                {tool === "checklist" && (
+                  <TravelChecklist
+                    profile={tripProfile}
+                    value={trip?.checklist}
+                    onChange={(checklist) => update(tripId, { checklist })} />
+                )}
+                {tool === "budget" && (
+                  <BudgetPanel
+                    itinerary={itinerary} profile={tripProfile}
+                    value={trip?.budget}
+                    onChange={(budget) => update(tripId, { budget })} />
+                )}
+              </div>
+            )}
+          </div>
+        </aside>
       </div>
 
       {itinerary && (
