@@ -17,6 +17,7 @@ import { deriveTaste } from "@/lib/taste";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { WhyFits } from "@/components/Signature";
 import { MapArt } from "@/components/Illustrations";
+import { CityPoster } from "@/components/CityPoster";
 import { PackingList } from "@/components/PackingList";
 import { TravelChecklist } from "@/components/TravelChecklist";
 import { BudgetPanel } from "@/components/BudgetPanel";
@@ -250,13 +251,19 @@ export function TripView({ tripId }: { tripId: string }) {
 
   return (
     <main className="mx-auto w-full max-w-[440px] pb-32 lg:max-w-6xl">
-      <header className="rise bg-[var(--surface)] px-5 pb-6 pt-8 lg:px-8">
-        <Link href="/trips" className="eyebrow mb-3 inline-flex items-center gap-1">
+      {/* poster band */}
+      <CityPoster destinationId={trip?.destinationId} cityHe={cityHe} overlay
+        className="h-[170px] lg:h-[240px]">
+        <Link href="/trips" className="eyebrow absolute right-5 top-5 inline-flex items-center gap-1 text-white/85 lg:right-8">
           <ChevronRight size={14} /> הטיולים שלי
         </Link>
-        <h1 className="serif text-[32px] leading-none lg:text-[40px]">{trip?.title ?? "…"}</h1>
-        <div className="rule mt-3"></div>
-        <p className="mt-3 text-[13px] text-[var(--text-2)]">
+        <div className="absolute inset-x-0 bottom-0 px-5 pb-5 lg:px-8 lg:pb-6">
+          <h1 className="serif text-[32px] font-bold leading-none text-white lg:text-[42px]">{trip?.title ?? "…"}</h1>
+        </div>
+      </CityPoster>
+
+      <header className="rise bg-[var(--surface)] px-5 pb-6 pt-5 lg:px-8">
+        <p className="text-[13px] text-[var(--text-2)]">
           {trip?.segments && trip.segments.length > 1
             ? `${trip.segments.map((s) => s.cityHe || s.city).join(" → ")} · `
             : cityHe ? `${cityHe} · ` : ""}

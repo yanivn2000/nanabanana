@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Search, MapPin, ArrowLeft } from "lucide-react";
+import { Search, ArrowLeft } from "lucide-react";
+import { CityPoster } from "@/components/CityPoster";
 import type { Destination } from "@/lib/db";
 import { regionOf, REGION_ORDER } from "@/lib/labels";
 
@@ -43,18 +44,17 @@ export function ExploreList({ destinations }: { destinations: Destination[] }) {
                   <Link
                     key={d.id}
                     href={`/destination/${d.id}`}
-                    className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)]"
+                    className="flex items-center gap-3 overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] p-2.5 shadow-[var(--shadow)]"
                   >
-                    <div className="grid size-11 place-items-center rounded-[var(--radius-sm)] bg-[var(--brand-soft)] text-[var(--brand-ink)]">
-                      <MapPin size={20} />
-                    </div>
+                    <CityPoster destinationId={d.id} cityHe={d.city_he || d.city}
+                      className="h-16 w-[58px] shrink-0 rounded-[var(--radius-sm)]" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[15px] font-medium">{d.city_he || d.city}</p>
+                      <p className="serif truncate text-[16px] font-semibold">{d.city_he || d.city}</p>
                       <p className="text-[13px] text-[var(--text-2)]">
                         {d.country_he || d.country} · {d.attraction_count.toLocaleString("he")} אטרקציות
                       </p>
                     </div>
-                    <ArrowLeft size={18} className="text-[var(--text-3)]" />
+                    <ArrowLeft size={18} className="ms-1 shrink-0 text-[var(--text-3)]" />
                   </Link>
                 ))}
               </div>

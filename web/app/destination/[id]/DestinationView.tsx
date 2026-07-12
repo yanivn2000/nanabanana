@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Star, Search, Compass } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
+import { CityPoster } from "@/components/CityPoster";
 import { descriptor, catColor, bigImage, mergeCat } from "@/lib/labels";
 import { passUrl, type Pass } from "@/lib/passes";
 import type { Attraction, Destination, Insight } from "@/lib/db";
@@ -96,15 +97,21 @@ export function DestinationView({
 
   return (
     <main className="mx-auto w-full max-w-[440px] pb-28 lg:max-w-none lg:pb-0">
-      {/* editorial header */}
-      <header className="rise bg-[var(--surface)] px-5 pb-6 pt-8 lg:px-8">
-        <Link href="/" className="eyebrow mb-4 inline-flex items-center gap-1 lg:hidden">
+      {/* poster hero */}
+      <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city} overlay
+        className="h-[210px] lg:h-[300px]">
+        <Link href="/" className="eyebrow absolute right-5 top-5 inline-flex items-center gap-1 text-white/85 lg:right-8">
           <ChevronRight size={14} /> בית
         </Link>
-        <p className="eyebrow">יעד · {dest.country_he || dest.country}</p>
-        <h1 className="serif mt-1.5 text-[36px] leading-none lg:text-[44px]">{dest.city_he || dest.city}</h1>
-        <div className="rule mt-3"></div>
-        <p className="mt-3 text-[13px] text-[var(--text-2)]">
+        <div className="absolute inset-x-0 bottom-0 px-5 pb-5 lg:px-8 lg:pb-6">
+          <p className="text-[12px] font-medium tracking-wide text-white/85">{dest.country_he || dest.country}</p>
+          <h1 className="serif text-[38px] font-bold leading-none text-white lg:text-[52px]">{dest.city_he || dest.city}</h1>
+        </div>
+      </CityPoster>
+
+      {/* editorial header */}
+      <header className="rise bg-[var(--surface)] px-5 pb-6 pt-5 lg:px-8">
+        <p className="text-[13px] text-[var(--text-2)]">
           {dest.attraction_count.toLocaleString("he")} מקומות במאגר
         </p>
 
