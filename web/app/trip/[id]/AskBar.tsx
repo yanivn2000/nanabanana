@@ -58,7 +58,7 @@ export function AskBar({
   ];
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 mx-auto max-w-[440px] bg-gradient-to-t from-[var(--bg)] via-[var(--bg)] to-transparent px-5 pb-5 pt-8 lg:max-w-2xl lg:px-8">
+    <div className="mt-4 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
       {/* scope selector — what to change */}
       <div className="mb-2 flex items-center gap-2 overflow-x-auto pb-1">
         <span className="shrink-0 text-[11.5px] text-[var(--text-3)]">מה לעדכן?</span>
@@ -94,7 +94,7 @@ export function AskBar({
         ))}
       </div>
 
-      <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] p-1.5 pr-4 shadow-[var(--shadow)]">
+      <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-1.5 pr-4">
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}

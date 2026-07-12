@@ -256,7 +256,7 @@ export function TripView({ tripId }: { tripId: string }) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[440px] pb-32 lg:max-w-6xl">
+    <main className="mx-auto w-full max-w-[440px] pb-16 lg:max-w-6xl">
       {/* ambient poster hero — title, meta, dates and actions all sit on the poster */}
       <header className="rise relative overflow-hidden">
         <div className="absolute inset-0">
@@ -581,6 +581,10 @@ export function TripView({ tripId }: { tripId: string }) {
               </div>
             )}
           </div>
+
+          {/* revise with AI — in the flow, right under the day */}
+          <AskBar onSend={revise} busy={busy === "revise"}
+            days={dayLabels} todayIndex={todayIndex} tomorrowIndex={tomorrowIndex} />
         </div>
       )}
         </div>
@@ -646,11 +650,6 @@ export function TripView({ tripId }: { tripId: string }) {
           </div>
         </aside>
       </div>
-
-      {itinerary && (
-        <AskBar onSend={revise} busy={busy === "revise"}
-          days={dayLabels} todayIndex={todayIndex} tomorrowIndex={tomorrowIndex} />
-      )}
     </main>
   );
 }
