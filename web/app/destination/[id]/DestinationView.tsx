@@ -97,32 +97,31 @@ export function DestinationView({
 
   return (
     <main className="mx-auto w-full max-w-[440px] pb-28 lg:max-w-none lg:pb-0">
-      {/* poster hero */}
-      <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city} overlay
-        orientation="banner" position="50% 46%" className="h-[210px] lg:h-[300px]">
-        <Link href="/" className="eyebrow absolute right-5 top-5 inline-flex items-center gap-1 text-white/85 lg:right-8">
-          <ChevronRight size={14} /> בית
-        </Link>
-        <div className="absolute inset-x-0 bottom-0 px-5 pb-5 lg:px-8 lg:pb-6">
-          <p className="text-[12px] font-medium tracking-wide text-white/85">{dest.country_he || dest.country}</p>
-          <h1 className="serif text-[38px] font-bold leading-none text-white lg:text-[52px]">{dest.city_he || dest.city}</h1>
+      {/* ambient poster hero — the poster is a soft background, content on top */}
+      <header className="rise relative overflow-hidden">
+        <div className="absolute inset-0">
+          <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city} ambient
+            orientation="banner" position="50% 52%" className="size-full" />
         </div>
-      </CityPoster>
+        <div className="relative mx-auto flex min-h-[320px] w-full max-w-6xl flex-col justify-between px-5 pb-6 pt-6 lg:min-h-[420px] lg:px-8 lg:pb-11 lg:pt-8">
+          <Link href="/" className="eyebrow inline-flex items-center gap-1 self-start text-[var(--text-2)]">
+            <ChevronRight size={14} /> בית
+          </Link>
+          <div>
+          <p className="text-[12.5px] font-medium tracking-wide text-[var(--text-2)]">{dest.country_he || dest.country}</p>
+          <h1 className="serif text-[42px] font-bold leading-none text-[var(--text)] lg:text-[64px]">{dest.city_he || dest.city}</h1>
+          <p className="mt-2.5 text-[13px] text-[var(--text-2)]">
+            {dest.attraction_count.toLocaleString("he")} מקומות במאגר
+          </p>
 
-      {/* editorial header */}
-      <header className="rise bg-[var(--surface)] px-5 pb-6 pt-5 lg:px-8">
-        <p className="text-[13px] text-[var(--text-2)]">
-          {dest.attraction_count.toLocaleString("he")} מקומות במאגר
-        </p>
+          {/* חקירת יעד — the guided, personalized exploration flow */}
+          <Link href={`/explore/${dest.id}`}
+            className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-5 py-2.5 text-[13.5px] font-medium text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
+            <Compass size={16} /> חקרו את היעד לפי מי שאתם
+          </Link>
 
-        {/* חקירת יעד — the guided, personalized exploration flow */}
-        <Link href={`/explore/${dest.id}`}
-          className="mt-3 inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-4 py-2.5 text-[13.5px] font-medium text-white shadow-[var(--shadow)]">
-          <Compass size={16} /> חקרו את היעד לפי מי שאתם
-        </Link>
-
-        {/* money-saving pass badge (#16) */}
-        {passes.length > 0 && (
+          {/* money-saving pass badge (#16) */}
+          {passes.length > 0 && (
           <div className="mt-3">
             <button onClick={() => setShowPasses((v) => !v)}
               className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition"
@@ -151,7 +150,9 @@ export function DestinationView({
               </div>
             )}
           </div>
-        )}
+          )}
+          </div>
+        </div>
       </header>
 
       {/* editor's picks rail (must-see) */}

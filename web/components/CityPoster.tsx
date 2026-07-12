@@ -3,15 +3,17 @@
 import { useState } from "react";
 import { posterSrcs } from "@/lib/posters";
 
-// City poster with a graceful brand-gradient fallback. Fills its container
-// (object-cover); poster art keeps the landmark centered with sky headroom, so
-// `position` can bias the crop. `orientation` picks the crop that fits the slot
-// (landscape for wide bands, portrait for tall cards) and falls back to the
-// other crop if the preferred one is missing, then to the gradient. `overlay`
-// adds a bottom scrim so overlaid Hebrew titles stay legible.
+// City poster with a graceful brand-gradient fallback.
+// Two modes:
+//  • default — a solid poster that fills its box (object-cover), optional dark
+//    scrim (`overlay`) for white text overlaid via `children`.
+//  • `ambient` — the poster as a faint, tinted BACKGROUND that melts into the
+//    page (low opacity + a fade to the page bg). Content sits on top in dark
+//    ink as a sibling; use it as `absolute inset-0` behind a relative content
+//    layer. This reads as atmosphere, not a banner photo.
 export function CityPoster({
   destinationId, cityHe, className, orientation = "landscape",
-  position = "50% 34%", overlay = false, children,
+  position = "50% 34%", overlay = false, ambient = false, children,
 }: {
   destinationId?: number | null;
   cityHe?: string | null;
@@ -19,6 +21,7 @@ export function CityPoster({
   orientation?: "banner" | "landscape" | "portrait";
   position?: string;
   overlay?: boolean;
+  ambient?: boolean;
   children?: React.ReactNode;
 }) {
   const srcs = posterSrcs(destinationId, orientation);
@@ -26,17 +29,25 @@ export function CityPoster({
   const src = srcs[idx];
 
   return (
-    <div className={`relative overflow-hidden bg-[var(--brand-soft)] ${className ?? ""}`}>
+    <div className={`relative overflow-hidden ${ambient ? "bg-[var(--bg)]" : "bg-[var(--brand-soft)]"} ${className ?? ""}`}>
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt={cityHe ? `פוסטר ${cityHe}` : ""} loading="lazy"
           onError={() => setIdx((i) => i + 1)}
           className="absolute inset-0 size-full object-cover"
-          style={{ objectPosition: position }} />
+          style={{ objectPosition: position, opacity: ambient ? 0.85 : 1 }} />
       ) : (
-        <PosterFallback />
+        <PosterFallback ambient={ambient} />
       )}
-      {overlay && (
+      {ambient && (
+        // a light, even cream veil softens the poster (atmosphere, not a crisp
+        // photo) while the bottom edge melts into the page so it isn't a banner.
+        <div className="absolute inset-0" style={{
+          background:
+            "linear-gradient(to top, var(--bg) 0%, color-mix(in srgb, var(--bg) 24%, transparent) 15%, color-mix(in srgb, var(--bg) 24%, transparent) 100%)",
+        }} />
+      )}
+      {overlay && !ambient && (
         <div className="absolute inset-0"
           style={{ background: "linear-gradient(to top, rgba(16,29,43,.62), rgba(16,29,43,.05) 58%)" }} />
       )}
@@ -46,7 +57,13 @@ export function CityPoster({
 }
 
 // Warm brand gradient + a faint pin — for cities without a poster yet.
-function PosterFallback() {
+function PosterFallback({ ambient }: { ambient?: boolean }) {
+  if (ambient) {
+    return (
+      <div className="absolute inset-0"
+        style={{ background: "linear-gradient(160deg, var(--brand-soft) 0%, var(--bg) 60%, var(--accent-soft) 130%)" }} />
+    );
+  }
   return (
     <div className="absolute inset-0"
       style={{ background: "linear-gradient(135deg, var(--brand) 0%, #14806f 52%, var(--accent) 150%)" }}>
