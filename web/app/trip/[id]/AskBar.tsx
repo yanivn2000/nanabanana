@@ -22,6 +22,10 @@ export function AskBar({
   // null = whole trip; otherwise a 0-based day index.
   const [scope, setScope] = useState<number | null>(null);
 
+  // Chips show only "יום N" — the full label (with the day's theme) still goes
+  // into the AI prompt via scoped().
+  const short = (i: number) => (days[i] ?? `יום ${i + 1}`).split(/[—–]/)[0].trim() || `יום ${i + 1}`;
+
   // Wrap the request with its scope so the AI changes only what was asked.
   function scoped(text: string, dayIdx: number | null) {
     if (dayIdx == null) return `התייחס לכל ימי הטיול. ${text}`;
@@ -72,7 +76,7 @@ export function AskBar({
                 color: on ? "#fff" : "var(--text-2)",
                 border: `1px solid ${on ? "var(--accent)" : "var(--border)"}`,
               }}>
-              {d == null ? "כל הטיול" : days[d] ?? `יום ${d + 1}`}
+              {d == null ? "כל הטיול" : short(d)}
             </button>
           );
         })}
@@ -101,7 +105,7 @@ export function AskBar({
           onKeyDown={(e) => e.key === "Enter" && submit()}
           disabled={busy}
           placeholder={busy ? "Claude מארגן מחדש…"
-            : scope == null ? "מה לשנות בכל הטיול…" : `מה לשנות ב${days[scope] ?? `יום ${scope + 1}`}…`}
+            : scope == null ? "מה לשנות בכל הטיול…" : `מה לשנות ב${short(scope)}…`}
           className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[var(--text-3)]"
         />
         <button

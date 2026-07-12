@@ -126,6 +126,10 @@ export function TripView({ tripId }: { tripId: string }) {
   // Trip calendar dates (from the earliest hotel check-in). Enables live mode:
   // only when today falls inside the trip do "today"/"tomorrow" mean anything.
   const dayLabels = itinerary?.days.map((d, i) => d.label || `יום ${i + 1}`) ?? [];
+  // AI labels carry the day's theme ("יום 2 — פארק רטירו…") — chips show only
+  // the short "יום N"; the full title lives in the day header below.
+  const shortDay = (i: number) =>
+    (dayLabels[i] ?? `יום ${i + 1}`).split(/[—–]/)[0].trim() || `יום ${i + 1}`;
   const dayCount = dayLabels.length;
   const startISO = tripHotels.map((h) => h.checkIn).filter(Boolean).sort()[0];
   const startDate = startISO ? new Date(startISO + "T00:00:00") : null;
@@ -407,7 +411,7 @@ export function TripView({ tripId }: { tripId: string }) {
                   className="shrink-0 rounded-full px-4 py-2 text-[13px] font-medium shadow-[var(--shadow)] transition"
                   style={{ background: on ? "var(--brand)" : "var(--surface)",
                            color: on ? "#fff" : "var(--text-2)" }}>
-                  {dayLabels[i]}{i === todayIndex ? " · היום" : ""}
+                  {shortDay(i)}{i === todayIndex ? " · היום" : ""}
                 </button>
               );
             })}
@@ -599,7 +603,7 @@ export function TripView({ tripId }: { tripId: string }) {
                   hotels={hotelPoints} focus={focus} />
               </div>
               <p className="mt-2 px-0.5 text-[11.5px] leading-snug text-[var(--text-3)]">
-                {day ? `מציג את ${dayLabels[curIdx]} · ${stopPoints.length} מקומות · ` : ""}
+                {day ? `מציג את ${shortDay(curIdx)} · ${stopPoints.length} מקומות · ` : ""}
                 <span className="text-[var(--brand)]">🏨 המלון</span> תמיד מוצג · המספרים = סדר הביקור · הקו = מסלול
               </p>
             </div>
