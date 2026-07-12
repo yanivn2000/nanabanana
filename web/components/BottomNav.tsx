@@ -6,7 +6,7 @@ import { Home, Briefcase, User } from "lucide-react";
 
 const ITEMS = [
   { href: "/", label: "בית", Icon: Home },
-  { href: "/trips", label: "הטיולים", Icon: Briefcase },
+  { href: "/trips", label: "הטיולים שלי", Icon: Briefcase },
   { href: "/profile", label: "פרופיל", Icon: User },
 ];
 
@@ -28,7 +28,7 @@ export function BottomNav() {
               style={{ color: active ? "var(--brand)" : "var(--text-3)" }}
             >
               <Icon size={22} strokeWidth={active ? 2.4 : 2} />
-              <span className="text-[11px]" style={{ fontWeight: active ? 500 : 400 }}>{label}</span>
+              <span className="whitespace-nowrap text-[11px]" style={{ fontWeight: active ? 500 : 400 }}>{label}</span>
             </Link>
           );
         })}

@@ -8,7 +8,7 @@ import { YalleMark } from "./YalleMark";
 
 const ITEMS = [
   { href: "/", label: "בית", Icon: Home },
-  { href: "/trips", label: "הטיולים", Icon: Briefcase },
+  { href: "/trips", label: "הטיולים שלי", Icon: Briefcase },
   { href: "/profile", label: "פרופיל", Icon: User },
 ];
 

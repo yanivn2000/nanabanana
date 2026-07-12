@@ -6,6 +6,7 @@ import { useProfile, profileSummary, useTrips } from "@/lib/store";
 import { Plus, ArrowLeft, Trash2, Sparkles, BedDouble } from "lucide-react";
 import { NewTrip } from "./NewTrip";
 import { SuitcaseArt } from "@/components/Illustrations";
+import { CityPoster } from "@/components/CityPoster";
 
 export default function TripsPage() {
   const [p, , profileLoaded] = useProfile();
@@ -15,8 +16,7 @@ export default function TripsPage() {
   return (
     <main className="mx-auto w-full max-w-[440px] px-5 pb-28 pt-8 lg:max-w-5xl lg:px-8 lg:pb-12">
       <header className="rise mb-5">
-        <p className="eyebrow">הטיולים שלי</p>
-        <h1 className="serif mt-1 text-[32px] leading-none lg:text-[40px]">המסעות שלי</h1>
+        <h1 className="serif text-[32px] font-bold leading-none lg:text-[40px]">הטיולים שלי</h1>
         {profileLoaded && (
           <p className="mt-2 text-[13px] text-[var(--text-2)]">{profileSummary(p)}</p>
         )}
@@ -43,8 +43,12 @@ export default function TripsPage() {
         {trips.map((t) => (
           <div key={t.id}
             className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
-            <div className="grid size-11 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-[var(--accent-soft)] text-[var(--accent-ink)]">
-              {t.mode === "hotels" ? <BedDouble size={20} /> : <Sparkles size={20} />}
+            <div className="relative shrink-0">
+              <CityPoster destinationId={t.destinationId} cityHe={t.cityHe || t.city} orientation="portrait"
+                className="h-16 w-[58px] rounded-[var(--radius-sm)]" />
+              <span className="absolute bottom-1 start-1 grid size-5 place-items-center rounded-full bg-[var(--surface)] text-[var(--accent-ink)] shadow-[var(--shadow)]">
+                {t.mode === "hotels" ? <BedDouble size={12} /> : <Sparkles size={12} />}
+              </span>
             </div>
             <Link href={`/trip/${t.id}`} className="min-w-0 flex-1">
               <p className="serif truncate text-[18px] leading-tight">{t.title}</p>
