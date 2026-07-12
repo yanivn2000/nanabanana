@@ -32,14 +32,14 @@ type Choice = "yes" | "maybe" | "no";
 
 // Step 1 (board mock): who's travelling THIS trip — composition, kid ages, and
 // interests — a per-trip draft over the global profile (locked decision 5).
-const COMPS = ["זוג", "משפחה", "חברים", "עם ילדים"] as const;
+const COMPS = ["זוג", "משפחה", "חברים"] as const; // "משפחה" = with kids (age bands appear)
 type Comp = (typeof COMPS)[number];
 const AGE_BANDS = ["0-3", "4-8", "9-12", "13+"] as const;
 const BAND_AGE: Record<string, number> = { "0-3": 2, "4-8": 6, "9-12": 10, "13+": 14 };
 const bandOf = (age: number) => (age <= 3 ? "0-3" : age <= 8 ? "4-8" : age <= 12 ? "9-12" : "13+");
 const STEP1_INTERESTS = ["טבע", "אוכל", "תרבות", "קניות", "ספורט", "חופים",
   "פארקי שעשועים", "היסטוריה", "חיי לילה"];
-const hasKids = (c: Comp) => c === "משפחה" || c === "עם ילדים";
+const hasKids = (c: Comp) => c === "משפחה";
 
 export function ExploreFlow(
   { dest, attractions, insights = [] }:
@@ -110,7 +110,7 @@ export function ExploreFlow(
   // navigation keeps their adjustments.
   useEffect(() => {
     if (!profileLoaded || seeded) return;
-    setComp(profile.kids.length ? "עם ילדים" : profile.adults >= 3 ? "חברים" : "זוג");
+    setComp(profile.kids.length ? "משפחה" : profile.adults >= 3 ? "חברים" : "זוג");
     setBands(new Set(profile.kids.map((k) => bandOf(k.age))));
     setInterests(new Set(profile.interests));
     const b = deriveTaste(profile);
