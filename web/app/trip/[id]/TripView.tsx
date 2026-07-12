@@ -251,107 +251,113 @@ export function TripView({ tripId }: { tripId: string }) {
 
   return (
     <main className="mx-auto w-full max-w-[440px] pb-32 lg:max-w-6xl">
-      {/* ambient poster band */}
-      <div className="relative overflow-hidden">
+      {/* ambient poster hero — title, meta, dates and actions all sit on the poster */}
+      <header className="rise relative overflow-hidden">
         <div className="absolute inset-0">
           <CityPoster destinationId={trip?.destinationId} cityHe={cityHe} ambient
-            orientation="banner" position="50% 50%" className="size-full" />
+            orientation="banner" position="50% 42%" className="size-full" />
         </div>
-        <div className="relative mx-auto flex min-h-[150px] w-full max-w-6xl flex-col justify-between px-5 pb-5 pt-6 lg:min-h-[210px] lg:px-8">
+        <div className="relative mx-auto flex min-h-[300px] w-full max-w-6xl flex-col justify-between px-5 pb-6 pt-6 lg:min-h-[380px] lg:px-8 lg:pb-9 lg:pt-8">
           <Link href="/trips" className="eyebrow inline-flex items-center gap-1 self-start text-[var(--text-2)]">
             <ChevronRight size={14} /> הטיולים שלי
           </Link>
-          <h1 className="serif text-[32px] font-bold leading-none text-[var(--text)] lg:text-[46px]">{trip?.title ?? "…"}</h1>
-        </div>
-      </div>
+          <div>
+            <h1 className="serif text-[32px] font-bold leading-none text-[var(--text)] lg:text-[46px]">{trip?.title ?? "…"}</h1>
 
-      <header className="rise bg-[var(--surface)] px-5 pb-6 pt-5 lg:px-8">
-        <p className="text-[13px] text-[var(--text-2)]">
-          {trip?.segments && trip.segments.length > 1
-            ? `${trip.segments.map((s) => s.cityHe || s.city).join(" → ")} · `
-            : cityHe ? `${cityHe} · ` : ""}
-          {trip?.days} ימים
-          {trip?.month ? ` · ${MONTHS_HE[trip.month - 1]}` : ""}
-          {trip?.segments && trip.segments.length > 1 ? ` · ${trip.segments.length} ערים` : ""}
-          {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
-        </p>
-
-        {/* exact dates → powers season, length and (soon) the live-events feed (#64) */}
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12.5px] text-[var(--text-2)]">
-          <CalendarDays size={14} className="text-[var(--text-3)]" />
-          <span>תאריכים:</span>
-          <input type="date" value={trip?.startDate ?? ""}
-            onChange={(e) => {
-              const info = datesToInfo(e.target.value, trip?.endDate);
-              update(tripId, { startDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
-            }}
-            className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[12.5px] text-[var(--text)] outline-none" />
-          <span>–</span>
-          <input type="date" value={trip?.endDate ?? ""} min={trip?.startDate}
-            onChange={(e) => {
-              const info = datesToInfo(trip?.startDate, e.target.value);
-              update(tripId, { endDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
-            }}
-            className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[12.5px] text-[var(--text)] outline-none" />
-        </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button onClick={generate} disabled={!!busy || !canBuild}
-            className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-5 py-2.5 text-[14px] font-medium text-white disabled:opacity-50">
-            {busy === "generate" ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
-            {busy === "generate" ? "בונה לו\"ז…" : itinerary ? "בנה מחדש" : "בנה לו\"ז עם AI"}
-          </button>
-          {itinerary && (
-            <button onClick={() => setEditing((v) => !v)}
-              className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-4 py-2.5 text-[14px] font-medium"
-              style={{ background: editing ? "var(--brand-soft)" : "var(--surface)",
-                       color: "var(--brand-ink)" }}>
-              <Pencil size={14} /> {editing ? "סיום עריכה" : "עריכה ידנית"}
-            </button>
-          )}
-          <button onClick={() => setEditTravelers((v) => !v)}
-            className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-4 py-2.5 text-[14px] font-medium"
-            style={{ background: editTravelers ? "var(--brand-soft)" : "var(--surface)",
-                     color: "var(--brand-ink)" }}>
-            <Users size={14} /> מי נוסע
-          </button>
-        </div>
-
-        <p className="mt-2 text-[12px] text-[var(--text-3)]">
-          נוסעים: {profileSummary(tripProfile)}{trip?.profile ? "" : " · ברירת מחדל מהפרופיל הכללי"}
-        </p>
-
-        {editTravelers && (
-          <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-4 lg:max-w-2xl">
-            <p className="mb-3 text-[13px] text-[var(--text-2)]">
-              מי נוסע בטיול <span className="font-medium">הזה</span>? משפיע על מה שה-AI יבנה (טיול עם הילדים שונה מטיול זוגי) — לא משנה את הפרופיל הכללי.
+            <p className="mt-2.5 text-[13px] text-[var(--text-2)]">
+              {trip?.segments && trip.segments.length > 1
+                ? `${trip.segments.map((s) => s.cityHe || s.city).join(" → ")} · `
+                : cityHe ? `${cityHe} · ` : ""}
+              {trip?.days} ימים
+              {trip?.month ? ` · ${MONTHS_HE[trip.month - 1]}` : ""}
+              {trip?.segments && trip.segments.length > 1 ? ` · ${trip.segments.length} ערים` : ""}
+              {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
             </p>
-            <ProfileEditor value={tripProfile} onChange={(p) => update(tripId, { profile: p })} />
-            {trip?.profile && (
-              <button onClick={() => update(tripId, { profile: undefined })}
-                className="mt-4 text-[12px] text-[var(--accent-ink)] underline">אפס לפרופיל הכללי</button>
-            )}
-          </div>
-        )}
 
-        {!canBuild && !multiTrip && (
-          <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3.5 lg:max-w-xl">
-            <p className="mb-2 text-[13px] text-[var(--text-2)]">
-              לאן הטיול? בחרו עיר ונבנה לו״ז סביב מרכז העיר — או הוסיפו מלון (למטה) לטיול-כוכב מדויק יותר.
+            {/* exact dates → powers season, length and (soon) the live-events feed (#64) */}
+            <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[12.5px] text-[var(--text-2)]">
+              <CalendarDays size={14} className="text-[var(--text-3)]" />
+              <span>תאריכים:</span>
+              <input type="date" value={trip?.startDate ?? ""}
+                onChange={(e) => {
+                  const info = datesToInfo(e.target.value, trip?.endDate);
+                  update(tripId, { startDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
+                }}
+                className="rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2 py-1 text-[12.5px] text-[var(--text)] outline-none backdrop-blur" />
+              <span>–</span>
+              <input type="date" value={trip?.endDate ?? ""} min={trip?.startDate}
+                onChange={(e) => {
+                  const info = datesToInfo(trip?.startDate, e.target.value);
+                  update(tripId, { endDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
+                }}
+                className="rounded-md border border-[var(--border)] bg-[var(--surface)]/85 px-2 py-1 text-[12.5px] text-[var(--text)] outline-none backdrop-blur" />
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <button onClick={generate} disabled={!!busy || !canBuild}
+                className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-5 py-2.5 text-[14px] font-medium text-white shadow-sm disabled:opacity-50">
+                {busy === "generate" ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                {busy === "generate" ? "בונה לו\"ז…" : itinerary ? "בנה מחדש" : "בנה לו\"ז עם AI"}
+              </button>
+              {itinerary && (
+                <button onClick={() => setEditing((v) => !v)}
+                  className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-4 py-2.5 text-[14px] font-medium backdrop-blur"
+                  style={{ background: editing ? "var(--brand-soft)" : "var(--surface)",
+                           color: "var(--brand-ink)" }}>
+                  <Pencil size={14} /> {editing ? "סיום עריכה" : "עריכה ידנית"}
+                </button>
+              )}
+              <button onClick={() => setEditTravelers((v) => !v)}
+                className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-4 py-2.5 text-[14px] font-medium backdrop-blur"
+                style={{ background: editTravelers ? "var(--brand-soft)" : "var(--surface)",
+                         color: "var(--brand-ink)" }}>
+                <Users size={14} /> מי נוסע
+              </button>
+            </div>
+
+            <p className="mt-2.5 text-[12px] text-[var(--text-3)]">
+              נוסעים: {profileSummary(tripProfile)}{trip?.profile ? "" : " · ברירת מחדל מהפרופיל הכללי"}
             </p>
-            <select value={trip?.destinationId ?? ""}
-              onChange={(e) => {
-                const d = dests.find((x) => String(x.id) === e.target.value);
-                if (d) update(tripId, { city: d.city, cityHe: d.city_he || d.city, country: d.country, destinationId: d.id });
-              }}
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-[14px] text-[var(--text)] outline-none">
-              <option value="">{dests.length ? "בחרו עיר יעד…" : "טוען ערים…"}</option>
-              {dests.map((d) => (
-                <option key={d.id} value={d.id}>{(d.city_he || d.city)} · {d.country}</option>
-              ))}
-            </select>
           </div>
-        )}
+        </div>
       </header>
+
+      {/* expandable panels — sit below the hero on the page canvas */}
+      {(editTravelers || (!canBuild && !multiTrip)) && (
+        <div className="px-5 pt-4 lg:px-8">
+          {editTravelers && (
+            <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] lg:max-w-2xl">
+              <p className="mb-3 text-[13px] text-[var(--text-2)]">
+                מי נוסע בטיול <span className="font-medium">הזה</span>? משפיע על מה שה-AI יבנה (טיול עם הילדים שונה מטיול זוגי) — לא משנה את הפרופיל הכללי.
+              </p>
+              <ProfileEditor value={tripProfile} onChange={(p) => update(tripId, { profile: p })} />
+              {trip?.profile && (
+                <button onClick={() => update(tripId, { profile: undefined })}
+                  className="mt-4 text-[12px] text-[var(--accent-ink)] underline">אפס לפרופיל הכללי</button>
+              )}
+            </div>
+          )}
+
+          {!canBuild && !multiTrip && (
+            <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)] lg:max-w-xl">
+              <p className="mb-2 text-[13px] text-[var(--text-2)]">
+                לאן הטיול? בחרו עיר ונבנה לו״ז סביב מרכז העיר — או הוסיפו מלון (למטה) לטיול-כוכב מדויק יותר.
+              </p>
+              <select value={trip?.destinationId ?? ""}
+                onChange={(e) => {
+                  const d = dests.find((x) => String(x.id) === e.target.value);
+                  if (d) update(tripId, { city: d.city, cityHe: d.city_he || d.city, country: d.country, destinationId: d.id });
+                }}
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5 text-[14px] text-[var(--text)] outline-none">
+                <option value="">{dests.length ? "בחרו עיר יעד…" : "טוען ערים…"}</option>
+                {dests.map((d) => (
+                  <option key={d.id} value={d.id}>{(d.city_he || d.city)} · {d.country}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="lg:flex lg:items-start lg:gap-8 lg:px-8 lg:pt-6">
         {/* aside: hotels + map of the trip (map on desktop only) */}
