@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { listDestinations } from "@/lib/db";
-import { ArrowLeft, Plus, Sparkles, Compass } from "lucide-react";
+import { ArrowLeft, Sparkles, Compass } from "lucide-react";
 import { YalleMark } from "@/components/YalleMark";
 import { ExploreList } from "./explore/ExploreList";
+import { HomeTrips } from "./HomeTrips";
 
 export const dynamic = "force-dynamic";
 
@@ -22,27 +23,8 @@ export default async function Home() {
         </div>
       </header>
 
-      <div className="lg:grid lg:grid-cols-3 lg:gap-4">
-      {/* hero CTA → trips */}
-      <Link
-        href="/trips"
-        className="rise rise-1 block rounded-[var(--radius-card)] bg-[var(--accent)] p-5 text-white shadow-[var(--shadow)] lg:col-span-2 lg:p-8"
-      >
-        <div className="flex items-center gap-2 text-[13px] text-[var(--accent-soft)]">
-          <Sparkles size={15} /> מתכננים את הבא
-        </div>
-        <p className="serif mt-2 text-[26px] leading-tight lg:text-[32px]">הטיולים שלי</p>
-        <p className="mt-1 text-sm text-[var(--accent-soft)]">בנו טיול חדש — לפי העדפות או לפי מלונות</p>
-      </Link>
-
-      {/* new trip */}
-      <Link
-        href="/trips"
-        className="rise rise-2 mt-3 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-dashed border-[var(--border)] bg-[var(--surface)] py-4 text-[15px] font-medium text-[var(--text-2)] lg:mt-0 lg:flex-col lg:py-0"
-      >
-        <Plus size={18} /> טיול חדש
-      </Link>
-      </div>
+      {/* my trips — a live preview + new-trip action (replaces the old CTA) */}
+      <HomeTrips />
 
       {/* don't know where? get a recommendation */}
       <Link
