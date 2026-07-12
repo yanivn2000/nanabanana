@@ -253,7 +253,7 @@ export function TripView({ tripId }: { tripId: string }) {
     <main className="mx-auto w-full max-w-[440px] pb-32 lg:max-w-6xl">
       {/* poster band */}
       <CityPoster destinationId={trip?.destinationId} cityHe={cityHe} overlay
-        className="h-[170px] lg:h-[240px]">
+        orientation="banner" position="50% 46%" className="h-[170px] lg:h-[240px]">
         <Link href="/trips" className="eyebrow absolute right-5 top-5 inline-flex items-center gap-1 text-white/85 lg:right-8">
           <ChevronRight size={14} /> הטיולים שלי
         </Link>

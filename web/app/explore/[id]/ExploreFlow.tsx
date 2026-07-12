@@ -283,7 +283,7 @@ export function ExploreFlow(
           <p className="eyebrow mb-2 flex items-center gap-1"><Globe size={12} /> שלב 2 · היכרות עם {cityHe}</p>
 
           <CityPoster destinationId={dest.id} cityHe={cityHe} overlay
-            className="mb-3 h-[150px] rounded-[var(--radius-card)]">
+            orientation="banner" position="50% 46%" className="mb-3 h-[150px] rounded-[var(--radius-card)]">
             <div className="absolute inset-x-0 bottom-0 p-4">
               <h2 className="serif text-[28px] font-bold leading-none text-white">{cityHe}</h2>
               <p className="text-[12.5px] text-white/85">{dest.country_he ?? dest.country}</p>

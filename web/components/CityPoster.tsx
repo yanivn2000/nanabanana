@@ -16,7 +16,7 @@ export function CityPoster({
   destinationId?: number | null;
   cityHe?: string | null;
   className?: string;
-  orientation?: "landscape" | "portrait";
+  orientation?: "banner" | "landscape" | "portrait";
   position?: string;
   overlay?: boolean;
   children?: React.ReactNode;

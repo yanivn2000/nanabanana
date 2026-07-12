@@ -99,7 +99,7 @@ export function DestinationView({
     <main className="mx-auto w-full max-w-[440px] pb-28 lg:max-w-none lg:pb-0">
       {/* poster hero */}
       <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city} overlay
-        className="h-[210px] lg:h-[300px]">
+        orientation="banner" position="50% 46%" className="h-[210px] lg:h-[300px]">
         <Link href="/" className="eyebrow absolute right-5 top-5 inline-flex items-center gap-1 text-white/85 lg:right-8">
           <ChevronRight size={14} /> בית
         </Link>

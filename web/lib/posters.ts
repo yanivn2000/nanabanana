@@ -1,6 +1,7 @@
 // City posters — hand-generated modern travel-poster art (brand palette),
-// stored as static assets in /public/posters/. Each city has up to two crops:
-//   <slug>-4x3.jpg (landscape, for wide bands/heroes) and
+// stored as static assets in /public/posters/. Each city has up to three crops:
+//   <slug>-4x2.jpg (banner 2:1, for the wide header bands/heroes),
+//   <slug>-4x3.jpg (landscape) and
 //   <slug>-3x4.jpg (portrait, for tall cards/thumbnails).
 // Only cities listed here have art; everything else uses CityPoster's brand
 // gradient. Drop the jpgs + add the id to light a city up.
@@ -15,16 +16,19 @@ export const POSTER_SLUG: Record<number, string> = {
   5: "budapest",
 };
 
-// Ordered candidate srcs: the preferred orientation first, the other as a
-// fallback (a city may have only one crop). Empty when the city has no poster.
+// Ordered candidate srcs: the preferred crop first, the others as fallbacks
+// (a city may have only some crops). Empty when the city has no poster.
 export function posterSrcs(
   destinationId: number | null | undefined,
-  prefer: "landscape" | "portrait" = "landscape"
+  prefer: "banner" | "landscape" | "portrait" = "landscape"
 ): string[] {
   if (destinationId == null) return [];
   const slug = POSTER_SLUG[destinationId];
   if (!slug) return [];
+  const banner = `/posters/${slug}-4x2.jpg`;
   const land = `/posters/${slug}-4x3.jpg`;
   const port = `/posters/${slug}-3x4.jpg`;
-  return prefer === "portrait" ? [port, land] : [land, port];
+  return prefer === "portrait" ? [port, land, banner]
+    : prefer === "banner" ? [banner, land, port]
+    : [land, banner, port];
 }
