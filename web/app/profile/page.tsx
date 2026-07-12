@@ -6,6 +6,7 @@ import { useProfile, useFollows, DEFAULT_PROFILE } from "@/lib/store";
 import { Check, Users, ChevronRight, Star } from "lucide-react";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { FollowsEditor } from "@/components/FollowsEditor";
+import { AuthButton } from "@/components/AuthButton";
 
 export default function ProfilePage() {
   const [p, save, loaded] = useProfile();
@@ -26,6 +27,15 @@ export default function ProfilePage() {
           <p className="text-[13px] text-[var(--text-2)]">ברירת מחדל לכל טיול · אפשר לשנות פר-טיול</p>
         </div>
       </header>
+
+      {/* account — login lives here on mobile (the top bar is desktop-only) */}
+      <div className="rise mb-6 flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3.5 shadow-[var(--shadow)]">
+        <div className="min-w-0">
+          <p className="text-[14px] font-medium">חשבון</p>
+          <p className="text-[12.5px] text-[var(--text-2)]">התחברו כדי לשמור את הטיולים בענן ולגשת מכל מכשיר</p>
+        </div>
+        <div className="shrink-0"><AuthButton showEmail /></div>
+      </div>
 
       {!loaded ? (
         <p className="text-sm text-[var(--text-3)]">טוען…</p>

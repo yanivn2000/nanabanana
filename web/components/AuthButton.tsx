@@ -6,7 +6,8 @@ import { LogIn, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 // Shows "sign in" when logged out, or the user's email + sign-out when logged in.
-export function AuthButton() {
+// `showEmail` forces the email to render on mobile too (nav hides it under lg).
+export function AuthButton({ showEmail = false }: { showEmail?: boolean }) {
   const [email, setEmail] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
@@ -33,7 +34,7 @@ export function AuthButton() {
       onClick={async () => { await createClient().auth.signOut(); location.href = "/"; }}
       className="flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] text-[var(--text-2)]"
       title="התנתקות">
-      <span className="hidden max-w-[140px] truncate lg:inline">{email}</span>
+      <span className={`max-w-[160px] truncate ${showEmail ? "" : "hidden lg:inline"}`}>{email}</span>
       <LogOut size={16} />
     </button>
   );
