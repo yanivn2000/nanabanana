@@ -42,7 +42,14 @@ function FitBounds({
   attractions, hotels, selected, userPos,
 }: { attractions: Attraction[]; hotels: MapHotel[]; selected: Attraction | null; userPos?: [number, number] | null }) {
   const map = useMap();
-  const sig = [...attractions.map((a) => a.id), ...hotels.map((h) => "h" + h.id), userPos ? "u" : ""].join(",");
+  // Signature by position (not just id) — trip stops use per-day indexes as
+  // ids, so two days with the same stop count would otherwise look identical
+  // and the map would stay framed on the previous day.
+  const sig = [
+    ...attractions.map((a) => `${a.id}:${a.lat},${a.lng}`),
+    ...hotels.map((h) => "h" + h.id),
+    userPos ? "u" : "",
+  ].join(",");
   useEffect(() => {
     if (selected) return;
     const pts = [
