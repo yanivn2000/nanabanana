@@ -1,14 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, ArrowLeft } from "lucide-react";
+import {
+  Search, Landmark, Building2, Trees, UtensilsCrossed, ShoppingBag,
+  Waves, FerrisWheel, PawPrint, type LucideIcon,
+} from "lucide-react";
 import { CityPoster } from "@/components/CityPoster";
-import type { Destination } from "@/lib/db";
+import type { Destination, DestinationSummary } from "@/lib/db";
 import { regionOf, REGION_ORDER } from "@/lib/labels";
 
-export function ExploreList({ destinations }: { destinations: Destination[] }) {
+// The strongest attraction categories in a city → 1-2 chips of real signal shown
+// on the card (beyond name / country / count). Ordered by count, count>0 only.
+const CAT_CHIPS: { key: keyof DestinationSummary; label: string; Icon: LucideIcon }[] = [
+  { key: "museum", label: "מוזיאונים", Icon: Landmark },
+  { key: "historic", label: "היסטוריה", Icon: Building2 },
+  { key: "nature", label: "טבע", Icon: Trees },
+  { key: "food", label: "אוכל", Icon: UtensilsCrossed },
+  { key: "shopping", label: "קניות", Icon: ShoppingBag },
+  { key: "water_park", label: "פארקי מים", Icon: Waves },
+  { key: "theme_park", label: "פארקי שעשועים", Icon: FerrisWheel },
+  { key: "zoo", label: "גן חיות", Icon: PawPrint },
+];
+function topCats(s: DestinationSummary | undefined, n = 2) {
+  if (!s) return [];
+  return CAT_CHIPS
+    .map((c) => ({ ...c, count: (s[c.key] as number) ?? 0 }))
+    .filter((c) => c.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, n);
+}
+
+export function ExploreList({ destinations, summaries = [] }: {
+  destinations: Destination[];
+  summaries?: DestinationSummary[];
+}) {
   const [q, setQ] = useState("");
+  const byId = useMemo(() => new Map(summaries.map((s) => [s.id, s])), [summaries]);
+
   const filtered = destinations.filter((d) =>
     `${d.city} ${d.country} ${d.city_he ?? ""} ${d.country_he ?? ""}`
       .toLowerCase()
@@ -35,26 +64,36 @@ export function ExploreList({ destinations }: { destinations: Destination[] }) {
       {byRegion.length === 0 ? (
         <p className="mt-8 text-center text-sm text-[var(--text-3)]">לא נמצאו יעדים.</p>
       ) : (
-        <div className="flex flex-col gap-7">
+        <div className="flex flex-col gap-8">
           {byRegion.map(({ region, items }) => (
             <section key={region}>
               <p className="eyebrow mb-3">{region} · {items.length}</p>
-              <div className="flex flex-col gap-2.5 lg:grid lg:grid-cols-3 lg:gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {items.map((d) => (
                   <Link
                     key={d.id}
                     href={`/destination/${d.id}`}
-                    className="flex items-center gap-3 overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] p-2.5 shadow-[var(--shadow)]"
+                    className="group relative block aspect-[3/2] overflow-hidden rounded-[var(--radius-card)] shadow-[var(--shadow)]"
                   >
-                    <CityPoster destinationId={d.id} cityHe={d.city_he || d.city} orientation="portrait"
-                      className="h-16 w-[58px] shrink-0 rounded-[var(--radius-sm)]" />
-                    <div className="min-w-0 flex-1">
-                      <p className="serif truncate text-[16px] font-semibold">{d.city_he || d.city}</p>
-                      <p className="text-[13px] text-[var(--text-2)]">
-                        {d.country_he || d.country} · {d.attraction_count.toLocaleString("he")} אטרקציות
-                      </p>
+                    <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.04]">
+                      <CityPoster destinationId={d.id} cityHe={d.city_he || d.city} overlay
+                        orientation="banner" position="50% 45%" className="size-full" />
                     </div>
-                    <ArrowLeft size={18} className="ms-1 shrink-0 text-[var(--text-3)]" />
+                    <div className="absolute inset-0 flex flex-col justify-end p-4 text-white">
+                      <p className="text-[12px] font-medium text-white/85">{d.country_he || d.country}</p>
+                      <h3 className="serif text-[24px] font-bold leading-none">{d.city_he || d.city}</h3>
+                      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                        <span className="rounded-full bg-[var(--surface)]/92 px-2.5 py-1 text-[11.5px] font-semibold text-[var(--text)] shadow-sm backdrop-blur">
+                          {d.attraction_count.toLocaleString("he")} אטרקציות
+                        </span>
+                        {topCats(byId.get(d.id)).map((c) => (
+                          <span key={c.key}
+                            className="inline-flex items-center gap-1 rounded-full bg-[var(--surface)]/92 px-2.5 py-1 text-[11.5px] font-medium text-[var(--text-2)] shadow-sm backdrop-blur">
+                            <c.Icon size={12} className="text-[var(--brand-ink)]" /> {c.label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   </Link>
                 ))}
               </div>

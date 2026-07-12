@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listDestinations } from "@/lib/db";
+import { listDestinations, destinationSummaries } from "@/lib/db";
 import { ArrowLeft, Sparkles, Compass } from "lucide-react";
 import { YalleMark } from "@/components/YalleMark";
 import { ExploreList } from "./explore/ExploreList";
@@ -8,7 +8,10 @@ import { HomeTrips } from "./HomeTrips";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const destinations = await listDestinations();
+  const [destinations, summaries] = await Promise.all([
+    listDestinations(),
+    destinationSummaries(), // per-city category counts → the card chips
+  ]);
 
   return (
     <main className="mx-auto w-full max-w-[440px] px-5 pb-24 pt-8 lg:max-w-6xl lg:px-8 lg:pb-12">
@@ -68,7 +71,7 @@ export default async function Home() {
           )}
         </div>
 
-        <ExploreList destinations={destinations} />
+        <ExploreList destinations={destinations} summaries={summaries} />
       </section>
     </main>
   );
