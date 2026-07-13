@@ -15,14 +15,14 @@ import db
 # taste-tag → regex (case-insensitive) over name_he+name_en+tagline+description
 TASTE = {
     "vintage_shopping": r"vintage|flea market|camden (?:market|lock|stables)|brick ?lane|portobello|spitalfields market|שוק קמדן|אורוות קמדן|ברק ליין|בריק ליין|פורטובלו|וינטג|יד ?שנייה|שוק הספרים",
-    "luxury_shopping":  r"harrods|selfridge|harvey nichols|fortnum|liberty london|bond street|\bboutique\b|הארודס|יוקרה|בונד סטריט",
-    "live_music":       r"\bo2 arena\b|brixton academy|roundhouse|\bkoko\b|\bjazz\b|live music|abbey road|handel|hendrix|academy of music|college of music|musical museum|הופעות חיות|ג׳אז|אבי רוד|אביי רוד|המוזיאון המוזיקלי|האקדמיה המלכותית למוזיקה|המכללה המלכותית למוזיקה",
-    "classical_opera":  r"\bopera(?!ting|tion)|philharmon|symphony orchestra|royal opera|אופרה|תזמורת|קונצרט קלאסי",
-    "theatre":          r"(?<!operating )theatre|(?<!amphi)theater|west ?end|globe theatre|shakespeare|palladium|\bmusical\b|תיאטרון(?! )?ה?גלוב|תיאטרון|מחזמר|ווסט אנד|שייקספיר",
-    "nightlife":        r"nightclub|cocktail bar|\bbar crawl\b|מועדון|חיי לילה|צ׳יינה טאון|chinatown",
-    "sports":           r"\bstadium\b|wembley|emirates stadium|stamford bridge|twickenham|lord'?s cricket|the oval|arsenal|כדורגל|אצטדיון|ארסנל|וומבלי|טוטנהאם|tottenham hotspur",
-    "food":             r"borough market|food market|street food|foodie|gastro|שוק אוכל|אוכל רחוב|קולינרי|שוק האוכל",
-    "family":           r"\bzoo\b|aquarium|sea ?life|playground|petting|גן חיות|אקווריום|מגרש משחקים|פינת החיות|מוזיאון לילדים|קידז|kids",
+    "luxury_shopping":  r"harrods|selfridge|harvey nichols|fortnum|liberty london|bond street|\bboutique\b|galeries lafayette|passeig de gràcia|montenapoleone|kurfürstendamm|הארודס|יוקרה|בונד סטריט",
+    "live_music":       r"\bo2 arena\b|brixton academy|roundhouse|\bkoko\b|\bjazz\b|live music|abbey road|handel|hendrix|academy of music|college of music|musical museum|musikverein|philharmonie hall|הופעות חיות|ג׳אז|אבי רוד|אביי רוד|המוזיאון המוזיקלי|האקדמיה המלכותית למוזיקה|המכללה המלכותית למוזיקה",
+    "classical_opera":  r"\bopera(?!ting|tion)|opéra|ópera|\boper\b|teatro dell'opera|philharmon|filharmoni|filarmonic|concertgebouw|konzerthaus|symphony orchestra|royal opera|אופרה|תזמורת|קונצרט קלאסי|פילהרמוני",
+    "theatre":          r"(?<!operating )theatre|(?<!amphi)theater|théâtre|teatro(?! dell'opera)|színház|schauspielhaus|burgtheater|west ?end|globe theatre|shakespeare|palladium|\bmusical\b|תיאטרון(?! )?ה?גלוב|תיאטרון|מחזמר|ווסט אנד|שייקספיר",
+    "nightlife":        r"nightclub|cocktail bar|\bbar crawl\b|discoteca|nachtclub|boîte de nuit|מועדון|חיי לילה|צ׳יינה טאון|chinatown",
+    "sports":           r"\bstadium\b|\bstade\b|stadio|stadion|estadio|estádio|wembley|emirates stadium|stamford bridge|twickenham|lord'?s cricket|the oval|arsenal|camp nou|santiago bernab|allianz arena|כדורגל|אצטדיון|ארסנל|וומבלי|טוטנהאם|tottenham hotspur",
+    "food":             r"borough market|food market|street food|foodie|gastro|mercado|mercato|marché|markthal|markthalle|market hall|food hall|boqueria|שוק אוכל|אוכל רחוב|קולינרי|שוק האוכל",
+    "family":           r"\bzoo\b|aquarium|aquário|acquario|sea ?life|playground|petting|theme park|amusement park|luna ?park|planetarium|tiergarten|dierentuin|zoológic|גן חיות|אקווריום|מגרש משחקים|פינת החיות|מוזיאון לילדים|פארק שעשועים|לונה פארק|פלנטריום|קידז|kids",
 }
 # hard removals: keyword hit but semantically wrong (by name substring)
 FALSE = {
@@ -68,7 +68,9 @@ def main(dest=14, apply=False):
     c = db.get_conn()
     rows = c.execute(
         "SELECT id,name_he,name_en,tagline_he,description_he,category,subcategory,must_see "
-        "FROM attractions WHERE destination_id=%s AND quality_keep=1 "
+        "FROM attractions WHERE destination_id=%s "
+        "AND (quality_keep=1 OR quality_keep IS NULL) "
+        "AND (is_duplicate IS NULL OR is_duplicate=0) "
         "AND (is_component IS NULL OR is_component=0)", (dest,)).fetchall()
     tagged = {a["id"]: tag(a) for a in rows}
     names = {a["id"]: (a["name_he"] or a["name_en"]) for a in rows}
@@ -95,5 +97,35 @@ def main(dest=14, apply=False):
     c.close()
 
 
+def tag_all(apply=False):
+    """Tag every destination. Structural tags are universal; taste-keyword tags
+    are best-effort multilingual."""
+    c = db.get_conn()
+    dests = [r["id"] for r in c.execute("SELECT id FROM destinations ORDER BY id").fetchall()]
+    c.close()
+    total = 0
+    for d in dests:
+        cc = db.get_conn()
+        rows = cc.execute(
+            "SELECT id,name_he,name_en,tagline_he,description_he,category,subcategory,must_see "
+            "FROM attractions WHERE destination_id=%s "
+            "AND (quality_keep=1 OR quality_keep IS NULL) "
+            "AND (is_duplicate IS NULL OR is_duplicate=0) "
+            "AND (is_component IS NULL OR is_component=0)", (d,)).fetchall()
+        tagged = {a["id"]: tag(a) for a in rows}
+        if apply:
+            for aid, ts in tagged.items():
+                cc.execute("UPDATE attractions SET taste_tags=%s WHERE id=%s", (json.dumps(ts), aid))
+            cc.commit()
+        withtaste = sum(1 for ts in tagged.values() if any(t not in ("landmark",) for t in ts))
+        print(f"  dest {d}: {len(rows)} rows, {withtaste} with a real taste tag")
+        total += len(rows)
+        cc.close()
+    print(f"{'STORED' if apply else 'DRY'} — {total} attractions across {len(dests)} cities")
+
+
 if __name__ == "__main__":
-    main(apply="--apply" in sys.argv)
+    if "--all" in sys.argv:
+        tag_all(apply="--apply" in sys.argv)
+    else:
+        main(apply="--apply" in sys.argv)
