@@ -7,8 +7,9 @@ import { MapClient } from "@/components/MapClient";
 import { CityPoster } from "@/components/CityPoster";
 import { descriptor, catColor, bigImage, mergeCat } from "@/lib/labels";
 import { passUrl, type Pass } from "@/lib/passes";
+import { useRouter } from "next/navigation";
 import { useProfile } from "@/lib/store";
-import { deriveTaste, tasteScore } from "@/lib/taste";
+import { deriveTaste, tasteScore, coarseFits } from "@/lib/taste";
 import type { Attraction, Destination, Insight } from "@/lib/db";
 
 // Emoji per insight kind — quick visual cue for the source of the tip.
@@ -69,14 +70,22 @@ export function DestinationView({
     () => Array.from(new Set(attractions.map((a) => mergeCat(a.category)))),
     [attractions]
   );
-  // "מתאים לפרופיל שלי" — pure client-side taste match on the already-loaded
-  // attractions. Only meaningful where the city is taste-tagged (London today).
+  // "מתאים לפרופיל שלי" — pure client-side match on the already-loaded
+  // attractions. Taste-tagged cities (London) use the precise taste score;
+  // everywhere else falls back to a coarse interests→categories match.
+  const router = useRouter();
   const taste = useMemo(() => deriveTaste(profile), [profile]);
   const cityTasteTagged = useMemo(() => attractions.some((a) => a.taste_tags?.length), [attractions]);
+  const hasPrefs = profile.interests.length > 0;
   const filtered = useMemo(
     () =>
       attractions.filter((a) => {
-        if (flags.fitsProfile && tasteScore(a.taste_tags, taste) < 3) return false;
+        if (flags.fitsProfile) {
+          const fits = cityTasteTagged
+            ? tasteScore(a.taste_tags, taste) >= 3
+            : coarseFits(mergeCat(a.category), a.subcategory, profile.interests);
+          if (!fits) return false;
+        }
         if (activeCat && mergeCat(a.category) !== activeCat) return false;
         if (flags.mustSee && a.must_see !== 1) return false;
         if (flags.free && a.cost_level !== 0) return false;
@@ -89,7 +98,7 @@ export function DestinationView({
         }
         return true;
       }),
-    [attractions, activeCat, query, flags, insights, taste]
+    [attractions, activeCat, query, flags, insights, taste, cityTasteTagged, profile.interests]
   );
 
   // The list shows the filtered set, optionally narrowed to the map viewport.
@@ -252,18 +261,21 @@ export function DestinationView({
           </div>
 
           <div className="mb-4 flex flex-wrap gap-2">
-            {/* the personalization hook — prominent, only where the city is taste-tagged */}
-            {cityTasteTagged && (
-              <button onClick={() => toggleFlag("fitsProfile")}
-                className="rounded-full px-3.5 py-1.5 text-[12.5px] font-medium transition"
-                style={{
-                  background: flags.fitsProfile ? "var(--brand)" : "var(--brand-soft)",
-                  color: flags.fitsProfile ? "#fff" : "var(--brand-ink)",
-                  border: `1.5px solid var(--brand)`,
-                }}>
-                ✨ מתאים לי
-              </button>
-            )}
+            {/* the personalization hook — no prefs yet? send them to fill the profile */}
+            <button
+              onClick={() => {
+                if (!hasPrefs) { router.push("/profile"); return; }
+                toggleFlag("fitsProfile");
+              }}
+              title={hasPrefs ? undefined : "מלאו מה מעניין אתכם בפרופיל"}
+              className="rounded-full px-3.5 py-1.5 text-[12.5px] font-medium transition"
+              style={{
+                background: flags.fitsProfile ? "var(--brand)" : "var(--brand-soft)",
+                color: flags.fitsProfile ? "#fff" : "var(--brand-ink)",
+                border: `1.5px solid var(--brand)`,
+              }}>
+              ✨ מתאים לי
+            </button>
             {([
               ["mustSee", "⭐ חובה לביקור"],
               ["free", "חינם"],

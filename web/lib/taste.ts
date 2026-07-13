@@ -45,6 +45,36 @@ export function tasteScore(tags: string[] | null, w: Record<string, number>): nu
   return tags.reduce((s, t) => s + (w[t] ?? 0), 0);
 }
 
+// Coarse profile match for cities that aren't taste-tagged yet: map profile
+// interest chips onto attraction categories/subcategories. Weaker than
+// taste_tags, but it lets "מתאים לי" work in every city. (#63)
+const INTEREST_CATS: Record<string, { cats?: string[]; subs?: string[] }> = {
+  "טבע": { cats: ["nature"] },
+  "חופים": { cats: ["nature"], subs: ["beach"] },
+  "אוכל": { cats: ["food"] },
+  "תרבות": { cats: ["museum", "historic"] },
+  "מוזיאונים": { cats: ["museum"] },
+  "קניות": { cats: ["shopping"] },
+  "וינטג'": { cats: ["shopping"] },
+  "יוקרה": { cats: ["shopping"] },
+  "ספורט": { cats: ["sport"] },
+  "היסטוריה": { cats: ["historic"] },
+  "פארקי שעשועים": { subs: ["theme_park", "water_park"] },
+};
+export function coarseFits(
+  category: string,
+  subcategory: string | null,
+  interests: string[]
+): boolean {
+  for (const it of interests) {
+    const m = INTEREST_CATS[it];
+    if (!m) continue;
+    if (m.cats?.includes(category)) return true;
+    if (subcategory && m.subs?.includes(subcategory)) return true;
+  }
+  return false;
+}
+
 // Re-rank attractions by taste (primary), then must-see, and — ONLY for trips
 // with kids — family_score. `family_score` is a family-friendliness score (how
 // much a family with kids would enjoy it), so applying it to a couples'/friends'
