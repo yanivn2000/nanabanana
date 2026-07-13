@@ -53,6 +53,7 @@ CATEGORY_MAP = {
     "historic=monument":    ("attraction", "outdoor", 5),
     "natural=peak":         ("nature", "outdoor", 5),
     "natural=waterfall":    ("nature", "outdoor", 8),
+    "natural=beach":        ("nature", "outdoor", 9),
 }
 
 
@@ -66,6 +67,9 @@ def _build_query(lat, lng, radius_m):
         'node["historic"~"castle|monument|memorial"]',
         'way["historic"~"castle|monument|memorial"]',
         'node["natural"~"peak|waterfall"]',
+        # beaches are usually mapped as ways (areas) — include both
+        'node["natural"="beach"]',
+        'way["natural"="beach"]',
     ]
     body = "".join(f'{f}(around:{radius_m},{lat},{lng});' for f in filters)
     return f"[out:json][timeout:60];({body});out center tags;"
