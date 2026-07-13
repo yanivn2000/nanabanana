@@ -63,8 +63,16 @@ export type Destination = {
   attraction_count: number;
 };
 
+// A row is "shown" in the consumer app: kept-or-unassessed, not a dup/component.
+const SHOWN = `(a.quality_keep = 1 OR a.quality_keep IS NULL)
+  AND (a.is_duplicate IS NULL OR a.is_duplicate = 0)
+  AND (a.is_component IS NULL OR a.is_component = 0)`;
+// Notability signal: mapped in OSM with a Wikipedia/Wikidata entry.
+const NOTABLE = `(info_sources IS NOT NULL AND info_sources::text NOT IN ('[]', 'null'))`;
+
 const DEST_SELECT = `SELECT dest.id, dest.city, dest.country, dest.city_he,
-         dest.country_he, dest.lat, dest.lng, count(a.id)::int AS attraction_count
+         dest.country_he, dest.lat, dest.lng,
+         count(a.id) FILTER (WHERE ${SHOWN})::int AS attraction_count
   FROM destinations dest
   LEFT JOIN attractions a ON a.destination_id = dest.id`;
 
@@ -90,8 +98,9 @@ export async function topAttractions(destinationId: number, limit = 40): Promise
          AND (quality_keep = 1 OR quality_keep IS NULL)
          AND (is_duplicate IS NULL OR is_duplicate = 0)
          AND (is_component IS NULL OR is_component = 0)
-       ORDER BY COALESCE(quality_keep = 1, false) DESC,
-                COALESCE(must_see, 0) DESC,
+       ORDER BY COALESCE(must_see, 0) DESC,
+                COALESCE(quality_keep = 1, false) DESC,
+                ${NOTABLE} DESC,
                 COALESCE(family_score, 0) DESC, name_en
        LIMIT $2`,
     [destinationId, limit]
@@ -106,7 +115,10 @@ export async function attractionsForMap(destinationId: number, limit = 200): Pro
          AND (quality_keep = 1 OR quality_keep IS NULL)
          AND (is_duplicate IS NULL OR is_duplicate = 0)
          AND (is_component IS NULL OR is_component = 0)
-       ORDER BY COALESCE(must_see, 0) DESC, COALESCE(family_score, 0) DESC, name_en
+       ORDER BY COALESCE(must_see, 0) DESC,
+                COALESCE(quality_keep = 1, false) DESC,
+                ${NOTABLE} DESC,
+                COALESCE(family_score, 0) DESC, name_en
        LIMIT $2`,
     [destinationId, limit]
   );

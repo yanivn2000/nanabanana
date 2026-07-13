@@ -160,7 +160,10 @@ def upsert_destination(conn, **kw):
 
 
 def upsert_attraction(conn, **kw):
-    """Insert attraction keyed on (osm_type, osm_id). Skip (return None) if exists."""
+    """Insert attraction keyed on (osm_type, osm_id). Returns id for a NEW row,
+    None if it already existed. On conflict, backfills the notability signals
+    (info_sources = wikidata/wikipedia, website) onto existing rows without
+    touching any curated field — so a re-ingest enriches old rows too."""
     for jcol in ("video_links", "info_sources"):
         if isinstance(kw.get(jcol), (list, dict)):
             kw[jcol] = psycopg2.extras.Json(kw[jcol])
@@ -174,11 +177,18 @@ def upsert_attraction(conn, **kw):
     placeholders = ",".join("?" * len(cols))
     cur = conn.execute(
         f"INSERT INTO attractions ({','.join(cols)}) VALUES ({placeholders}) "
-        "ON CONFLICT (osm_type, osm_id) DO NOTHING RETURNING id",
+        "ON CONFLICT (osm_type, osm_id) DO UPDATE SET "
+        "  info_sources = CASE WHEN attractions.info_sources IS NULL "
+        "      OR attractions.info_sources::text IN ('[]', 'null') "
+        "      THEN EXCLUDED.info_sources ELSE attractions.info_sources END, "
+        "  website = COALESCE(attractions.website, EXCLUDED.website) "
+        "RETURNING id, (xmax = 0) AS inserted",
         vals,
     )
     row = cur.fetchone()
-    return row[0] if row else None
+    if not row:
+        return None
+    return row[0] if row["inserted"] else None
 
 
 if __name__ == "__main__":
