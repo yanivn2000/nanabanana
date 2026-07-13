@@ -50,26 +50,49 @@ CATEGORY_MAP = {
     "leisure=nature_reserve": ("nature", "outdoor", 7),
     "leisure=water_park":   ("sport", "outdoor", 9),
     "historic=castle":      ("attraction", "both", 7),
+    "historic=fort":        ("attraction", "both", 7),
+    "historic=fortress":    ("attraction", "both", 7),
+    "historic=city_gate":   ("attraction", "outdoor", 6),
+    "historic=ruins":       ("attraction", "outdoor", 6),
+    "historic=archaeological_site": ("attraction", "outdoor", 6),
+    "historic=tower":       ("attraction", "both", 6),
     "historic=monument":    ("attraction", "outdoor", 5),
+    "leisure=garden":       ("nature", "outdoor", 8),
     "natural=peak":         ("nature", "outdoor", 5),
     "natural=waterfall":    ("nature", "outdoor", 8),
     "natural=beach":        ("nature", "outdoor", 9),
+    # thermal/public baths — a genuine attraction (Tbilisi sulphur, Budapest)
+    "amenity=public_bath":  ("attraction", "indoor", 7),
 }
 
 
 def _build_query(lat, lng, radius_m):
-    """Overpass QL: all interesting tourism/leisure/historic/natural nodes+ways."""
+    """Overpass QL: all interesting tourism/leisure/historic/natural nodes+ways.
+
+    Includes relations for tourism/leisure/historic — many major landmarks
+    (fortresses, botanical gardens, large parks) are mapped as multipolygon
+    relations, not nodes/ways, and were otherwise invisible.
+    """
+    tourism = 'attraction|museum|zoo|theme_park|viewpoint|gallery|aquarium'
+    leisure = 'park|nature_reserve|water_park|garden'
+    historic = 'castle|fort|fortress|city_gate|ruins|archaeological_site|tower|monument|memorial'
     filters = [
-        'node["tourism"~"attraction|museum|zoo|theme_park|viewpoint|gallery|aquarium"]',
-        'way["tourism"~"attraction|museum|zoo|theme_park|viewpoint|gallery|aquarium"]',
-        'node["leisure"~"park|nature_reserve|water_park"]',
-        'way["leisure"~"park|nature_reserve|water_park"]',
-        'node["historic"~"castle|monument|memorial"]',
-        'way["historic"~"castle|monument|memorial"]',
+        f'node["tourism"~"{tourism}"]',
+        f'way["tourism"~"{tourism}"]',
+        f'relation["tourism"~"{tourism}"]',
+        f'node["leisure"~"{leisure}"]',
+        f'way["leisure"~"{leisure}"]',
+        f'relation["leisure"~"{leisure}"]',
+        f'node["historic"~"{historic}"]',
+        f'way["historic"~"{historic}"]',
+        f'relation["historic"~"{historic}"]',
         'node["natural"~"peak|waterfall"]',
         # beaches are usually mapped as ways (areas) — include both
         'node["natural"="beach"]',
         'way["natural"="beach"]',
+        # thermal/public baths (Tbilisi sulphur baths, Budapest spa baths)
+        'node["amenity"="public_bath"]',
+        'way["amenity"="public_bath"]',
     ]
     body = "".join(f'{f}(around:{radius_m},{lat},{lng});' for f in filters)
     return f"[out:json][timeout:60];({body});out center tags;"
@@ -83,6 +106,12 @@ def _classify(tags):
             if mapped:
                 return mapped
             return (key, "both", 5)  # known top-level key, unmapped value
+    # amenity is a huge namespace — accept ONLY explicitly mapped values.
+    amen = tags.get("amenity")
+    if amen:
+        mapped = CATEGORY_MAP.get(f"amenity={amen}")
+        if mapped:
+            return mapped
     return (None, "both", 5)
 
 
