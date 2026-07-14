@@ -98,6 +98,42 @@ def hebrew_for(lang, title):
     if len(ex)<25: return None
     return ex, f"https://he.wikipedia.org/wiki/{urllib.parse.quote(ht.replace(' ','_'))}"
 
+def _he_extract(ht):
+    d=_summary("he",ht); ex=(d or {}).get("extract","").strip()
+    if len(ex)>=25:
+        return ex, f"https://he.wikipedia.org/wiki/{urllib.parse.quote(ht.replace(' ','_'))}"
+    return None
+
+def hebrew_from_sources(info_sources):
+    """Notable rows already carry a wiki source — go straight to the Hebrew
+    article via the stored Wikidata id / Wikipedia link (no search needed)."""
+    srcs = db.jloads(info_sources) or []
+    for s in srcs:                                  # Wikidata id -> he sitelink
+        if s.get("title") == "Wikidata":
+            q = s["url"].rstrip("/").split("/")[-1]
+            ht = _he_title(q)
+            if ht:
+                r = _he_extract(ht)
+                if r: return r
+    for s in srcs:                                  # Wikipedia link -> he
+        if s.get("title") == "Wikipedia":
+            try:
+                p = urllib.parse.urlparse(s["url"]); lang = p.netloc.split(".")[0]
+                title = urllib.parse.unquote(p.path.split("/wiki/", 1)[1])
+            except Exception:
+                continue
+            if lang == "he":
+                r = _he_extract(title)
+                if r: return r
+            else:
+                q = _qid(lang, title)
+                if q:
+                    ht = _he_title(q)
+                    if ht:
+                        r = _he_extract(ht)
+                        if r: return r
+    return None
+
 def first_sentence(text, maxlen=100):
     s=re.split(r"(?<=[.!?。])\s", text.strip())[0]
     if len(s)<=maxlen: return s.rstrip(" ,;:—-")
@@ -108,7 +144,7 @@ FILLER="'gallery','dog_park','garden','park','parklet','attraction','information
 
 def load(conn):
     if SET=="kept":
-        return conn.execute(f"""SELECT a.id,a.name_he,a.name_en,a.lat,a.lng,d.country
+        return conn.execute(f"""SELECT a.id,a.name_he,a.name_en,a.lat,a.lng,d.country,a.info_sources
           FROM attractions a JOIN destinations d ON d.id=a.destination_id
           WHERE (a.quality_keep=1 OR a.quality_keep IS NULL) AND (a.is_duplicate IS NULL OR a.is_duplicate=0)
             AND (a.is_component IS NULL OR a.is_component=0)
@@ -116,7 +152,17 @@ def load(conn):
             AND (a.must_see IS NULL OR a.must_see=0)
             AND (a.tagline_he IS NULL OR a.tagline_he='') AND (a.description_he IS NULL OR a.description_he='')
             AND a.subcategory NOT IN ({FILLER}) AND a.lat IS NOT NULL ORDER BY d.id""").fetchall()
-    return conn.execute("""SELECT a.id,a.name_he,a.name_en,a.lat,a.lng,d.country
+    if SET=="notable":
+        # shown, non-must-see, no description yet, but HAS a wiki source -> straight to Hebrew
+        return conn.execute("""SELECT a.id,a.name_he,a.name_en,a.lat,a.lng,d.country,a.info_sources
+          FROM attractions a JOIN destinations d ON d.id=a.destination_id
+          WHERE (a.quality_keep=1 OR a.quality_keep IS NULL) AND (a.is_duplicate IS NULL OR a.is_duplicate=0)
+            AND (a.is_component IS NULL OR a.is_component=0)
+            AND (a.must_see IS NULL OR a.must_see=0)
+            AND (a.description_he IS NULL OR a.description_he='')
+            AND a.info_sources IS NOT NULL AND a.info_sources::text NOT IN ('[]','null')
+            AND a.lat IS NOT NULL ORDER BY d.id""").fetchall()
+    return conn.execute("""SELECT a.id,a.name_he,a.name_en,a.lat,a.lng,d.country,a.info_sources
       FROM attractions a JOIN destinations d ON d.id=a.destination_id
       WHERE a.must_see=1 AND (a.is_duplicate IS NULL OR a.is_duplicate=0)
         AND (a.description_he IS NULL OR a.description_he='') AND a.lat IS NOT NULL ORDER BY d.id""").fetchall()
@@ -128,6 +174,21 @@ def main():
     print(f"set={SET} rows={len(rows)} apply={APPLY} test={TEST}", flush=True)
     he_n=story_n=hide_n=0
     for i,r in enumerate(rows,1):
+        if SET=="notable":
+            # already has a source — go straight to Hebrew, keep the source, never hide
+            he=hebrew_from_sources(r["info_sources"])
+            if he:
+                hex,heurl=he; desc=hex[:400].rstrip(); tag=first_sentence(hex); he_n+=1
+                if TEST: print(f"  HE  {r['name_he'] or r['name_en']}\n      tag: {tag}\n      desc: {desc[:160]}")
+                if APPLY:
+                    conn.execute("""UPDATE attractions SET description_he=%s,
+                        tagline_he=COALESCE(NULLIF(tagline_he,''),%s) WHERE id=%s""",
+                        (desc, tag, r["id"]))
+            else:
+                story_n+=1
+            if APPLY and i%50==0: conn.commit()
+            if not TEST and i%200==0: print(f"  {i}/{len(rows)} — he={he_n} no_he={story_n}", flush=True)
+            continue
         local=LANG.get(r["country"],"en")
         langs=("en",) if local=="en" else ("en",local)
         hit=resolve([r["name_en"],r["name_he"]], r["lat"], r["lng"], langs)  # correct entity
