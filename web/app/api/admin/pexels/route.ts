@@ -17,8 +17,15 @@ export async function GET(req: NextRequest) {
   if (!query) return NextResponse.json({ error: "unknown_dest" }, { status: 400 });
 
   const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=15&orientation=landscape`;
-  const r = await fetch(url, { headers: { Authorization: key }, cache: "no-store" });
-  if (!r.ok) return NextResponse.json({ error: "pexels", status: r.status }, { status: 502 });
+  // Pexels 403s requests without a browser-like User-Agent.
+  const r = await fetch(url, {
+    headers: { Authorization: key, "User-Agent": "Mozilla/5.0 Yalle/0.1" },
+    cache: "no-store",
+  });
+  if (!r.ok) {
+    const body = await r.text().catch(() => "");
+    return NextResponse.json({ error: "pexels", status: r.status, body: body.slice(0, 200) }, { status: 502 });
+  }
   const data = await r.json();
 
   const candidates = (data.photos ?? []).map((p: Record<string, any>) => ({
