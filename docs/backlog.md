@@ -2,19 +2,25 @@
 
 Items found during the content-quality campaign (bulk re-ingest, signal quality,
 dedupe, must-see images, taste-tagging) that are worth doing and not yet done.
-Ordered within each section by rough priority.
+Ordered within each section by rough priority. ✅ = done 2026-07-14.
 
 ## 🐞 Bugs & data errors
-- **Mislocated attractions** — coordinates far from the real place, so the map is wrong:
-  Versailles (id 27184, ~12 km into central Paris), Plaça de Catalunya (7719, ~8 km),
-  Kallithea Springs (39317, ~8 km), St James Park (25372), Great Pagoda / Kew (25993).
-- **Attractions in the wrong city** — Ávila walls (6788) tagged in Barcelona; "Acropolis"
-  (22047) in Larnaca; Bergen-Belsen (26890) in Paris; Portara/Naxos (16712) in Thessaloniki.
-- **Commercial "experiences" wrongly flagged must_see** — Museum of Illusions (×2),
-  Dialogue in the Dark, Amsterdam canal cruises, World of Banksy, Little Big City,
-  high-ropes course. Decide: un-mark must_see or keep.
-- **Possible remaining duplicates** — cross_dedupe only ran on shown, non-memorial rows;
-  other categories may still hold same-place/different-wikidata dupes.
+- ✅ **duration_minutes was 0%** → now 100% via fill_duration.py (category/subcategory
+  heuristic). Feeds the itinerary builder + attraction "משך".
+- ✅ **5 confirmed enrichment hallucinations hidden** (quality_keep=0, must_see=0):
+  Ávila-in-Barcelona (6788), Acropolis-in-Larnaca (22047), Bergen-Belsen-in-Paris (26890),
+  Portara-in-Thessaloniki (16712), Versailles-in-central-Paris (27184).
+- **Broader hallucination audit** — an automated geo-scan (name→Wikipedia→coord distance)
+  was too noisy: it can't separate a true hallucination from a real landmark whose English
+  name differs from its local Wikipedia title (Roman Forum vs "Foro Romano", Venice St
+  Mark's vs "Piazza San Marco", Berlin Naturkunde). Needs manual or AI review. Script:
+  scratchpad/hallucination_scan.py.
+- **Mislocated (coords wrong, name right)** — Plaça de Catalunya (7719, ~8 km off),
+  Kallithea Springs (39317), St James Park (25372), Great Pagoda / Kew (25993). Map shows
+  them in the wrong spot. Fix coords from the Wikipedia article point.
+- **Commercial "experiences" flagged must_see** — Museum of Illusions (×2), Dialogue in the
+  Dark, Amsterdam canal cruises, World of Banksy, Little Big City. Decide: un-mark or keep.
+- **Possible remaining duplicates** — cross_dedupe only ran on shown, non-memorial rows.
 
 ## 🖼️ Images (must-see at 88%; 78 remain)
 - **~30 famous must-see with no API-resolvable image** — Petaloudes, Anthony Quinn Beach,
