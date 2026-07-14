@@ -1,0 +1,177 @@
+{
+  "vienna": {
+    "source": "pexels",
+    "photo_id": "37694874",
+    "photographer": "Leszek Czyzewski",
+    "photographer_url": "https://www.pexels.com/@leszek-czyzewski-259819851",
+    "page_url": "https://www.pexels.com/photo/stunning-view-of-belvedere-palace-in-vienna-37694874/"
+  },
+  "salzburg": {
+    "source": "pexels",
+    "photo_id": "10126207",
+    "photographer": "Alvin Xue",
+    "photographer_url": "https://www.pexels.com/@alvin-xue-124362441",
+    "page_url": "https://www.pexels.com/photo/aerial-view-of-city-buildings-10126207/"
+  },
+  "rome": {
+    "source": "pexels",
+    "photo_id": "35576236",
+    "photographer": "Stavro Ligori",
+    "photographer_url": "https://www.pexels.com/@stavro-ligori-2155931679",
+    "page_url": "https://www.pexels.com/photo/aerial-view-of-the-colosseum-in-rome-italy-35576236/"
+  },
+  "athens": {
+    "source": "pexels",
+    "photo_id": "5961718",
+    "photographer": "Kevin Lee",
+    "photographer_url": "https://www.pexels.com/@kevin-lee-3825870",
+    "page_url": "https://www.pexels.com/photo/the-parthenon-in-greece-5961718/"
+  },
+  "budapest": {
+    "source": "pexels",
+    "photo_id": "37800017",
+    "photographer": "Yana Oleksiuk",
+    "photographer_url": "https://www.pexels.com/@yana-oleksiuk-2161225765",
+    "page_url": "https://www.pexels.com/photo/aerial-view-of-hungarian-parliament-building-in-budapest-37800017/"
+  },
+  "prague": {
+    "source": "pexels",
+    "photo_id": "442583",
+    "photographer": "JESHOOTS.com",
+    "photographer_url": "https://www.pexels.com/@jeshoots-com-147458",
+    "page_url": "https://www.pexels.com/photo/aerial-view-of-concrete-bridge-and-buildings-surrounded-by-trees-442583/"
+  },
+  "barcelona": {
+    "source": "pexels",
+    "photo_id": "27348447",
+    "photographer": "AXP Photography",
+    "photographer_url": "https://www.pexels.com/@axp-photography-500641970",
+    "page_url": "https://www.pexels.com/photo/the-view-from-the-top-of-the-sagrada-familia-in-barcelona-27348447/"
+  },
+  "amsterdam": {
+    "source": "pexels",
+    "photo_id": "32953042",
+    "photographer": "David Rama",
+    "photographer_url": "https://www.pexels.com/@phreewil",
+    "page_url": "https://www.pexels.com/photo/charming-amsterdam-canal-houses-at-twilight-32953042/"
+  },
+  "berlin": {
+    "source": "pexels",
+    "photo_id": "36937027",
+    "photographer": "Max Kladitin",
+    "photographer_url": "https://www.pexels.com/@max-kladitin-456997122",
+    "page_url": "https://www.pexels.com/photo/brandenburg-gate-and-berlin-tv-tower-view-36937027/"
+  },
+  "thessaloniki": {
+    "source": "pexels",
+    "photo_id": "34713042",
+    "photographer": "Dimitris Mourousiadis",
+    "photographer_url": "https://www.pexels.com/@dimi",
+    "page_url": "https://www.pexels.com/photo/the-white-tower-in-thessaloniki-greece-34713042/"
+  },
+  "larnaca": {
+    "source": "pexels",
+    "photo_id": "4967369",
+    "photographer": "Hert Niks",
+    "photographer_url": "https://www.pexels.com/@hert",
+    "page_url": "https://www.pexels.com/photo/resort-city-beach-and-promenade-4967369/"
+  },
+  "batumi": {
+    "source": "pexels",
+    "photo_id": "35676761",
+    "photographer": "vilnis Izotovs",
+    "photographer_url": "https://www.pexels.com/@vilnisphoto",
+    "page_url": "https://www.pexels.com/photo/sunset-over-batumi-ferris-wheel-and-skyline-35676761/"
+  },
+  "tel-aviv": {
+    "source": "pexels",
+    "photo_id": "27358598",
+    "photographer": "Виктор Соломоник",
+    "photographer_url": "https://www.pexels.com/@solomonikvik",
+    "page_url": "https://www.pexels.com/photo/tel-aviv-israel-the-city-of-the-sun-27358598/"
+  },
+  "london": {
+    "source": "pexels",
+    "photo_id": "20112276",
+    "photographer": "JD Photography",
+    "photographer_url": "https://www.pexels.com/@jd246",
+    "page_url": "https://www.pexels.com/photo/big-ben-in-london-20112276/"
+  },
+  "paris": {
+    "source": "pexels",
+    "photo_id": "7822975",
+    "photographer": "Shreyas Sane",
+    "photographer_url": "https://www.pexels.com/@shreyas-sane-54878068",
+    "page_url": "https://www.pexels.com/photo/the-eiffel-tower-in-france-7822975/"
+  },
+  "lisbon": {
+    "source": "pexels",
+    "photo_id": "31800256",
+    "photographer": "Riccardo Toso",
+    "photographer_url": "https://www.pexels.com/@riccardo-toso-2151342566",
+    "page_url": "https://www.pexels.com/photo/yellow-tram-navigating-lisbon-s-narrow-streets-31800256/"
+  },
+  "madrid": {
+    "source": "pexels",
+    "photo_id": "35639887",
+    "photographer": "Mert Ocak",
+    "photographer_url": "https://www.pexels.com/@mert-ocak-1182809874",
+    "page_url": "https://www.pexels.com/photo/elegant-architecture-on-gran-via-madrid-s-iconic-street-35639887/"
+  },
+  "milan": {
+    "source": "pexels",
+    "photo_id": "27362357",
+    "photographer": "Omar Ramadan",
+    "photographer_url": "https://www.pexels.com/@omar-ramadan-1739260",
+    "page_url": "https://www.pexels.com/photo/people-walking-around-in-front-of-a-cathedral-27362357/"
+  },
+  "venice": {
+    "source": "pexels",
+    "photo_id": "3546189",
+    "photographer": "Nextvoyage",
+    "photographer_url": "https://www.pexels.com/@nextvoyage",
+    "page_url": "https://www.pexels.com/photo/venice-grand-canal-3546189/"
+  },
+  "florence": {
+    "source": "pexels",
+    "photo_id": "17565270",
+    "photographer": "Wolfgang Weiser",
+    "photographer_url": "https://www.pexels.com/@wolfgang-weiser-467045605",
+    "page_url": "https://www.pexels.com/photo/panoramic-view-from-piazzale-michelangelo-florence-italy-17565270/"
+  },
+  "munich": {
+    "source": "pexels",
+    "photo_id": "8405809",
+    "photographer": "Lander Lai",
+    "photographer_url": "https://www.pexels.com/@lander-lai-64457665",
+    "page_url": "https://www.pexels.com/photo/drone-shot-of-buildings-8405809/"
+  },
+  "zurich": {
+    "source": "pexels",
+    "photo_id": "36549287",
+    "photographer": "Natalia Sevruk",
+    "photographer_url": "https://www.pexels.com/@natalia-sevruk-636238602",
+    "page_url": "https://www.pexels.com/photo/panoramic-view-of-historic-zurich-with-grossmunster-36549287/"
+  },
+  "tbilisi": {
+    "source": "pexels",
+    "photo_id": "4638268",
+    "photographer": "ArtHouse Studio",
+    "photographer_url": "https://www.pexels.com/@arthousestudio",
+    "page_url": "https://www.pexels.com/photo/view-of-a-town-4638268/"
+  },
+  "nice": {
+    "source": "pexels",
+    "photo_id": "29864444",
+    "photographer": "AXP Photography",
+    "photographer_url": "https://www.pexels.com/@axp-photography-500641970",
+    "page_url": "https://www.pexels.com/photo/aerial-view-of-nice-and-mediterranean-coastline-29864444/"
+  },
+  "rhodes": {
+    "source": "pexels",
+    "photo_id": "33151488",
+    "photographer": "Mark Thomas",
+    "photographer_url": "https://www.pexels.com/@tomo",
+    "page_url": "https://www.pexels.com/photo/scenic-view-of-rhodes-old-town-with-medieval-walls-33151488/"
+  }
+}
