@@ -3,6 +3,11 @@
 import { useState } from "react";
 import { posterSrcs } from "@/lib/posters";
 
+// The house "photographic language" — one consistent grade over every city photo
+// so a set of diverse real photos reads as one family: gently muted, soft
+// contrast, a touch of warmth. Non-destructive (display filter only); tune here.
+const GRADE = "saturate(0.9) contrast(1.06) brightness(1.03) sepia(0.1)";
+
 // City poster with a graceful brand-gradient fallback.
 // Two modes:
 //  • default — a solid poster that fills its box (object-cover), optional dark
@@ -35,7 +40,7 @@ export function CityPoster({
         <img src={src} alt={cityHe ? `פוסטר ${cityHe}` : ""} loading="lazy"
           onError={() => setIdx((i) => i + 1)}
           className="absolute inset-0 size-full object-cover"
-          style={{ objectPosition: position, opacity: ambient ? 0.85 : 1 }} />
+          style={{ objectPosition: position, opacity: ambient ? 0.85 : 1, filter: GRADE }} />
       ) : (
         <PosterFallback ambient={ambient} />
       )}
