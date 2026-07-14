@@ -204,3 +204,40 @@ export async function getModel(): Promise<string> {
 export function dataReady(): boolean {
   return pool() !== null;
 }
+
+// --- Admin poster picks (city hero photos chosen in /admin/posters) ---
+export type PosterPick = {
+  dest_id: number; variant: string; source: string | null;
+  photo_id: string | null; photographer: string | null;
+  photographer_url: string | null; src_url: string | null;
+  page_url: string | null; materialized: boolean;
+};
+
+export async function getPosterPicks(): Promise<PosterPick[]> {
+  return query<PosterPick>(
+    `SELECT dest_id, variant, source, photo_id, photographer, photographer_url,
+            src_url, page_url, materialized
+       FROM poster_picks`
+  );
+}
+
+export async function setPosterPick(p: {
+  dest_id: number; variant?: string; source: string; photo_id: string;
+  photographer: string; photographer_url: string; src_url: string;
+  page_url: string; width: number; height: number;
+}): Promise<void> {
+  await query(
+    `INSERT INTO poster_picks
+       (dest_id, variant, source, photo_id, photographer, photographer_url,
+        src_url, page_url, width, height, picked_at, materialized)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, now(), false)
+     ON CONFLICT (dest_id, variant) DO UPDATE SET
+       source=EXCLUDED.source, photo_id=EXCLUDED.photo_id,
+       photographer=EXCLUDED.photographer, photographer_url=EXCLUDED.photographer_url,
+       src_url=EXCLUDED.src_url, page_url=EXCLUDED.page_url,
+       width=EXCLUDED.width, height=EXCLUDED.height,
+       picked_at=now(), materialized=false`,
+    [p.dest_id, p.variant ?? "default", p.source, p.photo_id, p.photographer,
+     p.photographer_url, p.src_url, p.page_url, p.width, p.height]
+  );
+}

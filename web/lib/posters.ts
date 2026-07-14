@@ -37,6 +37,36 @@ export const POSTER_SLUG: Record<number, string> = {
   25: "rhodes",
 };
 
+// Landmark-anchored Pexels search per city — used by the admin poster picker to
+// surface iconic, recognisable candidates (not generic "city" shots).
+export const POSTER_QUERY: Record<number, string> = {
+  1: "Vienna Belvedere palace skyline",
+  2: "Salzburg old town fortress river",
+  3: "Rome Colosseum skyline",
+  4: "Athens Acropolis Parthenon",
+  5: "Budapest parliament Danube river",
+  6: "Prague old town Charles Bridge",
+  7: "Barcelona Sagrada Familia skyline",
+  8: "Amsterdam canal houses",
+  9: "Berlin Brandenburg Gate",
+  10: "Thessaloniki White Tower waterfront",
+  11: "Larnaca Cyprus palm promenade seafront",
+  12: "Batumi Georgia Black Sea skyline",
+  13: "Tel Aviv beach skyline Mediterranean",
+  14: "London Big Ben Westminster Thames",
+  15: "Paris Eiffel Tower skyline",
+  16: "Lisbon tram Alfama viewpoint",
+  17: "Madrid Gran Via Plaza Mayor",
+  18: "Milan Duomo cathedral",
+  19: "Venice Grand Canal gondola",
+  20: "Florence Duomo skyline Arno",
+  21: "Munich Marienplatz old town",
+  22: "Zurich lake old town Alps",
+  23: "Tbilisi old town Narikala",
+  24: "Nice French Riviera Promenade des Anglais",
+  25: "Rhodes old town medieval harbour Greece",
+};
+
 // Ordered candidate srcs: the preferred crop first, the others as fallbacks
 // (a city may have only some crops). Empty when the city has no poster.
 export function posterSrcs(
