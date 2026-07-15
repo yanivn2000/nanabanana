@@ -68,7 +68,7 @@ export function ExploreList({ destinations, summaries = [] }: {
           {byRegion.map(({ region, items }) => (
             <section key={region}>
               <p className="eyebrow mb-3">{region} · {items.length}</p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {items.map((d) => (
                   <Link
                     key={d.id}

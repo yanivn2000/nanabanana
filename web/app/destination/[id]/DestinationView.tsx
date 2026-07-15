@@ -120,7 +120,7 @@ export function DestinationView({
           <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city} ambient
             orientation="banner" position="50% 50%" className="size-full" />
         </div>
-        <div className="relative mx-auto flex min-h-[188px] w-full max-w-6xl flex-col justify-between gap-3 px-5 pb-5 pt-3.5 lg:min-h-[236px] lg:px-8 lg:pb-6 lg:pt-4">
+        <div className="relative mx-auto flex min-h-[188px] w-full max-w-[1600px] flex-col justify-between gap-3 px-5 pb-5 pt-3.5 lg:min-h-[236px] lg:px-8 lg:pb-6 lg:pt-4">
           <Link href="/" className="eyebrow inline-flex items-center gap-1 self-start text-[var(--text-2)]">
             <ChevronRight size={14} /> בית
           </Link>
@@ -156,7 +156,7 @@ export function DestinationView({
         <div className="grid transition-[grid-template-rows] duration-300 ease-out"
           style={{ gridTemplateRows: showPasses ? "1fr" : "0fr" }}>
           <div className="overflow-hidden">
-            <div className="mx-auto max-w-6xl px-5 pb-1 pt-3 lg:px-8">
+            <div className="mx-auto max-w-[1600px] px-5 pb-1 pt-3 lg:px-8">
               <div className="flex flex-col gap-2 lg:max-w-md">
                 {passes.map((p) => (
                   <a key={p.name} href={passUrl(p.name)} target="_blank" rel="noreferrer"

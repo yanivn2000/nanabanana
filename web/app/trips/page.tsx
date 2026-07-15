@@ -19,7 +19,7 @@ export default function TripsPage() {
   }, []);
 
   return (
-    <main className="mx-auto w-full max-w-[440px] px-5 pb-28 pt-8 lg:max-w-5xl lg:px-8 lg:pb-12">
+    <main className="mx-auto w-full max-w-[440px] px-5 pb-28 pt-8 lg:max-w-[1600px] lg:px-8 lg:pb-12">
       <header className="rise mb-5">
         <h1 className="serif text-[32px] font-bold leading-none lg:text-[40px]">הטיולים שלי</h1>
         {profileLoaded && (
@@ -44,7 +44,7 @@ export default function TripsPage() {
         </div>
       )}
 
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4 xl:grid-cols-3">
         {trips.map((t) => (
           <div key={t.id}
             className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">

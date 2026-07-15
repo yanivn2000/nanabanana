@@ -295,7 +295,7 @@ export function TripView({ tripId }: { tripId: string }) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[440px] pb-16 lg:max-w-6xl">
+    <main className="mx-auto w-full max-w-[440px] pb-16 lg:max-w-[1600px]">
       {/* compact header card — data beside a square poster; map + days stay above the fold */}
       <div className="px-5 pt-2 lg:px-8 lg:pt-2.5">
         <Link href="/trips" className="eyebrow mb-1.5 inline-flex items-center gap-1 text-[var(--text-2)]">

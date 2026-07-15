@@ -12,7 +12,7 @@ export default async function Home() {
   ]);
 
   return (
-    <main className="mx-auto w-full max-w-[440px] px-5 pb-24 pt-5 lg:max-w-6xl lg:px-8 lg:pb-12">
+    <main className="mx-auto w-full max-w-[440px] px-5 pb-24 pt-5 lg:max-w-[1600px] lg:px-8 lg:pb-12">
       {/* header */}
       <header className="rise mb-4 flex items-center justify-between">
         <div>
