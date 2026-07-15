@@ -56,7 +56,7 @@ export function HomeTrips() {
 
   const Head = (
     <div className="mb-2.5 flex items-baseline justify-between">
-      <h2 className="serif text-[24px] font-bold leading-tight lg:text-[30px]">הטיולים שלי</h2>
+      <h2 className="text-[14.5px] font-semibold text-[var(--text-2)]">הטיולים שלי</h2>
       <Link href="/trips" className="text-[14px] font-medium text-[var(--brand-ink)]">כל הטיולים ←</Link>
     </div>
   );
