@@ -121,6 +121,9 @@ export function DestinationView({
   const mustSeeIds = useMemo(() => attractions.filter((a) => a.must_see === 1).map((a) => a.id), [attractions]);
   const allMustSeeYes = mustSeeIds.length > 0 && mustSeeIds.every((id) => choices[id] === "yes");
   const toggleAllMustSee = () => setMany(mustSeeIds, allMustSeeYes ? null : "yes");
+  // ~how many attractions realistically fit N days; used to flag over-picking.
+  const buildCapacity = Math.round(buildDays * 5.3);
+  const overPick = yesCount > buildCapacity;
 
   const cats = useMemo(
     () => Array.from(new Set(attractions.map((a) => mergeCat(a.category)))),
@@ -685,11 +688,22 @@ export function DestinationView({
               <h3 className="serif text-[20px] font-bold">בונים לכם את הטיול</h3>
               <button onClick={() => setBuildOpen(false)} aria-label="סגור" className="text-[var(--text-3)]"><X size={18} /></button>
             </div>
-            <p className="mb-4 text-[13.5px] leading-relaxed text-[var(--text-2)]">
-              {yesCount
-                ? `${yesCount} מקומות שסימנתם "כן" יהיו העוגנים${maybeCount ? `, ו-${maybeCount} "אולי" ישתלבו אם יש זמן` : ""}.`
-                : "לא סימנתם מקומות — נבחר את החובה-לביקור שמתאימים לכם. תמיד אפשר לסמן כן/אולי/לא כדי לכוון."}
-            </p>
+            {overPick ? (
+              <div className="mb-4 rounded-[var(--radius-sm)] border border-[var(--amber)] bg-[var(--amber-soft)] p-3">
+                <p className="text-[13.5px] font-medium text-[var(--amber)]">
+                  בחרתם {yesCount} מקומות · {buildDays} ימים מספיקים לכ-{buildCapacity}
+                </p>
+                <p className="mt-1 text-[12.5px] leading-snug text-[var(--text-2)]">
+                  אפשר להוסיף ימים למטה, לחזור ולערוך את הרשימה, או להמשיך — נבחר את המתאימים ביותר ותוכלו לערוך אחר כך.
+                </p>
+              </div>
+            ) : (
+              <p className="mb-4 text-[13.5px] leading-relaxed text-[var(--text-2)]">
+                {yesCount
+                  ? `${yesCount} מקומות שסימנתם "כן" יהיו העוגנים${maybeCount ? `, ו-${maybeCount} "אולי" ישתלבו אם יש זמן` : ""}.`
+                  : "לא סימנתם מקומות — נבחר את החובה-לביקור שמתאימים לכם. תמיד אפשר לסמן כן/אולי/לא כדי לכוון."}
+              </p>
+            )}
             <div className="mb-4">
               <div className="mb-1.5 flex items-center justify-between text-[13.5px]">
                 <span>כמה ימים?</span><span className="font-medium text-[var(--brand-ink)]">{buildDays} ימים</span>
@@ -706,10 +720,19 @@ export function DestinationView({
                 onChange={(e) => setBuildRadius(Number(e.target.value))}
                 className="w-full accent-[var(--brand)]" />
             </div>
-            <button onClick={buildTrip} disabled={building}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-3.5 text-[15px] font-medium text-white disabled:opacity-60">
-              {building ? <Loader2 size={17} className="animate-spin" /> : <Sparkles size={17} />} בנו לי טיול
-            </button>
+            <div className="flex gap-2">
+              {overPick && (
+                <button onClick={() => setBuildOpen(false)}
+                  className="flex-1 rounded-full border border-[var(--border)] py-3.5 text-[14px] font-medium text-[var(--text-2)] transition hover:border-[var(--brand)]">
+                  ערכו את הרשימה
+                </button>
+              )}
+              <button onClick={buildTrip} disabled={building}
+                className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-3.5 text-[15px] font-medium text-white disabled:opacity-60">
+                {building ? <Loader2 size={17} className="animate-spin" /> : <Sparkles size={17} />}
+                {overPick ? "בנו — נבחר את המתאימים" : "בנו לי טיול"}
+              </button>
+            </div>
           </div>
         </div>
       )}

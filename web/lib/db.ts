@@ -107,6 +107,13 @@ export async function topAttractions(destinationId: number, limit = 40): Promise
   );
 }
 
+// Fetch specific attractions by id — used so the itinerary builder always has
+// the traveler's exact picks as candidates, even ones ranked below the top pool.
+export async function attractionsByIds(ids: number[]): Promise<Attraction[]> {
+  if (!ids.length) return [];
+  return query<Attraction>(`SELECT ${ATTR_COLS} FROM attractions WHERE id = ANY($1)`, [ids]);
+}
+
 export async function attractionsForMap(destinationId: number, limit = 200): Promise<Attraction[]> {
   return query<Attraction>(
     `SELECT ${ATTR_COLS}

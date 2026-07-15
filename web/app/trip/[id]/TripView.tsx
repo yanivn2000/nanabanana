@@ -211,7 +211,8 @@ export function TripView({ tripId }: { tripId: string }) {
         setError(msg);
         return;
       }
-      update(tripId, { itinerary: data.itinerary });
+      // `leftOut` comes back only on a selection build; keep the last value on revise.
+      update(tripId, { itinerary: data.itinerary, ...(data.leftOut !== undefined ? { leftOut: data.leftOut } : {}) });
     } catch {
       setError("שגיאת רשת");
     } finally {
@@ -236,6 +237,13 @@ export function TripView({ tripId }: { tripId: string }) {
   }, "generate");
   const revise = (instruction: string) =>
     call({ mode: "revise", current: itinerary, instruction, dateContext: dateContext || undefined }, "revise");
+
+  // Add a left-out "כן" pick back via the AI, and drop it from the list.
+  const addLeftOut = (p: { id: number; name_he: string | null; name_en: string }) => {
+    if (busy) return;
+    revise(`הוסף את "${p.name_he || p.name_en}" ליום שמתאים לו במיוחד מבחינת מיקום וקצב, ושמור על שאר הימים.`);
+    update(tripId, { leftOut: (trip?.leftOut ?? []).filter((x) => x.id !== p.id) });
+  };
 
   // Arrived from the city page with ?build=1 → start building immediately, once.
   const autoBuild = useSearchParams().get("build") === "1";
@@ -709,6 +717,33 @@ export function TripView({ tripId }: { tripId: string }) {
               </div>
             )}
           </div>
+
+          {/* picks that didn't fit the days — transparent, with one-tap add */}
+          {trip?.leftOut && trip.leftOut.length > 0 && (
+            <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--amber)] bg-[var(--amber-soft)] p-4">
+              <p className="text-[14px] font-semibold text-[var(--amber)]">בחרת אבל לא נכנסו ליומן · {trip.leftOut.length}</p>
+              <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--text-2)]">
+                {dayCount} ימים לא הספיקו לכל מה שסימנת. הוסיפו מה שחשוב — נשלב ביום שהכי מתאים.
+              </p>
+              <div className="mt-3 flex max-h-[320px] flex-col gap-2 overflow-y-auto">
+                {trip.leftOut.map((p) => (
+                  <div key={p.id} className="flex items-center gap-3 rounded-[10px] bg-[var(--surface)] p-2 shadow-[var(--shadow)]">
+                    {p.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.image_url} alt="" loading="lazy" className="size-11 shrink-0 rounded-[8px] object-cover" />
+                    ) : (
+                      <div className="grid size-11 shrink-0 place-items-center rounded-[8px] bg-[var(--surface-2)] text-[var(--text-3)]"><MapPin size={16} /></div>
+                    )}
+                    <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">{p.name_he || p.name_en}</span>
+                    <button onClick={() => addLeftOut(p)} disabled={!!busy}
+                      className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--brand)] px-3.5 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50">
+                      <Sparkles size={13} /> הוסף
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* revise with AI — in the flow, right under the day */}
           <AskBar onSend={revise} busy={busy === "revise"}

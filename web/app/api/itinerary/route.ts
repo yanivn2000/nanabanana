@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listDestinations, topAttractions, insightsForDestination } from "@/lib/db";
+import { listDestinations, topAttractions, insightsForDestination, attractionsByIds } from "@/lib/db";
 import type { Attraction, Destination } from "@/lib/db";
 import {
   aiConfigured,
@@ -65,7 +65,7 @@ function partitionBySelection(
 // (image, website, coords, tagline, time/dress/cost) for the expandable view.
 // When anchorIds is given (Explore build), tag each matched stop as an anchor or
 // an "אם יש זמן" filler so the trip page can show the two tiers.
-function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set<number>): Itinerary {
+function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set<number>, scheduled?: Set<number>): Itinerary {
   const exact = new Map<string, Attraction>();
   const list: { a: Attraction; n: string }[] = [];
   for (const a of attractions) {
@@ -88,6 +88,7 @@ function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set
         s.tagline = a.tagline_he; s.bestTime = a.best_time_he;
         s.dress = a.dress_he; s.cost = a.cost_level;
         if (anchorIds) s.anchor = anchorIds.has(a.id);
+        scheduled?.add(a.id);
       }
     }
   }
@@ -129,7 +130,13 @@ export async function POST(req: NextRequest) {
   // vintage couple and a sports/history couple get different attraction sets
   // fed to the builder → genuinely different trips. No taste → family order.
   const isFamily = body.isFamily === true;
-  const pool = await topAttractions(dest.id, 150);
+  // Base pool = top 150; then fold in the traveler's exact picks (even ones
+  // ranked below 150) so a chosen place is always a real build candidate.
+  const base = await topAttractions(dest.id, 150);
+  const pickIds = body.selection ? [...body.selection.yes, ...body.selection.maybe] : [];
+  const picks = pickIds.length ? await attractionsByIds(pickIds) : [];
+  const seen = new Set(base.map((a) => a.id));
+  const pool = [...base, ...picks.filter((p) => !seen.has(p.id))];
   const attractions = rankByTaste(pool, body.taste, 50, isFamily);
   // Explore build (F1): split into anchors + "אם יש זמן" fillers. Only used by
   // the single-city generate path below (details/revise/multi ignore it).
@@ -138,6 +145,20 @@ export async function POST(req: NextRequest) {
   // Only tag tiers when there's a real anchor set — otherwise every stop would
   // read "אם יש זמן" (e.g. a click-through selection with no picks / no must-sees).
   const anchorIds = sel && sel.anchors.length ? sel.anchorIds : undefined;
+
+  // Attach details, then report the traveler's "כן" picks that did NOT make it
+  // into the plan (too many for the days, or squeezed out) so the trip page can
+  // offer to add them back. Empty unless this was a real selection build.
+  const yesSet = new Set(body.selection?.yes ?? []);
+  const respondGenerate = (itin: Itinerary, engine?: string) => {
+    const scheduled = new Set<number>();
+    const withDetails = attachDetails(itin, buildList, anchorIds, scheduled);
+    const leftOut = body.selection
+      ? picks.filter((a) => yesSet.has(a.id) && !scheduled.has(a.id))
+          .map((a) => ({ id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category }))
+      : [];
+    return NextResponse.json({ itinerary: withDetails, ...(engine ? { engine } : {}), leftOut });
+  };
 
   // Attach DB details to an existing itinerary — no AI, so it works without
   // credit and upgrades trips created before details existed.
@@ -197,9 +218,8 @@ export async function POST(req: NextRequest) {
   // Generate works without a key via the heuristic builder; AI upgrades it.
   // buildList puts anchors first so the heuristic schedules them first too.
   if (body.mode !== "revise" && !aiConfigured()) {
-    const itinerary = attachDetails(buildHeuristicItinerary(
-      dest.city, dest.country, body.days ?? 4, buildList, isFamily), buildList, anchorIds);
-    return NextResponse.json({ itinerary, engine: "heuristic" });
+    return respondGenerate(
+      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList, isFamily), "heuristic");
   }
 
   if (body.mode === "revise") {
@@ -235,11 +255,10 @@ export async function POST(req: NextRequest) {
       fillers: sel?.fillers,
       isFamily,
     });
-    return NextResponse.json({ itinerary: attachDetails(itinerary, buildList, anchorIds) });
+    return respondGenerate(itinerary);
   } catch (e) {
     console.warn(`[itinerary] AI generate failed, using heuristic: ${(e as Error).message}`);
-    const itinerary = attachDetails(
-      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList, isFamily), buildList, anchorIds);
-    return NextResponse.json({ itinerary, engine: "heuristic" });
+    return respondGenerate(
+      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList, isFamily), "heuristic");
   }
 }
