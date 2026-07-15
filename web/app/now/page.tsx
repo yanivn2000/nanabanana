@@ -63,7 +63,7 @@ export default function NowPage() {
         </div>
         <div>
           <h1 className="text-[22px] font-bold leading-tight">מצב טיול</h1>
-          <p className="text-[13px] text-[var(--text-2)]">מה קרוב אליכם עכשיו</p>
+          <p className="text-[14px] text-[var(--text-2)]">מה קרוב אליכם עכשיו</p>
         </div>
       </header>
 
@@ -75,9 +75,9 @@ export default function NowPage() {
 
       {state.phase === "error" && (
         <div className="rounded-[var(--radius-card)] bg-[var(--amber-soft)] p-5 text-center">
-          <p className="text-[14px] text-[var(--amber)]">{state.msg}</p>
+          <p className="text-[15px] text-[var(--amber)]">{state.msg}</p>
           <button onClick={locate}
-            className="mt-3 rounded-full bg-[var(--brand)] px-5 py-2 text-[14px] font-medium text-white">
+            className="mt-3 rounded-full bg-[var(--brand)] px-5 py-2 text-[15px] font-medium text-white">
             נסו שוב
           </button>
         </div>
@@ -85,7 +85,7 @@ export default function NowPage() {
 
       {state.phase === "ready" && (
         <>
-          <p className="rise-1 mb-3 text-[13px] text-[var(--text-2)]">
+          <p className="rise-1 mb-3 text-[14px] text-[var(--text-2)]">
             אתם ליד <span className="font-medium text-[var(--text)]">{state.dest.city_he || state.dest.city}</span> · {state.items.length} מקומות בקרבת מקום
           </p>
 
@@ -110,14 +110,14 @@ export default function NowPage() {
                   <button type="button" onClick={() => a.description_he && setOpenId(openId === a.id ? null : a.id)}
                     className="block w-full text-right">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-[15px] font-medium leading-tight">{a.name_he || a.name_en}</p>
+                      <p className="truncate text-[16px] font-medium leading-tight">{a.name_he || a.name_en}</p>
                       {isFamily && !!a.family_score && (
-                        <span className="flex shrink-0 items-center gap-0.5 text-[12px] font-medium text-[var(--brand-ink)]">
+                        <span className="flex shrink-0 items-center gap-0.5 text-[13px] font-medium text-[var(--brand-ink)]">
                           <Star size={12} fill="currentColor" /> {a.family_score}
                         </span>
                       )}
                     </div>
-                    <p className="mt-0.5 text-[12.5px] text-[var(--text-2)]">
+                    <p className="mt-0.5 text-[13.5px] text-[var(--text-2)]">
                       {descriptor(a)} · <span className="text-[var(--brand-ink)]">{formatDistance(a.distanceKm)}</span>
                       {a.description_he && (
                         <span className="text-[var(--text-3)]"> · {openId === a.id ? "פחות ▴" : "עוד ▾"}</span>
@@ -125,15 +125,15 @@ export default function NowPage() {
                     </p>
                   </button>
                   {openId === a.id && a.description_he && (
-                    <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--text-2)]">{a.description_he}</p>
+                    <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--text-2)]">{a.description_he}</p>
                   )}
                   <div className="mt-2 flex gap-2">
                     <a href={wazeUrl(a.lat as number, a.lng as number)} target="_blank" rel="noreferrer"
-                      className="flex items-center gap-1 rounded-full bg-[var(--brand)] px-3 py-1.5 text-[12px] font-medium text-white">
+                      className="flex items-center gap-1 rounded-full bg-[var(--brand)] px-3 py-1.5 text-[13px] font-medium text-white">
                       <Navigation size={13} /> Waze
                     </a>
                     <a href={googleMapsUrl(a.lat as number, a.lng as number)} target="_blank" rel="noreferrer"
-                      className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-[12px] text-[var(--text-2)]">
+                      className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--text-2)]">
                       <MapPin size={13} /> Maps
                     </a>
                   </div>
@@ -144,7 +144,7 @@ export default function NowPage() {
         </>
       )}
 
-      <Link href="/" className="mt-6 flex items-center justify-center gap-1 text-[13px] text-[var(--text-3)]">
+      <Link href="/" className="mt-6 flex items-center justify-center gap-1 text-[14px] text-[var(--text-3)]">
         <ChevronRight size={15} /> חזרה לבית
       </Link>
     </main>

@@ -23,7 +23,7 @@ export function AuthButton({ showEmail = false }: { showEmail?: boolean }) {
   if (!email) {
     return (
       <Link href="/login"
-        className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-[14px] font-medium text-white">
+        className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-[15px] font-medium text-white">
         <LogIn size={16} /> התחברות
       </Link>
     );
@@ -32,7 +32,7 @@ export function AuthButton({ showEmail = false }: { showEmail?: boolean }) {
   return (
     <button
       onClick={async () => { await createClient().auth.signOut(); location.href = "/"; }}
-      className="flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] text-[var(--text-2)]"
+      className="flex items-center gap-1.5 rounded-full px-3 py-2 text-[14px] text-[var(--text-2)]"
       title="התנתקות">
       <span className={`max-w-[160px] truncate ${showEmail ? "" : "hidden lg:inline"}`}>{email}</span>
       <LogOut size={16} />

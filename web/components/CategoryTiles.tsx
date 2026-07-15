@@ -145,7 +145,7 @@ export function CategoryTile({ label, selected, state, onClick }: {
       className="relative flex flex-col items-center justify-center gap-1.5 rounded-[18px] px-1 py-3 transition"
       style={box}>
       {s !== "none" && (
-        <span className="absolute end-1.5 top-1.5 grid size-[18px] place-items-center rounded-full text-[10px] font-bold leading-none text-white"
+        <span className="absolute end-1.5 top-1.5 grid size-[18px] place-items-center rounded-full text-[11px] font-bold leading-none text-white"
           style={{ background: s === "yes" ? "var(--brand)" : "var(--text-3)" }}>
           {s === "yes" ? "✓" : "✕"}
         </span>
@@ -157,7 +157,7 @@ export function CategoryTile({ label, selected, state, onClick }: {
           <span className="grid size-[30px] place-items-center text-[20px]">✦</span>
         )}
       </span>
-      <span className="text-[12px] font-medium leading-tight"
+      <span className="text-[13px] font-medium leading-tight"
         style={{
           color: s === "yes" ? "var(--brand-ink)" : "var(--text-2)",
           textDecoration: s === "no" ? "line-through" : "none",

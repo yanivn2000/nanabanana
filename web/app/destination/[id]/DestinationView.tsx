@@ -125,23 +125,23 @@ export function DestinationView({
             <ChevronRight size={14} /> בית
           </Link>
           <div>
-            <p className="text-[12.5px] font-medium tracking-wide text-[var(--text-2)]">{dest.country_he || dest.country}</p>
+            <p className="text-[13.5px] font-medium tracking-wide text-[var(--text-2)]">{dest.country_he || dest.country}</p>
             <h1 className="serif text-[32px] font-bold leading-none text-[var(--text)] lg:text-[44px]">{dest.city_he || dest.city}</h1>
-            <p className="mt-1.5 text-[13px] text-[var(--text-2)]">
+            <p className="mt-1.5 text-[14px] text-[var(--text-2)]">
               {dest.attraction_count.toLocaleString("he")} מקומות במאגר
             </p>
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {/* חקירת יעד — the guided, personalized exploration flow */}
               <Link href={`/explore/${dest.id}`}
-                className="inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-4 py-2 text-[13.5px] font-medium text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-4 py-2 text-[14.5px] font-medium text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
                 <Compass size={16} /> חקרו את היעד לפי מי שאתם
               </Link>
 
               {/* money-saving pass toggle (#16) — the panel opens BELOW the hero */}
               {passes.length > 0 && (
                 <button onClick={() => setShowPasses((v) => !v)}
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition"
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13.5px] font-medium transition"
                   style={{ background: "var(--brand-soft)", color: "var(--brand-ink)", border: "1px solid var(--brand)" }}>
                   💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
                 </button>
@@ -163,18 +163,18 @@ export function DestinationView({
                     className="flex items-start gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-2.5 shadow-[var(--shadow)]">
                     <span className="shrink-0">💳</span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-[13.5px] font-medium">{p.name}</span>
-                      <span className="block text-[12px] text-[var(--text-2)]">{p.note_he}</span>
+                      <span className="block text-[14.5px] font-medium">{p.name}</span>
+                      <span className="block text-[13px] text-[var(--text-2)]">{p.note_he}</span>
                     </span>
-                    <span className="shrink-0 self-center text-[12px] text-[var(--brand-ink)]">פרטים ↗</span>
+                    <span className="shrink-0 self-center text-[13px] text-[var(--brand-ink)]">פרטים ↗</span>
                   </a>
                 ))}
                 {passes.some((p) => p.included?.length) && (
-                  <p className="text-[11.5px] text-[var(--brand-ink)]">
+                  <p className="text-[12.5px] text-[var(--brand-ink)]">
                     אטרקציות שמסומנות 💳 ברשימה נכללות בכרטיס{passes.find((p) => p.updated)?.updated ? ` (עודכן ${passes.find((p) => p.updated)!.updated})` : ""}.
                   </p>
                 )}
-                <p className="text-[11px] text-[var(--text-3)]">כרטיס אזורי/עירוני שיכול לחסוך על תחבורה וכניסות. הכיסוי משתנה מעת לעת — אמתו את הרשימה המלאה באתר הרשמי.</p>
+                <p className="text-[12px] text-[var(--text-3)]">כרטיס אזורי/עירוני שיכול לחסוך על תחבורה וכניסות. הכיסוי משתנה מעת לעת — אמתו את הרשימה המלאה באתר הרשמי.</p>
               </div>
             </div>
           </div>
@@ -189,25 +189,25 @@ export function DestinationView({
         <section className="rise border-b border-[var(--border)] bg-[var(--surface)] px-5 py-4 lg:px-8">
           <button onClick={() => setShowPlaces((v) => !v)}
             className="flex w-full items-center justify-between text-right">
-            <span className="text-[15px] font-medium">
+            <span className="text-[16px] font-medium">
               🏨 מלונות, אוכל והמלצות ממטיילים
-              <span className="mr-1.5 text-[13px] font-normal text-[var(--text-3)]">({placeGroups.length} מקומות)</span>
+              <span className="mr-1.5 text-[14px] font-normal text-[var(--text-3)]">({placeGroups.length} מקומות)</span>
             </span>
-            <span className="text-[13px] text-[var(--brand-ink)]">{showPlaces ? "הסתר ▴" : "הצג ▾"}</span>
+            <span className="text-[14px] text-[var(--brand-ink)]">{showPlaces ? "הסתר ▴" : "הצג ▾"}</span>
           </button>
           {showPlaces && (
             <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
               {placeGroups.slice(0, 120).map((g) => (
                 <div key={g.name} className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] p-3">
-                  <p className="mb-1 text-[13.5px] font-medium">
+                  <p className="mb-1 text-[14.5px] font-medium">
                     {g.name}
                     {g.items.length > 1 && (
-                      <span className="mr-1 text-[11.5px] font-normal text-[var(--text-3)]">· {g.items.length} מטיילים</span>
+                      <span className="mr-1 text-[12.5px] font-normal text-[var(--text-3)]">· {g.items.length} מטיילים</span>
                     )}
                   </p>
                   <div className="flex flex-col gap-1">
                     {g.items.map((ins) => (
-                      <p key={ins.id} className="flex items-start gap-1 text-[12.5px] leading-snug text-[var(--text-2)]">
+                      <p key={ins.id} className="flex items-start gap-1 text-[13.5px] leading-snug text-[var(--text-2)]">
                         <span className="shrink-0">{KIND_ICON[ins.kind] ?? "💬"}</span>
                         <span>{ins.text_he}</span>
                       </p>
@@ -216,7 +216,7 @@ export function DestinationView({
                 </div>
               ))}
               {placeGroups.length > 120 && (
-                <p className="text-[12px] text-[var(--text-3)]">מוצגים 120 המקומות שהומלצו הכי הרבה מתוך {placeGroups.length}.</p>
+                <p className="text-[13px] text-[var(--text-3)]">מוצגים 120 המקומות שהומלצו הכי הרבה מתוך {placeGroups.length}.</p>
               )}
             </div>
           )}
@@ -241,7 +241,7 @@ export function DestinationView({
             <Search size={16} className="shrink-0 text-[var(--text-3)]" />
             <input value={query} onChange={(e) => setQuery(e.target.value)}
               placeholder="חיפוש אטרקציה…"
-              className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[var(--text-3)]" />
+              className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]" />
           </div>
 
           <div className="mb-5 flex gap-4 overflow-x-auto pb-1">
@@ -249,7 +249,7 @@ export function DestinationView({
               const on = activeCat === c;
               return (
                 <button key={c ?? "all"} onClick={() => setActiveCat(c)}
-                  className="flex shrink-0 items-center gap-1.5 whitespace-nowrap pb-1 text-[13px] transition"
+                  className="flex shrink-0 items-center gap-1.5 whitespace-nowrap pb-1 text-[14px] transition"
                   style={{
                     color: on ? "var(--accent-ink)" : "var(--text-2)",
                     fontWeight: on ? 500 : 400,
@@ -272,7 +272,7 @@ export function DestinationView({
                 toggleFlag("fitsProfile");
               }}
               title={hasPrefs ? undefined : "מלאו מה מעניין אתכם בפרופיל"}
-              className="rounded-full px-3.5 py-1.5 text-[12.5px] font-medium transition"
+              className="rounded-full px-3.5 py-1.5 text-[13.5px] font-medium transition"
               style={{
                 background: flags.fitsProfile ? "var(--brand)" : "var(--brand-soft)",
                 color: flags.fitsProfile ? "#fff" : "var(--brand-ink)",
@@ -290,7 +290,7 @@ export function DestinationView({
               const on = flags[k];
               return (
                 <button key={k} onClick={() => toggleFlag(k)}
-                  className="rounded-full px-3 py-1.5 text-[12.5px] transition"
+                  className="rounded-full px-3 py-1.5 text-[13.5px] transition"
                   style={{
                     background: on ? "var(--accent)" : "var(--surface)",
                     color: on ? "#fff" : "var(--text-2)",
@@ -301,7 +301,7 @@ export function DestinationView({
               );
             })}
             <button onClick={() => toggleFlag("withInsights")}
-              className="rounded-full px-3 py-1.5 text-[12.5px] transition"
+              className="rounded-full px-3 py-1.5 text-[13.5px] transition"
               style={{
                 background: flags.withInsights ? "var(--brand)" : "var(--surface)",
                 color: flags.withInsights ? "#fff" : "var(--text-2)",
@@ -310,7 +310,7 @@ export function DestinationView({
               💬 עם תובנות מטיילים
             </button>
             <button onClick={() => setMapOnly((v) => !v)}
-              className="rounded-full px-3 py-1.5 text-[12.5px] transition"
+              className="rounded-full px-3 py-1.5 text-[13.5px] transition"
               style={{
                 background: mapOnly ? "var(--brand)" : "var(--surface)",
                 color: mapOnly ? "#fff" : "var(--text-2)",
@@ -322,19 +322,19 @@ export function DestinationView({
           </div>
 
           {flags.withInsights && (
-            <p className="mb-2 text-[12px] text-[var(--brand-ink)]">
+            <p className="mb-2 text-[13px] text-[var(--brand-ink)]">
               מציג רק מקומות עם תובנות מטיילים ({listItems.length})
             </p>
           )}
           {mapOnly && (
-            <p className="mb-2 text-[12px] text-[var(--brand-ink)]">
+            <p className="mb-2 text-[13px] text-[var(--brand-ink)]">
               מציג {listItems.length} מקומות באזור המפה — הזיזו או הגדילו את המפה לעדכון
             </p>
           )}
 
           <div className="flex flex-col">
             {listItems.length === 0 && (
-              <p className="py-8 text-center text-[14px] text-[var(--text-3)]">
+              <p className="py-8 text-center text-[15px] text-[var(--text-3)]">
                 {mapOnly ? "אין מקומות באזור המפה הנוכחי — הקטינו זום או הזיזו" : "אין תוצאות לסינון הזה"}
               </p>
             )}
@@ -359,29 +359,29 @@ export function DestinationView({
                     <div className="flex items-center gap-2">
                       <p className="eyebrow truncate">{meta(a)}</p>
                       {a.must_see === 1 && (
-                        <span className="shrink-0 bg-[var(--accent)] px-1.5 py-0.5 text-[9px] font-medium tracking-wide text-white">חובה</span>
+                        <span className="shrink-0 bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-white">חובה</span>
                       )}
                       {covered.has(a.id) && (
-                        <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-medium"
+                        <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
                           style={{ background: "var(--brand-soft)", color: "var(--brand-ink)" }}>💳 כלול בכרטיס</span>
                       )}
                     </div>
                     <p className="serif mt-0.5 text-[17px] leading-tight">{a.name_he || a.name_en}</p>
                     {a.tagline_he && (
-                      <p className={`mt-0.5 text-[13px] italic text-[var(--text-2)] ${isSel ? "" : "truncate"}`}>{a.tagline_he}</p>
+                      <p className={`mt-0.5 text-[14px] italic text-[var(--text-2)] ${isSel ? "" : "truncate"}`}>{a.tagline_he}</p>
                     )}
                     {isSel && a.description_he && (
-                      <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--text-2)]">{a.description_he}</p>
+                      <p className="mt-1.5 text-[14px] leading-relaxed text-[var(--text-2)]">{a.description_he}</p>
                     )}
                     {insights[a.id]?.length ? (
                       isSel ? (
                         // Selected: show every traveler insight for this place.
                         <div className="mt-1.5 flex flex-col gap-1">
-                          <p className="text-[11px] font-medium text-[var(--text-3)]">
+                          <p className="text-[12px] font-medium text-[var(--text-3)]">
                             תובנות ממטיילים ({insights[a.id].length})
                           </p>
                           {insights[a.id].map((ins) => (
-                            <p key={ins.id} className="flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]">
+                            <p key={ins.id} className="flex items-start gap-1 text-[13.5px] leading-snug text-[var(--brand-ink)]">
                               <span className="shrink-0">{KIND_ICON[ins.kind] ?? "💬"}</span>
                               <span>{ins.text_he}</span>
                             </p>
@@ -389,7 +389,7 @@ export function DestinationView({
                         </div>
                       ) : (
                         // Collapsed: teaser (first insight) + honest count of the rest.
-                        <p className="mt-1 flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]">
+                        <p className="mt-1 flex items-start gap-1 text-[13.5px] leading-snug text-[var(--brand-ink)]">
                           <span className="shrink-0">{KIND_ICON[insights[a.id][0].kind] ?? "💬"}</span>
                           <span className="line-clamp-2">
                             {insights[a.id][0].text_he}
@@ -400,7 +400,7 @@ export function DestinationView({
                         </p>
                       )
                     ) : null}
-                    <div className="mt-1.5 flex items-center gap-2.5 text-[12px] text-[var(--text-3)]">
+                    <div className="mt-1.5 flex items-center gap-2.5 text-[13px] text-[var(--text-3)]">
                       {isFamily && !!a.family_score && (
                         <span className="inline-flex items-center gap-0.5 text-[var(--accent-ink)]" title="ציון התאמה למשפחות">
                           <Star size={11} fill="currentColor" /> {a.family_score}

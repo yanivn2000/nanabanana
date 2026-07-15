@@ -15,7 +15,7 @@ const DIETARY = ["ללא גלוטן", "צמחוני", "טבעוני", "כשר", 
 function Chip({ on, children, onClick }: { on: boolean; children: React.ReactNode; onClick: () => void }) {
   return (
     <button onClick={onClick}
-      className="rounded-full px-3.5 py-1.5 text-[13px] transition"
+      className="rounded-full px-3.5 py-1.5 text-[14px] transition"
       style={{
         background: on ? "var(--brand)" : "var(--surface)",
         color: on ? "#fff" : "var(--text-2)",
@@ -31,7 +31,7 @@ function Seg<T extends string>({ value, options, onChange }: { value: T; options
     <div className="flex gap-1 rounded-full bg-[var(--surface-2)] p-1">
       {options.map((o) => (
         <button key={o} onClick={() => onChange(o)}
-          className="flex-1 rounded-full py-1.5 text-[13px] transition"
+          className="flex-1 rounded-full py-1.5 text-[14px] transition"
           style={{
             background: value === o ? "var(--surface)" : "transparent",
             color: value === o ? "var(--text)" : "var(--text-2)",
@@ -71,7 +71,7 @@ export function ProfileEditor({ value: p, onChange: save }: {
   return (
     <div className="flex flex-col gap-6">
       <section>
-        <label className="mb-2 block text-[14px] font-medium">מבוגרים</label>
+        <label className="mb-2 block text-[15px] font-medium">מבוגרים</label>
         <div className="flex w-fit items-center gap-4 rounded-full bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]">
           <button onClick={() => save({ ...p, adults: Math.max(1, p.adults - 1) })}
             className="grid size-9 place-items-center rounded-full bg-[var(--surface-2)]"><Minus size={16} /></button>
@@ -83,45 +83,45 @@ export function ProfileEditor({ value: p, onChange: save }: {
 
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <label className="text-[14px] font-medium">ילדים</label>
-          <button onClick={addKid} className="flex items-center gap-1 text-[13px] text-[var(--brand-ink)]">
+          <label className="text-[15px] font-medium">ילדים</label>
+          <button onClick={addKid} className="flex items-center gap-1 text-[14px] text-[var(--brand-ink)]">
             <Plus size={15} /> הוסף ילד
           </button>
         </div>
         <div className="flex flex-col gap-2">
           {p.kids.length === 0 && (
-            <p className="text-[13px] text-[var(--text-3)]">אין ילדים. הוסיפו כדי שנתאים אטרקציות וקצב.</p>
+            <p className="text-[14px] text-[var(--text-3)]">אין ילדים. הוסיפו כדי שנתאים אטרקציות וקצב.</p>
           )}
           {p.kids.map((k, i) => (
             <div key={i} className="rounded-[var(--radius-card)] bg-[var(--surface)] p-3 shadow-[var(--shadow)]">
               <div className="flex items-center gap-2">
                 <input value={k.name} onChange={(e) => setKid(i, { name: e.target.value })}
-                  placeholder="שם" className="min-w-0 flex-1 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[14px] outline-none" />
+                  placeholder="שם" className="min-w-0 flex-1 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[15px] outline-none" />
                 <div className="flex items-center gap-1.5 rounded-lg bg-[var(--surface-2)] px-2 py-1">
-                  <span className="text-[12px] text-[var(--text-3)]">גיל</span>
+                  <span className="text-[13px] text-[var(--text-3)]">גיל</span>
                   <input type="number" min={0} max={18} value={k.age}
                     onChange={(e) => setKid(i, { age: Number(e.target.value) })}
-                    className="w-10 bg-transparent text-center text-[14px] outline-none" />
+                    className="w-10 bg-transparent text-center text-[15px] outline-none" />
                 </div>
                 <button onClick={() => delKid(i)} className="grid size-9 place-items-center rounded-lg text-[var(--text-3)]"><Trash2 size={16} /></button>
               </div>
               <input value={k.loves} onChange={(e) => setKid(i, { loves: e.target.value })}
                 placeholder="מה הוא אוהב? (חיות, מים, רכבות…)"
-                className="mt-2 w-full rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[13px] outline-none" />
+                className="mt-2 w-full rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[14px] outline-none" />
             </div>
           ))}
         </div>
       </section>
 
       <section>
-        <label className="mb-1 block text-[14px] font-medium">מה מעניין אתכם?</label>
-        <p className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-[var(--text-3)]">
+        <label className="mb-1 block text-[15px] font-medium">מה מעניין אתכם?</label>
+        <p className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-[var(--text-3)]">
           <span>הקישו כדי לעבור בין:</span>
           <span className="inline-flex items-center gap-1">
-            <span className="grid size-4 place-items-center rounded-full bg-[var(--brand)] text-[9px] font-bold text-white">✓</span> מעוניין
+            <span className="grid size-4 place-items-center rounded-full bg-[var(--brand)] text-[10px] font-bold text-white">✓</span> מעוניין
           </span>
           <span className="inline-flex items-center gap-1">
-            <span className="grid size-4 place-items-center rounded-full bg-[var(--text-3)] text-[9px] font-bold text-white">✕</span> לא מעוניין
+            <span className="grid size-4 place-items-center rounded-full bg-[var(--text-3)] text-[10px] font-bold text-white">✕</span> לא מעוניין
           </span>
           <span>· ריק = ניטרלי</span>
         </p>
@@ -134,27 +134,27 @@ export function ProfileEditor({ value: p, onChange: save }: {
       </section>
 
       <section>
-        <label className="mb-2 block text-[14px] font-medium">קצב</label>
+        <label className="mb-2 block text-[15px] font-medium">קצב</label>
         <Seg value={p.pace} options={PACES} onChange={(v) => save({ ...p, pace: v })} />
       </section>
       <section>
-        <label className="mb-2 block text-[14px] font-medium">תקציב</label>
+        <label className="mb-2 block text-[15px] font-medium">תקציב</label>
         <Seg value={p.budget} options={BUDGETS} onChange={(v) => save({ ...p, budget: v })} />
       </section>
 
       <section>
         <div className="mb-1 flex items-center justify-between">
-          <label className="text-[14px] font-medium">זמן נסיעה לכל כיוון</label>
-          <span className="text-[13px] text-[var(--brand-ink)]">עד {p.dailyDriveHours} שעות</span>
+          <label className="text-[15px] font-medium">זמן נסיעה לכל כיוון</label>
+          <span className="text-[14px] text-[var(--brand-ink)]">עד {p.dailyDriveHours} שעות</span>
         </div>
-        <p className="mb-2 text-[12px] text-[var(--text-3)]">עד כמה רחוק מהבסיס מוכנים לנסוע לטיול-יום (כיוון אחד)</p>
+        <p className="mb-2 text-[13px] text-[var(--text-3)]">עד כמה רחוק מהבסיס מוכנים לנסוע לטיול-יום (כיוון אחד)</p>
         <input type="range" min={0.5} max={5} step={0.5} value={p.dailyDriveHours}
           onChange={(e) => save({ ...p, dailyDriveHours: Number(e.target.value) })}
           className="w-full accent-[var(--brand)]" />
       </section>
 
       <section>
-        <label className="mb-2 block text-[14px] font-medium">סגנון לינה</label>
+        <label className="mb-2 block text-[15px] font-medium">סגנון לינה</label>
         <div className="flex flex-wrap gap-2">
           {LODGINGS.map((v) => (
             <Chip key={v} on={p.lodging === v} onClick={() => save({ ...p, lodging: v })}>{v}</Chip>
@@ -163,7 +163,7 @@ export function ProfileEditor({ value: p, onChange: save }: {
       </section>
 
       <section>
-        <label className="mb-2 block text-[14px] font-medium">נגישות</label>
+        <label className="mb-2 block text-[15px] font-medium">נגישות</label>
         <div className="flex flex-wrap gap-2">
           {ACCESSIBILITY.map((v) => (
             <Chip key={v} on={(p.accessibility ?? []).includes(v)}
@@ -173,7 +173,7 @@ export function ProfileEditor({ value: p, onChange: save }: {
       </section>
 
       <section>
-        <label className="mb-2 block text-[14px] font-medium">תזונה</label>
+        <label className="mb-2 block text-[15px] font-medium">תזונה</label>
         <div className="flex flex-wrap gap-2">
           {DIETARY.map((v) => (
             <Chip key={v} on={(p.dietary ?? []).includes(v)}

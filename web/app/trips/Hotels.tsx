@@ -76,7 +76,7 @@ export function Hotels({
         <p className="eyebrow">מלונות הטיול</p>
         {!open && (
           <button onClick={() => setOpen(true)}
-            className="flex items-center gap-1 text-[13px] text-[var(--accent-ink)]">
+            className="flex items-center gap-1 text-[14px] text-[var(--accent-ink)]">
             <Plus size={15} /> הוסף מלון
           </button>
         )}
@@ -85,28 +85,28 @@ export function Hotels({
       {open && (
         <div className="mb-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-[14px] font-medium">מלון חדש</span>
+            <span className="text-[15px] font-medium">מלון חדש</span>
             <button onClick={() => { setOpen(false); setErr(null); }} aria-label="סגור"
               className="text-[var(--text-3)]"><X size={18} /></button>
           </div>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="שם המלון (לא חובה)"
-            className="mb-2 w-full rounded-lg bg-[var(--surface-2)] px-3 py-2.5 text-[14px] outline-none" />
+            className="mb-2 w-full rounded-lg bg-[var(--surface-2)] px-3 py-2.5 text-[15px] outline-none" />
           <input value={address} onChange={(e) => setAddress(e.target.value)}
             placeholder="כתובת / עיר (למשל: Getreidegasse 9, Salzburg)"
-            className="mb-2 w-full rounded-lg bg-[var(--surface-2)] px-3 py-2.5 text-[14px] outline-none" />
+            className="mb-2 w-full rounded-lg bg-[var(--surface-2)] px-3 py-2.5 text-[15px] outline-none" />
           <div className="mb-3 flex gap-2">
-            <label className="flex-1 text-[12px] text-[var(--text-3)]">צ׳ק-אין
+            <label className="flex-1 text-[13px] text-[var(--text-3)]">צ׳ק-אין
               <input type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)}
-                className="mt-1 w-full rounded-lg bg-[var(--surface-2)] px-2 py-2 text-[13px] text-[var(--text)] outline-none" />
+                className="mt-1 w-full rounded-lg bg-[var(--surface-2)] px-2 py-2 text-[14px] text-[var(--text)] outline-none" />
             </label>
-            <label className="flex-1 text-[12px] text-[var(--text-3)]">צ׳ק-אאוט
+            <label className="flex-1 text-[13px] text-[var(--text-3)]">צ׳ק-אאוט
               <input type="date" value={checkOut} onChange={(e) => setCheckOut(e.target.value)}
-                className="mt-1 w-full rounded-lg bg-[var(--surface-2)] px-2 py-2 text-[13px] text-[var(--text)] outline-none" />
+                className="mt-1 w-full rounded-lg bg-[var(--surface-2)] px-2 py-2 text-[14px] text-[var(--text)] outline-none" />
             </label>
           </div>
-          {err && <p className="mb-2 text-[12.5px] text-[var(--amber)]">{err}</p>}
+          {err && <p className="mb-2 text-[13.5px] text-[var(--amber)]">{err}</p>}
           <button onClick={save} disabled={busy}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-2.5 text-[14px] font-medium text-white disabled:opacity-60">
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-2.5 text-[15px] font-medium text-white disabled:opacity-60">
             {busy ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />}
             {busy ? "מאתר…" : "הוסף ואתר במפה"}
           </button>
@@ -115,7 +115,7 @@ export function Hotels({
 
       {loaded && tripHotels.length === 0 && !open && (
         <button onClick={() => setOpen(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-dashed border-[var(--border)] bg-[var(--surface)] py-4 text-[14px] font-medium text-[var(--text-2)]">
+          className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-dashed border-[var(--border)] bg-[var(--surface)] py-4 text-[15px] font-medium text-[var(--text-2)]">
           <Plus size={18} /> הוסיפו את המלון שהזמנתם
         </button>
       )}
@@ -133,13 +133,13 @@ export function Hotels({
                 <BedDouble size={19} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[15px] font-medium">{h.name}</p>
-                <p className="truncate text-[12.5px] text-[var(--text-2)]">
+                <p className="truncate text-[16px] font-medium">{h.name}</p>
+                <p className="truncate text-[13.5px] text-[var(--text-2)]">
                   {h.city ? `${h.city}${h.country ? ", " + h.country : ""}` : h.label}
                   {(h.checkIn || h.checkOut) ? ` · ${h.checkIn || ""}${h.checkOut ? "→" + h.checkOut : ""}` : ""}
                 </p>
                 {canFocus && (
-                  <span className="mt-0.5 hidden items-center gap-1 text-[11.5px] text-[var(--brand)] lg:inline-flex">
+                  <span className="mt-0.5 hidden items-center gap-1 text-[12.5px] text-[var(--brand)] lg:inline-flex">
                     <MapPin size={11} /> הצג במפה
                   </span>
                 )}
@@ -148,7 +148,7 @@ export function Hotels({
             {multi && (
               <select value={h.segmentId ?? ""} onChange={(e) => assign(h.id, e.target.value || null)}
                 title="לאיזה מקטע שייך המלון"
-                className="shrink-0 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-1.5 text-[11.5px] text-[var(--text-2)] outline-none">
+                className="shrink-0 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-1.5 text-[12.5px] text-[var(--text-2)] outline-none">
                 <option value="">— מקטע —</option>
                 {segments!.map((s) => (
                   <option key={s.id} value={s.id}>{s.cityHe || s.city}</option>
@@ -168,10 +168,10 @@ export function Hotels({
           <div className="flex flex-col gap-2">
             {unassigned.map((h) => (
               <button key={h.id} onClick={() => link(h.id, tripId)}
-                className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-2.5 text-right text-[13px]">
+                className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-2.5 text-right text-[14px]">
                 <Link2 size={15} className="text-[var(--accent-ink)]" />
                 <span className="min-w-0 flex-1 truncate">{h.name} · {h.city}</span>
-                <span className="text-[12px] text-[var(--accent-ink)]">קשר</span>
+                <span className="text-[13px] text-[var(--accent-ink)]">קשר</span>
               </button>
             ))}
           </div>

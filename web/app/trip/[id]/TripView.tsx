@@ -289,7 +289,7 @@ export function TripView({ tripId }: { tripId: string }) {
     return (
       <main className="mx-auto max-w-[440px] px-5 pt-16 text-center">
         <p className="serif text-[22px]">הטיול לא נמצא</p>
-        <Link href="/trips" className="mt-3 inline-block text-[14px] text-[var(--accent-ink)]">← לכל הטיולים</Link>
+        <Link href="/trips" className="mt-3 inline-block text-[15px] text-[var(--accent-ink)]">← לכל הטיולים</Link>
       </main>
     );
   }
@@ -315,7 +315,7 @@ export function TripView({ tripId }: { tripId: string }) {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h1 className="serif text-[20px] font-bold leading-tight lg:text-[24px]">{trip?.title ?? "…"}</h1>
-                <p className="mt-0.5 text-[13px] text-[var(--text-2)]">
+                <p className="mt-0.5 text-[14px] text-[var(--text-2)]">
                   {trip?.segments && trip.segments.length > 1
                     ? `${trip.segments.map((s) => s.cityHe || s.city).join(" → ")} · `
                     : cityHe ? `${cityHe} · ` : ""}
@@ -324,18 +324,18 @@ export function TripView({ tripId }: { tripId: string }) {
                   {trip?.segments && trip.segments.length > 1 ? ` · ${trip.segments.length} ערים` : ""}
                   {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
                 </p>
-                <p className="mt-0.5 truncate text-[11.5px] text-[var(--text-3)]">
+                <p className="mt-0.5 truncate text-[12.5px] text-[var(--text-3)]">
                   נוסעים: {profileSummary(tripProfile)}{trip?.profile ? "" : " · ברירת מחדל"}
                 </p>
               </div>
               <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                 <button onClick={generate} disabled={!!busy || !canBuild}
-                  className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-[13.5px] font-medium text-white disabled:opacity-50">
+                  className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-[14.5px] font-medium text-white disabled:opacity-50">
                   {busy === "generate" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
                   {busy === "generate" ? "בונה…" : itinerary ? "בנה מחדש" : "בנה לו\"ז"}
                 </button>
                 <button onClick={() => setEditTravelers((v) => !v)}
-                  className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-3.5 py-2 text-[13.5px] font-medium"
+                  className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-3.5 py-2 text-[14.5px] font-medium"
                   style={{ background: editTravelers ? "var(--brand-soft)" : "var(--surface)", color: "var(--brand-ink)" }}>
                   <Users size={14} /> מי נוסע
                 </button>
@@ -343,7 +343,7 @@ export function TripView({ tripId }: { tripId: string }) {
             </div>
 
             {/* exact dates → powers season, length and (soon) the live-events feed (#64) */}
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px] text-[var(--text-2)]">
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px] text-[var(--text-2)]">
               <CalendarDays size={14} className="text-[var(--text-3)]" />
               <span>תאריכים:</span>
               <input type="date" value={trip?.startDate ?? ""}
@@ -351,14 +351,14 @@ export function TripView({ tripId }: { tripId: string }) {
                   const info = datesToInfo(e.target.value, trip?.endDate);
                   update(tripId, { startDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
                 }}
-                className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[12px] text-[var(--text)] outline-none" />
+                className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[13px] text-[var(--text)] outline-none" />
               <span>–</span>
               <input type="date" value={trip?.endDate ?? ""} min={trip?.startDate}
                 onChange={(e) => {
                   const info = datesToInfo(trip?.startDate, e.target.value);
                   update(tripId, { endDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
                 }}
-                className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[12px] text-[var(--text)] outline-none" />
+                className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[13px] text-[var(--text)] outline-none" />
             </div>
           </div>
         </header>
@@ -369,20 +369,20 @@ export function TripView({ tripId }: { tripId: string }) {
         <div className="px-5 pt-4 lg:px-8">
           {editTravelers && (
             <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--shadow)] lg:max-w-2xl">
-              <p className="mb-3 text-[13px] text-[var(--text-2)]">
+              <p className="mb-3 text-[14px] text-[var(--text-2)]">
                 מי נוסע בטיול <span className="font-medium">הזה</span>? משפיע על מה שה-AI יבנה (טיול עם הילדים שונה מטיול זוגי) — לא משנה את הפרופיל הכללי.
               </p>
               <ProfileEditor value={tripProfile} onChange={(p) => update(tripId, { profile: p })} />
               {trip?.profile && (
                 <button onClick={() => update(tripId, { profile: undefined })}
-                  className="mt-4 text-[12px] text-[var(--accent-ink)] underline">אפס לפרופיל הכללי</button>
+                  className="mt-4 text-[13px] text-[var(--accent-ink)] underline">אפס לפרופיל הכללי</button>
               )}
             </div>
           )}
 
           {!canBuild && !multiTrip && (
             <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)] lg:max-w-xl">
-              <p className="mb-2 text-[13px] text-[var(--text-2)]">
+              <p className="mb-2 text-[14px] text-[var(--text-2)]">
                 לאן הטיול? בחרו עיר ונבנה לו״ז סביב מרכז העיר — או הוסיפו מלון (למטה) לטיול-כוכב מדויק יותר.
               </p>
               <select value={trip?.destinationId ?? ""}
@@ -390,7 +390,7 @@ export function TripView({ tripId }: { tripId: string }) {
                   const d = dests.find((x) => String(x.id) === e.target.value);
                   if (d) update(tripId, { city: d.city, cityHe: d.city_he || d.city, country: d.country, destinationId: d.id });
                 }}
-                className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5 text-[14px] text-[var(--text)] outline-none">
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5 text-[15px] text-[var(--text)] outline-none">
                 <option value="">{dests.length ? "בחרו עיר יעד…" : "טוען ערים…"}</option>
                 {dests.map((d) => (
                   <option key={d.id} value={d.id}>{(d.city_he || d.city)} · {d.country}</option>
@@ -416,11 +416,11 @@ export function TripView({ tripId }: { tripId: string }) {
                   style={{ background: on ? "var(--brand)" : "var(--surface)",
                            borderColor: on ? "var(--brand)" : "var(--border)",
                            boxShadow: on ? "var(--shadow)" : "none" }}>
-                  <span className="block text-[14px] font-semibold leading-tight"
+                  <span className="block text-[15px] font-semibold leading-tight"
                         style={{ color: on ? "#fff" : "var(--text)" }}>
                     יום {i + 1}{i === todayIndex ? " · היום" : ""}
                   </span>
-                  <span className="mt-0.5 block text-[11.5px]"
+                  <span className="mt-0.5 block text-[12.5px]"
                         style={{ color: on ? "rgba(255,255,255,.85)" : "var(--text-3)" }}>
                     {dd ? dd.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" }) : ""}
                     {dd ? " · " : ""}{d.stops.length} תחנות
@@ -434,7 +434,7 @@ export function TripView({ tripId }: { tripId: string }) {
           <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5">
             <div className="min-w-0 flex-1">
               <h2 className="serif truncate text-[18px] font-bold leading-tight lg:text-[20px]">{dayLabels[curIdx]}</h2>
-              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-[var(--text-2)]">
+              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px] text-[var(--text-2)]">
                 <span className="flex items-center gap-1"><MapPin size={13} className="text-[var(--text-3)]" /> {stopPoints.length} תחנות</span>
                 {dayTotalKm > 0 && <span className="flex items-center gap-1"><Ruler size={13} className="text-[var(--text-3)]" /> {formatDistance(dayTotalKm)}</span>}
                 {dayTotalWalkMin > 0 && <span className="flex items-center gap-1"><Footprints size={13} className="text-[var(--text-3)]" /> ~{dayTotalWalkMin} דק׳ הליכה</span>}
@@ -452,7 +452,7 @@ export function TripView({ tripId }: { tripId: string }) {
                 </span>
               )}
               <button onClick={() => setEditing((v) => !v)}
-                className="flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-medium transition"
+                className="flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[14px] font-medium transition"
                 style={{ background: editing ? "var(--accent-soft)" : "var(--surface)",
                          borderColor: editing ? "var(--accent)" : "var(--border)",
                          color: editing ? "var(--accent-ink)" : "var(--text-2)" }}>
@@ -467,7 +467,7 @@ export function TripView({ tripId }: { tripId: string }) {
         {/* main column (right on desktop): the day timeline */}
         <div className="lg:min-w-0 lg:flex-1">
       {error && (
-        <div className="mx-5 mt-4 rounded-[var(--radius-card)] bg-[var(--amber-soft)] px-4 py-3 text-[13px] text-[var(--amber)] lg:mx-0">
+        <div className="mx-5 mt-4 rounded-[var(--radius-card)] bg-[var(--amber-soft)] px-4 py-3 text-[14px] text-[var(--amber)] lg:mx-0">
           {error}
         </div>
       )}
@@ -477,13 +477,13 @@ export function TripView({ tripId }: { tripId: string }) {
         <div className="mx-5 mt-5 flex flex-col items-center rounded-[var(--radius-card)] bg-[var(--surface)] px-5 py-8 text-center shadow-[var(--shadow)] lg:mx-0">
           <MapArt width={200} />
           <p className="serif mt-3 text-[20px] font-semibold">בונים לכם את הטיול המושלם…</p>
-          <div className="mt-3 flex flex-col items-start gap-1.5 text-[13px] text-[var(--text-2)]">
+          <div className="mt-3 flex flex-col items-start gap-1.5 text-[14px] text-[var(--text-2)]">
             {["מתאים להעדפות ולטעם שלכם",
               ...(trip?.selection ? ["כל יום נפתח בעוגן שבחרתם"] : []),
               "בונים לפי מרחק וזמן",
               "מאוזן ומגוון נכון"].map((t) => (
               <p key={t} className="flex items-center gap-1.5">
-                <span className="grid size-4 place-items-center rounded-full bg-[var(--brand)] text-[10px] text-white">✓</span> {t}
+                <span className="grid size-4 place-items-center rounded-full bg-[var(--brand)] text-[11px] text-white">✓</span> {t}
               </p>
             ))}
           </div>
@@ -499,7 +499,7 @@ export function TripView({ tripId }: { tripId: string }) {
           <div className="mt-4 flex rounded-full bg-[var(--surface-2)] p-1 lg:hidden">
             {([["plan", "מסלול", Route], ["map", "מפה", MapIcon]] as const).map(([k, l, I]) => (
               <button key={k} onClick={() => setMobileTab(k)}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[13.5px] font-medium transition"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[14.5px] font-medium transition"
                 style={{ background: mobileTab === k ? "var(--surface)" : "transparent",
                          color: mobileTab === k ? "var(--brand-ink)" : "var(--text-2)",
                          boxShadow: mobileTab === k ? "var(--shadow)" : "none" }}>
@@ -556,17 +556,17 @@ export function TripView({ tripId }: { tripId: string }) {
                       <div className="min-w-0 flex-1 py-3.5">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex min-w-0 items-center gap-1.5">
-                            <p className="truncate text-[15px] font-medium leading-tight">{s.name}</p>
+                            <p className="truncate text-[16px] font-medium leading-tight">{s.name}</p>
                             {fromSelection && s.anchor === true && (
-                              <span className="shrink-0 rounded-full bg-[var(--brand-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--brand-ink)]">עוגן</span>
+                              <span className="shrink-0 rounded-full bg-[var(--brand-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--brand-ink)]">עוגן</span>
                             )}
                             {fromSelection && s.anchor === false && (
-                              <span className="shrink-0 rounded-full bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px] text-[var(--text-3)]">אם יש זמן</span>
+                              <span className="shrink-0 rounded-full bg-[var(--surface-2)] px-1.5 py-0.5 text-[11px] text-[var(--text-3)]">אם יש זמן</span>
                             )}
                           </div>
                           <div className="flex shrink-0 items-center gap-1.5">
                             {/* fixed-width so the star column lines up across every row */}
-                            <span className="flex min-w-[34px] items-center justify-end gap-1 text-[12px] font-medium text-[var(--accent-ink)]">
+                            <span className="flex min-w-[34px] items-center justify-end gap-1 text-[13px] font-medium text-[var(--accent-ink)]">
                               {!!s.score && (<><Star size={13} fill="currentColor" /><span className="tabular-nums">{s.score}</span></>)}
                             </span>
                             {/* chevron slot is always present (empty when no details) so
@@ -579,8 +579,8 @@ export function TripView({ tripId }: { tripId: string }) {
                             </span>
                           </div>
                         </div>
-                        {s.duration && <p className="mt-0.5 text-[12px] text-[var(--text-3)]">{s.duration}</p>}
-                        {s.note && <p className={`mt-1 text-[12.5px] leading-snug text-[var(--text-2)] ${isOpen ? "" : "line-clamp-2"}`}>{s.note}</p>}
+                        {s.duration && <p className="mt-0.5 text-[13px] text-[var(--text-3)]">{s.duration}</p>}
+                        {s.note && <p className={`mt-1 text-[13.5px] leading-snug text-[var(--text-2)] ${isOpen ? "" : "line-clamp-2"}`}>{s.note}</p>}
                         {editing && (
                           <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-[var(--border)] pt-2.5"
                                onClick={(e) => e.stopPropagation()}>
@@ -590,11 +590,11 @@ export function TripView({ tripId }: { tripId: string }) {
                               className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronDown size={15} /></button>
                             <span className="mx-1 h-4 w-px bg-[var(--border)]"></span>
                             <button onClick={() => moveStopToDay(curIdx, si, -1)} disabled={curIdx === 0}
-                              className="flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 text-[11px] disabled:opacity-30">
+                              className="flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 text-[12px] disabled:opacity-30">
                               <ChevronsUp size={13} /> ליום הקודם
                             </button>
                             <button onClick={() => moveStopToDay(curIdx, si, 1)} disabled={curIdx === allDays.length - 1}
-                              className="flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 text-[11px] disabled:opacity-30">
+                              className="flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 text-[12px] disabled:opacity-30">
                               <ChevronsDown size={13} /> ליום הבא
                             </button>
                             <button onClick={() => deleteStop(curIdx, si)} aria-label="מחק"
@@ -606,7 +606,7 @@ export function TripView({ tripId }: { tripId: string }) {
                       <div className="flex w-7 shrink-0 flex-col items-center">
                         <div className="min-h-[16px] w-px flex-1" style={{ background: first ? "transparent" : spine }} />
                         {ci != null ? (
-                          <span className="grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-white transition"
+                          <span className="grid size-6 shrink-0 place-items-center rounded-full text-[12px] font-semibold text-white transition"
                             style={{ background: col, boxShadow: isActive ? `0 0 0 3px color-mix(in srgb, ${col} 30%, transparent)` : "none" }}>
                             {ci + 1}
                           </span>
@@ -617,7 +617,7 @@ export function TripView({ tripId }: { tripId: string }) {
                       </div>
                       {/* time */}
                       <div className="w-11 shrink-0 py-3.5">
-                        <p className="text-[13px] font-semibold text-[var(--text-2)]" dir="ltr">{s.time}</p>
+                        <p className="text-[14px] font-semibold text-[var(--text-2)]" dir="ltr">{s.time}</p>
                       </div>
                     </div>
 
@@ -630,9 +630,9 @@ export function TripView({ tripId }: { tripId: string }) {
                             className="mb-3 aspect-[4/3] w-full rounded-[10px] object-cover" />
                         )}
                         {s.tagline && s.tagline !== s.note && (
-                          <p className="mb-2 text-[13.5px] italic text-[var(--text-2)]">{s.tagline}</p>
+                          <p className="mb-2 text-[14.5px] italic text-[var(--text-2)]">{s.tagline}</p>
                         )}
-                        <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[12.5px] text-[var(--text-2)]">
+                        <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[13.5px] text-[var(--text-2)]">
                           {s.bestTime && <span><span className="text-[var(--text-3)]">מתי: </span>{s.bestTime}</span>}
                           {s.dress && <span><span className="text-[var(--text-3)]">לבוש: </span>{s.dress}</span>}
                           {s.cost != null && <span><span className="text-[var(--text-3)]">עלות: </span>{COST_HE[s.cost] ?? ""}</span>}
@@ -640,19 +640,19 @@ export function TripView({ tripId }: { tripId: string }) {
                         <div className="mt-3 flex flex-wrap gap-2">
                           {s.website && (
                             <a href={s.website} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
-                              className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[12.5px] text-[var(--blue)]">
+                              className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[13.5px] text-[var(--blue)]">
                               <ExternalLink size={13} /> אתר רשמי
                             </a>
                           )}
                           {s.lat != null && s.lng != null && (
                             <a href={googleMapsUrl(s.lat, s.lng)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
-                              className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[12.5px] text-[var(--text-2)]">
+                              className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[13.5px] text-[var(--text-2)]">
                               <Navigation size={13} /> פתח במפה
                             </a>
                           )}
                         </div>
                         {!s.website && !s.image && s.lat == null && (
-                          <p className="text-[12.5px] text-[var(--text-3)]">אין פרטים נוספים למקום הזה</p>
+                          <p className="text-[13.5px] text-[var(--text-3)]">אין פרטים נוספים למקום הזה</p>
                         )}
                       </div>
                     )}
@@ -662,7 +662,7 @@ export function TripView({ tripId }: { tripId: string }) {
                       <div className="flex items-stretch gap-3">
                         <div className="w-14 shrink-0 pr-1" />
                         <div className="min-w-0 flex-1 py-1">
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[11.5px] text-[var(--text-2)]">
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[12.5px] text-[var(--text-2)]">
                             <PersonStanding size={13} /> ~{leg.min} דק׳ הליכה · {formatDistance(leg.km)}
                           </span>
                         </div>
@@ -689,7 +689,7 @@ export function TripView({ tripId }: { tripId: string }) {
                   ].map((q) => (
                     <button key={q.l} disabled={!!busy}
                       onClick={() => revise(`שנה אך ורק את ${dayLabels[curIdx]} (היום ה-${curIdx + 1} בטיול), אל תיגע בשאר הימים. ${q.t}`)}
-                      className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[12px] text-[var(--text-2)] transition hover:border-[var(--brand)] disabled:opacity-50">
+                      className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[13px] text-[var(--text-2)] transition hover:border-[var(--brand)] disabled:opacity-50">
                       <Sparkles size={12} className="text-[var(--brand)]" /> {q.l}
                     </button>
                   ))}
@@ -724,7 +724,7 @@ export function TripView({ tripId }: { tripId: string }) {
                   <div className="absolute bottom-3 left-3 z-[1000] w-[210px] overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)] shadow-[var(--shadow)]"
                        style={{ background: "var(--surface)" }}>
                     <button onClick={() => setLegendOpen((o) => !o)}
-                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-[12px] font-medium text-[var(--text-2)]">
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-[13px] font-medium text-[var(--text-2)]">
                       <span>מקרא · {stopPoints.length} תחנות</span>
                       <ChevronDown size={14} className={`transition-transform ${legendOpen ? "" : "rotate-180"}`} />
                     </button>
@@ -738,9 +738,9 @@ export function TripView({ tripId }: { tripId: string }) {
                               onClick={() => { const si = locatedToStop[i]; if (si == null) return;
                                 setExpanded(`${curIdx}-${si}`);
                                 requestAnimationFrame(() => stopRefs.current[si]?.scrollIntoView({ behavior: "smooth", block: "center" })); }}
-                              className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-right text-[12px] transition"
+                              className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-right text-[13px] transition"
                               style={{ background: on ? "var(--surface-2)" : "transparent" }}>
-                              <span className="grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-semibold text-white"
+                              <span className="grid size-5 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-white"
                                     style={{ background: stopColor(i) }}>{i + 1}</span>
                               <span className="truncate text-[var(--text-2)]">{s.name}</span>
                             </button>
@@ -752,7 +752,7 @@ export function TripView({ tripId }: { tripId: string }) {
                 )}
               </div>
 
-              <p className="mt-2 px-0.5 text-[11.5px] leading-snug text-[var(--text-3)]">
+              <p className="mt-2 px-0.5 text-[12.5px] leading-snug text-[var(--text-3)]">
                 {day ? `${shortDay(curIdx)} · ${stopPoints.length} מקומות · ` : ""}
                 <span className="text-[var(--brand)]">🏨 המלון</span> תמיד מוצג · המספרים = סדר הביקור · הקו = מסלול
               </p>
@@ -771,7 +771,7 @@ export function TripView({ tripId }: { tripId: string }) {
                 const on = tool === key;
                 return (
                   <button key={key} onClick={() => setTool(on ? null : key)}
-                    className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-medium shadow-[var(--shadow)] transition"
+                    className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[14px] font-medium shadow-[var(--shadow)] transition"
                     style={{ background: on ? "var(--brand-soft)" : "var(--surface)",
                              color: on ? "var(--brand-ink)" : "var(--text-2)" }}>
                     <Icon size={15} /> {label}

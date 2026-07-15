@@ -17,10 +17,10 @@ export function WhyFits({ title = "למה זה מתאים לכם", children }: {
   return (
     <div className="rounded-[var(--radius-card)] p-3.5"
       style={{ background: "var(--brand-soft)", borderInlineStart: "3px solid var(--brand)" }}>
-      <p className="serif mb-1 flex items-center gap-1.5 text-[13.5px] font-bold text-[var(--brand-ink)]">
+      <p className="serif mb-1 flex items-center gap-1.5 text-[14.5px] font-bold text-[var(--brand-ink)]">
         <Sparkles size={15} className="shrink-0" /> {title}
       </p>
-      <div className="text-[13.5px] leading-relaxed text-[var(--brand-ink)]">{children}</div>
+      <div className="text-[14.5px] leading-relaxed text-[var(--brand-ink)]">{children}</div>
     </div>
   );
 }
@@ -32,17 +32,17 @@ export function TravelersSay({ quote, kind }: {
   return (
     <div className="rounded-[var(--radius-card)] bg-[var(--surface)] p-3.5"
       style={{ border: "1.5px dashed color-mix(in srgb, var(--brand) 40%, transparent)" }}>
-      <p className="serif mb-1 flex flex-wrap items-center gap-1.5 text-[13.5px] font-bold text-[var(--text)]">
+      <p className="serif mb-1 flex flex-wrap items-center gap-1.5 text-[14.5px] font-bold text-[var(--text)]">
         <MessageCircle size={15} className="shrink-0 text-[var(--brand)]" />
         מטיילים כמוכם אומרים
-        <span className="inline-flex items-center gap-0.5 rounded-full bg-[var(--brand-soft)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--brand-ink)]">
+        <span className="inline-flex items-center gap-0.5 rounded-full bg-[var(--brand-soft)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--brand-ink)]">
           <BadgeCheck size={11} /> מאומת
         </span>
         {kind && (
-          <span className="rounded-full bg-[var(--amber-soft)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--amber)]">{kind}</span>
+          <span className="rounded-full bg-[var(--amber-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--amber)]">{kind}</span>
         )}
       </p>
-      <p className="text-[13.5px] italic leading-relaxed text-[var(--text-2)]">"{quote}"</p>
+      <p className="text-[14.5px] italic leading-relaxed text-[var(--text-2)]">"{quote}"</p>
     </div>
   );
 }

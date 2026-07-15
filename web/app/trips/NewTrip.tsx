@@ -96,7 +96,7 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="שם הטיול (לא חובה)"
-        className="mb-3 w-full rounded-lg bg-[var(--surface-2)] px-3 py-2.5 text-[14px] outline-none"
+        className="mb-3 w-full rounded-lg bg-[var(--surface-2)] px-3 py-2.5 text-[15px] outline-none"
       />
 
       <div className="mb-3 grid grid-cols-2 gap-2">
@@ -107,8 +107,8 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
             background: mode === "preferences" ? "var(--accent-soft)" : "transparent",
           }}>
           <Sparkles size={18} className="mb-1 text-[var(--accent-ink)]" />
-          <div className="text-[13.5px] font-medium">בנה לי לפי העדפות</div>
-          <div className="text-[12px] text-[var(--text-2)]">בוחרים יעד/ים, ה-AI בונה</div>
+          <div className="text-[14.5px] font-medium">בנה לי לפי העדפות</div>
+          <div className="text-[13px] text-[var(--text-2)]">בוחרים יעד/ים, ה-AI בונה</div>
         </button>
         <button onClick={() => setMode("hotels")}
           className="rounded-[var(--radius-sm)] border p-3 text-right transition"
@@ -117,30 +117,30 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
             background: mode === "hotels" ? "var(--accent-soft)" : "transparent",
           }}>
           <BedDouble size={18} className="mb-1 text-[var(--accent-ink)]" />
-          <div className="text-[13.5px] font-medium">כבר הזמנתי מלונות</div>
-          <div className="text-[12px] text-[var(--text-2)]">טיול כוכב סביבם</div>
+          <div className="text-[14.5px] font-medium">כבר הזמנתי מלונות</div>
+          <div className="text-[13px] text-[var(--text-2)]">טיול כוכב סביבם</div>
         </button>
       </div>
 
       {mode === "preferences" && (
         <div className="mb-3">
-          <label className="mb-1.5 block text-[13px] text-[var(--text-2)]">
+          <label className="mb-1.5 block text-[14px] text-[var(--text-2)]">
             יעדים <span className="text-[var(--text-3)]">(אפשר כמה — טיול רב-ערים)</span>
           </label>
-          {dests.length === 0 && <span className="text-[13px] text-[var(--text-3)]">טוען יעדים…</span>}
+          {dests.length === 0 && <span className="text-[14px] text-[var(--text-3)]">טוען יעדים…</span>}
           <div className="flex flex-col gap-3">
             {REGION_ORDER
               .map((region) => ({ region, items: dests.filter((d) => regionOf(d.country) === region) }))
               .filter((g) => g.items.length > 0)
               .map(({ region, items }) => (
                 <div key={region}>
-                  <p className="mb-1.5 text-[11px] text-[var(--text-3)]">{region}</p>
+                  <p className="mb-1.5 text-[12px] text-[var(--text-3)]">{region}</p>
                   <div className="flex flex-wrap gap-2">
                     {items.map((d) => {
                       const on = segs.some((s) => s.destId === d.id);
                       return (
                         <button key={d.id} onClick={() => (on ? removeSeg(d.id) : addSeg(d.id))}
-                          className="flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] transition"
+                          className="flex items-center gap-1 rounded-full px-3 py-1.5 text-[14px] transition"
                           style={{
                             background: on ? "var(--accent)" : "var(--surface-2)",
                             color: on ? "#fff" : "var(--text-2)",
@@ -160,7 +160,7 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
                 const d = destOf(s.destId);
                 return (
                   <div key={s.destId} className="flex items-center gap-2 rounded-lg bg-[var(--surface-2)] px-2.5 py-2">
-                    <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-bold text-white">{i + 1}</span>
+                    <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">{i + 1}</span>
                     {segs.length > 1 && (
                       <span className="flex shrink-0 flex-col">
                         <button onClick={() => moveSeg(i, -1)} disabled={i === 0} aria-label="העלה"
@@ -169,10 +169,10 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
                           className="text-[var(--text-3)] disabled:opacity-30"><ChevronDown size={14} /></button>
                       </span>
                     )}
-                    <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{d?.city_he || d?.city}</span>
+                    <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{d?.city_he || d?.city}</span>
                     <button onClick={() => setSegDays(s.destId, s.days - 1)} aria-label="פחות"
                       className="grid size-7 place-items-center rounded-md bg-[var(--surface)] text-[var(--text-2)]"><Minus size={14} /></button>
-                    <span className="w-14 text-center text-[13px]">{s.days} ימים</span>
+                    <span className="w-14 text-center text-[14px]">{s.days} ימים</span>
                     <button onClick={() => setSegDays(s.destId, s.days + 1)} aria-label="עוד"
                       className="grid size-7 place-items-center rounded-md bg-[var(--surface)] text-[var(--text-2)]"><Plus size={14} /></button>
                     <button onClick={() => removeSeg(s.destId)} aria-label="הסר"
@@ -180,7 +180,7 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
                   </div>
                 );
               })}
-              <p className="text-[12px] text-[var(--text-3)]">
+              <p className="text-[13px] text-[var(--text-3)]">
                 סה״כ {totalDays} ימים{segs.length > 1 ? ` · ${segs.length} ערים` : ""}
               </p>
             </div>
@@ -191,8 +191,8 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
       {mode === "hotels" && (
         <div className="mb-4">
           <div className="mb-1.5 flex items-center justify-between">
-            <label className="text-[13px] text-[var(--text-2)]">מספר ימים</label>
-            <span className="text-[13px] font-medium text-[var(--accent-ink)]">{days}</span>
+            <label className="text-[14px] text-[var(--text-2)]">מספר ימים</label>
+            <span className="text-[14px] font-medium text-[var(--accent-ink)]">{days}</span>
           </div>
           <input type="range" min={1} max={14} value={days}
             onChange={(e) => setDays(Number(e.target.value))}
@@ -201,7 +201,7 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
       )}
 
       <div className="mb-4">
-        <label className="mb-1.5 block text-[13px] text-[var(--text-2)]">
+        <label className="mb-1.5 block text-[14px] text-[var(--text-2)]">
           מתי? <span className="text-[var(--accent-ink)]">(חשוב — להמלצות לפי עונה)</span>
         </label>
         <div className="grid grid-cols-4 gap-1.5">
@@ -209,7 +209,7 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
             const on = month === i + 1;
             return (
               <button key={m} onClick={() => setMonth(i + 1)}
-                className="rounded-lg py-2 text-[12.5px] transition"
+                className="rounded-lg py-2 text-[13.5px] transition"
                 style={{
                   background: on ? "var(--accent)" : "var(--surface-2)",
                   color: on ? "#fff" : "var(--text-2)",
@@ -226,27 +226,27 @@ export function NewTrip({ onClose }: { onClose: () => void }) {
       <div className="mb-4">
         <button onClick={() => setEditTravelers((v) => !v)}
           className="flex w-full items-center justify-between rounded-lg bg-[var(--surface-2)] px-3 py-2.5 text-right">
-          <span className="flex items-center gap-2 text-[13px] text-[var(--text-2)]">
+          <span className="flex items-center gap-2 text-[14px] text-[var(--text-2)]">
             <Users size={15} /> מי נוסע · <span className="font-medium text-[var(--text)]">{profileSummary(travelers ?? globalProfile)}</span>
           </span>
           {editTravelers ? <ChevronUp size={16} className="text-[var(--text-3)]" /> : <ChevronDown size={16} className="text-[var(--text-3)]" />}
         </button>
         {editTravelers && (
           <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] p-4">
-            <p className="mb-3 text-[12.5px] text-[var(--text-3)]">
+            <p className="mb-3 text-[13.5px] text-[var(--text-3)]">
               ברירת המחדל מהפרופיל הכללי. שינוי כאן חל על הטיול הזה בלבד (טיול זוגי שונה מטיול עם הילדים).
             </p>
             <ProfileEditor value={travelers ?? globalProfile} onChange={setTravelers} />
             {travelers && (
               <button onClick={() => setTravelers(null)}
-                className="mt-4 text-[12px] text-[var(--accent-ink)] underline">אפס לפרופיל הכללי</button>
+                className="mt-4 text-[13px] text-[var(--accent-ink)] underline">אפס לפרופיל הכללי</button>
             )}
           </div>
         )}
       </div>
 
       <button onClick={go} disabled={!canGo || creating}
-        className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-3 text-[15px] font-medium text-white disabled:opacity-50">
+        className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-3 text-[16px] font-medium text-white disabled:opacity-50">
         {creating ? <Loader2 size={17} className="animate-spin" /> : <Sparkles size={17} />}
         צור טיול
       </button>

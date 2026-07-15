@@ -76,12 +76,15 @@
   --font-sans: var(--font-assistant), system-ui, sans-serif;
   --font-serif: var(--font-fredoka), var(--font-assistant), sans-serif;
   --radius-card: var(--radius);
+  /* readability: small text runs ~10% larger site-wide (xs 12→13, sm 14→15) */
+  --text-xs: 13px;
+  --text-sm: 15px;
 }
 
 /* Display headings — Fredoka (rounded geometric sans, warm + modern).
    The class keeps its historical name; it means "display face". */
 .serif { font-family: var(--font-serif); font-weight: 600; letter-spacing: 0; }
-.eyebrow { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+.eyebrow { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--text-3); font-weight: 500; }
 .rule { height: 2px; width: 32px; background: var(--accent); border-radius: 2px; }
 

@@ -154,11 +154,11 @@ export function ExploreFlow(
       <div key={c.tag} className="flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
         <Icon size={19} className="shrink-0 text-[var(--brand)]" />
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-1.5 text-[14px] font-medium">
+          <p className="flex items-center gap-1.5 text-[15px] font-medium">
             {c.label_he}
-            {c.hot && <span className="rounded-full bg-[var(--amber-soft)] px-1.5 py-0.5 text-[10px] text-[var(--amber)]">בולט</span>}
+            {c.hot && <span className="rounded-full bg-[var(--amber-soft)] px-1.5 py-0.5 text-[11px] text-[var(--amber)]">בולט</span>}
           </p>
-          <p className="text-[12px] text-[var(--text-3)]">{c.vibe_he}</p>
+          <p className="text-[13px] text-[var(--text-3)]">{c.vibe_he}</p>
         </div>
         <button onClick={() => rate(c.tag, "like")} aria-label="אהבתי"
           className="grid size-8 place-items-center rounded-full border transition"
@@ -216,7 +216,7 @@ export function ExploreFlow(
       <header className="rise mb-5 flex items-center justify-between">
         <div>
           <h1 className="text-[22px] font-bold leading-tight">חקירת יעד · {cityHe}</h1>
-          <p className="text-[13px] text-[var(--text-2)]">נכיר את היעד לפי מי שאתם — ונבנה טיול</p>
+          <p className="text-[14px] text-[var(--text-2)]">נכיר את היעד לפי מי שאתם — ונבנה טיול</p>
         </div>
         <div className="flex items-center gap-1.5">
           {[1, 2, 3, 4].map((n) => (
@@ -232,9 +232,9 @@ export function ExploreFlow(
           <p className="eyebrow mb-2">שלב 1 · פרופיל</p>
           <div className="rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
             <h2 className="serif text-[20px] font-semibold">מי יוצא לטיול?</h2>
-            <p className="mb-4 mt-0.5 text-[12.5px] text-[var(--text-3)]">זה יעזור לנו לבנות לכם טיול שמתאים בול לכם</p>
+            <p className="mb-4 mt-0.5 text-[13.5px] text-[var(--text-3)]">זה יעזור לנו לבנות לכם טיול שמתאים בול לכם</p>
 
-            <p className="mb-2 text-[14px] font-medium">מי נוסע?</p>
+            <p className="mb-2 text-[15px] font-medium">מי נוסע?</p>
             <div className="mb-4 flex flex-wrap gap-1.5">
               {COMPS.map((c) => (
                 <SelChip key={c} on={comp === c} onClick={() => setComp(c)}>{c}</SelChip>
@@ -243,7 +243,7 @@ export function ExploreFlow(
 
             {hasKids(comp) && (
               <>
-                <p className="mb-2 text-[14px] font-medium">גילאי ילדים</p>
+                <p className="mb-2 text-[15px] font-medium">גילאי ילדים</p>
                 <div className="mb-4 flex flex-wrap gap-1.5">
                   {AGE_BANDS.map((b) => (
                     <SelChip key={b} on={bands.has(b)}
@@ -255,7 +255,7 @@ export function ExploreFlow(
               </>
             )}
 
-            <p className="mb-2 text-[14px] font-medium">מה אתם אוהבים?</p>
+            <p className="mb-2 text-[15px] font-medium">מה אתם אוהבים?</p>
             <div className="mb-4 grid grid-cols-3 gap-2">
               {STEP1_INTERESTS.map((v) => (
                 <CategoryTile key={v} label={v} selected={interests.has(v)}
@@ -263,14 +263,14 @@ export function ExploreFlow(
               ))}
             </div>
 
-            <label className="flex items-center justify-between gap-2 text-[13px] text-[var(--text-2)]">
+            <label className="flex items-center justify-between gap-2 text-[14px] text-[var(--text-2)]">
               מתי הטיול?
               <select value={month} onChange={(e) => setMonth(Number(e.target.value))}
-                className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1.5 text-[13px] outline-none">
+                className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1.5 text-[14px] outline-none">
                 {MONTHS_HE.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
               </select>
             </label>
-            <p className="mt-3 text-[12px] text-[var(--text-3)]">
+            <p className="mt-3 text-[13px] text-[var(--text-3)]">
               הבחירות כאן שייכות לטיול הזה בלבד — הפרופיל הכללי לא משתנה.{" "}
               <Link href="/profile" className="underline">עריכת פרופיל</Link>
             </p>
@@ -290,33 +290,33 @@ export function ExploreFlow(
             </div>
             <div className="relative flex min-h-[130px] flex-col justify-end p-4">
               <h2 className="serif text-[28px] font-bold leading-none text-[var(--text)]">{cityHe}</h2>
-              <p className="text-[12.5px] text-[var(--text-2)]">{dest.country_he ?? dest.country}</p>
+              <p className="text-[13.5px] text-[var(--text-2)]">{dest.country_he ?? dest.country}</p>
             </div>
           </div>
 
           <div className="mb-2 flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3">
             <CloudRain size={26} className="shrink-0 text-[var(--blue)]" />
             <div>
-              <p className="text-[13px] font-medium">{MONTHS_HE[month - 1]} · {weather.he}</p>
-              <p className="text-[12px] text-[var(--text-3)]">{weather.hint_he}</p>
+              <p className="text-[14px] font-medium">{MONTHS_HE[month - 1]} · {weather.he}</p>
+              <p className="text-[13px] text-[var(--text-3)]">{weather.hint_he}</p>
             </div>
           </div>
-          <p className="mb-1 text-[13px] leading-relaxed text-[var(--text-2)]">{brief.narrative_he}</p>
-          {brief.history_he && <p className="mb-1 text-[12.5px] leading-relaxed text-[var(--text-3)]">{brief.history_he}</p>}
-          {brief.language_he && <p className="mb-4 text-[12px] text-[var(--text-3)]">שפה: {brief.language_he}</p>}
+          <p className="mb-1 text-[14px] leading-relaxed text-[var(--text-2)]">{brief.narrative_he}</p>
+          {brief.history_he && <p className="mb-1 text-[13.5px] leading-relaxed text-[var(--text-3)]">{brief.history_he}</p>}
+          {brief.language_he && <p className="mb-4 text-[13px] text-[var(--text-3)]">שפה: {brief.language_he}</p>}
 
           {/* Calibration framing: preferences are pre-loaded from the profile —
               the user only fine-tunes for THIS destination, and never touches the
               global profile (per-trip calibration, decision 5). */}
-          <div className="mb-3 flex items-start gap-1.5 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--brand-soft)] p-3 text-[12.5px] leading-relaxed text-[var(--brand-ink)]">
+          <div className="mb-3 flex items-start gap-1.5 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--brand-soft)] p-3 text-[13.5px] leading-relaxed text-[var(--brand-ink)]">
             <Sparkles size={15} className="mt-0.5 shrink-0" />
             <span>ההעדפות שלכם כבר טעונות מהפרופיל — כאן רק מכווננים ל{cityHe}. שנו רק מה שמיוחד ליעד. זה לא משנה את הפרופיל הכללי.</span>
           </div>
 
           {discoverCats.length > 0 && (
             <>
-              <p className="mb-1 text-[15px] font-bold">שווה לגלות ב{cityHe}</p>
-              <p className="mb-3 text-[12px] text-[var(--text-3)]">בולטים כאן — לא ביקשתם, אבל אולי תאהבו. סמנו מה שמסקרן.</p>
+              <p className="mb-1 text-[16px] font-bold">שווה לגלות ב{cityHe}</p>
+              <p className="mb-3 text-[13px] text-[var(--text-3)]">בולטים כאן — לא ביקשתם, אבל אולי תאהבו. סמנו מה שמסקרן.</p>
               <div className="flex flex-col gap-2">{discoverCats.map(renderCat)}</div>
             </>
           )}
@@ -326,7 +326,7 @@ export function ExploreFlow(
               <button onClick={() => setShowProfilePrefs((v) => !v)}
                 className="flex w-full items-center gap-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2.5 text-right">
                 <Heart size={15} className="shrink-0 text-[var(--brand)]" fill="currentColor" />
-                <span className="min-w-0 flex-1 text-[13px] text-[var(--text-2)]">
+                <span className="min-w-0 flex-1 text-[14px] text-[var(--text-2)]">
                   {profileCats.length} העדפות מהפרופיל שלכם כבר נכללות — הקישו לכוונון
                 </span>
                 <ChevronDown size={17} className={`shrink-0 text-[var(--text-3)] transition-transform ${showProfilePrefs ? "rotate-180" : ""}`} />
@@ -343,7 +343,7 @@ export function ExploreFlow(
       {step === 3 && (
         <section className="rise">
           <p className="eyebrow mb-2"><Star size={12} className="inline" /> שלב 3 · איך נשמע לכם?</p>
-          <p className="mb-3 text-[12px] text-[var(--text-3)]">סמנו מה מתאים במיוחד — כן / אולי / לא.</p>
+          <p className="mb-3 text-[13px] text-[var(--text-3)]">סמנו מה מתאים במיוחד — כן / אולי / לא.</p>
           {/* status filter (board mock 3): revisit what you marked */}
           <div className="mb-3 flex flex-wrap gap-1.5">
             {([
@@ -353,7 +353,7 @@ export function ExploreFlow(
               { k: "no", label: "לא" },
             ] as { k: "all" | Choice; label: string }[]).map((f) => (
               <button key={f.k} onClick={() => setFilt(f.k)}
-                className="rounded-full px-3.5 py-1.5 text-[12.5px] font-medium transition"
+                className="rounded-full px-3.5 py-1.5 text-[13.5px] font-medium transition"
                 style={filt === f.k
                   ? f.k === "maybe"
                     ? { background: "var(--amber-fill)", color: "var(--text)", border: "1.5px solid var(--amber-fill)" }
@@ -388,9 +388,9 @@ export function ExploreFlow(
                         onClick={() => setOpenCard(open ? null : a.id)}
                         className="flex w-full items-start justify-between gap-2 text-right">
                         <span className="min-w-0">
-                          <span className="serif block truncate text-[15.5px] font-semibold leading-tight">{a.name_he ?? a.name_en}</span>
+                          <span className="serif block truncate text-[17px] font-semibold leading-tight">{a.name_he ?? a.name_en}</span>
                           {(a.tagline_he || a.description_he) && (
-                            <span className="mt-0.5 block line-clamp-1 text-[12px] text-[var(--text-3)]">{a.tagline_he ?? a.description_he}</span>
+                            <span className="mt-0.5 block line-clamp-1 text-[13px] text-[var(--text-3)]">{a.tagline_he ?? a.description_he}</span>
                           )}
                         </span>
                         {hasMore && (
@@ -401,13 +401,13 @@ export function ExploreFlow(
                       {/* family_score is a family-friendliness score → only shown
                           as a "fit" badge for trips with kids. */}
                       {isFamily && a.family_score != null && (
-                        <span className="mt-1 flex items-center gap-1 text-[12.5px] font-semibold text-[var(--amber)]">
+                        <span className="mt-1 flex items-center gap-1 text-[13.5px] font-semibold text-[var(--amber)]">
                           <Sun size={14} fill="var(--amber-fill)" stroke="var(--amber-fill)" /> {a.family_score}/10 לילדים
                         </span>
                       )}
                       <div className="mb-1.5 mt-1 flex flex-wrap gap-1">
                         {chips.map((ch, i) => (
-                          <span key={i} className="rounded-full px-1.5 py-0.5 text-[10.5px]"
+                          <span key={i} className="rounded-full px-1.5 py-0.5 text-[11.5px]"
                             style={
                               ch.kind === "nudge" ? { background: "var(--amber-soft)", color: "var(--amber)" }
                               : ch.kind === "must" ? { background: "var(--brand-soft)", color: "var(--brand-ink)" }
@@ -416,7 +416,7 @@ export function ExploreFlow(
                         ))}
                         {a.website && (
                           <a href={a.website} target="_blank" rel="noreferrer"
-                            className="inline-flex items-center gap-0.5 rounded-full bg-[var(--surface-2)] px-1.5 py-0.5 text-[10.5px] text-[var(--text-2)]">
+                            className="inline-flex items-center gap-0.5 rounded-full bg-[var(--surface-2)] px-1.5 py-0.5 text-[11.5px] text-[var(--text-2)]">
                             קישור <ExternalLink size={9} />
                           </a>
                         )}
@@ -438,9 +438,9 @@ export function ExploreFlow(
                   {open && (
                     <div className="mt-2.5 flex flex-col gap-2 border-t border-[var(--border)] pt-2.5">
                       {why && <WhyFits>{why}</WhyFits>}
-                      {desc && <p className="text-[12.5px] leading-relaxed text-[var(--text-2)]">{desc}</p>}
+                      {desc && <p className="text-[13.5px] leading-relaxed text-[var(--text-2)]">{desc}</p>}
                       {facts.length > 0 && (
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-[var(--text-2)]">
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-[var(--text-2)]">
                           {facts.map((f, i) => (
                             <span key={i}><span className="text-[var(--text-3)]">{f.label_he}: </span>{f.value_he}</span>
                           ))}
@@ -455,7 +455,7 @@ export function ExploreFlow(
               );
             })}
           </div>
-          <p className="mt-3 text-center text-[12px] text-[var(--text-3)]">בחרתם {yesCount} · אולי {maybeCount}</p>
+          <p className="mt-3 text-center text-[13px] text-[var(--text-3)]">בחרתם {yesCount} · אולי {maybeCount}</p>
         </section>
       )}
 
@@ -466,14 +466,14 @@ export function ExploreFlow(
           <div className="mb-2 flex justify-center"><MapArt width={190} /></div>
           <h2 className="serif mb-4 text-center text-[20px] font-semibold">בונים לכם את הטיול המושלם</h2>
           <div className="mb-4">
-            <div className="mb-1 flex justify-between text-[13px] text-[var(--text-2)]">
+            <div className="mb-1 flex justify-between text-[14px] text-[var(--text-2)]">
               <span>כמה ימים?</span><span className="font-medium text-[var(--brand-ink)]">{days} ימים</span>
             </div>
             <input type="range" min={2} max={7} value={days} onChange={(e) => setDays(Number(e.target.value))}
               className="w-full" style={{ accentColor: "var(--brand)" }} />
           </div>
           <div className="mb-4">
-            <div className="mb-1 flex justify-between text-[13px] text-[var(--text-2)]">
+            <div className="mb-1 flex justify-between text-[14px] text-[var(--text-2)]">
               <span>מרחק נסיעה ליום</span><span className="font-medium text-[var(--brand-ink)]">{RADIUS_HE[radius]}</span>
             </div>
             <input type="range" min={0} max={3} value={radius} onChange={(e) => setRadius(Number(e.target.value))}
@@ -481,7 +481,7 @@ export function ExploreFlow(
           </div>
           {/* what the builder takes into account (board mock 4) — all true */}
           <div className="rounded-[var(--radius-card)] bg-[var(--brand-soft)] p-4">
-            <div className="flex flex-col gap-1.5 text-[13px] leading-relaxed text-[var(--brand-ink)]">
+            <div className="flex flex-col gap-1.5 text-[14px] leading-relaxed text-[var(--brand-ink)]">
               {["מתאים להעדפות ולכיול שסימנתם",
                 "כל יום נפתח בעוגן שבחרתם ב״כן״ — וה״אולי״ משתלב אם יש זמן",
                 `לפי מרחק הנסיעה שבחרתם (${RADIUS_HE[radius]})`,
@@ -493,10 +493,10 @@ export function ExploreFlow(
             </div>
           </div>
           <button onClick={build}
-            className="mt-4 w-full rounded-full bg-[var(--brand)] py-3 text-[15px] font-medium text-white">
+            className="mt-4 w-full rounded-full bg-[var(--brand)] py-3 text-[16px] font-medium text-white">
             בנו לי טיול
           </button>
-          <p className="mt-2 text-center text-[11px] text-[var(--text-3)]">כל דירוג ובחירה מלמדים אותנו — ונשתפר לפרופילים דומים</p>
+          <p className="mt-2 text-center text-[12px] text-[var(--text-3)]">כל דירוג ובחירה מלמדים אותנו — ונשתפר לפרופילים דומים</p>
         </section>
       )}
 
@@ -504,11 +504,11 @@ export function ExploreFlow(
       {step < 4 && (
         <div className="mt-6 flex items-center justify-between">
           <button onClick={back} disabled={step === 1}
-            className="inline-flex items-center gap-1 rounded-full border-[1.5px] border-[var(--brand)] bg-[var(--surface)] px-4 py-2.5 text-[14px] font-medium text-[var(--brand-ink)] disabled:opacity-0">
+            className="inline-flex items-center gap-1 rounded-full border-[1.5px] border-[var(--brand)] bg-[var(--surface)] px-4 py-2.5 text-[15px] font-medium text-[var(--brand-ink)] disabled:opacity-0">
             <ChevronRight size={15} /> חזרה
           </button>
           <button onClick={next}
-            className="inline-flex items-center gap-1 rounded-full bg-[var(--brand)] px-5 py-2.5 text-[14px] font-medium text-white">
+            className="inline-flex items-center gap-1 rounded-full bg-[var(--brand)] px-5 py-2.5 text-[15px] font-medium text-white">
             {step === 3 ? "לבניית הטיול" : "הבא"} <ChevronLeft size={15} />
           </button>
         </div>
@@ -521,7 +521,7 @@ export function ExploreFlow(
 function SelChip({ on, children, onClick }: { on: boolean; children: React.ReactNode; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick}
-      className="rounded-full px-3.5 py-1.5 text-[13px] font-medium transition"
+      className="rounded-full px-3.5 py-1.5 text-[14px] font-medium transition"
       style={{
         background: on ? "var(--brand)" : "var(--surface)",
         color: on ? "#fff" : "var(--text-2)",
@@ -544,7 +544,7 @@ function ChoiceBtn({ active, onClick, tone, icon, label }: {
   }[tone];
   return (
     <button onClick={onClick}
-      className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border py-1.5 text-[12px] font-medium transition"
+      className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border py-1.5 text-[13px] font-medium transition"
       style={active ? on : { background: "var(--surface)", color: "var(--text-3)", borderColor: "var(--border)" }}>
       {icon} {label}
     </button>

@@ -23,13 +23,13 @@ export default function TripsPage() {
       <header className="rise mb-5">
         <h1 className="serif text-[32px] font-bold leading-none lg:text-[40px]">הטיולים שלי</h1>
         {profileLoaded && (
-          <p className="mt-2 text-[13px] text-[var(--text-2)]">{profileSummary(p)}</p>
+          <p className="mt-2 text-[14px] text-[var(--text-2)]">{profileSummary(p)}</p>
         )}
       </header>
 
       {!creating && (
         <button onClick={() => setCreating(true)}
-          className="rise rise-1 mb-5 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[var(--brand)] py-4 text-[15px] font-medium text-white shadow-[var(--shadow)] lg:max-w-xs">
+          className="rise rise-1 mb-5 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[var(--brand)] py-4 text-[16px] font-medium text-white shadow-[var(--shadow)] lg:max-w-xs">
           <Plus size={18} /> טיול חדש
         </button>
       )}
@@ -40,7 +40,7 @@ export default function TripsPage() {
         <div className="flex flex-col items-center rounded-[var(--radius-card)] bg-[var(--surface)] px-5 py-10 text-center shadow-[var(--shadow)]">
           <SuitcaseArt width={210} />
           <p className="serif mt-4 text-[20px] font-bold">המזוודה מוכנה. לאן טסים?</p>
-          <p className="mt-1 text-[13px] text-[var(--text-2)]">צרו טיול ראשון — לפי העדפות או לפי מלונות שכבר הזמנתם.</p>
+          <p className="mt-1 text-[14px] text-[var(--text-2)]">צרו טיול ראשון — לפי העדפות או לפי מלונות שכבר הזמנתם.</p>
         </div>
       )}
 
@@ -57,7 +57,7 @@ export default function TripsPage() {
             </div>
             <Link href={`/trip/${t.id}`} className="min-w-0 flex-1">
               <p className="serif truncate text-[18px] leading-tight">{t.title}</p>
-              <p className="mt-0.5 text-[13px] text-[var(--text-2)]">
+              <p className="mt-0.5 text-[14px] text-[var(--text-2)]">
                 {t.cityHe || t.city ? `${t.cityHe || t.city} · ` : ""}{t.days} ימים
                 {t.itinerary ? " · לו\"ז מוכן" : " · טרם נבנה"}
               </p>

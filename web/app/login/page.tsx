@@ -74,7 +74,7 @@ export default function LoginPage() {
         <ChevronRight size={14} /> בית
       </Link>
       <h1 className="serif text-[32px] leading-none lg:text-[40px]">התחברות</h1>
-      <p className="mt-3 text-[14px] text-[var(--text-2)]">
+      <p className="mt-3 text-[15px] text-[var(--text-2)]">
         התחברו כדי לשמור את הטיולים שלכם ולגשת אליהם מכל מכשיר.
       </p>
 
@@ -82,12 +82,12 @@ export default function LoginPage() {
         <div className="mt-6">
           {/* Google — primary */}
           <button onClick={google} disabled={status !== "idle"}
-            className="flex w-full items-center justify-center gap-2.5 rounded-full border border-[var(--border)] bg-[var(--surface)] py-3 text-[15px] font-medium shadow-[var(--shadow)] disabled:opacity-50">
+            className="flex w-full items-center justify-center gap-2.5 rounded-full border border-[var(--border)] bg-[var(--surface)] py-3 text-[16px] font-medium shadow-[var(--shadow)] disabled:opacity-50">
             {status === "google" ? <Loader2 size={18} className="animate-spin" /> : <GoogleMark />}
             המשך עם Google
           </button>
 
-          <div className="my-5 flex items-center gap-3 text-[12px] text-[var(--text-3)]">
+          <div className="my-5 flex items-center gap-3 text-[13px] text-[var(--text-3)]">
             <span className="h-px flex-1 bg-[var(--border)]" /> או במייל <span className="h-px flex-1 bg-[var(--border)]" />
           </div>
 
@@ -97,15 +97,15 @@ export default function LoginPage() {
             <input value={email} onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendLink()}
               type="email" inputMode="email" placeholder="האימייל שלכם" dir="ltr"
-              className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[var(--text-3)]" />
+              className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]" />
           </div>
-          {error && <p className="mt-2 text-[12.5px] leading-snug text-[var(--amber)]">{error}</p>}
+          {error && <p className="mt-2 text-[13.5px] leading-snug text-[var(--amber)]">{error}</p>}
           <button onClick={sendLink} disabled={status === "sending"}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-3 text-[15px] font-medium text-white disabled:opacity-50">
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-3 text-[16px] font-medium text-white disabled:opacity-50">
             {status === "sending" ? <Loader2 size={17} className="animate-spin" /> : <Mail size={17} />}
             שלחו לי קישור כניסה
           </button>
-          <p className="mt-4 text-[12px] text-[var(--text-3)]">
+          <p className="mt-4 text-[13px] text-[var(--text-3)]">
             אפשר להמשיך לדפדף בלי חשבון — התחברות נדרשת רק כדי לשמור טיולים.
           </p>
         </div>
@@ -115,26 +115,26 @@ export default function LoginPage() {
             <MailCheck size={22} />
           </div>
           <p className="serif mt-3 text-center text-[18px]">בדקו את המייל</p>
-          <p className="mt-1 text-center text-[13px] text-[var(--text-2)]">
+          <p className="mt-1 text-center text-[14px] text-[var(--text-2)]">
             שלחנו קישור כניסה ל-<span className="font-medium text-[var(--text)]" dir="ltr">{email.trim()}</span>.
             לחצו עליו <span className="font-medium">מאותו מכשיר</span> כדי להיכנס.
           </p>
 
           {/* optional code entry (works once the email template includes a code) */}
           <div className="mt-4 border-t border-[var(--border)] pt-4">
-            <p className="mb-2 text-center text-[12px] text-[var(--text-3)]">קיבלתם קוד בן 6 ספרות? הזינו אותו כאן:</p>
+            <p className="mb-2 text-center text-[13px] text-[var(--text-3)]">קיבלתם קוד בן 6 ספרות? הזינו אותו כאן:</p>
             <input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
               onKeyDown={(e) => e.key === "Enter" && verify()}
               inputMode="numeric" autoComplete="one-time-code" placeholder="______" dir="ltr" maxLength={6}
               className="w-full rounded-[14px] border border-[var(--border)] bg-[var(--surface-2)] py-2.5 text-center font-mono text-[22px] tracking-[0.4em] outline-none placeholder:text-[var(--text-3)] focus:border-[var(--brand)]" />
-            {error && <p className="mt-2 text-center text-[12.5px] text-[var(--amber)]">{error}</p>}
+            {error && <p className="mt-2 text-center text-[13.5px] text-[var(--amber)]">{error}</p>}
             <button onClick={verify} disabled={status === "verifying" || code.length < 6}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-2.5 text-[14px] font-medium text-white disabled:opacity-40">
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-2.5 text-[15px] font-medium text-white disabled:opacity-40">
               {status === "verifying" ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />} כניסה
             </button>
           </div>
 
-          <div className="mt-4 flex items-center justify-between text-[12.5px]">
+          <div className="mt-4 flex items-center justify-between text-[13.5px]">
             <button onClick={() => { setView("email"); setError(""); }} className="text-[var(--text-3)]">← חזרה</button>
             <button onClick={sendLink} disabled={cooldown > 0 || status === "sending"}
               className="font-medium text-[var(--brand-ink)] disabled:text-[var(--text-3)]">

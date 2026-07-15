@@ -30,7 +30,7 @@ export function TopNav() {
               <Link
                 key={href}
                 href={href}
-                className="flex items-center gap-2 rounded-full px-4 py-2 text-[14px] transition"
+                className="flex items-center gap-2 rounded-full px-4 py-2 text-[15px] transition"
                 style={{
                   background: active ? "var(--brand-soft)" : "transparent",
                   color: active ? "var(--brand-ink)" : "var(--text-2)",

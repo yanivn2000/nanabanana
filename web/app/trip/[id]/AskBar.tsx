@@ -65,12 +65,12 @@ export function AskBar({
     <div className="mt-4 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
       {/* scope selector — what to change */}
       <div className="mb-2 flex items-center gap-2 overflow-x-auto pb-1">
-        <span className="shrink-0 text-[11.5px] text-[var(--text-3)]">מה לעדכן?</span>
+        <span className="shrink-0 text-[12.5px] text-[var(--text-3)]">מה לעדכן?</span>
         {[null, ...days.map((_, i) => i)].map((d) => {
           const on = scope === d;
           return (
             <button key={d ?? "all"} disabled={busy} onClick={() => setScope(d)}
-              className="shrink-0 rounded-full px-2.5 py-1 text-[12px] transition disabled:opacity-50"
+              className="shrink-0 rounded-full px-2.5 py-1 text-[13px] transition disabled:opacity-50"
               style={{
                 background: on ? "var(--accent)" : "var(--surface)",
                 color: on ? "#fff" : "var(--text-2)",
@@ -86,13 +86,13 @@ export function AskBar({
       <div className="mb-2.5 flex gap-2 overflow-x-auto pb-1">
         {live.map((s) => (
           <button key={s.text} disabled={busy} onClick={() => send(s.text, s.dayIdx ?? null)}
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--brand)] bg-[rgba(13,148,136,.08)] px-3 py-1.5 text-[12px] text-[var(--brand-ink)] disabled:opacity-50">
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--brand)] bg-[rgba(13,148,136,.08)] px-3 py-1.5 text-[13px] text-[var(--brand-ink)] disabled:opacity-50">
             <s.icon size={13} /> {s.chip ?? s.text}
           </button>
         ))}
         {planning.map((s) => (
           <button key={s.text} disabled={busy} onClick={() => send(s.text, scope)}
-            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[12px] text-[var(--text-2)] disabled:opacity-50">
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[13px] text-[var(--text-2)] disabled:opacity-50">
             <s.icon size={13} /> {s.text}
           </button>
         ))}
@@ -106,7 +106,7 @@ export function AskBar({
           disabled={busy}
           placeholder={busy ? "Claude מארגן מחדש…"
             : scope == null ? "מה לשנות בכל הטיול…" : `מה לשנות ב${short(scope)}…`}
-          className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[var(--text-3)]"
+          className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]"
         />
         <button
           aria-label="שלח"

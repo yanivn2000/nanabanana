@@ -18,19 +18,19 @@ function AddChips({ icon, label, placeholder, items, onChange }: {
   };
   return (
     <section>
-      <label className="mb-2 flex items-center gap-1.5 text-[14px] font-medium">
+      <label className="mb-2 flex items-center gap-1.5 text-[15px] font-medium">
         <span className="text-[var(--brand-ink)]">{icon}</span> {label}
       </label>
       <div className="mb-2 flex gap-2">
         <input value={val} onChange={(e) => setVal(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()} placeholder={placeholder}
-          className="min-w-0 flex-1 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[14px] outline-none" />
+          className="min-w-0 flex-1 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[15px] outline-none" />
         <button onClick={add} className="grid size-9 shrink-0 place-items-center rounded-lg bg-[var(--brand)] text-white"><Plus size={16} /></button>
       </div>
       <div className="flex flex-wrap gap-2">
-        {items.length === 0 && <p className="text-[12.5px] text-[var(--text-3)]">עוד לא הוספתם.</p>}
+        {items.length === 0 && <p className="text-[13.5px] text-[var(--text-3)]">עוד לא הוספתם.</p>}
         {items.map((it) => (
-          <span key={it} className="flex items-center gap-1 rounded-full bg-[var(--brand-soft)] py-1 pl-1.5 pr-3 text-[13px] text-[var(--brand-ink)]">
+          <span key={it} className="flex items-center gap-1 rounded-full bg-[var(--brand-soft)] py-1 pl-1.5 pr-3 text-[14px] text-[var(--brand-ink)]">
             {it}
             <button onClick={() => onChange(items.filter((x) => x !== it))} aria-label="הסר"><X size={13} /></button>
           </span>
@@ -57,7 +57,7 @@ export function FollowsEditor({ value, onChange }: {
         placeholder="למשל: Arsenal, מכבי" items={value.teams}
         onChange={(teams) => onChange({ ...value, teams })} />
       <section>
-        <label className="mb-2 flex items-center gap-1.5 text-[14px] font-medium">
+        <label className="mb-2 flex items-center gap-1.5 text-[15px] font-medium">
           <span className="text-[var(--brand-ink)]"><CalendarHeart size={16} /></span> ימים ואירועים מיוחדים
         </label>
         <div className="flex flex-wrap gap-2">
@@ -65,7 +65,7 @@ export function FollowsEditor({ value, onChange }: {
             const on = value.observances.includes(o);
             return (
               <button key={o} onClick={() => toggleObs(o)}
-                className="rounded-full px-3.5 py-1.5 text-[13px] transition"
+                className="rounded-full px-3.5 py-1.5 text-[14px] transition"
                 style={{ background: on ? "var(--brand)" : "var(--surface)", color: on ? "#fff" : "var(--text-2)",
                          border: `1px solid ${on ? "var(--brand)" : "var(--border)"}` }}>
                 {o}

@@ -57,7 +57,7 @@ export function ExploreList({ destinations, summaries = [] }: {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="חפשו עיר או מדינה…"
-          className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-[var(--text-3)]"
+          className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]"
         />
       </div>
 
@@ -80,15 +80,15 @@ export function ExploreList({ destinations, summaries = [] }: {
                         orientation="banner" position="50% 45%" className="size-full" />
                     </div>
                     <div className="absolute inset-0 flex flex-col justify-end p-4 text-white">
-                      <p className="text-[12px] font-medium text-white/85">{d.country_he || d.country}</p>
+                      <p className="text-[13px] font-medium text-white/85">{d.country_he || d.country}</p>
                       <h3 className="serif text-[24px] font-bold leading-none">{d.city_he || d.city}</h3>
                       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                        <span className="rounded-full bg-[var(--surface)]/92 px-2.5 py-1 text-[11.5px] font-semibold text-[var(--text)] shadow-sm backdrop-blur">
+                        <span className="rounded-full bg-[var(--surface)]/92 px-2.5 py-1 text-[12.5px] font-semibold text-[var(--text)] shadow-sm backdrop-blur">
                           {d.attraction_count.toLocaleString("he")} אטרקציות
                         </span>
                         {topCats(byId.get(d.id)).map((c) => (
                           <span key={c.key}
-                            className="inline-flex items-center gap-1 rounded-full bg-[var(--surface)]/92 px-2.5 py-1 text-[11.5px] font-medium text-[var(--text-2)] shadow-sm backdrop-blur">
+                            className="inline-flex items-center gap-1 rounded-full bg-[var(--surface)]/92 px-2.5 py-1 text-[12.5px] font-medium text-[var(--text-2)] shadow-sm backdrop-blur">
                             <c.Icon size={12} className="text-[var(--brand-ink)]" /> {c.label}
                           </span>
                         ))}

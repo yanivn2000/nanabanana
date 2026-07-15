@@ -54,7 +54,7 @@ export function TravelChecklist({
                    borderColor: on ? "var(--brand)" : "var(--border)" }}>
           {on && <Check size={13} className="text-white" />}
         </button>
-        <span className="flex-1 text-[13.5px]"
+        <span className="flex-1 text-[14.5px]"
           style={{ color: on ? "var(--text-3)" : "var(--text)", textDecoration: on ? "line-through" : "none" }}>
           {it.label}
         </span>
@@ -66,7 +66,7 @@ export function TravelChecklist({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-[12.5px] text-[var(--text-2)]">הושלם {done}/{allVisible.length}</span>
+        <span className="text-[13.5px] text-[var(--text-2)]">הושלם {done}/{allVisible.length}</span>
         <div className="h-1.5 w-28 overflow-hidden rounded-full bg-[var(--surface-2)]">
           <div className="h-full rounded-full bg-[var(--brand)]"
             style={{ width: `${allVisible.length ? (done / allVisible.length) * 100 : 0}%` }} />
@@ -91,7 +91,7 @@ export function TravelChecklist({
         <input value={newItem} onChange={(e) => setNewItem(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
           placeholder="הוסף משימה…"
-          className="flex-1 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[13px] outline-none placeholder:text-[var(--text-3)]" />
+          className="flex-1 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-[14px] outline-none placeholder:text-[var(--text-3)]" />
         <button onClick={add} className="grid size-9 place-items-center rounded-lg bg-[var(--brand)] text-white"><Plus size={16} /></button>
       </div>
     </div>

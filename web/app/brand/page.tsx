@@ -65,7 +65,7 @@ function Tile({ bg, fg, pin, label }: { bg: string; fg: string; pin: string; lab
         <span className="disp text-[44px] font-black leading-none" style={{ color: fg }}>Y</span>
         <span className="absolute" style={{ top: 10, insetInlineEnd: 12 }}><Pin size={16} fill={pin} /></span>
       </div>
-      <span className="text-[11px]" style={{ color: C.ink3 }}>{label}</span>
+      <span className="text-[12px]" style={{ color: C.ink3 }}>{label}</span>
     </div>
   );
 }
@@ -88,7 +88,7 @@ function Stamp() {
 function Section({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
   return (
     <section className="mt-14">
-      <p className="mb-1 text-[11px] font-semibold tracking-[0.18em]" style={{ color: C.terra }}>{n}</p>
+      <p className="mb-1 text-[12px] font-semibold tracking-[0.18em]" style={{ color: C.terra }}>{n}</p>
       <h2 className="disp mb-5 text-[26px] font-black" style={{ color: C.ink }}>{title}</h2>
       {children}
     </section>
@@ -102,7 +102,7 @@ export default function BrandBoard() {
       <style>{`.disp{font-family:var(--f-fred)} .rubik{font-family:var(--f-rubik)} .plex{font-family:var(--f-plex)}`}</style>
       <div className="mx-auto max-w-[760px] px-6 pt-14">
 
-        <p className="text-[11px] font-semibold tracking-[0.2em]" style={{ color: C.ink3 }}>YALLE · BRAND BOARD · כיוון B · פנימי</p>
+        <p className="text-[12px] font-semibold tracking-[0.2em]" style={{ color: C.ink3 }}>YALLE · BRAND BOARD · כיוון B · פנימי</p>
 
         {/* ---------- 1 · the lockup ---------- */}
         <Section n="01" title="הלוגו">
@@ -113,14 +113,14 @@ export default function BrandBoard() {
               <span className="-ms-2 mt-1"><PinSpark size={40} /></span>
             </div>
             <p className="disp mt-3 text-[22px] font-700" style={{ color: C.ink, fontWeight: 700 }}>הטיול שלך. בול בשבילך.</p>
-            <p className="mt-1 text-[13px]" style={{ color: C.ink2 }}>וורדמארק ירוק-יער · פין טרקוטה עם ניצוץ — האנרגיה של "יאללה, יוצאים"</p>
+            <p className="mt-1 text-[14px]" style={{ color: C.ink2 }}>וורדמארק ירוק-יער · פין טרקוטה עם ניצוץ — האנרגיה של "יאללה, יוצאים"</p>
           </div>
           <div className="mt-6 flex flex-wrap items-end justify-center gap-7">
             <Tile bg={C.green} fg="#FFFFFF" pin={C.terraBright} label="ראשי" />
             <Tile bg={C.surface} fg={C.green} pin={C.terraBright} label="בהיר" />
             <Tile bg={C.bg} fg={C.green} pin={C.terra} label="קרם" />
             <Tile bg={C.terraBright} fg="#FFFFFF" pin="#FFF3E9" label="חם (קמפיינים)" />
-            <div className="flex flex-col items-center gap-2"><Stamp /><span className="text-[11px]" style={{ color: C.ink3 }}>חותמת (מוטיב)</span></div>
+            <div className="flex flex-col items-center gap-2"><Stamp /><span className="text-[12px]" style={{ color: C.ink3 }}>חותמת (מוטיב)</span></div>
           </div>
         </Section>
 
@@ -132,14 +132,14 @@ export default function BrandBoard() {
                 style={{ background: C.surface, boxShadow: "0 1px 3px rgba(16,29,43,.06), 0 8px 20px rgba(16,29,43,.06)" }}>
                 <div style={{ background: s.hex, height: 64, borderBottom: `1px solid ${C.surface2}` }} />
                 <div className="p-2.5">
-                  <p className="text-[13px] font-bold" style={{ color: C.ink }}>{s.name}</p>
-                  <p className="text-[11px] leading-snug" style={{ color: C.ink2 }}>{s.role}</p>
-                  <p className="mt-1 font-mono text-[10px]" dir="ltr" style={{ color: C.ink3 }}>{s.hex} · {s.contrast}</p>
+                  <p className="text-[14px] font-bold" style={{ color: C.ink }}>{s.name}</p>
+                  <p className="text-[12px] leading-snug" style={{ color: C.ink2 }}>{s.role}</p>
+                  <p className="mt-1 font-mono text-[11px]" dir="ltr" style={{ color: C.ink3 }}>{s.hex} · {s.contrast}</p>
                 </div>
               </div>
             ))}
           </div>
-          <p className="mt-3 text-[12.5px]" style={{ color: C.ink2 }}>
+          <p className="mt-3 text-[13.5px]" style={{ color: C.ink2 }}>
             הטרקוטה של הבורד המקורי (#E76F51) נכשלה בנגישות טקסט (3.1) — הוכהתה ל-#C64F26 (4.6 · AA).
             הגוון הבהיר נשמר לאיור ולמוטיבים בלבד.
           </p>
@@ -159,21 +159,21 @@ export default function BrandBoard() {
               <div key={f.name} className="rounded-[20px] p-6"
                 style={{ background: C.surface, boxShadow: "0 1px 3px rgba(16,29,43,.05), 0 10px 26px rgba(16,29,43,.07)" }}>
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold"
+                  <span className="rounded-full px-2 py-0.5 text-[11.5px] font-bold"
                     style={{ background: f.tag === "הנבחר" ? C.greenSoft : C.surface2, color: f.tag === "הנבחר" ? C.greenInk : C.ink2 }}>{f.tag}</span>
-                  <span className="font-mono text-[11px]" dir="ltr" style={{ color: C.ink3 }}>{f.name}</span>
+                  <span className="font-mono text-[12px]" dir="ltr" style={{ color: C.ink3 }}>{f.name}</span>
                 </div>
                 <p className={f.cls} style={{ fontSize: 30, fontWeight: f.weight, lineHeight: 1.25, color: C.ink }}>
                   לטייל כמו שאתם אוהבים
                 </p>
-                <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: C.ink2 }}>{f.why}</p>
+                <p className="mt-2 text-[13.5px] leading-relaxed" style={{ color: C.ink2 }}>{f.why}</p>
               </div>
             ))}
             <div className="rounded-[20px] p-6" style={{ background: C.surface2 }}>
-              <p className="text-[11px] font-semibold tracking-wider" style={{ color: C.ink3 }}>טקסט רץ — Assistant (נשאר)</p>
-              <p className="mt-1.5 text-[15px] leading-relaxed" style={{ color: C.ink }}>
+              <p className="text-[12px] font-semibold tracking-wider" style={{ color: C.ink3 }}>טקסט רץ — Assistant (נשאר)</p>
+              <p className="mt-1.5 text-[16px] leading-relaxed" style={{ color: C.ink }}>
                 אנחנו כאן כדי להפוך את התכנון לחוויה — פשוטה, אישית ומרגשת. הטקסט הרץ נשאר Assistant: קריא,
-                חם, ועובד מצוין בעברית. <span dir="ltr" className="font-mono text-[13px]">Aa Bb 0123456789</span>
+                חם, ועובד מצוין בעברית. <span dir="ltr" className="font-mono text-[14px]">Aa Bb 0123456789</span>
               </p>
             </div>
           </div>
@@ -184,30 +184,30 @@ export default function BrandBoard() {
           <div className="rounded-[24px] p-7" style={{ background: C.surface, boxShadow: "0 2px 6px rgba(16,29,43,.05), 0 18px 44px rgba(16,29,43,.08)" }}>
             {/* buttons — locked 2026-07-11: primary=green fill, secondary=green outline, tertiary=link */}
             <div className="flex flex-wrap items-center gap-3">
-              <button className="rounded-full px-6 py-3 text-[14.5px] font-bold text-white transition"
+              <button className="rounded-full px-6 py-3 text-[16px] font-bold text-white transition"
                 style={{ background: C.green, boxShadow: "0 6px 16px rgba(14,107,94,.35)" }}>כפתור ראשי</button>
-              <button className="rounded-full px-6 py-3 text-[14.5px] font-medium"
+              <button className="rounded-full px-6 py-3 text-[16px] font-medium"
                 style={{ background: C.surface, color: C.greenInk, border: `1.5px solid ${C.green}` }}>כפתור משני</button>
-              <a className="text-[14px] font-medium" style={{ color: C.greenInk }}>קישור משני ‹</a>
+              <a className="text-[15px] font-medium" style={{ color: C.greenInk }}>קישור משני ‹</a>
             </div>
             {/* choice chips — FILLED (board): green / amber(+ink text, AA) / terracotta */}
             <div className="mt-5 flex flex-wrap gap-2">
-              <span className="rounded-full px-3.5 py-1.5 text-[13px] font-bold text-white" style={{ background: C.green }}>✓ כן</span>
-              <span className="rounded-full px-3.5 py-1.5 text-[13px] font-bold" style={{ background: "#EF9F27", color: C.ink }}>? אולי</span>
-              <span className="rounded-full px-3.5 py-1.5 text-[13px] font-bold text-white" style={{ background: C.terra }}>✕ לא</span>
-              <span className="rounded-full px-3 py-1.5 text-[12px]" style={{ background: C.greenSoft, color: C.greenInk }}>חובה</span>
-              <span className="rounded-full px-3 py-1.5 text-[12px]" style={{ background: C.amberSoft, color: C.amberInk }}>בולט</span>
-              <span className="rounded-full px-3 py-1.5 text-[12px]" style={{ background: C.blueSoft, color: C.blue }}>מקורה</span>
-              <span className="rounded-full px-3 py-1.5 text-[12px]" style={{ background: C.surface2, color: C.amberInk }}>★ מועדף</span>
+              <span className="rounded-full px-3.5 py-1.5 text-[14px] font-bold text-white" style={{ background: C.green }}>✓ כן</span>
+              <span className="rounded-full px-3.5 py-1.5 text-[14px] font-bold" style={{ background: "#EF9F27", color: C.ink }}>? אולי</span>
+              <span className="rounded-full px-3.5 py-1.5 text-[14px] font-bold text-white" style={{ background: C.terra }}>✕ לא</span>
+              <span className="rounded-full px-3 py-1.5 text-[13px]" style={{ background: C.greenSoft, color: C.greenInk }}>חובה</span>
+              <span className="rounded-full px-3 py-1.5 text-[13px]" style={{ background: C.amberSoft, color: C.amberInk }}>בולט</span>
+              <span className="rounded-full px-3 py-1.5 text-[13px]" style={{ background: C.blueSoft, color: C.blue }}>מקורה</span>
+              <span className="rounded-full px-3 py-1.5 text-[13px]" style={{ background: C.surface2, color: C.amberInk }}>★ מועדף</span>
             </div>
             {/* category tiles — two-tone filled icon set (live component) */}
-            <p className="mb-2 mt-6 text-[13px] font-bold" style={{ color: C.ink }}>קטגוריות</p>
+            <p className="mb-2 mt-6 text-[14px] font-bold" style={{ color: C.ink }}>קטגוריות</p>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
               {["תרבות", "טבע", "לילדים", "אוכל", "קניות", "חופים"].map((l, i) => (
                 <CategoryTile key={l} label={l} selected={i === 1} />
               ))}
             </div>
-            <p className="mt-5 text-[12.5px] leading-relaxed" style={{ color: C.ink2 }}>
+            <p className="mt-5 text-[13.5px] leading-relaxed" style={{ color: C.ink2 }}>
               שפת העומק: משטחים לבנים על קרם, צל כפול (קרוב + רחוק) במקום מסגרות, פינות 16–24,
               והרבה אוויר. הערת נגישות: "אולי" מלא בענבר מקבל טקסט כהה — לבן על ענבר נכשל ב-AA.
             </p>
@@ -226,7 +226,7 @@ export default function BrandBoard() {
             <TravelersSay
               quote="הגענו ב-16:00 ולא היה תור בכלל. אל תפספסו את הדוכן מאחורי הכנסייה."
               kind="טיפ" />
-            <p className="text-[12px]" style={{ color: C.ink3 }}>
+            <p className="text-[13px]" style={{ color: C.ink3 }}>
               * רכיבי מערכת חיים (components/Signature.tsx) — אלה בדיוק הרכיבים שרצים במוצר, על דאטה אמיתי
               (טעמים מכוילים, שדה ה-"למה" של כל יום, תובנות מאומתות).
             </p>

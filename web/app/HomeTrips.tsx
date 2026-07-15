@@ -1,69 +1,102 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, Sparkles, BedDouble } from "lucide-react";
+import { Plus, Sparkles, BedDouble, Compass } from "lucide-react";
 import { useTrips } from "@/lib/store";
 import { CityPoster } from "@/components/CityPoster";
-import { SuitcaseArt } from "@/components/Illustrations";
 
-// Home entry to "הטיולים שלי": a preview of the traveler's real trips (not a
-// redundant link to /trips) + one "new trip" action. Client-side (trips live in
-// localStorage). Empty state invites the first trip.
+// Home entry to "הטיולים שלי": a compact single row of SQUARE tiles — the
+// traveler's recent trips, then a "new trip" tile, then the two entry CTAs
+// ("לא יודעים לאן?" / "אני בטיול עכשיו") in their palette colours, so the whole
+// row sits high on the page and the destinations below peek above the fold.
+// Client-side (trips live in localStorage).
 export function HomeTrips() {
   const { trips, loaded } = useTrips();
 
-  if (!loaded) {
-    return <div className="rise h-[104px] rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[var(--shadow)]" />;
-  }
+  // one horizontal, scroll-on-overflow row of fixed square tiles
+  const Row = ({ children }: { children: React.ReactNode }) => (
+    <div className="-mx-5 grid grid-flow-col auto-cols-[150px] gap-3 overflow-x-auto px-5 pb-1 lg:mx-0 lg:auto-cols-[176px] lg:px-0"
+         style={{ scrollbarWidth: "none" }}>
+      {children}
+    </div>
+  );
 
-  if (trips.length === 0) {
+  const NewTile = (
+    <Link href="/trips?new=1"
+      className="flex aspect-square flex-col items-center justify-center gap-2 rounded-[var(--radius-card)] border-2 border-dashed border-[var(--border)] bg-[var(--surface)] text-[var(--brand-ink)] transition hover:border-[var(--brand)]">
+      <Plus size={22} /> <span className="text-[15px] font-medium">טיול חדש</span>
+    </Link>
+  );
+
+  // The two standing entry points, as square tiles in their palette colours.
+  const CtaTile = ({ href, bg, ink, Icon, title, sub }: {
+    href: string; bg: string; ink: string; Icon: typeof Sparkles; title: string; sub: string;
+  }) => (
+    <Link href={href}
+      className="flex aspect-square flex-col justify-between rounded-[var(--radius-card)] border border-[var(--border)] p-3.5 shadow-[var(--shadow)] transition hover:-translate-y-0.5"
+      style={{ background: bg }}>
+      <span className="grid size-10 place-items-center rounded-full bg-[var(--surface)]" style={{ color: ink }}>
+        <Icon size={20} />
+      </span>
+      <span>
+        <span className="block text-[16px] font-semibold" style={{ color: ink }}>{title}</span>
+        <span className="mt-0.5 block text-[13.5px] text-[var(--text-2)]">{sub}</span>
+      </span>
+    </Link>
+  );
+
+  const ctas = (
+    <>
+      <CtaTile href="/recommend" bg="var(--accent-soft)" ink="var(--accent-ink)"
+        Icon={Sparkles} title="לא יודעים לאן?" sub="המלצת יעד לפי המשפחה" />
+      <CtaTile href="/now" bg="var(--brand-soft)" ink="var(--brand-ink)"
+        Icon={Compass} title="אני בטיול עכשיו" sub="מה קרוב אליי + ניווט" />
+    </>
+  );
+
+  const Head = (
+    <div className="mb-2.5 flex items-baseline justify-between">
+      <h2 className="serif text-[20px] font-bold">הטיולים שלי</h2>
+      <Link href="/trips" className="text-[14px] font-medium text-[var(--brand-ink)]">כל הטיולים ←</Link>
+    </div>
+  );
+
+  if (!loaded) {
     return (
-      <div className="rise flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
-        <SuitcaseArt width={104} />
-        <div className="min-w-0 flex-1">
-          <p className="serif text-[19px] font-bold leading-tight">מוכנים לצאת לדרך?</p>
-          <p className="mt-0.5 text-[13px] text-[var(--text-2)]">בנו את הטיול הראשון — לפי העדפות או לפי מלונות שכבר הזמנתם.</p>
-          <Link href="/trips?new=1"
-            className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-[13.5px] font-medium text-white">
-            <Plus size={15} /> טיול חדש
-          </Link>
-        </div>
+      <div className="rise">
+        {Head}
+        <Row>{NewTile}{ctas}</Row>
       </div>
     );
   }
 
-  const recent = trips.slice(0, 2);
+  const recent = trips.slice(0, 3);
   return (
     <div className="rise">
-      <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="serif text-[20px] font-bold">הטיולים שלי</h2>
-        <Link href="/trips" className="text-[13px] font-medium text-[var(--brand-ink)]">כל הטיולים ←</Link>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {Head}
+      <Row>
         {recent.map((t) => (
           <Link key={t.id} href={`/trip/${t.id}`}
-            className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-2.5 shadow-[var(--shadow)]">
-            <div className="relative shrink-0">
-              <CityPoster destinationId={t.destinationId} cityHe={t.cityHe || t.city} orientation="portrait"
-                className="h-16 w-[58px] rounded-[var(--radius-sm)]" />
-              <span className="absolute bottom-1 start-1 grid size-5 place-items-center rounded-full bg-[var(--surface)] text-[var(--accent-ink)] shadow-[var(--shadow)]">
-                {t.mode === "hotels" ? <BedDouble size={12} /> : <Sparkles size={12} />}
-              </span>
+            className="group relative block aspect-square overflow-hidden rounded-[var(--radius-card)] shadow-[var(--shadow)]">
+            <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.05]">
+              <CityPoster destinationId={t.destinationId} cityHe={t.cityHe || t.city} overlay
+                orientation="landscape" position="50% 45%" className="size-full" />
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="serif truncate text-[16px] font-semibold">{t.title}</p>
-              <p className="mt-0.5 text-[12.5px] text-[var(--text-2)]">
+            <span className="absolute start-2 top-2 grid size-6 place-items-center rounded-full bg-[var(--surface)]/92 text-[var(--accent-ink)] shadow-sm backdrop-blur">
+              {t.mode === "hotels" ? <BedDouble size={13} /> : <Sparkles size={13} />}
+            </span>
+            <div className="absolute inset-0 flex flex-col justify-end p-3 text-white">
+              <p className="serif text-[16px] font-bold leading-tight drop-shadow">{t.title}</p>
+              <p className="mt-0.5 text-[13px] text-white/85 drop-shadow">
                 {t.cityHe || t.city ? `${t.cityHe || t.city} · ` : ""}{t.days} ימים
-                {t.itinerary ? " · לו\"ז מוכן" : " · טרם נבנה"}
+                {t.itinerary ? " · מוכן" : ""}
               </p>
             </div>
           </Link>
         ))}
-        <Link href="/trips?new=1"
-          className="flex min-h-[84px] items-center justify-center gap-2 rounded-[var(--radius-card)] border-2 border-dashed border-[var(--border)] bg-[var(--surface)] p-4 text-[14px] font-medium text-[var(--brand-ink)]">
-          <Plus size={17} /> טיול חדש
-        </Link>
-      </div>
+        {NewTile}
+        {ctas}
+      </Row>
     </div>
   );
 }

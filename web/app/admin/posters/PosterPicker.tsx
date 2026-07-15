@@ -62,7 +62,7 @@ export function PosterPicker({ cities, initialPicks }: { cities: City[]; initial
 
   return (
     <div>
-      <p className="mb-4 rounded-[var(--radius-card)] bg-[var(--brand-soft)] px-4 py-2.5 text-[13px] text-[var(--brand-ink)]">
+      <p className="mb-4 rounded-[var(--radius-card)] bg-[var(--brand-soft)] px-4 py-2.5 text-[14px] text-[var(--brand-ink)]">
         נבחרו {doneCount}/{cities.length} ערים
       </p>
       <div className="flex flex-col gap-2.5">
@@ -76,12 +76,12 @@ export function PosterPicker({ cities, initialPicks }: { cities: City[]; initial
                 <span className="flex items-center gap-2">
                   {chosen ? <CheckCircle2 size={18} className="text-[var(--brand)]" />
                           : <span className="size-[18px] rounded-full border-2 border-[var(--border)]" />}
-                  <span className="text-[15px] font-medium">{city.city}</span>
+                  <span className="text-[16px] font-medium">{city.city}</span>
                   {chosen && !mat[city.id] && (
-                    <span className="rounded-full bg-[var(--amber-soft)] px-2 py-0.5 text-[10.5px] text-[var(--amber)]">ממתין להעלאה</span>
+                    <span className="rounded-full bg-[var(--amber-soft)] px-2 py-0.5 text-[11.5px] text-[var(--amber)]">ממתין להעלאה</span>
                   )}
                   {chosen && mat[city.id] && (
-                    <span className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[10.5px] text-[var(--brand-ink)]">פורסם</span>
+                    <span className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11.5px] text-[var(--brand-ink)]">פורסם</span>
                   )}
                 </span>
                 <ChevronDown size={18} className={`text-[var(--text-3)] transition-transform ${isOpen ? "rotate-180" : ""}`} />
@@ -90,7 +90,7 @@ export function PosterPicker({ cities, initialPicks }: { cities: City[]; initial
               {isOpen && (
                 <div className="border-t border-[var(--border)] p-4">
                   {loading === city.id ? (
-                    <div className="flex items-center gap-2 py-6 text-[13px] text-[var(--text-3)]">
+                    <div className="flex items-center gap-2 py-6 text-[14px] text-[var(--text-3)]">
                       <Loader2 size={16} className="animate-spin" /> טוען מועמדות…
                     </div>
                   ) : (
@@ -116,7 +116,7 @@ export function PosterPicker({ cities, initialPicks }: { cities: City[]; initial
                                 </span>
                               )}
                             </button>
-                            <div className="flex items-center justify-between px-2 py-1 text-[10.5px] text-[var(--text-3)]">
+                            <div className="flex items-center justify-between px-2 py-1 text-[11.5px] text-[var(--text-3)]">
                               <span className="truncate">{c.photographer}</span>
                               <a href={c.page_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
                                 <ExternalLink size={11} />
