@@ -108,7 +108,7 @@ export function DestinationView({
   const [filtersOpen, setFiltersOpen] = useState(false);
   // Per-city yes/maybe/no marks (the "city profile") + the build modal.
   const { create } = useTrips();
-  const { choices, setChoice } = useCitySelection(dest.id);
+  const { choices, setChoice, setMany } = useCitySelection(dest.id);
   const [buildOpen, setBuildOpen] = useState(false);
   const [buildDays, setBuildDays] = useState(4);
   const [buildRadius, setBuildRadius] = useState(1);
@@ -117,6 +117,10 @@ export function DestinationView({
   const [visibleCount, setVisibleCount] = useState(PAGE);
   const yesCount = Object.values(choices).filter((c) => c === "yes").length;
   const maybeCount = Object.values(choices).filter((c) => c === "maybe").length;
+  // "select all must-see" — a one-click way to mark every חובה place as כן.
+  const mustSeeIds = useMemo(() => attractions.filter((a) => a.must_see === 1).map((a) => a.id), [attractions]);
+  const allMustSeeYes = mustSeeIds.length > 0 && mustSeeIds.every((id) => choices[id] === "yes");
+  const toggleAllMustSee = () => setMany(mustSeeIds, allMustSeeYes ? null : "yes");
 
   const cats = useMemo(
     () => Array.from(new Set(attractions.map((a) => mergeCat(a.category)))),
@@ -374,6 +378,16 @@ export function DestinationView({
               </button>
             ))}
 
+            {mustSeeIds.length > 0 && (
+              <button onClick={toggleAllMustSee}
+                className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
+                style={{ background: allMustSeeYes ? "var(--brand)" : "var(--surface)",
+                         color: allMustSeeYes ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
+                {allMustSeeYes ? <Check size={14} /> : <Sparkles size={14} />}
+                {allMustSeeYes ? "כל החובה נבחרו · בטל" : `בחר את כל אתרי החובה · ${mustSeeIds.length}`}
+              </button>
+            )}
+
             <span className="mx-1 h-5 w-px shrink-0 bg-[var(--border)]" />
 
             {/* sort */}
@@ -525,6 +539,14 @@ export function DestinationView({
                 className="rounded-full px-3 py-1.5 text-[13.5px] transition"
                 style={{ background: mapOnly ? "var(--brand)" : "var(--surface)", color: mapOnly ? "#fff" : "var(--text-2)",
                          border: `1px solid ${mapOnly ? "var(--brand)" : "var(--border)"}` }}>📍 על המפה</button>
+              {mustSeeIds.length > 0 && (
+                <button onClick={toggleAllMustSee}
+                  className="rounded-full px-3 py-1.5 text-[13.5px] font-medium transition"
+                  style={{ background: allMustSeeYes ? "var(--brand)" : "var(--surface)",
+                           color: allMustSeeYes ? "#fff" : "var(--brand-ink)", border: "1px solid var(--brand)" }}>
+                  {allMustSeeYes ? "✓ כל החובה" : `⭐ בחר את כל החובה · ${mustSeeIds.length}`}
+                </button>
+              )}
             </div>
           </div>
 

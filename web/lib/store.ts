@@ -240,6 +240,7 @@ const CITYSEL_KEY = "nanabanana.citysel.v1";
 export function useCitySelection(destinationId: number | null | undefined): {
   choices: Record<number, Choice>;
   setChoice: (attractionId: number, c: Choice) => void;
+  setMany: (attractionIds: number[], c: Choice | null) => void;
   clear: () => void;
   loaded: boolean;
 } {
@@ -267,6 +268,11 @@ export function useCitySelection(destinationId: number | null | undefined): {
     setChoice: (id, c) => commit((prev) => {
       const cur = { ...(prev[key] ?? {}) };
       if (cur[id] === c) delete cur[id]; else cur[id] = c;  // clicking the same choice clears it
+      return { ...prev, [key]: cur };
+    }),
+    setMany: (ids, c) => commit((prev) => {
+      const cur = { ...(prev[key] ?? {}) };
+      for (const id of ids) { if (c === null) delete cur[id]; else cur[id] = c; }
       return { ...prev, [key]: cur };
     }),
     clear: () => commit((prev) => { const n = { ...prev }; delete n[key]; return n; }),
