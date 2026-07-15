@@ -90,14 +90,18 @@ function hotelIcon() {
   });
 }
 
-// Numbered pin (used in trip view to show stop order along the route).
-function numberedIcon(n: number, color: string) {
+// Numbered pin (used in trip view to show stop order along the route). `active`
+// enlarges the pin and rings it; `dim` fades stops the user isn't hovering so
+// the focused one stands out.
+function numberedIcon(n: number, color: string, active = false, dim = false) {
+  const size = active ? 32 : 24;
+  const ring = active ? ",0 0 0 4px " + color + "33" : "";
   return L.divIcon({
     className: "num-pin",
-    html: `<div style="background:${color};color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:600 12px/1 sans-serif;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35)">${n}</div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -12],
+    html: `<div style="background:${color};color:#fff;width:${size}px;height:${size}px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:600 ${active ? 14 : 12}px/1 sans-serif;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35)${ring};opacity:${dim ? 0.4 : 1};transition:all .15s">${n}</div>`,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
   });
 }
 
@@ -174,6 +178,9 @@ export default function AttractionsMap({
   focus = null,
   segIdx,
   colorBySegment = false,
+  colors,
+  activeIdx = null,
+  onStopClick,
   userPos = null,
   onBounds,
 }: {
@@ -185,14 +192,19 @@ export default function AttractionsMap({
   focus?: { lat: number; lng: number; n: number } | null;
   segIdx?: number[];
   colorBySegment?: boolean;
+  colors?: string[];              // explicit per-stop colour (trip view: the day palette)
+  activeIdx?: number | null;      // hovered/opened stop — enlarge it, fade the rest
+  onStopClick?: (i: number) => void;
   userPos?: [number, number] | null;
   onBounds?: (b: MapBounds) => void;
 }) {
   const markers = useRef<Map<number, LeafletCircleMarker>>(new Map());
-  const routePts = ordered
+  const orderedPts = ordered
     ? attractions.filter((a) => a.lat != null && a.lng != null)
-        .map((a) => [a.lat as number, a.lng as number] as [number, number])
     : [];
+  // Colour of stop i: explicit day palette when given, else by segment/category.
+  const stopHue = (a: Attraction, i: number) =>
+    colors?.[i] ?? (colorBySegment && segIdx ? segColor(segIdx[i] ?? 0) : catColor(a.category));
 
   return (
     <MapContainer center={center} zoom={12} style={{ height: "100%", width: "100%" }}
@@ -228,19 +240,28 @@ export default function AttractionsMap({
         </Marker>
       ))}
 
-      {ordered && routePts.length > 1 && (
-        <Polyline positions={routePts}
-          pathOptions={{ color: "#c64f26", weight: 2.5, opacity: 0.65, dashArray: "5 7" }} />
-      )}
+      {/* Route as one coloured segment per leg — each takes the colour of the
+          stop it leads TO, so the line, the pin and the timeline row all match.
+          Solid (a confirmed leg); the active leg (into/out of the hovered stop)
+          stays bright while the rest fade. */}
+      {ordered && orderedPts.slice(1).map((a, i) => {
+        const from = orderedPts[i], to = a;
+        const near = activeIdx != null && (activeIdx === i || activeIdx === i + 1);
+        const faded = activeIdx != null && !near;
+        return (
+          <Polyline key={"seg" + i}
+            positions={[[from.lat as number, from.lng as number], [to.lat as number, to.lng as number]]}
+            pathOptions={{ color: stopHue(to, i + 1), weight: near ? 4 : 3,
+              opacity: faded ? 0.25 : 0.7 }} />
+        );
+      })}
 
       {ordered
-        ? attractions
-            .filter((a) => a.lat != null && a.lng != null)
-            .map((a, i) => (
+        ? orderedPts.map((a, i) => (
               <Marker key={a.id} position={[a.lat as number, a.lng as number]}
-                icon={numberedIcon(
-                  i + 1,
-                  colorBySegment && segIdx ? segColor(segIdx[i] ?? 0) : catColor(a.category))}>
+                icon={numberedIcon(i + 1, stopHue(a, i),
+                  activeIdx === i, activeIdx != null && activeIdx !== i)}
+                eventHandlers={onStopClick ? { click: () => onStopClick(i) } : undefined}>
                 <AttractionPopup a={a} />
               </Marker>
             ))

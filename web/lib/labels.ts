@@ -65,6 +65,19 @@ export function segColor(i: number): string {
   return SEG_PALETTE[((i % n) + n) % n];
 }
 
+// One distinct, accessible colour per STOP in a day — the visual thread that
+// ties a stop's map marker, its route segment, its timeline dot and its legend
+// row together so the day reads as one system. Muted enough to sit on a light
+// map, a white card and a cream page, and to carry white numerals (AA).
+export const STOP_PALETTE = [
+  "#2563A6", "#7357C8", "#E96A2C", "#4D9B55",
+  "#168C83", "#C94B74", "#C19332", "#566273",
+];
+export function stopColor(i: number): string {
+  const n = STOP_PALETTE.length;
+  return STOP_PALETTE[((i % n) + n) % n];
+}
+
 // Group destinations under regions (ticket #14). Maps a country (English, as
 // stored) to a Hebrew region; REGION_ORDER sets the display order.
 const COUNTRY_REGION: Record<string, string> = {

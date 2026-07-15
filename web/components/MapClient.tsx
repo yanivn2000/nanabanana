@@ -22,6 +22,9 @@ export function MapClient(props: {
   focus?: { lat: number; lng: number; n: number } | null;
   segIdx?: number[];
   colorBySegment?: boolean;
+  colors?: string[];
+  activeIdx?: number | null;
+  onStopClick?: (i: number) => void;
   userPos?: [number, number] | null;
   onBounds?: (b: MapBounds) => void;
 }) {
