@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
@@ -235,6 +236,17 @@ export function TripView({ tripId }: { tripId: string }) {
   }, "generate");
   const revise = (instruction: string) =>
     call({ mode: "revise", current: itinerary, instruction, dateContext: dateContext || undefined }, "revise");
+
+  // Arrived from the city page with ?build=1 → start building immediately, once.
+  const autoBuild = useSearchParams().get("build") === "1";
+  const autoBuiltRef = useRef(false);
+  useEffect(() => {
+    if (autoBuild && loaded && trip && !itinerary && canBuild && !busy && !autoBuiltRef.current) {
+      autoBuiltRef.current = true;
+      generate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoBuild, loaded, !!trip, !!itinerary, canBuild, busy]);
 
   // Auto-attach details to trips created before details existed (no AI/credit).
   useEffect(() => {

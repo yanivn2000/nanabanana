@@ -2,13 +2,17 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin } from "lucide-react";
+import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin, HelpCircle, X, Loader2 } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
 import { CityPoster } from "@/components/CityPoster";
 import { descriptor, catColor, bigImage, mergeCat, countryFlag } from "@/lib/labels";
 import { passUrl, type Pass } from "@/lib/passes";
 import { useRouter } from "next/navigation";
-import { useProfile } from "@/lib/store";
+import { useProfile, useTrips, useCitySelection, type Choice } from "@/lib/store";
+
+// distance slider index → per-trip dailyDriveHours (same scale as the old flow)
+const RADIUS_HOURS = [0.5, 1, 2, 3];
+const RADIUS_HE = ["קרוב מאוד", "עד שעה", "עד שעתיים", "גם רחוק"];
 import { deriveTaste, tasteScore, coarseFits } from "@/lib/taste";
 import type { Attraction, Destination, Insight } from "@/lib/db";
 
@@ -44,6 +48,26 @@ type SortKey = "match" | "mustsee" | "name";
 const SORT_HE: Record<SortKey, string> = {
   match: "הכי מתאים לי", mustsee: "מומלצים תחילה", name: "לפי א׳–ב׳",
 };
+
+// yes / maybe / no marks on a card — the traveler's picks for the trip.
+const TONE: Record<Choice, { on: string; ink: string; off: string }> = {
+  yes: { on: "var(--brand)", ink: "#fff", off: "var(--brand-ink)" },
+  maybe: { on: "var(--amber-fill)", ink: "#3d2c0a", off: "var(--amber)" },
+  no: { on: "#c0453f", ink: "#fff", off: "#c0453f" },
+};
+function ChoiceBtn({ tone, active, onClick, icon, label }: {
+  tone: Choice; active: boolean; onClick: () => void; icon: React.ReactNode; label: string;
+}) {
+  const t = TONE[tone];
+  return (
+    <button onClick={(e) => { e.stopPropagation(); onClick(); }}
+      className="flex items-center justify-center gap-1 rounded-full border py-1.5 text-[12.5px] font-medium transition"
+      style={{ background: active ? t.on : "var(--surface)", color: active ? t.ink : t.off,
+               borderColor: active ? t.on : "var(--border)" }}>
+      {icon} {label}
+    </button>
+  );
+}
 
 export function DestinationView({
   dest,
@@ -82,6 +106,15 @@ export function DestinationView({
   const [sort, setSort] = useState<SortKey>("match");
   const [sortOpen, setSortOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // Per-city yes/maybe/no marks (the "city profile") + the build modal.
+  const { create } = useTrips();
+  const { choices, setChoice } = useCitySelection(dest.id);
+  const [buildOpen, setBuildOpen] = useState(false);
+  const [buildDays, setBuildDays] = useState(4);
+  const [buildRadius, setBuildRadius] = useState(1);
+  const [building, setBuilding] = useState(false);
+  const yesCount = Object.values(choices).filter((c) => c === "yes").length;
+  const maybeCount = Object.values(choices).filter((c) => c === "maybe").length;
 
   const cats = useMemo(
     () => Array.from(new Set(attractions.map((a) => mergeCat(a.category)))),
@@ -146,6 +179,31 @@ export function DestinationView({
   // The extra filters tucked behind the desktop "פילטרים" popover.
   const moreFilterCount = (flags.indoor ? 1 : 0) + (flags.withInsights ? 1 : 0) + (mapOnly ? 1 : 0);
 
+  // Build a trip from the city marks (yes = anchors, maybe = "if time", no =
+  // excluded). Empty selection is fine — the builder falls back to the
+  // profile-matched must-sees. Days + distance come from the modal. We hand off
+  // to the trip page with ?build=1 so it starts building immediately.
+  function buildTrip() {
+    const yes: number[] = [], maybe: number[] = [], no: number[] = [];
+    for (const [id, c] of Object.entries(choices)) {
+      (c === "yes" ? yes : c === "maybe" ? maybe : no).push(Number(id));
+    }
+    setBuilding(true);
+    const trip = create({
+      title: `טיול ל${dest.city_he || dest.city}`,
+      mode: "preferences",
+      city: dest.city,
+      cityHe: dest.city_he || dest.city,
+      country: dest.country,
+      destinationId: dest.id,
+      days: buildDays,
+      month: new Date().getMonth() + 1,   // a default season; exact dates are set on the trip page
+      profile: { ...profile, taste, dailyDriveHours: RADIUS_HOURS[buildRadius] },
+      ...(yes.length || maybe.length || no.length ? { selection: { yes, maybe, no } } : {}),
+    });
+    router.push(`/trip/${trip.id}?build=1`);
+  }
+
   return (
     <main className="mx-auto w-full max-w-[440px] pb-28 lg:max-w-none lg:pb-0">
       {/* compact card hero — a small landscape thumbnail + flag/city + a
@@ -176,13 +234,13 @@ export function DestinationView({
               </span>
             </div>
           </div>
-          {/* actions — explore CTA (primary), pass toggle to its left (secondary,
-              white with a brand outline). The pass panel opens below the hero. */}
+          {/* actions — build CTA (opens the days/distance modal, then builds a
+              trip from the city marks), pass toggle to its left (secondary). */}
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-            <Link href={`/explore/${dest.id}`}
+            <button onClick={() => setBuildOpen(true)}
               className="flex items-center justify-center gap-2 rounded-full border-[1.5px] border-transparent bg-[var(--brand)] px-5 py-3 text-[15px] font-medium text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
-              <Sparkles size={17} /> התחילו לבחור לטיול
-            </Link>
+              <Sparkles size={17} /> בנו לי טיול
+            </button>
             {passes.length > 0 && (
               <button onClick={() => setShowPasses((v) => !v)}
                 className="flex items-center justify-center gap-2 rounded-full border-[1.5px] border-[var(--brand)] bg-[var(--surface)] px-5 py-3 text-[15px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
@@ -445,71 +503,138 @@ export function DestinationView({
               const cat = mergeCat(a.category);
               const insList = insights[a.id] ?? [];
               const tip = insList[0]?.text_he || a.tips_he;
+              const choice = choices[a.id];
               return (
-                <button key={a.id} onClick={() => setSelected(a)}
+                <div key={a.id}
                   className="group flex flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition hover:-translate-y-0.5"
-                  style={{ borderColor: isSel ? "var(--brand)" : "var(--border)",
-                           boxShadow: isSel ? "0 0 0 1.5px var(--brand)" : undefined }}>
-                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-[var(--surface-2)]">
-                    {a.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={bigImage(a.image_url, 400)} alt="" loading="lazy"
-                        onError={(e) => { const t = e.currentTarget; if (t.src !== a.image_url) t.src = a.image_url as string; }}
-                        className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
-                    ) : (
-                      // No photo yet — a calm, branded placeholder tinted by the
-                      // category (not a lonely letter), so it reads as intentional.
-                      <div className="grid size-full place-items-center"
-                        style={{ background: `linear-gradient(140deg, color-mix(in srgb, ${catColor(cat)} 20%, var(--surface-2)), var(--surface-2) 72%)` }}>
-                        <MapPin size={30} className="opacity-30" style={{ color: catColor(cat) }} />
-                      </div>
-                    )}
-                    <span className="absolute right-2 top-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium text-white shadow-sm"
-                          style={{ background: catColor(cat) }}>
-                      {CAT_HE[cat] ?? a.category}
-                    </span>
-                    {a.must_see === 1 && (
-                      <span className="absolute left-2 top-2 rounded-full bg-[var(--accent)] px-2 py-0.5 text-[11px] font-medium text-white shadow-sm">⭐ חובה</span>
-                    )}
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col p-3">
-                    <p className="serif truncate text-[17px] font-bold leading-tight">{a.name_he || a.name_en}</p>
-                    {a.name_he && a.name_en && a.name_en !== a.name_he && (
-                      <p className="truncate text-[12.5px] text-[var(--text-3)]" dir="ltr" style={{ unicodeBidi: "isolate" }}>{a.name_en}</p>
-                    )}
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[12px]">
-                      {cost && <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 font-medium text-[var(--brand-ink)]">{cost}</span>}
-                      {dur && <span className="text-[var(--text-3)]">🕐 {dur}</span>}
-                      {covered.has(a.id) && <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 font-medium text-[var(--brand-ink)]">💳 כלול בכרטיס</span>}
+                  style={{ borderColor: choice === "yes" || isSel ? "var(--brand)" : "var(--border)",
+                           boxShadow: isSel ? "0 0 0 1.5px var(--brand)" : undefined,
+                           opacity: choice === "no" ? 0.5 : 1 }}>
+                  {/* clickable body — selects the place and flies the map */}
+                  <button onClick={() => setSelected(a)} className="flex flex-1 flex-col text-right">
+                    <div className="relative aspect-[16/10] w-full overflow-hidden bg-[var(--surface-2)]">
+                      {a.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={bigImage(a.image_url, 400)} alt="" loading="lazy"
+                          onError={(e) => { const t = e.currentTarget; if (t.src !== a.image_url) t.src = a.image_url as string; }}
+                          className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
+                      ) : (
+                        // No photo yet — a calm, branded placeholder tinted by the
+                        // category (not a lonely letter), so it reads as intentional.
+                        <div className="grid size-full place-items-center"
+                          style={{ background: `linear-gradient(140deg, color-mix(in srgb, ${catColor(cat)} 20%, var(--surface-2)), var(--surface-2) 72%)` }}>
+                          <MapPin size={30} className="opacity-30" style={{ color: catColor(cat) }} />
+                        </div>
+                      )}
+                      <span className="absolute right-2 top-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium text-white shadow-sm"
+                            style={{ background: catColor(cat) }}>
+                        {CAT_HE[cat] ?? a.category}
+                      </span>
+                      {a.must_see === 1 && (
+                        <span className="absolute left-2 top-2 rounded-full bg-[var(--accent)] px-2 py-0.5 text-[11px] font-medium text-white shadow-sm">⭐ חובה</span>
+                      )}
                     </div>
-                    {a.tagline_he && (
-                      <p className={`mt-1.5 text-[13px] leading-snug text-[var(--text-2)] ${isSel ? "" : "line-clamp-2"}`}>{a.tagline_he}</p>
-                    )}
-                    {isSel && a.description_he && (
-                      <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--text-2)]">{a.description_he}</p>
-                    )}
-                    {tip && (
-                      <p className="mt-1.5 flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]">
-                        <span className="shrink-0">💡</span>
-                        <span className={isSel ? "" : "line-clamp-2"}>טיפ מטיילים: {tip}</span>
-                      </p>
-                    )}
-                    {isSel && insList.length > 1 && (
-                      <div className="mt-1.5 flex flex-col gap-1">
-                        {insList.slice(1).map((ins) => (
-                          <p key={ins.id} className="flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]">
-                            <span className="shrink-0">{KIND_ICON[ins.kind] ?? "💬"}</span><span>{ins.text_he}</span>
-                          </p>
-                        ))}
+                    <div className="flex min-w-0 flex-1 flex-col p-3">
+                      <p className="serif truncate text-[17px] font-bold leading-tight">{a.name_he || a.name_en}</p>
+                      {a.name_he && a.name_en && a.name_en !== a.name_he && (
+                        <p className="truncate text-[12.5px] text-[var(--text-3)]" dir="ltr" style={{ unicodeBidi: "isolate" }}>{a.name_en}</p>
+                      )}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[12px]">
+                        {cost && <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 font-medium text-[var(--brand-ink)]">{cost}</span>}
+                        {dur && <span className="text-[var(--text-3)]">🕐 {dur}</span>}
+                        {covered.has(a.id) && <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 font-medium text-[var(--brand-ink)]">💳 כלול בכרטיס</span>}
                       </div>
-                    )}
+                      {a.tagline_he && (
+                        <p className={`mt-1.5 text-[13px] leading-snug text-[var(--text-2)] ${isSel ? "" : "line-clamp-2"}`}>{a.tagline_he}</p>
+                      )}
+                      {isSel && a.description_he && (
+                        <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--text-2)]">{a.description_he}</p>
+                      )}
+                      {tip && (
+                        <p className="mt-1.5 flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]">
+                          <span className="shrink-0">💡</span>
+                          <span className={isSel ? "" : "line-clamp-2"}>טיפ מטיילים: {tip}</span>
+                        </p>
+                      )}
+                      {isSel && insList.length > 1 && (
+                        <div className="mt-1.5 flex flex-col gap-1">
+                          {insList.slice(1).map((ins) => (
+                            <p key={ins.id} className="flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]">
+                              <span className="shrink-0">{KIND_ICON[ins.kind] ?? "💬"}</span><span>{ins.text_he}</span>
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                  {/* yes / maybe / no marks — the traveler's picks for this city.
+                      RTL order: כן first (right), then אולי, then לא. */}
+                  <div className="grid grid-cols-3 gap-1.5 border-t border-[var(--border)] p-2">
+                    <ChoiceBtn tone="yes" active={choice === "yes"} onClick={() => setChoice(a.id, "yes")} icon={<Check size={13} />} label="כן" />
+                    <ChoiceBtn tone="maybe" active={choice === "maybe"} onClick={() => setChoice(a.id, "maybe")} icon={<HelpCircle size={13} />} label="אולי" />
+                    <ChoiceBtn tone="no" active={choice === "no"} onClick={() => setChoice(a.id, "no")} icon={<X size={13} />} label="לא" />
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
         </section>
       </div>
+
+      {/* floating build bar — appears once the traveler has marked places */}
+      {yesCount + maybeCount > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-3 shadow-[0_-8px_20px_rgba(16,29,43,0.08)] lg:px-8">
+          <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-3">
+            <p className="text-[14px] text-[var(--text-2)]">
+              <span className="font-semibold text-[var(--text)]">{yesCount}</span> נבחרו לטיול
+              {maybeCount ? <span className="text-[var(--text-3)]"> · {maybeCount} אולי</span> : null}
+            </p>
+            <button onClick={() => setBuildOpen(true)}
+              className="flex items-center gap-2 rounded-full bg-[var(--brand)] px-6 py-2.5 text-[14px] font-medium text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
+              <Sparkles size={16} /> בנו טיול
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* build modal — days + distance, then hand off to the trip page */}
+      {buildOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-5"
+          onClick={() => !building && setBuildOpen(false)}>
+          <div className="w-full max-w-md rounded-[var(--radius-card)] bg-[var(--surface)] p-5 shadow-[var(--shadow)]"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="mb-1 flex items-center justify-between">
+              <h3 className="serif text-[20px] font-bold">בונים לכם את הטיול</h3>
+              <button onClick={() => setBuildOpen(false)} aria-label="סגור" className="text-[var(--text-3)]"><X size={18} /></button>
+            </div>
+            <p className="mb-4 text-[13.5px] leading-relaxed text-[var(--text-2)]">
+              {yesCount
+                ? `${yesCount} מקומות שסימנתם "כן" יהיו העוגנים${maybeCount ? `, ו-${maybeCount} "אולי" ישתלבו אם יש זמן` : ""}.`
+                : "לא סימנתם מקומות — נבחר את החובה-לביקור שמתאימים לכם. תמיד אפשר לסמן כן/אולי/לא כדי לכוון."}
+            </p>
+            <div className="mb-4">
+              <div className="mb-1.5 flex items-center justify-between text-[13.5px]">
+                <span>כמה ימים?</span><span className="font-medium text-[var(--brand-ink)]">{buildDays} ימים</span>
+              </div>
+              <input type="range" min={2} max={7} value={buildDays} dir="ltr"
+                onChange={(e) => setBuildDays(Number(e.target.value))}
+                className="w-full accent-[var(--brand)]" />
+            </div>
+            <div className="mb-5">
+              <div className="mb-1.5 flex items-center justify-between text-[13.5px]">
+                <span>מרחק נסיעה ליום</span><span className="font-medium text-[var(--brand-ink)]">{RADIUS_HE[buildRadius]}</span>
+              </div>
+              <input type="range" min={0} max={3} value={buildRadius} dir="ltr"
+                onChange={(e) => setBuildRadius(Number(e.target.value))}
+                className="w-full accent-[var(--brand)]" />
+            </div>
+            <button onClick={buildTrip} disabled={building}
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-3.5 text-[15px] font-medium text-white disabled:opacity-60">
+              {building ? <Loader2 size={17} className="animate-spin" /> : <Sparkles size={17} />} בנו לי טיול
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

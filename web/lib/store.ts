@@ -231,6 +231,48 @@ export function useTrips(): {
   };
 }
 
+// Per-city yes/maybe/no marks, kept per destination and persisted — the
+// traveler's evolving "city profile". Any trip to that city inherits them, and
+// the map feeds the itinerary builder (yes = anchors, maybe = "if time").
+export type Choice = "yes" | "maybe" | "no";
+const CITYSEL_KEY = "nanabanana.citysel.v1";
+
+export function useCitySelection(destinationId: number | null | undefined): {
+  choices: Record<number, Choice>;
+  setChoice: (attractionId: number, c: Choice) => void;
+  clear: () => void;
+  loaded: boolean;
+} {
+  const [all, setAll] = useState<Record<string, Record<number, Choice>>>({});
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CITYSEL_KEY);
+      if (raw) setAll(JSON.parse(raw));
+    } catch {}
+    setLoaded(true);
+  }, []);
+  // Functional updates so rapid marks on different cards never clobber each
+  // other (each read sees the freshest state); localStorage is written inline.
+  const commit = (updater: (prev: Record<string, Record<number, Choice>>) => Record<string, Record<number, Choice>>) =>
+    setAll((prev) => {
+      const next = updater(prev);
+      try { localStorage.setItem(CITYSEL_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  const key = String(destinationId ?? "_");
+  return {
+    choices: all[key] ?? {},
+    loaded,
+    setChoice: (id, c) => commit((prev) => {
+      const cur = { ...(prev[key] ?? {}) };
+      if (cur[id] === c) delete cur[id]; else cur[id] = c;  // clicking the same choice clears it
+      return { ...prev, [key]: cur };
+    }),
+    clear: () => commit((prev) => { const n = { ...prev }; delete n[key]; return n; }),
+  };
+}
+
 // Read a single trip by id outside React (e.g. on the trip page initial load).
 export function readTrip(id: string): Trip | null {
   try {
