@@ -192,6 +192,10 @@ export function DestinationView({
   // place even if it ranks beyond the first page. Reset to page 1 on any change.
   useEffect(() => { setVisibleCount(PAGE); }, [query, activeCat, flags, mapOnly, sort]);
   const visible = sortedItems.slice(0, visibleCount);
+  // Bulk marks scoped to the current view (e.g. filter to "מוזיאון" → select /
+  // clear all museums at once). Operates on the whole filtered set, not the page.
+  const viewIds = useMemo(() => sortedItems.map((a) => a.id), [sortedItems]);
+  const viewSelected = viewIds.filter((id) => choices[id]).length;
 
   // The extra filters tucked behind the desktop "פילטרים" popover.
   const moreFilterCount = (flags.indoor ? 1 : 0) + (flags.withInsights ? 1 : 0) + (mapOnly ? 1 : 0);
@@ -383,14 +387,29 @@ export function DestinationView({
               </button>
             ))}
 
-            {mustSeeIds.length > 0 && (
-              <button onClick={toggleAllMustSee}
-                className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
-                style={{ background: allMustSeeYes ? "var(--brand)" : "var(--surface)",
-                         color: allMustSeeYes ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
-                {allMustSeeYes ? <Check size={14} /> : <Sparkles size={14} />}
-                {allMustSeeYes ? "כל החובה נבחרו · בטל" : `בחר את כל אתרי החובה · ${mustSeeIds.length}`}
-              </button>
+            {activeCat == null ? (
+              mustSeeIds.length > 0 && (
+                <button onClick={toggleAllMustSee}
+                  className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
+                  style={{ background: allMustSeeYes ? "var(--brand)" : "var(--surface)",
+                           color: allMustSeeYes ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
+                  {allMustSeeYes ? <Check size={14} /> : <Sparkles size={14} />}
+                  {allMustSeeYes ? "כל החובה נבחרו · בטל" : `בחר את כל אתרי החובה · ${mustSeeIds.length}`}
+                </button>
+              )
+            ) : (
+              <>
+                <button onClick={() => setMany(viewIds, "yes")}
+                  className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-3.5 py-1.5 text-[13.5px] font-medium text-[var(--brand-ink)] transition">
+                  <Check size={14} /> בחר הכל · {viewIds.length}
+                </button>
+                {viewSelected > 0 && (
+                  <button onClick={() => setMany(viewIds, null)}
+                    className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-[13.5px] font-medium text-[var(--text-2)] transition hover:border-[#c0453f] hover:text-[#c0453f]">
+                    <X size={14} /> נקה · {viewSelected}
+                  </button>
+                )}
+              </>
             )}
 
             <span className="mx-1 h-5 w-px shrink-0 bg-[var(--border)]" />
@@ -556,13 +575,28 @@ export function DestinationView({
                 className="rounded-full px-3 py-1.5 text-[13.5px] transition"
                 style={{ background: mapOnly ? "var(--brand)" : "var(--surface)", color: mapOnly ? "#fff" : "var(--text-2)",
                          border: `1px solid ${mapOnly ? "var(--brand)" : "var(--border)"}` }}>📍 על המפה</button>
-              {mustSeeIds.length > 0 && (
-                <button onClick={toggleAllMustSee}
-                  className="rounded-full px-3 py-1.5 text-[13.5px] font-medium transition"
-                  style={{ background: allMustSeeYes ? "var(--brand)" : "var(--surface)",
-                           color: allMustSeeYes ? "#fff" : "var(--brand-ink)", border: "1px solid var(--brand)" }}>
-                  {allMustSeeYes ? "✓ כל החובה" : `⭐ בחר את כל החובה · ${mustSeeIds.length}`}
-                </button>
+              {activeCat == null ? (
+                mustSeeIds.length > 0 && (
+                  <button onClick={toggleAllMustSee}
+                    className="rounded-full px-3 py-1.5 text-[13.5px] font-medium transition"
+                    style={{ background: allMustSeeYes ? "var(--brand)" : "var(--surface)",
+                             color: allMustSeeYes ? "#fff" : "var(--brand-ink)", border: "1px solid var(--brand)" }}>
+                    {allMustSeeYes ? "✓ כל החובה" : `⭐ בחר את כל החובה · ${mustSeeIds.length}`}
+                  </button>
+                )
+              ) : (
+                <>
+                  <button onClick={() => setMany(viewIds, "yes")}
+                    className="rounded-full border border-[var(--brand)] px-3 py-1.5 text-[13.5px] font-medium text-[var(--brand-ink)]">
+                    ✓ בחר הכל · {viewIds.length}
+                  </button>
+                  {viewSelected > 0 && (
+                    <button onClick={() => setMany(viewIds, null)}
+                      className="rounded-full border border-[var(--border)] px-3 py-1.5 text-[13.5px] font-medium text-[var(--text-2)]">
+                      ✗ נקה · {viewSelected}
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
