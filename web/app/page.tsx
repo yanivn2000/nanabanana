@@ -32,7 +32,7 @@ export default async function Home() {
         <div className="mb-3 flex items-baseline justify-between gap-3">
           <div>
             <h2 className="serif text-[24px] font-bold leading-tight lg:text-[30px]">גלו יעדים</h2>
-            <p className="mt-0.5 text-[14.5px] text-[var(--text-2)]">יעדים אהובים על משפחות ישראליות</p>
+            <p className="mt-0.5 text-[14.5px] text-[var(--text-2)]">יעדים שישראלים אוהבים</p>
           </div>
           {destinations.length > 0 && (
             <span className="shrink-0 text-xs text-[var(--text-3)]">{destinations.length} יעדים</span>
