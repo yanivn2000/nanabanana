@@ -443,7 +443,14 @@ export function DestinationView({
               )}
             </div>
 
-            <span className="mr-auto shrink-0 text-[13px] text-[var(--text-3)]">{sortedItems.length} מקומות</span>
+            <div className="mr-auto flex shrink-0 items-center gap-3">
+              {yesCount + maybeCount > 0 && (
+                <span className="flex items-center gap-1.5 rounded-full bg-[var(--brand-soft)] px-3 py-1 text-[13px] font-medium text-[var(--brand-ink)]">
+                  <Check size={14} /> נבחרו {yesCount}{maybeCount ? ` · ${maybeCount} אולי` : ""}
+                </span>
+              )}
+              <span className="text-[13px] text-[var(--text-3)]">{sortedItems.length} מקומות</span>
+            </div>
           </div>
         </div>
       </div>
@@ -525,6 +532,11 @@ export function DestinationView({
               })}
             </div>
             <div className="flex flex-wrap gap-2">
+              {yesCount + maybeCount > 0 && (
+                <span className="flex items-center gap-1 rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-[13.5px] font-medium text-[var(--brand-ink)]">
+                  <Check size={13} /> נבחרו {yesCount}{maybeCount ? ` · ${maybeCount}` : ""}
+                </span>
+              )}
               <button onClick={() => { if (!hasPrefs) { router.push("/profile"); return; } toggleFlag("fitsProfile"); }}
                 className="rounded-full px-3.5 py-1.5 text-[13.5px] font-medium transition"
                 style={{ background: flags.fitsProfile ? "var(--brand)" : "var(--brand-soft)",
