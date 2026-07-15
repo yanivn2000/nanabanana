@@ -49,8 +49,8 @@ export default function TripsPage() {
           <div key={t.id}
             className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
             <div className="relative shrink-0">
-              <CityPoster destinationId={t.destinationId} cityHe={t.cityHe || t.city} orientation="portrait"
-                className="h-16 w-[58px] rounded-[var(--radius-sm)]" />
+              <CityPoster destinationId={t.destinationId} cityHe={t.cityHe || t.city} orientation="landscape"
+                className="h-[58px] w-[86px] rounded-[var(--radius-sm)]" />
               <span className="absolute bottom-1 start-1 grid size-5 place-items-center rounded-full bg-[var(--surface)] text-[var(--accent-ink)] shadow-[var(--shadow)]">
                 {t.mode === "hotels" ? <BedDouble size={12} /> : <Sparkles size={12} />}
               </span>

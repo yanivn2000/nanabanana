@@ -112,37 +112,41 @@ export function DestinationView({
 
   return (
     <main className="mx-auto w-full max-w-[440px] pb-28 lg:max-w-none lg:pb-0">
-      {/* ambient poster hero — the poster is a soft background, content on top */}
-      <header className="rise relative overflow-hidden">
+      {/* compact ambient hero — the city poster as a soft, shorter banner (was a
+          tall 420px block); content sits on top, tight, so the map + list are
+          reachable with far less scrolling */}
+      <header className="rise relative overflow-hidden border-b border-[var(--border)]">
         <div className="absolute inset-0">
           <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city} ambient
-            orientation="banner" position="50% 52%" className="size-full" />
+            orientation="banner" position="50% 50%" className="size-full" />
         </div>
-        <div className="relative mx-auto flex min-h-[320px] w-full max-w-6xl flex-col justify-between px-5 pb-6 pt-6 lg:min-h-[420px] lg:px-8 lg:pb-11 lg:pt-8">
+        <div className="relative mx-auto flex min-h-[188px] w-full max-w-6xl flex-col justify-between gap-3 px-5 pb-5 pt-3.5 lg:min-h-[236px] lg:px-8 lg:pb-6 lg:pt-4">
           <Link href="/" className="eyebrow inline-flex items-center gap-1 self-start text-[var(--text-2)]">
             <ChevronRight size={14} /> בית
           </Link>
           <div>
-          <p className="text-[12.5px] font-medium tracking-wide text-[var(--text-2)]">{dest.country_he || dest.country}</p>
-          <h1 className="serif text-[42px] font-bold leading-none text-[var(--text)] lg:text-[64px]">{dest.city_he || dest.city}</h1>
-          <p className="mt-2.5 text-[13px] text-[var(--text-2)]">
-            {dest.attraction_count.toLocaleString("he")} מקומות במאגר
-          </p>
+            <p className="text-[12.5px] font-medium tracking-wide text-[var(--text-2)]">{dest.country_he || dest.country}</p>
+            <h1 className="serif text-[32px] font-bold leading-none text-[var(--text)] lg:text-[44px]">{dest.city_he || dest.city}</h1>
+            <p className="mt-1.5 text-[13px] text-[var(--text-2)]">
+              {dest.attraction_count.toLocaleString("he")} מקומות במאגר
+            </p>
 
-          {/* חקירת יעד — the guided, personalized exploration flow */}
-          <Link href={`/explore/${dest.id}`}
-            className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-5 py-2.5 text-[13.5px] font-medium text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
-            <Compass size={16} /> חקרו את היעד לפי מי שאתם
-          </Link>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {/* חקירת יעד — the guided, personalized exploration flow */}
+              <Link href={`/explore/${dest.id}`}
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-4 py-2 text-[13.5px] font-medium text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
+                <Compass size={16} /> חקרו את היעד לפי מי שאתם
+              </Link>
 
-          {/* money-saving pass toggle (#16) — the panel opens BELOW the hero */}
-          {passes.length > 0 && (
-            <button onClick={() => setShowPasses((v) => !v)}
-              className="mt-3 inline-flex items-center gap-1.5 self-start rounded-full px-3 py-1.5 text-[12.5px] font-medium transition"
-              style={{ background: "var(--brand-soft)", color: "var(--brand-ink)", border: "1px solid var(--brand)" }}>
-              💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
-            </button>
-          )}
+              {/* money-saving pass toggle (#16) — the panel opens BELOW the hero */}
+              {passes.length > 0 && (
+                <button onClick={() => setShowPasses((v) => !v)}
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-medium transition"
+                  style={{ background: "var(--brand-soft)", color: "var(--brand-ink)", border: "1px solid var(--brand)" }}>
+                  💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </header>
