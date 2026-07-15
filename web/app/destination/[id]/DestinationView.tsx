@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin, HelpCircle, X, Loader2 } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
@@ -113,6 +113,8 @@ export function DestinationView({
   const [buildDays, setBuildDays] = useState(4);
   const [buildRadius, setBuildRadius] = useState(1);
   const [building, setBuilding] = useState(false);
+  const PAGE = 200;
+  const [visibleCount, setVisibleCount] = useState(PAGE);
   const yesCount = Object.values(choices).filter((c) => c === "yes").length;
   const maybeCount = Object.values(choices).filter((c) => c === "maybe").length;
 
@@ -175,6 +177,12 @@ export function DestinationView({
     return [...listItems].sort((a, b) =>
       ms(b) - ms(a) || img(b) - img(a) || within(a, b));
   }, [listItems, sort, cityTasteTagged, taste]);
+
+  // Paginate the list: show PAGE at a time, "load more" reveals the next page.
+  // Search + filters run over the FULL loaded city, so search always finds a
+  // place even if it ranks beyond the first page. Reset to page 1 on any change.
+  useEffect(() => { setVisibleCount(PAGE); }, [query, activeCat, flags, mapOnly, sort]);
+  const visible = sortedItems.slice(0, visibleCount);
 
   // The extra filters tucked behind the desktop "פילטרים" popover.
   const moreFilterCount = (flags.indoor ? 1 : 0) + (flags.withInsights ? 1 : 0) + (mapOnly ? 1 : 0);
@@ -468,7 +476,7 @@ export function DestinationView({
       <div className="lg:flex lg:items-start">
         {/* map — a narrow sticky rail on desktop; full-width strip on mobile */}
         <div className="sticky top-0 z-10 h-[240px] w-full overflow-hidden border-y border-[var(--border)] lg:order-2 lg:h-[calc(100dvh-164px)] lg:top-[164px] lg:w-[380px] lg:shrink-0 lg:border-y-0 lg:border-s">
-          <MapClient attractions={filtered} center={[dest.lat, dest.lng]} selected={selected} onBounds={setBounds} />
+          <MapClient attractions={visible} center={[dest.lat, dest.lng]} selected={selected} onBounds={setBounds} />
         </div>
 
         {/* attraction cards — a grid on desktop, single column on mobile */}
@@ -535,7 +543,7 @@ export function DestinationView({
 
           {/* rich image-top cards */}
           <div className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-2 lg:pt-4 xl:grid-cols-3">
-            {sortedItems.map((a) => {
+            {visible.map((a) => {
               const isSel = selected?.id === a.id;
               const cost = a.cost_level != null ? COST_HE[a.cost_level] : null;
               const dur = durationHe(a.duration_minutes);
@@ -617,6 +625,15 @@ export function DestinationView({
               );
             })}
           </div>
+
+          {visibleCount < sortedItems.length && (
+            <div className="mt-6 flex justify-center pb-4">
+              <button onClick={() => setVisibleCount((v) => v + PAGE)}
+                className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-6 py-2.5 text-[14px] font-medium text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:border-[var(--brand)]">
+                הצג עוד · נותרו {sortedItems.length - visibleCount}
+              </button>
+            </div>
+          )}
         </section>
       </div>
 

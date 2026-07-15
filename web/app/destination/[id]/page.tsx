@@ -14,7 +14,7 @@ export default async function DestinationPage({
   const dest = await getDestination(Number(id));
   if (!dest) notFound();
   const [attractions, allInsights] = await Promise.all([
-    attractionsForMap(dest.id, 200),
+    attractionsForMap(dest.id, 2000),   // load the whole city (rows are light); the list paginates client-side
     insightsForDestination(dest.id),
   ]);
   // Group attraction-linked insights into a plain object (client-serializable).
