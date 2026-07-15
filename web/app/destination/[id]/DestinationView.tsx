@@ -179,6 +179,41 @@ export function DestinationView({
   // The extra filters tucked behind the desktop "פילטרים" popover.
   const moreFilterCount = (flags.indoor ? 1 : 0) + (flags.withInsights ? 1 : 0) + (mapOnly ? 1 : 0);
 
+  // Faceted counts shown on each tag. A facet's count respects every OTHER
+  // active filter but not itself — i.e. "how many remain if I add this one".
+  const facet = useMemo(() => {
+    const catOf = (a: Attraction) => mergeCat(a.category);
+    const q = query.toLowerCase();
+    const mQ = (a: Attraction) => !q || `${a.name_he ?? ""} ${a.name_en} ${descriptor(a)}`.toLowerCase().includes(q);
+    const mMap = (a: Attraction) => !mapOnly || !bounds ||
+      (a.lat != null && a.lng != null && a.lat <= bounds.north && a.lat >= bounds.south && a.lng <= bounds.east && a.lng >= bounds.west);
+    const pred: Record<keyof typeof flags, (a: Attraction) => boolean> = {
+      fitsProfile: (a) => cityTasteTagged ? tasteScore(a.taste_tags, taste) >= 3 : coarseFits(catOf(a), a.subcategory, profile.interests),
+      mustSee: (a) => a.must_see === 1,
+      free: (a) => a.cost_level === 0,
+      indoor: (a) => a.indoor_outdoor === "indoor" || a.indoor_outdoor === "both",
+      top: (a) => (a.family_score ?? 0) >= 8,
+      withInsights: (a) => !!insights[a.id]?.length,
+    };
+    const active = (Object.keys(flags) as (keyof typeof flags)[]).filter((k) => flags[k]);
+    // category counts: query + map + all active flags (but not the category itself)
+    const cats: Record<string, number> = {};
+    let allCount = 0;
+    for (const a of attractions) {
+      if (!mQ(a) || !mMap(a) || !active.every((k) => pred[k](a))) continue;
+      allCount++;
+      const c = catOf(a); cats[c] = (cats[c] ?? 0) + 1;
+    }
+    // flag counts: query + map + activeCat + the OTHER active flags + this flag
+    const flagCount = {} as Record<keyof typeof flags, number>;
+    (Object.keys(pred) as (keyof typeof flags)[]).forEach((key) => {
+      const others = active.filter((k) => k !== key);
+      flagCount[key] = attractions.filter((a) =>
+        mQ(a) && mMap(a) && (!activeCat || catOf(a) === activeCat) && others.every((k) => pred[k](a)) && pred[key](a)).length;
+    });
+    return { cats, allCount, flagCount };
+  }, [attractions, query, mapOnly, bounds, flags, activeCat, cityTasteTagged, taste, insights, profile.interests]);
+
   // Build a trip from the city marks (yes = anchors, maybe = "if time", no =
   // excluded). Empty selection is fine — the builder falls back to the
   // profile-matched must-sees. Days + distance come from the modal. We hand off
@@ -297,6 +332,7 @@ export function DestinationView({
                     style={{ color: on ? "var(--text)" : "var(--text-2)", fontWeight: on ? 600 : 400,
                              borderColor: on ? "var(--brand)" : "transparent" }}>
                     {c === null ? "הכל" : CAT_HE[c] ?? c}
+                    <span className="text-[var(--text-3)]"> {c === null ? facet.allCount : facet.cats[c] ?? 0}</span>
                   </button>
                 );
               })}
@@ -317,7 +353,7 @@ export function DestinationView({
               className="rounded-full px-3.5 py-1.5 text-[13.5px] font-medium transition"
               style={{ background: flags.fitsProfile ? "var(--brand)" : "var(--brand-soft)",
                        color: flags.fitsProfile ? "#fff" : "var(--brand-ink)", border: "1.5px solid var(--brand)" }}>
-              ✨ מתאים לי
+              ✨ מתאים לי <span className="opacity-70">{facet.flagCount.fitsProfile}</span>
             </button>
             {([["mustSee", "⭐ חובה לביקור"], ["free", "חינם"],
                ...(isFamily ? [["top", "מומלץ למשפחות"]] : [])] as [keyof typeof flags, string][]).map(([k, label]) => (
@@ -326,7 +362,7 @@ export function DestinationView({
                 style={{ background: flags[k] ? "var(--accent)" : "var(--surface)",
                          color: flags[k] ? "#fff" : "var(--text-2)",
                          border: `1px solid ${flags[k] ? "var(--accent)" : "var(--border)"}` }}>
-                {label}
+                {label} <span className="opacity-60">{facet.flagCount[k]}</span>
               </button>
             ))}
 
@@ -367,7 +403,9 @@ export function DestinationView({
                   {([["indoor", "מקורה"], ["withInsights", "💬 עם תובנות מטיילים"]] as [keyof typeof flags, string][]).map(([k, label]) => (
                     <button key={k} onClick={() => toggleFlag(k)}
                       className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]">
-                      <span style={{ color: flags[k] ? "var(--brand-ink)" : "var(--text-2)", fontWeight: flags[k] ? 600 : 400 }}>{label}</span>
+                      <span style={{ color: flags[k] ? "var(--brand-ink)" : "var(--text-2)", fontWeight: flags[k] ? 600 : 400 }}>
+                        {label} <span className="text-[var(--text-3)]">{facet.flagCount[k]}</span>
+                      </span>
                       {flags[k] && <Check size={15} className="text-[var(--brand)]" />}
                     </button>
                   ))}
@@ -456,6 +494,7 @@ export function DestinationView({
                              borderBottom: `2px solid ${on ? "var(--accent)" : "transparent"}` }}>
                     {c !== null && <span className="size-2.5 rounded-full" style={{ background: catColor(c) }} />}
                     {c === null ? "הכל" : CAT_HE[c] ?? c}
+                    <span className="text-[var(--text-3)]">{c === null ? facet.allCount : facet.cats[c] ?? 0}</span>
                   </button>
                 );
               })}
@@ -465,14 +504,14 @@ export function DestinationView({
                 className="rounded-full px-3.5 py-1.5 text-[13.5px] font-medium transition"
                 style={{ background: flags.fitsProfile ? "var(--brand)" : "var(--brand-soft)",
                          color: flags.fitsProfile ? "#fff" : "var(--brand-ink)", border: "1.5px solid var(--brand)" }}>
-                ✨ מתאים לי
+                ✨ מתאים לי <span className="opacity-70">{facet.flagCount.fitsProfile}</span>
               </button>
               {([["mustSee", "⭐ חובה"], ["free", "חינם"], ["indoor", "מקורה"],
                  ...(isFamily ? [["top", "למשפחות"]] : [])] as [keyof typeof flags, string][]).map(([k, label]) => (
                 <button key={k} onClick={() => toggleFlag(k)}
                   className="rounded-full px-3 py-1.5 text-[13.5px] transition"
                   style={{ background: flags[k] ? "var(--accent)" : "var(--surface)", color: flags[k] ? "#fff" : "var(--text-2)",
-                           border: `1px solid ${flags[k] ? "var(--accent)" : "var(--border)"}` }}>{label}</button>
+                           border: `1px solid ${flags[k] ? "var(--accent)" : "var(--border)"}` }}>{label} <span className="opacity-60">{facet.flagCount[k]}</span></button>
               ))}
               <button onClick={() => setMapOnly((v) => !v)}
                 className="rounded-full px-3 py-1.5 text-[13.5px] transition"
