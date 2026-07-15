@@ -96,6 +96,18 @@ export function regionOf(country: string | null | undefined): string {
   return (country && COUNTRY_REGION[country]) || "אחר";
 }
 
+// Flag emoji per country (English name as stored) — a small, friendly cue in
+// the city hero. Falls back to a globe when we don't have a mapping.
+const COUNTRY_FLAG: Record<string, string> = {
+  Germany: "🇩🇪", Austria: "🇦🇹", Czechia: "🇨🇿", "Czech Republic": "🇨🇿",
+  Hungary: "🇭🇺", Switzerland: "🇨🇭", France: "🇫🇷", Netherlands: "🇳🇱",
+  "United Kingdom": "🇬🇧", Spain: "🇪🇸", Portugal: "🇵🇹", Italy: "🇮🇹",
+  Greece: "🇬🇷", Cyprus: "🇨🇾", Georgia: "🇬🇪", Israel: "🇮🇱",
+};
+export function countryFlag(country: string | null | undefined): string {
+  return (country && COUNTRY_FLAG[country]) || "🌍";
+}
+
 // Request a larger Wikimedia image when it's SAFE to do so. Commons FilePath
 // "?width=" URLs regenerate from the original (serving the original if smaller),
 // so upscaling never fails. We deliberately do NOT touch upload.wikimedia

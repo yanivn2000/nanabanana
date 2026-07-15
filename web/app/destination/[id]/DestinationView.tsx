@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Star, Search, Compass } from "lucide-react";
+import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
 import { CityPoster } from "@/components/CityPoster";
-import { descriptor, catColor, bigImage, mergeCat } from "@/lib/labels";
+import { descriptor, catColor, bigImage, mergeCat, countryFlag } from "@/lib/labels";
 import { passUrl, type Pass } from "@/lib/passes";
 import { useRouter } from "next/navigation";
 import { useProfile } from "@/lib/store";
@@ -31,6 +31,19 @@ function meta(a: Attraction): string {
   if (a.best_season && SEASON_HE[a.best_season]) parts.push(SEASON_HE[a.best_season]);
   return parts.join(" · ");
 }
+
+// Rough visit-time label from stored minutes — a band, no fake precision.
+function durationHe(min: number | null): string | null {
+  if (!min) return null;
+  if (min < 75) return "כשעה";
+  if (min < 150) return "שעה-שעתיים";
+  if (min < 240) return "חצי יום";
+  return "יום שלם";
+}
+type SortKey = "match" | "mustsee" | "name";
+const SORT_HE: Record<SortKey, string> = {
+  match: "הכי מתאים לי", mustsee: "מומלצים תחילה", name: "לפי א׳–ב׳",
+};
 
 export function DestinationView({
   dest,
@@ -65,6 +78,10 @@ export function DestinationView({
   // #13 — narrow the list to what's currently visible on the map.
   const [mapOnly, setMapOnly] = useState(false);
   const [bounds, setBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
+  // Desktop tags row: sort order + the "more filters" popover.
+  const [sort, setSort] = useState<SortKey>("match");
+  const [sortOpen, setSortOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const cats = useMemo(
     () => Array.from(new Set(attractions.map((a) => mergeCat(a.category)))),
@@ -110,43 +127,68 @@ export function DestinationView({
       a.lng <= bounds.east && a.lng >= bounds.west);
   }, [filtered, mapOnly, bounds]);
 
+  // Sort the visible list. "חובה לביקור" ALWAYS leads, no matter the sort mode.
+  // Within each group, places WITH a photo come before the (still under-enriched)
+  // image-less long tail, so the browse never opens on empty cards. The chosen
+  // sort then orders within those sub-groups.
+  const sortedItems = useMemo(() => {
+    const ms = (a: Attraction) => (a.must_see === 1 ? 1 : 0);
+    const img = (a: Attraction) => (a.image_url ? 1 : 0);
+    const within = (a: Attraction, b: Attraction) => {
+      if (sort === "name") return (a.name_he || a.name_en).localeCompare(b.name_he || b.name_en, "he");
+      if (sort === "match" && cityTasteTagged) return tasteScore(b.taste_tags, taste) - tasteScore(a.taste_tags, taste);
+      return (b.family_score ?? 0) - (a.family_score ?? 0);
+    };
+    return [...listItems].sort((a, b) =>
+      ms(b) - ms(a) || img(b) - img(a) || within(a, b));
+  }, [listItems, sort, cityTasteTagged, taste]);
+
+  // The extra filters tucked behind the desktop "פילטרים" popover.
+  const moreFilterCount = (flags.indoor ? 1 : 0) + (flags.withInsights ? 1 : 0) + (mapOnly ? 1 : 0);
+
   return (
     <main className="mx-auto w-full max-w-[440px] pb-28 lg:max-w-none lg:pb-0">
-      {/* compact ambient hero — the city poster as a soft, shorter banner (was a
-          tall 420px block); content sits on top, tight, so the map + list are
-          reachable with far less scrolling */}
-      <header className="rise relative overflow-hidden border-b border-[var(--border)]">
-        <div className="absolute inset-0">
-          <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city} ambient
-            orientation="banner" position="50% 50%" className="size-full" />
-        </div>
-        <div className="relative mx-auto flex min-h-[188px] w-full max-w-[1600px] flex-col justify-between gap-3 px-5 pb-5 pt-3.5 lg:min-h-[236px] lg:px-8 lg:pb-6 lg:pt-4">
-          <Link href="/" className="eyebrow inline-flex items-center gap-1 self-start text-[var(--text-2)]">
-            <ChevronRight size={14} /> בית
-          </Link>
-          <div>
-            <p className="text-[13.5px] font-medium tracking-wide text-[var(--text-2)]">{dest.country_he || dest.country}</p>
-            <h1 className="serif text-[32px] font-bold leading-none text-[var(--text)] lg:text-[44px]">{dest.city_he || dest.city}</h1>
-            <p className="mt-1.5 text-[14px] text-[var(--text-2)]">
-              {dest.attraction_count.toLocaleString("he")} מקומות במאגר
-            </p>
-
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              {/* חקירת יעד — the guided, personalized exploration flow */}
-              <Link href={`/explore/${dest.id}`}
-                className="inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-4 py-2 text-[14.5px] font-medium text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
-                <Compass size={16} /> חקרו את היעד לפי מי שאתם
-              </Link>
-
-              {/* money-saving pass toggle (#16) — the panel opens BELOW the hero */}
-              {passes.length > 0 && (
-                <button onClick={() => setShowPasses((v) => !v)}
-                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13.5px] font-medium transition"
-                  style={{ background: "var(--brand-soft)", color: "var(--brand-ink)", border: "1px solid var(--brand)" }}>
-                  💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
-                </button>
-              )}
+      {/* compact card hero — a small landscape thumbnail + flag/city + a
+          personalized CTA (the trip page's hero language), so the map + list
+          are reachable right away */}
+      <header className="rise px-5 pt-3 pb-2.5 lg:px-8 lg:pt-4 lg:pb-3">
+        <Link href="/" className="eyebrow mb-2 inline-flex items-center gap-1 text-[var(--text-2)]">
+          <ChevronRight size={14} /> בית
+        </Link>
+        <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)] sm:flex-row sm:items-center sm:gap-4">
+          <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+            {/* landscape thumbnail — at the start (right in RTL) */}
+            <div className="relative aspect-[3/2] w-[104px] shrink-0 overflow-hidden rounded-[var(--radius-sm)] sm:w-[150px] lg:w-[188px]">
+              <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
+                orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
             </div>
+            <div className="min-w-0">
+              <h1 className="serif flex items-center gap-2 text-[24px] font-bold leading-tight lg:text-[30px]">
+                <span className="text-[0.72em]">{countryFlag(dest.country)}</span>
+                {dest.city_he || dest.city}
+              </h1>
+              <p className="mt-1 text-[14.5px] font-semibold text-[var(--text)]">
+                {dest.attraction_count.toLocaleString("he")} מקומות לגלות בעיר
+              </p>
+              <p className="mt-0.5 text-[13.5px] text-[var(--text-2)]">אטרקציות והמלצות שנבחרו לפי ההעדפות שלכם</p>
+              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[var(--brand-soft)] px-2.5 py-1 text-[12.5px] font-medium text-[var(--brand-ink)]">
+                <Sparkles size={13} /> מותאם לפרופיל שלכם
+              </span>
+            </div>
+          </div>
+          {/* actions — explore CTA (primary), pass toggle to its left (secondary,
+              white with a brand outline). The pass panel opens below the hero. */}
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+            <Link href={`/explore/${dest.id}`}
+              className="flex items-center justify-center gap-2 rounded-full border-[1.5px] border-transparent bg-[var(--brand)] px-5 py-3 text-[15px] font-medium text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
+              <Sparkles size={17} /> התחילו לבחור לטיול
+            </Link>
+            {passes.length > 0 && (
+              <button onClick={() => setShowPasses((v) => !v)}
+                className="flex items-center justify-center gap-2 rounded-full border-[1.5px] border-[var(--brand)] bg-[var(--surface)] px-5 py-3 text-[15px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
+                💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -180,6 +222,110 @@ export function DestinationView({
           </div>
         </div>
       )}
+
+      {/* desktop toolbar — one sticky block under the hero: categories + search
+          (row 1), then quick tags · sort · filters (row 2). Sits on the cream
+          page background (not a white slab) so the hero card floats above it. */}
+      <div className="sticky top-[57px] z-30 hidden bg-[var(--bg)] shadow-[0_10px_12px_-12px_rgba(16,29,43,0.12)] lg:block">
+        <div className="mx-auto max-w-[1600px] px-8">
+          {/* row 1 — categories (right) + search (left) */}
+          <div className="flex items-center gap-5 border-b border-[var(--border)] py-1.5">
+            <div className="flex min-w-0 flex-1 items-center gap-6 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+              {[null, ...cats].map((c) => {
+                const on = activeCat === c;
+                return (
+                  <button key={c ?? "all"} onClick={() => setActiveCat(c)}
+                    className="shrink-0 whitespace-nowrap border-b-2 pb-2 pt-1.5 text-[15px] transition"
+                    style={{ color: on ? "var(--text)" : "var(--text-2)", fontWeight: on ? 600 : 400,
+                             borderColor: on ? "var(--brand)" : "transparent" }}>
+                    {c === null ? "הכל" : CAT_HE[c] ?? c}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex w-[320px] shrink-0 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
+              <Search size={16} className="shrink-0 text-[var(--text-3)]" />
+              <input value={query} onChange={(e) => setQuery(e.target.value)}
+                placeholder="חיפוש אטרקציה, שכונה או סוג מקום…"
+                className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]" />
+            </div>
+          </div>
+
+          {/* row 2 — quick tags (right) · divider · sort + filters (left) */}
+          <div className="flex items-center gap-2.5 py-2">
+            <button
+              onClick={() => { if (!hasPrefs) { router.push("/profile"); return; } toggleFlag("fitsProfile"); }}
+              title={hasPrefs ? undefined : "מלאו מה מעניין אתכם בפרופיל"}
+              className="rounded-full px-3.5 py-1.5 text-[13.5px] font-medium transition"
+              style={{ background: flags.fitsProfile ? "var(--brand)" : "var(--brand-soft)",
+                       color: flags.fitsProfile ? "#fff" : "var(--brand-ink)", border: "1.5px solid var(--brand)" }}>
+              ✨ מתאים לי
+            </button>
+            {([["mustSee", "⭐ חובה לביקור"], ["free", "חינם"],
+               ...(isFamily ? [["top", "מומלץ למשפחות"]] : [])] as [keyof typeof flags, string][]).map(([k, label]) => (
+              <button key={k} onClick={() => toggleFlag(k)}
+                className="rounded-full px-3 py-1.5 text-[13.5px] transition"
+                style={{ background: flags[k] ? "var(--accent)" : "var(--surface)",
+                         color: flags[k] ? "#fff" : "var(--text-2)",
+                         border: `1px solid ${flags[k] ? "var(--accent)" : "var(--border)"}` }}>
+                {label}
+              </button>
+            ))}
+
+            <span className="mx-1 h-5 w-px shrink-0 bg-[var(--border)]" />
+
+            {/* sort */}
+            <div className="relative shrink-0">
+              <button onClick={() => { setSortOpen((o) => !o); setFiltersOpen(false); }}
+                className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-[13.5px] text-[var(--text-2)]">
+                מיון: <span className="font-medium text-[var(--text)]">{SORT_HE[sort]}</span>
+                <ChevronDown size={14} className={sortOpen ? "rotate-180" : ""} />
+              </button>
+              {sortOpen && (
+                <div className="absolute z-40 mt-1 w-44 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)]">
+                  {(Object.keys(SORT_HE) as SortKey[]).map((k) => (
+                    <button key={k} onClick={() => { setSort(k); setSortOpen(false); }}
+                      className="block w-full px-3 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]"
+                      style={{ color: sort === k ? "var(--brand-ink)" : "var(--text-2)", fontWeight: sort === k ? 600 : 400 }}>
+                      {SORT_HE[k]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* filters popover — the less-used toggles */}
+            <div className="relative shrink-0">
+              <button onClick={() => { setFiltersOpen((o) => !o); setSortOpen(false); }}
+                className="flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] transition"
+                style={{ borderColor: moreFilterCount ? "var(--brand)" : "var(--border)",
+                         background: moreFilterCount ? "var(--brand-soft)" : "var(--surface)",
+                         color: moreFilterCount ? "var(--brand-ink)" : "var(--text-2)" }}>
+                <SlidersHorizontal size={15} /> פילטרים{moreFilterCount ? ` · ${moreFilterCount}` : ""}
+                <ChevronDown size={14} className={filtersOpen ? "rotate-180" : ""} />
+              </button>
+              {filtersOpen && (
+                <div className="absolute z-40 mt-1 w-56 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]">
+                  {([["indoor", "מקורה"], ["withInsights", "💬 עם תובנות מטיילים"]] as [keyof typeof flags, string][]).map(([k, label]) => (
+                    <button key={k} onClick={() => toggleFlag(k)}
+                      className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]">
+                      <span style={{ color: flags[k] ? "var(--brand-ink)" : "var(--text-2)", fontWeight: flags[k] ? 600 : 400 }}>{label}</span>
+                      {flags[k] && <Check size={15} className="text-[var(--brand)]" />}
+                    </button>
+                  ))}
+                  <button onClick={() => setMapOnly((v) => !v)}
+                    className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]">
+                    <span style={{ color: mapOnly ? "var(--brand-ink)" : "var(--text-2)", fontWeight: mapOnly ? 600 : 400 }}>📍 רק מה שעל המפה</span>
+                    {mapOnly && <Check size={15} className="text-[var(--brand)]" />}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <span className="mr-auto shrink-0 text-[13px] text-[var(--text-3)]">{sortedItems.length} מקומות</span>
+          </div>
+        </div>
+      </div>
 
       {/* (Editor's-picks rail removed — the list below has a "חובה לביקור" filter.) */}
 
@@ -224,191 +370,139 @@ export function DestinationView({
       )}
 
       <div className="lg:flex lg:items-start">
-        {/* map */}
-        <div className="sticky top-0 z-10 h-[240px] w-full overflow-hidden border-y border-[var(--border)] lg:order-2 lg:h-[calc(100dvh-57px)] lg:top-[57px] lg:flex-1 lg:border-y-0 lg:border-s">
+        {/* map — a narrow sticky rail on desktop; full-width strip on mobile */}
+        <div className="sticky top-0 z-10 h-[240px] w-full overflow-hidden border-y border-[var(--border)] lg:order-2 lg:h-[calc(100dvh-164px)] lg:top-[164px] lg:w-[380px] lg:shrink-0 lg:border-y-0 lg:border-s">
           <MapClient attractions={filtered} center={[dest.lat, dest.lng]} selected={selected} onBounds={setBounds} />
         </div>
 
-        {/* list */}
-        <section className="px-5 lg:order-1 lg:w-[500px] lg:shrink-0 lg:px-8 lg:pb-16">
-          {/* sticky filter header — stays visible while the list scrolls
-              (below the map on mobile, below the top nav on desktop) */}
-          <div className="sticky top-[240px] z-20 -mx-5 bg-[var(--bg)] px-5 pb-2 pt-4 shadow-[0_8px_10px_-10px_rgba(16,29,43,0.2)] lg:top-[57px] lg:-mx-8 lg:px-8">
-          <div className="mb-3 flex items-center gap-2.5 border-b border-[var(--border)] pb-2">
-            {/* city name — keeps context once the hero has scrolled away */}
-            <span className="serif shrink-0 text-[16px] font-bold text-[var(--text)]">{dest.city_he || dest.city}</span>
-            <span className="h-4 w-px shrink-0 bg-[var(--border)]" />
-            <Search size={16} className="shrink-0 text-[var(--text-3)]" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)}
-              placeholder="חיפוש אטרקציה…"
-              className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]" />
-          </div>
-
-          <div className="mb-5 flex gap-4 overflow-x-auto pb-1">
-            {[null, ...cats].map((c) => {
-              const on = activeCat === c;
-              return (
-                <button key={c ?? "all"} onClick={() => setActiveCat(c)}
-                  className="flex shrink-0 items-center gap-1.5 whitespace-nowrap pb-1 text-[14px] transition"
-                  style={{
-                    color: on ? "var(--accent-ink)" : "var(--text-2)",
-                    fontWeight: on ? 500 : 400,
-                    borderBottom: `2px solid ${on ? "var(--accent)" : "transparent"}`,
-                  }}>
-                  {c !== null && (
-                    <span className="size-2.5 rounded-full" style={{ background: catColor(c) }} />
-                  )}
-                  {c === null ? "הכל" : CAT_HE[c] ?? c}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mb-4 flex flex-wrap gap-2">
-            {/* the personalization hook — no prefs yet? send them to fill the profile */}
-            <button
-              onClick={() => {
-                if (!hasPrefs) { router.push("/profile"); return; }
-                toggleFlag("fitsProfile");
-              }}
-              title={hasPrefs ? undefined : "מלאו מה מעניין אתכם בפרופיל"}
-              className="rounded-full px-3.5 py-1.5 text-[13.5px] font-medium transition"
-              style={{
-                background: flags.fitsProfile ? "var(--brand)" : "var(--brand-soft)",
-                color: flags.fitsProfile ? "#fff" : "var(--brand-ink)",
-                border: `1.5px solid var(--brand)`,
-              }}>
-              ✨ מתאים לי
-            </button>
-            {([
-              ["mustSee", "⭐ חובה לביקור"],
-              ["free", "חינם"],
-              ["indoor", "מקורה"],
-              // "מומלץ למשפחות" = family_score filter — only when there are kids.
-              ...(isFamily ? [["top", "מומלץ למשפחות"]] : []),
-            ] as [keyof typeof flags, string][]).map(([k, label]) => {
-              const on = flags[k];
-              return (
+        {/* attraction cards — a grid on desktop, single column on mobile */}
+        <section className="px-5 lg:order-1 lg:min-w-0 lg:flex-1 lg:px-8 lg:pb-16">
+          {/* mobile filter header (search + categories + quick tags) — desktop
+              uses the toolbar above */}
+          <div className="sticky top-[240px] z-20 -mx-5 bg-[var(--bg)] px-5 pb-2 pt-4 shadow-[0_8px_10px_-10px_rgba(16,29,43,0.2)] lg:hidden">
+            <div className="mb-3 flex items-center gap-2.5 border-b border-[var(--border)] pb-2">
+              <span className="serif shrink-0 text-[16px] font-bold text-[var(--text)]">{dest.city_he || dest.city}</span>
+              <span className="h-4 w-px shrink-0 bg-[var(--border)]" />
+              <Search size={16} className="shrink-0 text-[var(--text-3)]" />
+              <input value={query} onChange={(e) => setQuery(e.target.value)}
+                placeholder="חיפוש אטרקציה…"
+                className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]" />
+            </div>
+            <div className="mb-3 flex gap-4 overflow-x-auto pb-1">
+              {[null, ...cats].map((c) => {
+                const on = activeCat === c;
+                return (
+                  <button key={c ?? "all"} onClick={() => setActiveCat(c)}
+                    className="flex shrink-0 items-center gap-1.5 whitespace-nowrap pb-1 text-[14px] transition"
+                    style={{ color: on ? "var(--accent-ink)" : "var(--text-2)", fontWeight: on ? 500 : 400,
+                             borderBottom: `2px solid ${on ? "var(--accent)" : "transparent"}` }}>
+                    {c !== null && <span className="size-2.5 rounded-full" style={{ background: catColor(c) }} />}
+                    {c === null ? "הכל" : CAT_HE[c] ?? c}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => { if (!hasPrefs) { router.push("/profile"); return; } toggleFlag("fitsProfile"); }}
+                className="rounded-full px-3.5 py-1.5 text-[13.5px] font-medium transition"
+                style={{ background: flags.fitsProfile ? "var(--brand)" : "var(--brand-soft)",
+                         color: flags.fitsProfile ? "#fff" : "var(--brand-ink)", border: "1.5px solid var(--brand)" }}>
+                ✨ מתאים לי
+              </button>
+              {([["mustSee", "⭐ חובה"], ["free", "חינם"], ["indoor", "מקורה"],
+                 ...(isFamily ? [["top", "למשפחות"]] : [])] as [keyof typeof flags, string][]).map(([k, label]) => (
                 <button key={k} onClick={() => toggleFlag(k)}
                   className="rounded-full px-3 py-1.5 text-[13.5px] transition"
-                  style={{
-                    background: on ? "var(--accent)" : "var(--surface)",
-                    color: on ? "#fff" : "var(--text-2)",
-                    border: `1px solid ${on ? "var(--accent)" : "var(--border)"}`,
-                  }}>
-                  {label}
-                </button>
-              );
-            })}
-            <button onClick={() => toggleFlag("withInsights")}
-              className="rounded-full px-3 py-1.5 text-[13.5px] transition"
-              style={{
-                background: flags.withInsights ? "var(--brand)" : "var(--surface)",
-                color: flags.withInsights ? "#fff" : "var(--text-2)",
-                border: `1px solid ${flags.withInsights ? "var(--brand)" : "var(--border)"}`,
-              }}>
-              💬 עם תובנות מטיילים
-            </button>
-            <button onClick={() => setMapOnly((v) => !v)}
-              className="rounded-full px-3 py-1.5 text-[13.5px] transition"
-              style={{
-                background: mapOnly ? "var(--brand)" : "var(--surface)",
-                color: mapOnly ? "#fff" : "var(--text-2)",
-                border: `1px solid ${mapOnly ? "var(--brand)" : "var(--border)"}`,
-              }}>
-              📍 רק מה שעל המפה
-            </button>
-          </div>
+                  style={{ background: flags[k] ? "var(--accent)" : "var(--surface)", color: flags[k] ? "#fff" : "var(--text-2)",
+                           border: `1px solid ${flags[k] ? "var(--accent)" : "var(--border)"}` }}>{label}</button>
+              ))}
+              <button onClick={() => setMapOnly((v) => !v)}
+                className="rounded-full px-3 py-1.5 text-[13.5px] transition"
+                style={{ background: mapOnly ? "var(--brand)" : "var(--surface)", color: mapOnly ? "#fff" : "var(--text-2)",
+                         border: `1px solid ${mapOnly ? "var(--brand)" : "var(--border)"}` }}>📍 על המפה</button>
+            </div>
           </div>
 
-          {flags.withInsights && (
-            <p className="mb-2 text-[13px] text-[var(--brand-ink)]">
-              מציג רק מקומות עם תובנות מטיילים ({listItems.length})
-            </p>
-          )}
-          {mapOnly && (
-            <p className="mb-2 text-[13px] text-[var(--brand-ink)]">
-              מציג {listItems.length} מקומות באזור המפה — הזיזו או הגדילו את המפה לעדכון
+          {(flags.withInsights || mapOnly) && (
+            <p className="pt-3 text-[13px] text-[var(--brand-ink)] lg:pt-4">
+              {mapOnly ? `מציג ${sortedItems.length} מקומות באזור המפה — הזיזו/הגדילו את המפה`
+                       : `מציג רק מקומות עם תובנות מטיילים (${sortedItems.length})`}
             </p>
           )}
 
-          <div className="flex flex-col">
-            {listItems.length === 0 && (
-              <p className="py-8 text-center text-[15px] text-[var(--text-3)]">
-                {mapOnly ? "אין מקומות באזור המפה הנוכחי — הקטינו זום או הזיזו" : "אין תוצאות לסינון הזה"}
-              </p>
-            )}
-            {listItems.map((a, i) => {
+          {sortedItems.length === 0 && (
+            <p className="py-10 text-center text-[15px] text-[var(--text-3)]">
+              {mapOnly ? "אין מקומות באזור המפה הנוכחי — הקטינו זום או הזיזו" : "אין תוצאות לסינון הזה"}
+            </p>
+          )}
+
+          {/* rich image-top cards */}
+          <div className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-2 lg:pt-4 xl:grid-cols-3">
+            {sortedItems.map((a) => {
               const isSel = selected?.id === a.id;
               const cost = a.cost_level != null ? COST_HE[a.cost_level] : null;
+              const dur = durationHe(a.duration_minutes);
+              const cat = mergeCat(a.category);
+              const insList = insights[a.id] ?? [];
+              const tip = insList[0]?.text_he || a.tips_he;
               return (
                 <button key={a.id} onClick={() => setSelected(a)}
-                  className="flex items-start gap-3.5 border-b border-[var(--border)] py-3.5 text-right transition"
-                  style={{ background: isSel ? "var(--accent-soft)" : "transparent" }}>
-                  {a.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={bigImage(a.image_url, 256)} alt="" loading="lazy"
-                      onError={(e) => { const t = e.currentTarget; if (t.src !== a.image_url) t.src = a.image_url as string; }}
-                      className="h-[84px] w-[84px] shrink-0 rounded-[8px] object-cover" />
-                  ) : (
-                    <div className="grid h-[84px] w-[84px] shrink-0 place-items-center rounded-[8px] bg-[var(--surface-2)]">
-                      <span className="serif text-[22px] text-[var(--text-3)]">{(a.name_he || a.name_en).slice(0, 1)}</span>
+                  className="group flex flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition hover:-translate-y-0.5"
+                  style={{ borderColor: isSel ? "var(--brand)" : "var(--border)",
+                           boxShadow: isSel ? "0 0 0 1.5px var(--brand)" : undefined }}>
+                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-[var(--surface-2)]">
+                    {a.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={bigImage(a.image_url, 400)} alt="" loading="lazy"
+                        onError={(e) => { const t = e.currentTarget; if (t.src !== a.image_url) t.src = a.image_url as string; }}
+                        className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
+                    ) : (
+                      // No photo yet — a calm, branded placeholder tinted by the
+                      // category (not a lonely letter), so it reads as intentional.
+                      <div className="grid size-full place-items-center"
+                        style={{ background: `linear-gradient(140deg, color-mix(in srgb, ${catColor(cat)} 20%, var(--surface-2)), var(--surface-2) 72%)` }}>
+                        <MapPin size={30} className="opacity-30" style={{ color: catColor(cat) }} />
+                      </div>
+                    )}
+                    <span className="absolute right-2 top-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium text-white shadow-sm"
+                          style={{ background: catColor(cat) }}>
+                      {CAT_HE[cat] ?? a.category}
+                    </span>
+                    {a.must_see === 1 && (
+                      <span className="absolute left-2 top-2 rounded-full bg-[var(--accent)] px-2 py-0.5 text-[11px] font-medium text-white shadow-sm">⭐ חובה</span>
+                    )}
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col p-3">
+                    <p className="serif truncate text-[17px] font-bold leading-tight">{a.name_he || a.name_en}</p>
+                    {a.name_he && a.name_en && a.name_en !== a.name_he && (
+                      <p className="truncate text-[12.5px] text-[var(--text-3)]" dir="ltr" style={{ unicodeBidi: "isolate" }}>{a.name_en}</p>
+                    )}
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[12px]">
+                      {cost && <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 font-medium text-[var(--brand-ink)]">{cost}</span>}
+                      {dur && <span className="text-[var(--text-3)]">🕐 {dur}</span>}
+                      {covered.has(a.id) && <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 font-medium text-[var(--brand-ink)]">💳 כלול בכרטיס</span>}
                     </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="eyebrow truncate">{meta(a)}</p>
-                      {a.must_see === 1 && (
-                        <span className="shrink-0 bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-white">חובה</span>
-                      )}
-                      {covered.has(a.id) && (
-                        <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                          style={{ background: "var(--brand-soft)", color: "var(--brand-ink)" }}>💳 כלול בכרטיס</span>
-                      )}
-                    </div>
-                    <p className="serif mt-0.5 text-[17px] leading-tight">{a.name_he || a.name_en}</p>
                     {a.tagline_he && (
-                      <p className={`mt-0.5 text-[14px] italic text-[var(--text-2)] ${isSel ? "" : "truncate"}`}>{a.tagline_he}</p>
+                      <p className={`mt-1.5 text-[13px] leading-snug text-[var(--text-2)] ${isSel ? "" : "line-clamp-2"}`}>{a.tagline_he}</p>
                     )}
                     {isSel && a.description_he && (
-                      <p className="mt-1.5 text-[14px] leading-relaxed text-[var(--text-2)]">{a.description_he}</p>
+                      <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--text-2)]">{a.description_he}</p>
                     )}
-                    {insights[a.id]?.length ? (
-                      isSel ? (
-                        // Selected: show every traveler insight for this place.
-                        <div className="mt-1.5 flex flex-col gap-1">
-                          <p className="text-[12px] font-medium text-[var(--text-3)]">
-                            תובנות ממטיילים ({insights[a.id].length})
+                    {tip && (
+                      <p className="mt-1.5 flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]">
+                        <span className="shrink-0">💡</span>
+                        <span className={isSel ? "" : "line-clamp-2"}>טיפ מטיילים: {tip}</span>
+                      </p>
+                    )}
+                    {isSel && insList.length > 1 && (
+                      <div className="mt-1.5 flex flex-col gap-1">
+                        {insList.slice(1).map((ins) => (
+                          <p key={ins.id} className="flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]">
+                            <span className="shrink-0">{KIND_ICON[ins.kind] ?? "💬"}</span><span>{ins.text_he}</span>
                           </p>
-                          {insights[a.id].map((ins) => (
-                            <p key={ins.id} className="flex items-start gap-1 text-[13.5px] leading-snug text-[var(--brand-ink)]">
-                              <span className="shrink-0">{KIND_ICON[ins.kind] ?? "💬"}</span>
-                              <span>{ins.text_he}</span>
-                            </p>
-                          ))}
-                        </div>
-                      ) : (
-                        // Collapsed: teaser (first insight) + honest count of the rest.
-                        <p className="mt-1 flex items-start gap-1 text-[13.5px] leading-snug text-[var(--brand-ink)]">
-                          <span className="shrink-0">{KIND_ICON[insights[a.id][0].kind] ?? "💬"}</span>
-                          <span className="line-clamp-2">
-                            {insights[a.id][0].text_he}
-                            {insights[a.id].length > 1 && (
-                              <span className="text-[var(--text-3)]"> · עוד {insights[a.id].length - 1} תובנות ▾</span>
-                            )}
-                          </span>
-                        </p>
-                      )
-                    ) : null}
-                    <div className="mt-1.5 flex items-center gap-2.5 text-[13px] text-[var(--text-3)]">
-                      {isFamily && !!a.family_score && (
-                        <span className="inline-flex items-center gap-0.5 text-[var(--accent-ink)]" title="ציון התאמה למשפחות">
-                          <Star size={11} fill="currentColor" /> {a.family_score}
-                        </span>
-                      )}
-                      {cost && <span>{cost}</span>}
-                      {a.best_time_he && <span className="truncate">{a.best_time_he}</span>}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </button>
               );
