@@ -121,8 +121,10 @@ export function DestinationView({
   const mustSeeIds = useMemo(() => attractions.filter((a) => a.must_see === 1).map((a) => a.id), [attractions]);
   const allMustSeeYes = mustSeeIds.length > 0 && mustSeeIds.every((id) => choices[id] === "yes");
   const toggleAllMustSee = () => setMany(mustSeeIds, allMustSeeYes ? null : "yes");
-  // ~how many attractions realistically fit N days; used to flag over-picking.
-  const buildCapacity = Math.round(buildDays * 5.3);
+  // Match the builder's own pace ("3-4 עצירות משמעותיות ביום") so the estimate
+  // is honest — ~4 attractions/day, i.e. what actually gets scheduled.
+  const PER_DAY = 4;
+  const buildCapacity = buildDays * PER_DAY;
   const overPick = yesCount > buildCapacity;
 
   const cats = useMemo(
