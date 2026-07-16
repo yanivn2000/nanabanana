@@ -243,6 +243,29 @@ export async function insightsByAttraction(
   return m;
 }
 
+// --- User feedback ("מצאתם באג? יש רעיון?") ---------------------------------
+export type Feedback = {
+  id: number; created_at: string; kind: string | null;
+  message: string; email: string | null; page: string | null;
+};
+
+export async function addFeedback(f: {
+  kind: string; message: string; email: string | null;
+  page: string | null; userAgent: string | null;
+}): Promise<void> {
+  await query(
+    `INSERT INTO feedback (kind, message, email, page, user_agent)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [f.kind, f.message, f.email, f.page, f.userAgent]
+  );
+}
+
+export async function listFeedback(limit = 200): Promise<Feedback[]> {
+  return query<Feedback>(
+    `SELECT id, created_at, kind, message, email, page
+       FROM feedback ORDER BY id DESC LIMIT $1`, [limit]);
+}
+
 // Shared AI model setting (written by the Streamlit admin Settings tab).
 export async function getModel(): Promise<string> {
   const fallback = process.env.NANABANANA_MODEL || "claude-opus-4-8";

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Briefcase, User } from "lucide-react";
 import { AuthButton } from "./AuthButton";
+import { FeedbackWidget } from "./FeedbackWidget";
 import { YalleMark } from "./YalleMark";
 
 const ITEMS = [
@@ -41,6 +42,7 @@ export function TopNav() {
               </Link>
             );
           })}
+          <FeedbackWidget variant="nav" />
           <span className="ms-1"><AuthButton /></span>
         </nav>
       </div>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Briefcase, User } from "lucide-react";
+import { FeedbackWidget } from "./FeedbackWidget";
 
 const ITEMS = [
   { href: "/", label: "בית", Icon: Home },
@@ -32,6 +33,7 @@ export function BottomNav() {
             </Link>
           );
         })}
+        <FeedbackWidget variant="tab" />
       </div>
     </nav>
   );
