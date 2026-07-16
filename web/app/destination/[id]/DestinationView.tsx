@@ -160,7 +160,9 @@ export function DestinationView({
           if (!o) return a;
           const rank = "rank" in o ? o.rank : a.editor_rank;
           const kids = "kids" in o ? o.kids : a.editor_kids;
-          const must_see = "rank" in o ? (rank === "must" ? 1 : 0) : a.must_see;
+          // Effective must-see overlay: a set rank drives it; clearing the rank
+          // reverts to the raw OSM flag (matches the server per-attraction model).
+          const must_see = "rank" in o ? (rank ? (rank === "must" ? 1 : 0) : (a.osm_must_see ?? 0)) : a.must_see;
           return { ...a, editor_rank: rank ?? null, editor_kids: kids ?? null, must_see };
         })),
     [baseAttractions, ratingOverrides]
@@ -187,6 +189,8 @@ export function DestinationView({
   // "solo" — a transient focus (not saved to the profile): show ONLY this topic.
   // Single-select. It's the 4th step of the tile cycle, after "לא מעוניין".
   const [soloInterest, setSoloInterest] = useState<string | null>(null);
+  const [selectedOnly, setSelectedOnly] = useState(false);  // "הצג רק נבחרים" — mutually exclusive with solo
+  const toggleSelectedOnly = () => { setSoloInterest(null); setSelectedOnly((v) => !v); };
   const interestState = (v: string): "yes" | "no" | "none" | "solo" =>
     soloInterest === v ? "solo"
       : profile.interests.includes(v) ? "yes"
@@ -195,7 +199,7 @@ export function DestinationView({
     const s = interestState(v);
     if (s === "none") setProfile({ ...profile, interests: [...profile.interests, v], dislikes: profile.dislikes.filter((x) => x !== v) });
     else if (s === "yes") setProfile({ ...profile, interests: profile.interests.filter((x) => x !== v), dislikes: [...profile.dislikes, v] });
-    else if (s === "no") { setProfile({ ...profile, dislikes: profile.dislikes.filter((x) => x !== v) }); setSoloInterest(v); }
+    else if (s === "no") { setProfile({ ...profile, dislikes: profile.dislikes.filter((x) => x !== v) }); setSoloInterest(v); setSelectedOnly(false); }
     else setSoloInterest(null);   // solo → none
   };
   const hasPrefs = profile.interests.length > 0 || profile.dislikes.length > 0;
@@ -204,7 +208,6 @@ export function DestinationView({
   const [showPlaces, setShowPlaces] = useState(false);
   const [showPasses, setShowPasses] = useState(false);
   const [mustOnly, setMustOnly] = useState(true);   // "רק אתרי חובה" — default ON
-  const [selectedOnly, setSelectedOnly] = useState(false);  // "הצג רק נבחרים"
   const [flags, setFlags] = useState({
     free: false, indoor: false, top: false, withInsights: false,
   });
@@ -310,16 +313,17 @@ export function DestinationView({
   // image-less long tail, so the browse never opens on empty cards. The chosen
   // sort then orders within those sub-groups.
   const { sortedItems, dimmedIds, matchedIds } = useMemo(() => {
-    const ms = (a: Attraction) => (a.must_see === 1 ? 1 : 0);
     const img = (a: Attraction) => (a.image_url ? 1 : 0);
-    // The editor's "ממש לא" is the floor — those always sink to the very bottom.
-    const demote = (a: Attraction) => (a.editor_rank === "no" ? 1 : 0);
+    // Editor importance tier: "ממש לא" floors it (0); effective must-see leads
+    // (4); "אולי" is a real mid boost (3); everything else normal (2).
+    const tier = (a: Attraction) =>
+      a.editor_rank === "no" ? 0 : a.must_see === 1 ? 4 : a.editor_rank === "maybe" ? 3 : 2;
     const within = (a: Attraction, b: Attraction) => {
       if (sort === "name") return (a.name_he || a.name_en).localeCompare(b.name_he || b.name_en, "he");
       if (sort === "match" && cityTasteTagged) return tasteScore(b.taste_tags, taste) - tasteScore(a.taste_tags, taste);
       return (b.family_score ?? 0) - (a.family_score ?? 0);
     };
-    const cmp = (a: Attraction, b: Attraction) => demote(a) - demote(b) || ms(b) - ms(a) || img(b) - img(a) || within(a, b);
+    const cmp = (a: Attraction, b: Attraction) => tier(b) - tier(a) || img(b) - img(a) || within(a, b);
     // Matches lead; the profile-cut tail is dimmed below (still markable). In
     // "selected only" mode there's no dimming — every pick shows in full.
     const matched: Attraction[] = [], dimmed: Attraction[] = [];
@@ -346,13 +350,16 @@ export function DestinationView({
   );
   const [fitNonce, setFitNonce] = useState(0);
 
-  // How many must-see places sit inside the currently selected topics — a stable
-  // facet count (independent of the "אתרי חובה" toggle itself), same search/map/
-  // popover scope as the list. Shown on the must-see chip below the topics.
+  // How many must-see places are actually VISIBLE in the list — i.e. must-see,
+  // not hidden by a ✕ interest (an explicit כן/אולי keeps it), within the same
+  // search/map/popover scope. Deliberately toggle-independent, and it counts the
+  // dimmed likes-tail too (which the list still shows), so the chip number
+  // matches the must-see cards on screen.
   const mustSeeCount = useMemo(() => {
     const q = query.toLowerCase();
     return attractions.filter((a) => {
-      if (a.must_see !== 1 || !profileMatch(a)) return false;
+      if (a.must_see !== 1) return false;
+      if (!choices[a.id] && profile.dislikes.some((it) => matchesInterest(a, it))) return false;
       if (flags.free && a.cost_level !== 0) return false;
       if (flags.indoor && !(a.indoor_outdoor === "indoor" || a.indoor_outdoor === "both")) return false;
       if (flags.top && (a.family_score ?? 0) < 8) return false;
@@ -362,7 +369,7 @@ export function DestinationView({
       if (q && !`${a.name_he ?? ""} ${a.name_en} ${descriptor(a)}`.toLowerCase().includes(q)) return false;
       return true;
     }).length;
-  }, [attractions, profileMatch, flags, insights, mapOnly, bounds, query]);
+  }, [attractions, choices, profile.dislikes, flags, insights, mapOnly, bounds, query]);
 
   // Active popover filters (for the "פילטרים · N" badge).
   const moreFilterCount = (flags.free ? 1 : 0) + (flags.indoor ? 1 : 0) + (flags.withInsights ? 1 : 0) + (mapOnly ? 1 : 0);
@@ -555,15 +562,20 @@ export function DestinationView({
                 placeholder="חיפוש אטרקציה, שכונה או סוג מקום…"
                 className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]" />
             </div>
-            <span className="mx-1 h-5 w-px shrink-0 bg-[var(--border)]" />
-            <button onClick={() => setMustOnly((v) => !v)}
-              className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
-              style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
-                       color: mustOnly ? "#fff" : "var(--text-2)", borderColor: mustOnly ? "var(--brand)" : "var(--border)" }}>
-              ⭐ אתרי חובה <span className={mustOnly ? "opacity-80" : "opacity-60"}>{mustSeeCount}</span>
-            </button>
+            {/* must-see facet — hidden in solo / selected-only (it's inert there) */}
+            {!soloInterest && !selectedOnly && (
+              <>
+                <span className="mx-1 h-5 w-px shrink-0 bg-[var(--border)]" />
+                <button onClick={() => setMustOnly((v) => !v)}
+                  className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
+                  style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
+                           color: mustOnly ? "#fff" : "var(--text-2)", borderColor: mustOnly ? "var(--brand)" : "var(--border)" }}>
+                  ⭐ אתרי חובה <span className={mustOnly ? "opacity-80" : "opacity-60"}>{mustSeeCount}</span>
+                </button>
+              </>
+            )}
             {yesCount + maybeCount > 0 && (
-              <button onClick={() => setSelectedOnly((v) => !v)}
+              <button onClick={toggleSelectedOnly}
                 className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
                 style={{ background: selectedOnly ? "var(--brand)" : "var(--brand-soft)",
                          color: selectedOnly ? "#fff" : "var(--brand-ink)",
@@ -716,14 +728,16 @@ export function DestinationView({
                 className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]" />
             </div>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => setMustOnly((v) => !v)}
-                className="rounded-full px-3 py-1.5 text-[13.5px] font-medium transition"
-                style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
-                         color: mustOnly ? "#fff" : "var(--text-2)", border: `1px solid ${mustOnly ? "var(--brand)" : "var(--border)"}` }}>
-                ⭐ אתרי חובה <span className="opacity-70">{mustSeeCount}</span>
-              </button>
+              {!soloInterest && !selectedOnly && (
+                <button onClick={() => setMustOnly((v) => !v)}
+                  className="rounded-full px-3 py-1.5 text-[13.5px] font-medium transition"
+                  style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
+                           color: mustOnly ? "#fff" : "var(--text-2)", border: `1px solid ${mustOnly ? "var(--brand)" : "var(--border)"}` }}>
+                  ⭐ אתרי חובה <span className="opacity-70">{mustSeeCount}</span>
+                </button>
+              )}
               {yesCount + maybeCount > 0 && (
-                <button onClick={() => setSelectedOnly((v) => !v)}
+                <button onClick={toggleSelectedOnly}
                   className="flex items-center gap-1 rounded-full border px-3 py-1.5 text-[13.5px] font-medium transition"
                   style={{ background: selectedOnly ? "var(--brand)" : "var(--brand-soft)",
                            color: selectedOnly ? "#fff" : "var(--brand-ink)",
@@ -923,7 +937,7 @@ export function DestinationView({
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {yesCount + maybeCount > 0 && (
-                <button onClick={() => setSelectedOnly((v) => !v)}
+                <button onClick={toggleSelectedOnly}
                   className="hidden items-center gap-1.5 rounded-full border px-4 py-2.5 text-[13.5px] font-medium transition sm:flex"
                   style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)",
                            color: selectedOnly ? "#fff" : "var(--brand-ink)",

@@ -93,16 +93,18 @@ export async function getDestination(id: number): Promise<Destination | null> {
 }
 
 // --- Editor overlay -------------------------------------------------------
-// Join the editor's per-attraction ratings and derive the effective must-see.
-// A city is "rank-curated" once it has ANY importance rank; there, effective
-// must_see = (rank='must'), else the raw OSM flag. `has_ranks` is per the row's
-// OWN destination, so the same overlay is correct for single- or
-// multi-destination result sets (map, builder pool, and by-id picks alike).
+// A pure PER-ATTRACTION overlay on the raw OSM flag: an attraction the editor
+// ranked uses that rank (must → must-see, else not); an UN-ranked attraction
+// keeps its OSM must_see. So clearing a rank reverts to the OSM default, and a
+// demotion sticks only for that one place (no city-wide seeding needed).
 const EDITOR_JOIN = `
-  LEFT JOIN editor_picks ep ON ep.destination_id = a.destination_id AND ep.attraction_id = a.id
-  LEFT JOIN (SELECT destination_id FROM editor_picks WHERE rank IS NOT NULL GROUP BY destination_id) hr
-    ON hr.destination_id = a.destination_id`;
-const EFF_MUST = `CASE WHEN hr.destination_id IS NOT NULL THEN (ep.rank = 'must')::int ELSE a.must_see END`;
+  LEFT JOIN editor_picks ep ON ep.destination_id = a.destination_id AND ep.attraction_id = a.id`;
+const EFF_MUST = `CASE WHEN ep.rank IS NOT NULL THEN (ep.rank = 'must')::int ELSE a.must_see END`;
+// Importance tier for ORDER BY: editor 'no' floors it (0); effective must-see
+// leads (4); editor 'maybe' is a mid boost (3); everything else normal (2).
+const EDITOR_ORDER = `(CASE WHEN ep.rank = 'no' THEN 0
+  WHEN COALESCE(${EFF_MUST}, 0) = 1 THEN 4
+  WHEN ep.rank = 'maybe' THEN 3 ELSE 2 END) DESC`;
 // ATTR_COLS with must_see swapped for the effective value + the editor columns
 // (osm_must_see kept as the raw reference; editor_rank/editor_kids surfaced).
 const ATTR_COLS_EFF = ATTR_COLS.replace(/\bmust_see\b/,
@@ -119,7 +121,7 @@ export async function topAttractions(destinationId: number, limit = 40): Promise
          AND (a.is_duplicate IS NULL OR a.is_duplicate = 0)
          AND (a.is_component IS NULL OR a.is_component = 0)
          AND (ep.rank IS NULL OR ep.rank <> 'no')
-       ORDER BY COALESCE(${EFF_MUST}, 0) DESC,
+       ORDER BY ${EDITOR_ORDER},
                 COALESCE(a.quality_keep = 1, false) DESC,
                 ${NOTABLE} DESC,
                 COALESCE(a.family_score, 0) DESC, a.name_en
@@ -145,8 +147,7 @@ export async function attractionsForMap(destinationId: number, limit = 200): Pro
          AND (a.quality_keep = 1 OR a.quality_keep IS NULL)
          AND (a.is_duplicate IS NULL OR a.is_duplicate = 0)
          AND (a.is_component IS NULL OR a.is_component = 0)
-       ORDER BY COALESCE(${EFF_MUST}, 0) DESC,
-                (ep.rank = 'no') ASC,
+       ORDER BY ${EDITOR_ORDER},
                 COALESCE(a.quality_keep = 1, false) DESC,
                 ${NOTABLE} DESC,
                 COALESCE(a.family_score, 0) DESC, a.name_en
@@ -157,31 +158,12 @@ export async function attractionsForMap(destinationId: number, limit = 200): Pro
 
 // Editor curation: set one of an attraction's two 3-state ratings —
 // `rank` (importance: must | maybe | no) or `kids` (fit: yes | maybe | no);
-// null clears it. The FIRST rank edit to an uncurated city forks the OSM
-// must-see set into editor_picks (rank='must'), so a demotion actually sticks
-// instead of no-op'ing against an empty table.
+// null clears it (reverts that axis to the raw OSM / data default). A pure
+// per-attraction overlay — no city-wide seeding.
 export async function setEditorRating(
   destinationId: number, attractionId: number,
   field: "rank" | "kids", value: string | null, by: string
 ): Promise<void> {
-  if (field === "rank") {
-    const seeded = await query<{ has_ranks: boolean }>(
-      `SELECT EXISTS(SELECT 1 FROM editor_picks WHERE destination_id = $1 AND rank IS NOT NULL) AS has_ranks`,
-      [destinationId]
-    );
-    if (!seeded[0]?.has_ranks) {
-      await query(
-        `INSERT INTO editor_picks (destination_id, attraction_id, rank, created_by)
-         SELECT destination_id, id, 'must', $2 FROM attractions
-         WHERE destination_id = $1 AND must_see = 1 AND lat IS NOT NULL AND lng IS NOT NULL
-           AND (quality_keep = 1 OR quality_keep IS NULL)
-           AND (is_duplicate IS NULL OR is_duplicate = 0)
-           AND (is_component IS NULL OR is_component = 0)
-         ON CONFLICT (destination_id, attraction_id) DO UPDATE SET rank = 'must'`,
-        [destinationId, by]
-      );
-    }
-  }
   // Upsert the chosen field; keep the other axis intact.
   const col = field === "rank" ? "rank" : "kids";
   await query(
