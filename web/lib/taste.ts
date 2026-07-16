@@ -15,6 +15,7 @@ export const INTEREST_TASTE: Record<string, string[]> = {
   // showed 16 "beaches") — kept empty so it stays distinct from טבע.
   "חופים": [],
   "פארקי שעשועים": ["family"],
+  "ילדים": ["family"],
   "היסטוריה": ["history", "landmark"],
   // finer taste chips (added to the editor for real divergence):
   "מוזיקה חיה": ["live_music"],
@@ -63,6 +64,9 @@ export const INTEREST_CATS: Record<string, { cats?: string[]; subs?: string[] }>
   "ספורט": { cats: ["sport"] },
   "היסטוריה": { cats: ["historic"] },
   "פארקי שעשועים": { subs: ["theme_park", "water_park"] },
+  // Genuinely kid-oriented places only (not big adult museums that merely have a
+  // high family_score) — so ✕ "ילדים" hides these while museums still show.
+  "ילדים": { subs: ["theme_park", "water_park", "zoo", "aquarium", "playground"] },
 };
 export function coarseFits(
   category: string,

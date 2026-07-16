@@ -213,6 +213,9 @@ export function DestinationView({
         // "הצג רק נבחרים" overrides the other filters: show exactly the places
         // the traveler marked (כן/אולי), so a lone pick is always findable.
         if (selectedOnly) return choices[a.id] === "yes" || choices[a.id] === "maybe";
+        // ✕ interests hide entirely — e.g. "ילדים" on a couples' trip removes
+        // every kid-oriented place, not even dimmed. An explicit כן/אולי keeps it.
+        if (!choices[a.id] && profile.dislikes.some((it) => matchesInterest(a, it))) return false;
         if (mustOnly && a.must_see !== 1) return false;
         if (flags.free && a.cost_level !== 0) return false;
         if (flags.indoor && !(a.indoor_outdoor === "indoor" || a.indoor_outdoor === "both")) return false;
@@ -224,7 +227,7 @@ export function DestinationView({
         }
         return true;
       }),
-    [attractions, mustOnly, query, flags, insights, selectedOnly, choices]
+    [attractions, mustOnly, query, flags, insights, selectedOnly, choices, profile.dislikes]
   );
   // Does an attraction match the traveler's profile? A ✓ interest includes it;
   // a ✕ interest excludes it; no interests set = everything matches (default).

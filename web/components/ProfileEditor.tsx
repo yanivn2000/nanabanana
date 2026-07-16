@@ -4,7 +4,7 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 import type { FamilyProfile, Kid } from "@/lib/store";
 import { CategoryTile } from "@/components/CategoryTiles";
 
-const INTERESTS = ["טבע", "אוכל", "תרבות", "קניות", "ספורט", "חופים", "פארקי שעשועים", "היסטוריה",
+const INTERESTS = ["טבע", "אוכל", "תרבות", "קניות", "ספורט", "חופים", "פארקי שעשועים", "ילדים", "היסטוריה",
   "מוזיקה חיה", "חיי לילה", "מחזמר ותיאטרון", "בלט ואופרה", "וינטג'", "יוקרה", "מוזיאונים"];
 const PACES = ["רגוע", "בינוני", "אינטנסיבי"] as const;
 const BUDGETS = ["חסכוני", "בינוני", "מפנק"] as const;

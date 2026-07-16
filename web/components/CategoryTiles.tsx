@@ -117,6 +117,15 @@ export const CATEGORY_ICONS: Record<string, React.ReactNode> = {
       <path d="M17.5 27 c0-4.2 2.1-7 5-7 s5 2.8 5 7 Z" fill={A} />
     </g>
   ),
+  "ילדים": (
+    <g>
+      <ellipse cx="11.5" cy="11" rx="7.5" ry="9" fill={G} />
+      <path d="M11.5 20 l-1.4 2.2 h2.8 Z" fill={G} />
+      <path d="M11.5 22 c0 3 4.5 3.2 4.5 6.5" stroke={A} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+      <ellipse cx="23" cy="15" rx="5.5" ry="6.6" fill={A} />
+      <path d="M23 21.6 l-1 1.6 h2 Z" fill={A} />
+    </g>
+  ),
   "מוזיאונים": (
     <g>
       <rect x="4" y="6" width="24" height="20" rx="2.5" fill={G} />
