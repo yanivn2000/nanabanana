@@ -78,6 +78,22 @@ function FlyTo({ focus }: { focus: { lat: number; lng: number; n: number } | nul
   return null;
 }
 
+// Frames the map to the traveler's picks on demand (a button, via the nonce),
+// so every selected place fits in view. Only fires when the nonce increments —
+// marking/unmarking never reframes the map on its own.
+function FitToPicks({ picks, nonce }: { picks: Attraction[]; nonce: number }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!nonce) return;
+    const pts = picks.filter((a) => a.lat != null && a.lng != null)
+      .map((a) => [a.lat as number, a.lng as number] as [number, number]);
+    if (pts.length === 1) map.flyTo(pts[0], 14, { duration: 0.6 });
+    else if (pts.length > 1) map.flyToBounds(pts, { padding: [55, 55], maxZoom: 15, duration: 0.6 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nonce]);
+  return null;
+}
+
 // Distinct hotel marker — a teal rounded pin with a bed glyph.
 function hotelIcon() {
   const bed = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>';
@@ -183,6 +199,8 @@ export default function AttractionsMap({
   onStopClick,
   userPos = null,
   onBounds,
+  picks = [],
+  fitNonce = 0,
 }: {
   attractions: Attraction[];
   center: [number, number];
@@ -197,6 +215,8 @@ export default function AttractionsMap({
   onStopClick?: (i: number) => void;
   userPos?: [number, number] | null;
   onBounds?: (b: MapBounds) => void;
+  picks?: Attraction[];           // the traveler's כן/אולי marks — highlighted + framed on demand
+  fitNonce?: number;              // increment to frame the map to `picks`
 }) {
   const markers = useRef<Map<number, LeafletCircleMarker>>(new Map());
   const orderedPts = ordered
@@ -216,6 +236,7 @@ export default function AttractionsMap({
       <Flyer selected={selected} markers={markers} />
       <FitBounds attractions={attractions} hotels={hotels} selected={selected} userPos={userPos} />
       <FlyTo focus={focus} />
+      <FitToPicks picks={picks} nonce={fitNonce} />
       <BoundsReporter onBounds={onBounds} />
 
       {userPos && (
@@ -283,6 +304,19 @@ export default function AttractionsMap({
               <AttractionPopup a={a} />
             </CircleMarker>
           ))}
+
+      {/* the traveler's picks — a brand-green ring on top, so selected places
+          are identifiable at a glance and every one has a marker to frame */}
+      {!ordered && picks.map((a) => (
+        a.lat != null && a.lng != null && (
+          <CircleMarker key={"pick" + a.id}
+            center={[a.lat as number, a.lng as number]}
+            radius={selected?.id === a.id ? 9 : 7}
+            pathOptions={{ color: "#fff", weight: 2.5, fillColor: "#0e6b5e", fillOpacity: 1 }}>
+            <AttractionPopup a={a} />
+          </CircleMarker>
+        )
+      ))}
     </MapContainer>
   );
 }

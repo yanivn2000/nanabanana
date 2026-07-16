@@ -275,6 +275,14 @@ export function DestinationView({
   const viewIds = matchedIds;
   const viewSelected = viewIds.filter((id) => choices[id]).length;
 
+  // The traveler's picks with coordinates — highlighted on the map, and framed
+  // when they tap "מקד את הנבחרים" (bumps a nonce the map watches).
+  const pickedAttractions = useMemo(
+    () => attractions.filter((a) => (choices[a.id] === "yes" || choices[a.id] === "maybe") && a.lat != null && a.lng != null),
+    [attractions, choices]
+  );
+  const [fitNonce, setFitNonce] = useState(0);
+
   // How many must-see places sit inside the currently selected topics — a stable
   // facet count (independent of the "אתרי חובה" toggle itself), same search/map/
   // popover scope as the list. Shown on the must-see chip below the topics.
@@ -607,8 +615,15 @@ export function DestinationView({
 
       <div className="lg:flex lg:items-start">
         {/* map — a narrow sticky rail on desktop; full-width strip on mobile */}
-        <div className="sticky top-0 z-10 h-[240px] w-full overflow-hidden border-y border-[var(--border)] lg:order-2 lg:h-[calc(100dvh-164px)] lg:top-[164px] lg:w-[380px] lg:shrink-0 lg:border-y-0 lg:border-s">
-          <MapClient attractions={visible} center={[dest.lat, dest.lng]} selected={selected} onBounds={setBounds} />
+        <div className="relative sticky top-0 z-10 h-[240px] w-full overflow-hidden border-y border-[var(--border)] lg:order-2 lg:h-[calc(100dvh-164px)] lg:top-[164px] lg:w-[380px] lg:shrink-0 lg:border-y-0 lg:border-s">
+          <MapClient attractions={visible} center={[dest.lat, dest.lng]} selected={selected}
+            picks={pickedAttractions} fitNonce={fitNonce} onBounds={setBounds} />
+          {pickedAttractions.length > 0 && (
+            <button onClick={() => setFitNonce((n) => n + 1)}
+              className="absolute left-1/2 top-3 z-[1000] flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-3.5 py-1.5 text-[13px] font-semibold text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:bg-[var(--brand-soft)]">
+              <MapPin size={14} /> מקד את הנבחרים · {pickedAttractions.length}
+            </button>
+          )}
         </div>
 
         {/* attraction cards — a grid on desktop, single column on mobile */}

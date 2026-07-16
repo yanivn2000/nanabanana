@@ -27,6 +27,8 @@ export function MapClient(props: {
   onStopClick?: (i: number) => void;
   userPos?: [number, number] | null;
   onBounds?: (b: MapBounds) => void;
+  picks?: Attraction[];
+  fitNonce?: number;
 }) {
   return <AttractionsMap {...props} />;
 }
