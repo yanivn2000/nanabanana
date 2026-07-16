@@ -259,8 +259,11 @@ export function DestinationView({
   const moreFilterCount = (flags.free ? 1 : 0) + (flags.indoor ? 1 : 0) + (flags.withInsights ? 1 : 0) + (mapOnly ? 1 : 0);
 
   // Interest-tile counts (ALL interests are always shown so they double as the
-  // profile editor) + popover filter counts. A tile's count = places of that
-  // interest in the current view (must-see toggle + search + map + popover).
+  // profile editor) + popover filter counts. A tile's count is a STABLE FACT —
+  // how many places of that interest the city holds in the current search/map
+  // scope. It deliberately ignores the "רק אתרי חובה" toggle: that's an
+  // additional filter on the grid, not a preference, so it must not rewrite
+  // "ספורט 4" to "ספורט 0" just because none of those 4 are editor-picks.
   const { interestTiles, flagCount } = useMemo(() => {
     const q = query.toLowerCase();
     const mQ = (a: Attraction) => !q || `${a.name_he ?? ""} ${a.name_en} ${descriptor(a)}`.toLowerCase().includes(q);
@@ -271,16 +274,16 @@ export function DestinationView({
     const mTop = (a: Attraction) => (a.family_score ?? 0) >= 8;
     const mIns = (a: Attraction) => !!insights[a.id]?.length;
     const pop = (a: Attraction) => (!flags.free || mFree(a)) && (!flags.indoor || mIndoor(a)) && (!flags.top || mTop(a)) && (!flags.withInsights || mIns(a));
-    const base = (a: Attraction) => mQ(a) && mMap(a) && pop(a) && (!mustOnly || a.must_see === 1);
+    const base = (a: Attraction) => mQ(a) && mMap(a) && pop(a);
     const tiles = ALL_INTERESTS.map((it) => ({ key: it, count: attractions.filter((a) => base(a) && matchesInterest(a, it)).length }));
     const flagCount = {
-      free: attractions.filter((a) => mQ(a) && mMap(a) && (!mustOnly || a.must_see === 1) && mFree(a)).length,
-      indoor: attractions.filter((a) => mQ(a) && mMap(a) && (!mustOnly || a.must_see === 1) && mIndoor(a)).length,
-      top: attractions.filter((a) => mQ(a) && mMap(a) && (!mustOnly || a.must_see === 1) && mTop(a)).length,
-      withInsights: attractions.filter((a) => mQ(a) && mMap(a) && (!mustOnly || a.must_see === 1) && mIns(a)).length,
+      free: attractions.filter((a) => mQ(a) && mMap(a) && mFree(a)).length,
+      indoor: attractions.filter((a) => mQ(a) && mMap(a) && mIndoor(a)).length,
+      top: attractions.filter((a) => mQ(a) && mMap(a) && mTop(a)).length,
+      withInsights: attractions.filter((a) => mQ(a) && mMap(a) && mIns(a)).length,
     } as Record<keyof typeof flags, number>;
     return { interestTiles: tiles, flagCount };
-  }, [attractions, query, mapOnly, bounds, flags, mustOnly, insights]);
+  }, [attractions, query, mapOnly, bounds, flags, insights]);
 
   // Build a trip from the city marks (yes = anchors, maybe = "if time", no =
   // excluded). Empty selection is fine — the builder falls back to the
@@ -389,7 +392,10 @@ export function DestinationView({
           page background (not a white slab) so the hero card floats above it. */}
       <div className="sticky top-[57px] z-30 hidden bg-[var(--bg)] shadow-[0_10px_12px_-12px_rgba(16,29,43,0.12)] lg:block">
         <div className="mx-auto max-w-[1600px] px-8">
-          {/* row 1 — interest tiles (the profile, editable in place) + search */}
+          {/* row 1 — interest tiles (the profile, editable in place) + the
+              "editor picks" filter + search. The must-see toggle lives here (not
+              in row 2) and is additive: it narrows the grid but never rewrites
+              the interest counts above. */}
           <div className="flex items-center gap-4 border-b border-[var(--border)] py-2">
             <span className="shrink-0 text-[12.5px] font-medium text-[var(--text-3)]">מה מעניין אתכם?</span>
             <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
@@ -397,6 +403,12 @@ export function DestinationView({
                 <InterestTile key={key} interest={key} state={interestState(key)} count={count} onClick={() => cycleInterest(key)} />
               ))}
             </div>
+            <button onClick={() => setMustOnly((v) => !v)}
+              className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
+              style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
+                       color: mustOnly ? "#fff" : "var(--text-2)", borderColor: mustOnly ? "var(--brand)" : "var(--border)" }}>
+              ⭐ רק אתרי חובה
+            </button>
             <div className="flex w-[280px] shrink-0 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
               <Search size={16} className="shrink-0 text-[var(--text-3)]" />
               <input value={query} onChange={(e) => setQuery(e.target.value)}
@@ -405,15 +417,8 @@ export function DestinationView({
             </div>
           </div>
 
-          {/* row 2 — must-see toggle · bulk-select the current view · sort · filters */}
+          {/* row 2 — bulk-select the current view · sort · filters */}
           <div className="flex items-center gap-2.5 py-2">
-            <button onClick={() => setMustOnly((v) => !v)}
-              className="flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
-              style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
-                       color: mustOnly ? "#fff" : "var(--text-2)", borderColor: mustOnly ? "var(--brand)" : "var(--border)" }}>
-              ⭐ רק אתרי חובה
-            </button>
-
             {viewIds.length > 0 && (
               <>
                 <button onClick={() => setMany(viewIds, "yes")}
@@ -426,10 +431,9 @@ export function DestinationView({
                     <X size={14} /> נקה · {viewSelected}
                   </button>
                 )}
+                <span className="mx-1 h-5 w-px shrink-0 bg-[var(--border)]" />
               </>
             )}
-
-            <span className="mx-1 h-5 w-px shrink-0 bg-[var(--border)]" />
 
             {/* sort */}
             <div className="relative shrink-0">
@@ -570,7 +574,15 @@ export function DestinationView({
                 placeholder="חיפוש אטרקציה…"
                 className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]" />
             </div>
-            <p className="mb-1.5 text-[12.5px] font-medium text-[var(--text-3)]">מה מעניין אתכם? (הקישו לסמן ✓/✕)</p>
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <p className="text-[12.5px] font-medium text-[var(--text-3)]">מה מעניין אתכם? <span className="text-[var(--text-3)] opacity-70">(✓/✕)</span></p>
+              <button onClick={() => setMustOnly((v) => !v)}
+                className="shrink-0 rounded-full px-3 py-1 text-[13px] font-medium transition"
+                style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
+                         color: mustOnly ? "#fff" : "var(--text-2)", border: `1px solid ${mustOnly ? "var(--brand)" : "var(--border)"}` }}>
+                ⭐ רק אתרי חובה
+              </button>
+            </div>
             <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
               {interestTiles.map(({ key, count }) => (
                 <InterestTile key={key} interest={key} state={interestState(key)} count={count} onClick={() => cycleInterest(key)} />
@@ -582,12 +594,6 @@ export function DestinationView({
                   <Check size={13} /> נבחרו {yesCount}{maybeCount ? ` · ${maybeCount}` : ""}
                 </span>
               )}
-              <button onClick={() => setMustOnly((v) => !v)}
-                className="rounded-full px-3.5 py-1.5 text-[13.5px] font-medium transition"
-                style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
-                         color: mustOnly ? "#fff" : "var(--text-2)", border: `1px solid ${mustOnly ? "var(--brand)" : "var(--border)"}` }}>
-                ⭐ רק אתרי חובה
-              </button>
               {viewIds.length > 0 && (
                 <>
                   <button onClick={() => setMany(viewIds, "yes")}
