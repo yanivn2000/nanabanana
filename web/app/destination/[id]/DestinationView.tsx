@@ -7,7 +7,6 @@ import { MapClient } from "@/components/MapClient";
 import { CityPoster } from "@/components/CityPoster";
 import { descriptor, catColor, bigImage, mergeCat, countryFlag } from "@/lib/labels";
 import { passUrl, type Pass } from "@/lib/passes";
-import { useRouter } from "next/navigation";
 import { useProfile, useTrips, useCitySelection, type Choice } from "@/lib/store";
 
 // distance slider index → per-trip dailyDriveHours (same scale as the old flow)
@@ -19,8 +18,26 @@ const RADIUS_HE = ["קרוב מאוד", "עד שעה", "עד שעתיים", "ג�
 const PACES = ["רגוע", "בינוני", "אינטנסיבי"] as const;
 type Pace = (typeof PACES)[number];
 const PACE_PER_DAY: Record<Pace, number> = { "רגוע": 4, "בינוני": 5, "אינטנסיבי": 6 };
-import { deriveTaste, tasteScore, coarseFits } from "@/lib/taste";
+import { deriveTaste, tasteScore, INTEREST_TASTE, INTEREST_CATS } from "@/lib/taste";
+import { CATEGORY_ICONS } from "@/components/CategoryTiles";
 import type { Attraction, Destination, Insight } from "@/lib/db";
+
+// Every interest in the profile vocabulary — used as the fallback tile set when
+// the traveler hasn't set profile interests yet.
+const ALL_INTERESTS = Object.keys(INTEREST_TASTE);
+// Does an attraction belong to an interest? taste-tags first (precise), then the
+// coarse category/subcategory map so it works in half-tagged cities too.
+function matchesInterest(a: Attraction, interest: string): boolean {
+  const tags = INTEREST_TASTE[interest];
+  if (tags && a.taste_tags && a.taste_tags.some((t) => tags.includes(t))) return true;
+  const m = INTEREST_CATS[interest];
+  if (m) {
+    const cat = mergeCat(a.category);
+    if (m.cats?.includes(cat)) return true;
+    if (a.subcategory && m.subs?.includes(a.subcategory)) return true;
+  }
+  return false;
+}
 
 // Emoji per insight kind — quick visual cue for the source of the tip.
 const KIND_ICON: Record<string, string> = {
@@ -99,9 +116,10 @@ export function DestinationView({
   const [query, setQuery] = useState("");
   const [showPlaces, setShowPlaces] = useState(false);
   const [showPasses, setShowPasses] = useState(false);
-  const [activeCat, setActiveCat] = useState<string | null>(null);
+  const [activeInterest, setActiveInterest] = useState<string | null>(null);
+  const [mustOnly, setMustOnly] = useState(true);   // "רק אתרי חובה" — default ON
   const [flags, setFlags] = useState({
-    fitsProfile: false, mustSee: false, free: false, indoor: false, top: false, withInsights: false,
+    free: false, indoor: false, top: false, withInsights: false,
   });
   const toggleFlag = (k: keyof typeof flags) =>
     setFlags((f) => ({ ...f, [k]: !f[k] }));
@@ -135,28 +153,17 @@ export function DestinationView({
   const buildCapacity = buildDays * PACE_PER_DAY[buildPace];
   const overPick = yesCount > buildCapacity;
 
-  const cats = useMemo(
-    () => Array.from(new Set(attractions.map((a) => mergeCat(a.category)))),
-    [attractions]
-  );
-  // "מתאים לפרופיל שלי" — pure client-side match on the already-loaded
-  // attractions. Taste-tagged cities (London) use the precise taste score;
-  // everywhere else falls back to a coarse interests→categories match.
-  const router = useRouter();
   const taste = useMemo(() => deriveTaste(profile), [profile]);
   const cityTasteTagged = useMemo(() => attractions.some((a) => a.taste_tags?.length), [attractions]);
-  const hasPrefs = profile.interests.length > 0;
+
+  // The visible list: must-see by default (the "רק אתרי חובה" toggle), narrowed
+  // to the active interest tile + the popover filters. Search runs over the
+  // whole loaded city.
   const filtered = useMemo(
     () =>
       attractions.filter((a) => {
-        if (flags.fitsProfile) {
-          const fits = cityTasteTagged
-            ? tasteScore(a.taste_tags, taste) >= 3
-            : coarseFits(mergeCat(a.category), a.subcategory, profile.interests);
-          if (!fits) return false;
-        }
-        if (activeCat && mergeCat(a.category) !== activeCat) return false;
-        if (flags.mustSee && a.must_see !== 1) return false;
+        if (mustOnly && a.must_see !== 1) return false;
+        if (activeInterest && !matchesInterest(a, activeInterest)) return false;
         if (flags.free && a.cost_level !== 0) return false;
         if (flags.indoor && !(a.indoor_outdoor === "indoor" || a.indoor_outdoor === "both")) return false;
         if (flags.top && (a.family_score ?? 0) < 8) return false;
@@ -167,7 +174,7 @@ export function DestinationView({
         }
         return true;
       }),
-    [attractions, activeCat, query, flags, insights, taste, cityTasteTagged, profile.interests]
+    [attractions, activeInterest, mustOnly, query, flags, insights]
   );
 
   // The list shows the filtered set, optionally narrowed to the map viewport.
@@ -198,50 +205,59 @@ export function DestinationView({
   // Paginate the list: show PAGE at a time, "load more" reveals the next page.
   // Search + filters run over the FULL loaded city, so search always finds a
   // place even if it ranks beyond the first page. Reset to page 1 on any change.
-  useEffect(() => { setVisibleCount(PAGE); }, [query, activeCat, flags, mapOnly, sort]);
+  useEffect(() => { setVisibleCount(PAGE); }, [query, activeInterest, mustOnly, flags, mapOnly, sort]);
   const visible = sortedItems.slice(0, visibleCount);
   // Bulk marks scoped to the current view (e.g. filter to "מוזיאון" → select /
   // clear all museums at once). Operates on the whole filtered set, not the page.
   const viewIds = useMemo(() => sortedItems.map((a) => a.id), [sortedItems]);
   const viewSelected = viewIds.filter((id) => choices[id]).length;
 
-  // The extra filters tucked behind the desktop "פילטרים" popover.
-  const moreFilterCount = (flags.indoor ? 1 : 0) + (flags.withInsights ? 1 : 0) + (mapOnly ? 1 : 0);
+  // Active popover filters (for the "פילטרים · N" badge).
+  const moreFilterCount = (flags.free ? 1 : 0) + (flags.indoor ? 1 : 0) + (flags.withInsights ? 1 : 0) + (mapOnly ? 1 : 0);
 
-  // Faceted counts shown on each tag. A facet's count respects every OTHER
-  // active filter but not itself — i.e. "how many remain if I add this one".
-  const facet = useMemo(() => {
-    const catOf = (a: Attraction) => mergeCat(a.category);
+  // The interest tiles (primary filters) + the popover filter counts. A tile
+  // shows only if the interest has ANY place in the city; its count respects the
+  // must-see toggle + search + map + popover filters (faceted, not itself).
+  const { interestTiles, allCount, flagCount } = useMemo(() => {
     const q = query.toLowerCase();
     const mQ = (a: Attraction) => !q || `${a.name_he ?? ""} ${a.name_en} ${descriptor(a)}`.toLowerCase().includes(q);
     const mMap = (a: Attraction) => !mapOnly || !bounds ||
       (a.lat != null && a.lng != null && a.lat <= bounds.north && a.lat >= bounds.south && a.lng <= bounds.east && a.lng >= bounds.west);
-    const pred: Record<keyof typeof flags, (a: Attraction) => boolean> = {
-      fitsProfile: (a) => cityTasteTagged ? tasteScore(a.taste_tags, taste) >= 3 : coarseFits(catOf(a), a.subcategory, profile.interests),
-      mustSee: (a) => a.must_see === 1,
-      free: (a) => a.cost_level === 0,
-      indoor: (a) => a.indoor_outdoor === "indoor" || a.indoor_outdoor === "both",
-      top: (a) => (a.family_score ?? 0) >= 8,
-      withInsights: (a) => !!insights[a.id]?.length,
-    };
-    const active = (Object.keys(flags) as (keyof typeof flags)[]).filter((k) => flags[k]);
-    // category counts: query + map + all active flags (but not the category itself)
-    const cats: Record<string, number> = {};
-    let allCount = 0;
-    for (const a of attractions) {
-      if (!mQ(a) || !mMap(a) || !active.every((k) => pred[k](a))) continue;
-      allCount++;
-      const c = catOf(a); cats[c] = (cats[c] ?? 0) + 1;
+    const mFree = (a: Attraction) => a.cost_level === 0;
+    const mIndoor = (a: Attraction) => a.indoor_outdoor === "indoor" || a.indoor_outdoor === "both";
+    const mTop = (a: Attraction) => (a.family_score ?? 0) >= 8;
+    const mIns = (a: Attraction) => !!insights[a.id]?.length;
+    const pop = (a: Attraction) => (!flags.free || mFree(a)) && (!flags.indoor || mIndoor(a)) && (!flags.top || mTop(a)) && (!flags.withInsights || mIns(a));
+    const ctx = (a: Attraction) => mQ(a) && mMap(a) && pop(a);                       // everything but must-toggle + interest
+    const ctxMust = (a: Attraction) => ctx(a) && (!mustOnly || a.must_see === 1);
+    const source = profile.interests.length ? profile.interests : ALL_INTERESTS;
+    const seen = new Set<string>();
+    const tiles: { key: string; count: number }[] = [];
+    for (const it of source) {
+      if (seen.has(it)) continue; seen.add(it);
+      if (!attractions.some((a) => ctx(a) && matchesInterest(a, it))) continue;      // hide truly empty
+      tiles.push({ key: it, count: attractions.filter((a) => ctxMust(a) && matchesInterest(a, it)).length });
     }
-    // flag counts: query + map + activeCat + the OTHER active flags + this flag
-    const flagCount = {} as Record<keyof typeof flags, number>;
-    (Object.keys(pred) as (keyof typeof flags)[]).forEach((key) => {
-      const others = active.filter((k) => k !== key);
-      flagCount[key] = attractions.filter((a) =>
-        mQ(a) && mMap(a) && (!activeCat || catOf(a) === activeCat) && others.every((k) => pred[k](a)) && pred[key](a)).length;
-    });
-    return { cats, allCount, flagCount };
-  }, [attractions, query, mapOnly, bounds, flags, activeCat, cityTasteTagged, taste, insights, profile.interests]);
+    const allCount = attractions.filter(ctxMust).length;
+    // popover counts: respect interest + must-toggle + search + map (not other flags)
+    const fBase = (a: Attraction) => mQ(a) && mMap(a) && (!activeInterest || matchesInterest(a, activeInterest)) && (!mustOnly || a.must_see === 1);
+    const flagCount = {
+      free: attractions.filter((a) => fBase(a) && mFree(a)).length,
+      indoor: attractions.filter((a) => fBase(a) && mIndoor(a)).length,
+      top: attractions.filter((a) => fBase(a) && mTop(a)).length,
+      withInsights: attractions.filter((a) => fBase(a) && mIns(a)).length,
+    } as Record<keyof typeof flags, number>;
+    return { interestTiles: tiles, allCount, flagCount };
+  }, [attractions, query, mapOnly, bounds, flags, activeInterest, mustOnly, insights, profile.interests]);
+
+  // #5 — when on an interest with "רק אתרי חובה" ON, how many non-must-see of it
+  // exist (matching the search), so we can invite the traveler to reveal them.
+  const nonMustCount = useMemo(() => {
+    if (!activeInterest || !mustOnly) return 0;
+    const q = query.toLowerCase();
+    return attractions.filter((a) => a.must_see !== 1 && matchesInterest(a, activeInterest)
+      && (!q || `${a.name_he ?? ""} ${a.name_en} ${descriptor(a)}`.toLowerCase().includes(q))).length;
+  }, [attractions, activeInterest, mustOnly, query]);
 
   // Build a trip from the city marks (yes = anchors, maybe = "if time", no =
   // excluded). Empty selection is fine — the builder falls back to the
@@ -350,23 +366,27 @@ export function DestinationView({
           page background (not a white slab) so the hero card floats above it. */}
       <div className="sticky top-[57px] z-30 hidden bg-[var(--bg)] shadow-[0_10px_12px_-12px_rgba(16,29,43,0.12)] lg:block">
         <div className="mx-auto max-w-[1600px] px-8">
-          {/* row 1 — categories (right) + search (left) */}
+          {/* row 1 — interest tiles (right, the primary filters) + search (left) */}
           <div className="flex items-center gap-5 border-b border-[var(--border)] py-1.5">
-            <div className="flex min-w-0 flex-1 items-center gap-6 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-              {[null, ...cats].map((c) => {
-                const on = activeCat === c;
+            <div className="flex min-w-0 flex-1 items-center gap-5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+              {[null, ...interestTiles.map((t) => t.key)].map((key) => {
+                const on = activeInterest === key;
+                const count = key === null ? allCount : interestTiles.find((t) => t.key === key)!.count;
                 return (
-                  <button key={c ?? "all"} onClick={() => setActiveCat(c)}
-                    className="shrink-0 whitespace-nowrap border-b-2 pb-2 pt-1.5 text-[15px] transition"
+                  <button key={key ?? "all"} onClick={() => setActiveInterest(key)}
+                    className="flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 pb-2 pt-1.5 text-[15px] transition"
                     style={{ color: on ? "var(--text)" : "var(--text-2)", fontWeight: on ? 600 : 400,
                              borderColor: on ? "var(--brand)" : "transparent" }}>
-                    {c === null ? "הכל" : CAT_HE[c] ?? c}
-                    <span className="text-[var(--text-3)]"> {c === null ? facet.allCount : facet.cats[c] ?? 0}</span>
+                    {key && CATEGORY_ICONS[key] && (
+                      <svg width="17" height="17" viewBox="0 0 32 32" aria-hidden className="shrink-0">{CATEGORY_ICONS[key]}</svg>
+                    )}
+                    {key === null ? "הכל" : key}
+                    <span className="text-[var(--text-3)]">{count}</span>
                   </button>
                 );
               })}
             </div>
-            <div className="flex w-[320px] shrink-0 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
+            <div className="flex w-[300px] shrink-0 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
               <Search size={16} className="shrink-0 text-[var(--text-3)]" />
               <input value={query} onChange={(e) => setQuery(e.target.value)}
                 placeholder="חיפוש אטרקציה, שכונה או סוג מקום…"
@@ -374,38 +394,16 @@ export function DestinationView({
             </div>
           </div>
 
-          {/* row 2 — quick tags (right) · divider · sort + filters (left) */}
+          {/* row 2 — must-see toggle · bulk (when on an interest) · sort · filters */}
           <div className="flex items-center gap-2.5 py-2">
-            <button
-              onClick={() => { if (!hasPrefs) { router.push("/profile"); return; } toggleFlag("fitsProfile"); }}
-              title={hasPrefs ? undefined : "מלאו מה מעניין אתכם בפרופיל"}
-              className="rounded-full px-3.5 py-1.5 text-[13.5px] font-medium transition"
-              style={{ background: flags.fitsProfile ? "var(--brand)" : "var(--brand-soft)",
-                       color: flags.fitsProfile ? "#fff" : "var(--brand-ink)", border: "1.5px solid var(--brand)" }}>
-              ✨ מתאים לי <span className="opacity-70">{facet.flagCount.fitsProfile}</span>
+            <button onClick={() => setMustOnly((v) => !v)}
+              className="flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
+              style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
+                       color: mustOnly ? "#fff" : "var(--text-2)", borderColor: mustOnly ? "var(--brand)" : "var(--border)" }}>
+              ⭐ רק אתרי חובה
             </button>
-            {([["mustSee", "⭐ חובה לביקור"], ["free", "חינם"],
-               ...(isFamily ? [["top", "מומלץ למשפחות"]] : [])] as [keyof typeof flags, string][]).map(([k, label]) => (
-              <button key={k} onClick={() => toggleFlag(k)}
-                className="rounded-full px-3 py-1.5 text-[13.5px] transition"
-                style={{ background: flags[k] ? "var(--accent)" : "var(--surface)",
-                         color: flags[k] ? "#fff" : "var(--text-2)",
-                         border: `1px solid ${flags[k] ? "var(--accent)" : "var(--border)"}` }}>
-                {label} <span className="opacity-60">{facet.flagCount[k]}</span>
-              </button>
-            ))}
 
-            {activeCat == null ? (
-              mustSeeIds.length > 0 && (
-                <button onClick={toggleAllMustSee}
-                  className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
-                  style={{ background: allMustSeeYes ? "var(--brand)" : "var(--surface)",
-                           color: allMustSeeYes ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
-                  {allMustSeeYes ? <Check size={14} /> : <Sparkles size={14} />}
-                  {allMustSeeYes ? "כל החובה נבחרו · בטל" : `בחר את כל אתרי החובה · ${mustSeeIds.length}`}
-                </button>
-              )
-            ) : (
+            {activeInterest != null && (
               <>
                 <button onClick={() => setMany(viewIds, "yes")}
                   className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-3.5 py-1.5 text-[13.5px] font-medium text-[var(--brand-ink)] transition">
@@ -453,12 +451,28 @@ export function DestinationView({
                 <ChevronDown size={14} className={filtersOpen ? "rotate-180" : ""} />
               </button>
               {filtersOpen && (
-                <div className="absolute z-40 mt-1 w-56 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]">
-                  {([["indoor", "מקורה"], ["withInsights", "💬 עם תובנות מטיילים"]] as [keyof typeof flags, string][]).map(([k, label]) => (
+                <div className="absolute z-40 mt-1 w-60 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]">
+                  {/* action — mark every must-see place as כן in one tap */}
+                  {mustSeeIds.length > 0 && (
+                    <>
+                      <button onClick={toggleAllMustSee}
+                        className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]">
+                        <span className="font-medium" style={{ color: allMustSeeYes ? "var(--brand-ink)" : "var(--text)" }}>
+                          ⭐ אתרי חובה
+                          <span className="font-normal text-[var(--text-3)]"> {allMustSeeYes ? "· נבחרו" : `· סמן הכל (${mustSeeIds.length})`}</span>
+                        </span>
+                        {allMustSeeYes ? <Check size={15} className="text-[var(--brand)]" /> : <Sparkles size={14} className="text-[var(--brand)]" />}
+                      </button>
+                      <div className="my-1 h-px bg-[var(--border)]" />
+                    </>
+                  )}
+                  {([["free", "חינם"], ["indoor", "מקורה"],
+                     ...(isFamily ? [["top", "מומלץ למשפחות"]] : []),
+                     ["withInsights", "💬 עם תובנות מטיילים"]] as [keyof typeof flags, string][]).map(([k, label]) => (
                     <button key={k} onClick={() => toggleFlag(k)}
                       className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]">
                       <span style={{ color: flags[k] ? "var(--brand-ink)" : "var(--text-2)", fontWeight: flags[k] ? 600 : 400 }}>
-                        {label} <span className="text-[var(--text-3)]">{facet.flagCount[k]}</span>
+                        {label} <span className="text-[var(--text-3)]">{flagCount[k]}</span>
                       </span>
                       {flags[k] && <Check size={15} className="text-[var(--brand)]" />}
                     </button>
@@ -546,16 +560,19 @@ export function DestinationView({
                 className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]" />
             </div>
             <div className="mb-3 flex gap-4 overflow-x-auto pb-1">
-              {[null, ...cats].map((c) => {
-                const on = activeCat === c;
+              {[null, ...interestTiles.map((t) => t.key)].map((key) => {
+                const on = activeInterest === key;
+                const count = key === null ? allCount : interestTiles.find((t) => t.key === key)!.count;
                 return (
-                  <button key={c ?? "all"} onClick={() => setActiveCat(c)}
+                  <button key={key ?? "all"} onClick={() => setActiveInterest(key)}
                     className="flex shrink-0 items-center gap-1.5 whitespace-nowrap pb-1 text-[14px] transition"
-                    style={{ color: on ? "var(--accent-ink)" : "var(--text-2)", fontWeight: on ? 500 : 400,
-                             borderBottom: `2px solid ${on ? "var(--accent)" : "transparent"}` }}>
-                    {c !== null && <span className="size-2.5 rounded-full" style={{ background: catColor(c) }} />}
-                    {c === null ? "הכל" : CAT_HE[c] ?? c}
-                    <span className="text-[var(--text-3)]">{c === null ? facet.allCount : facet.cats[c] ?? 0}</span>
+                    style={{ color: on ? "var(--text)" : "var(--text-2)", fontWeight: on ? 600 : 400,
+                             borderBottom: `2px solid ${on ? "var(--brand)" : "transparent"}` }}>
+                    {key && CATEGORY_ICONS[key] && (
+                      <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden className="shrink-0">{CATEGORY_ICONS[key]}</svg>
+                    )}
+                    {key === null ? "הכל" : key}
+                    <span className="text-[var(--text-3)]">{count}</span>
                   </button>
                 );
               })}
@@ -566,30 +583,19 @@ export function DestinationView({
                   <Check size={13} /> נבחרו {yesCount}{maybeCount ? ` · ${maybeCount}` : ""}
                 </span>
               )}
-              <button onClick={() => { if (!hasPrefs) { router.push("/profile"); return; } toggleFlag("fitsProfile"); }}
+              <button onClick={() => setMustOnly((v) => !v)}
                 className="rounded-full px-3.5 py-1.5 text-[13.5px] font-medium transition"
-                style={{ background: flags.fitsProfile ? "var(--brand)" : "var(--brand-soft)",
-                         color: flags.fitsProfile ? "#fff" : "var(--brand-ink)", border: "1.5px solid var(--brand)" }}>
-                ✨ מתאים לי <span className="opacity-70">{facet.flagCount.fitsProfile}</span>
+                style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
+                         color: mustOnly ? "#fff" : "var(--text-2)", border: `1px solid ${mustOnly ? "var(--brand)" : "var(--border)"}` }}>
+                ⭐ רק אתרי חובה
               </button>
-              {([["mustSee", "⭐ חובה"], ["free", "חינם"], ["indoor", "מקורה"],
-                 ...(isFamily ? [["top", "למשפחות"]] : [])] as [keyof typeof flags, string][]).map(([k, label]) => (
-                <button key={k} onClick={() => toggleFlag(k)}
-                  className="rounded-full px-3 py-1.5 text-[13.5px] transition"
-                  style={{ background: flags[k] ? "var(--accent)" : "var(--surface)", color: flags[k] ? "#fff" : "var(--text-2)",
-                           border: `1px solid ${flags[k] ? "var(--accent)" : "var(--border)"}` }}>{label} <span className="opacity-60">{facet.flagCount[k]}</span></button>
-              ))}
-              <button onClick={() => setMapOnly((v) => !v)}
-                className="rounded-full px-3 py-1.5 text-[13.5px] transition"
-                style={{ background: mapOnly ? "var(--brand)" : "var(--surface)", color: mapOnly ? "#fff" : "var(--text-2)",
-                         border: `1px solid ${mapOnly ? "var(--brand)" : "var(--border)"}` }}>📍 על המפה</button>
-              {activeCat == null ? (
+              {activeInterest == null ? (
                 mustSeeIds.length > 0 && (
                   <button onClick={toggleAllMustSee}
                     className="rounded-full px-3 py-1.5 text-[13.5px] font-medium transition"
                     style={{ background: allMustSeeYes ? "var(--brand)" : "var(--surface)",
                              color: allMustSeeYes ? "#fff" : "var(--brand-ink)", border: "1px solid var(--brand)" }}>
-                    {allMustSeeYes ? "✓ כל החובה" : `⭐ בחר את כל החובה · ${mustSeeIds.length}`}
+                    {allMustSeeYes ? "✓ כל החובה נבחרו" : `⭐ בחר את כל החובה · ${mustSeeIds.length}`}
                   </button>
                 )
               ) : (
@@ -606,6 +612,16 @@ export function DestinationView({
                   )}
                 </>
               )}
+              {([["free", "חינם"], ["indoor", "מקורה"]] as [keyof typeof flags, string][]).map(([k, label]) => (
+                <button key={k} onClick={() => toggleFlag(k)}
+                  className="rounded-full px-3 py-1.5 text-[13.5px] transition"
+                  style={{ background: flags[k] ? "var(--accent)" : "var(--surface)", color: flags[k] ? "#fff" : "var(--text-2)",
+                           border: `1px solid ${flags[k] ? "var(--accent)" : "var(--border)"}` }}>{label} <span className="opacity-60">{flagCount[k]}</span></button>
+              ))}
+              <button onClick={() => setMapOnly((v) => !v)}
+                className="rounded-full px-3 py-1.5 text-[13.5px] transition"
+                style={{ background: mapOnly ? "var(--brand)" : "var(--surface)", color: mapOnly ? "#fff" : "var(--text-2)",
+                         border: `1px solid ${mapOnly ? "var(--brand)" : "var(--border)"}` }}>📍 על המפה</button>
             </div>
           </div>
 
@@ -613,6 +629,12 @@ export function DestinationView({
             <p className="pt-3 text-[13px] text-[var(--brand-ink)] lg:pt-4">
               {mapOnly ? `מציג ${sortedItems.length} מקומות באזור המפה — הזיזו/הגדילו את המפה`
                        : `מציג רק מקומות עם תובנות מטיילים (${sortedItems.length})`}
+            </p>
+          )}
+          {nonMustCount > 0 && (
+            <p className="pt-3 text-[13px] leading-snug text-[var(--text-2)] lg:pt-4">
+              מוצגים רק אתרי החובה. יש עוד <span className="font-semibold text-[var(--text)]">{nonMustCount} מקומות ב{activeInterest}</span> בעיר —{" "}
+              <button onClick={() => setMustOnly(false)} className="font-medium text-[var(--brand-ink)] underline">הצג את כולם</button>
             </p>
           )}
 

@@ -48,7 +48,7 @@ export function tasteScore(tags: string[] | null, w: Record<string, number>): nu
 // Coarse profile match for cities that aren't taste-tagged yet: map profile
 // interest chips onto attraction categories/subcategories. Weaker than
 // taste_tags, but it lets "מתאים לי" work in every city. (#63)
-const INTEREST_CATS: Record<string, { cats?: string[]; subs?: string[] }> = {
+export const INTEREST_CATS: Record<string, { cats?: string[]; subs?: string[] }> = {
   "טבע": { cats: ["nature"] },
   "חופים": { cats: ["nature"], subs: ["beach"] },
   "אוכל": { cats: ["food"] },
