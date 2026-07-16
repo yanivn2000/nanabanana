@@ -67,8 +67,10 @@ export const POSTER_QUERY: Record<number, string> = {
   25: "Rhodes old town medieval harbour Greece",
 };
 
-// Ordered candidate srcs: the preferred crop first, the others as fallbacks
-// (a city may have only some crops). Empty when the city has no poster.
+// Ordered candidate srcs: the preferred crop first, the other as fallback.
+// Real-photo posters ship in two crops — 4x2 (wide) and 3x4 (tall); the old 4x3
+// "landscape" crops were retired, so both banner and landscape use the wide 4x2.
+// Empty when the city has no poster.
 export function posterSrcs(
   destinationId: number | null | undefined,
   prefer: "banner" | "landscape" | "portrait" = "landscape"
@@ -76,10 +78,7 @@ export function posterSrcs(
   if (destinationId == null) return [];
   const slug = POSTER_SLUG[destinationId];
   if (!slug) return [];
-  const banner = `/posters/${slug}-4x2.jpg`;
-  const land = `/posters/${slug}-4x3.jpg`;
-  const port = `/posters/${slug}-3x4.jpg`;
-  return prefer === "portrait" ? [port, land, banner]
-    : prefer === "banner" ? [banner, land, port]
-    : [land, banner, port];
+  const banner = `/posters/${slug}-4x2.jpg`;   // wide real photo
+  const port = `/posters/${slug}-3x4.jpg`;     // tall real photo
+  return prefer === "portrait" ? [port, banner] : [banner, port];
 }
