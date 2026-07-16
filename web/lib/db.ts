@@ -243,6 +243,51 @@ export async function insightsByAttraction(
   return m;
 }
 
+// --- Admin: destination management ------------------------------------------
+export type AdminDestination = {
+  id: number; city: string; country: string; region: string | null;
+  city_he: string | null; country_he: string | null;
+  lat: number; lng: number; description_he: string | null;
+  best_months: number[] | null; israeli_popularity_score: number | null;
+  timezone: string | null; currency: string | null; language: string | null;
+  shown_count: number; must_count: number; editor_ranked: number; img_pct: number; he_pct: number;
+};
+
+// Every destination with its full record + content-health stats for the admin.
+export async function adminDestinations(): Promise<AdminDestination[]> {
+  return query<AdminDestination>(
+    `SELECT d.id, d.city, d.country, d.region, d.city_he, d.country_he, d.lat, d.lng,
+            d.description_he, d.best_months, d.israeli_popularity_score,
+            d.timezone, d.currency, d.language,
+            count(a.id) FILTER (WHERE ${SHOWN})::int AS shown_count,
+            count(a.id) FILTER (WHERE ${SHOWN} AND a.must_see = 1)::int AS must_count,
+            (SELECT count(*)::int FROM editor_picks ep WHERE ep.destination_id = d.id AND ep.rank IS NOT NULL) AS editor_ranked,
+            COALESCE(round(100.0 * count(a.id) FILTER (WHERE ${SHOWN} AND a.image_url IS NOT NULL)
+              / NULLIF(count(a.id) FILTER (WHERE ${SHOWN}), 0))::int, 0) AS img_pct,
+            COALESCE(round(100.0 * count(a.id) FILTER (WHERE ${SHOWN} AND a.name_he IS NOT NULL)
+              / NULLIF(count(a.id) FILTER (WHERE ${SHOWN}), 0))::int, 0) AS he_pct
+       FROM destinations d
+       LEFT JOIN attractions a ON a.destination_id = d.id
+       GROUP BY d.id
+       ORDER BY shown_count DESC`);
+}
+
+// Whitelisted editable destination fields (the admin cities tab).
+const DEST_EDITABLE = new Set([
+  "city", "country", "region", "city_he", "country_he", "lat", "lng",
+  "description_he", "best_months", "israeli_popularity_score",
+  "timezone", "currency", "language",
+]);
+
+export async function updateDestination(id: number, fields: Record<string, unknown>): Promise<boolean> {
+  const entries = Object.entries(fields).filter(([k]) => DEST_EDITABLE.has(k));
+  if (!entries.length) return false;
+  const sets = entries.map(([k], i) => `${k} = $${i + 2}`).join(", ");
+  const vals = entries.map(([k, v]) => (k === "best_months" && Array.isArray(v) ? JSON.stringify(v) : v));
+  await query(`UPDATE destinations SET ${sets} WHERE id = $1`, [id, ...vals]);
+  return true;
+}
+
 // --- User feedback ("מצאתם באג? יש רעיון?") ---------------------------------
 export type Feedback = {
   id: number; created_at: string; kind: string | null;
