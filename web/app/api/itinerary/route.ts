@@ -8,6 +8,7 @@ import {
   reviseItinerary,
 } from "@/lib/ai";
 import { buildHeuristicItinerary, buildMultiHeuristicItinerary } from "@/lib/heuristic";
+import { paceToPerDay } from "@/lib/trip-types";
 import { rankByTaste, tasteEmphasis } from "@/lib/taste";
 import { haversineKm } from "@/lib/geo";
 import type { TripHotel } from "@/lib/ai";
@@ -114,6 +115,9 @@ export async function POST(req: NextRequest) {
     // Only when there are kids: apply the family-friendliness lens (family_score
     // ranking). Adults-only trips (couple/friends) rank by taste + must-see only.
     isFamily?: boolean;
+    // Trip pace → meaningful stops/day for the heuristic builder (matches the
+    // city page's capacity promise). AI path reads pace from profileText.
+    pace?: string;
   };
   try {
     body = await req.json();
@@ -130,6 +134,7 @@ export async function POST(req: NextRequest) {
   // vintage couple and a sports/history couple get different attraction sets
   // fed to the builder → genuinely different trips. No taste → family order.
   const isFamily = body.isFamily === true;
+  const perDay = paceToPerDay(body.pace);   // heuristic stops/day, matches the pace promise
   // Base pool = top 150; then fold in the traveler's exact picks (even ones
   // ranked below 150) so a chosen place is always a real build candidate.
   const base = await topAttractions(dest.id, 150);
@@ -187,7 +192,7 @@ export async function POST(req: NextRequest) {
     const heuristic = () => attachDetails(
       buildMultiHeuristicItinerary(segAttrs.map((x) => ({
         city: x.dest.city, country: x.dest.country, days: x.days, attractions: x.attractions,
-      })), isFamily), allAttractions);
+      })), isFamily, perDay), allAttractions);
 
     if (!aiConfigured()) {
       return NextResponse.json({ itinerary: heuristic(), engine: "heuristic" });
@@ -219,7 +224,7 @@ export async function POST(req: NextRequest) {
   // buildList puts anchors first so the heuristic schedules them first too.
   if (body.mode !== "revise" && !aiConfigured()) {
     return respondGenerate(
-      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList, isFamily), "heuristic");
+      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList, isFamily, perDay), "heuristic");
   }
 
   if (body.mode === "revise") {
@@ -259,6 +264,6 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.warn(`[itinerary] AI generate failed, using heuristic: ${(e as Error).message}`);
     return respondGenerate(
-      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList, isFamily), "heuristic");
+      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList, isFamily, perDay), "heuristic");
   }
 }

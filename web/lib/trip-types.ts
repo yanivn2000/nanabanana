@@ -1,5 +1,11 @@
 // Shared trip types — used by client components and the server AI layer.
 
+// Meaningful attractions per day by pace — the SINGLE source used both for the
+// city page's capacity promise ("N ימים מספיקים לכ-…") and the heuristic
+// builder's per-day count, so what's promised is what gets built.
+export const PACE_PER_DAY: Record<string, number> = { "רגוע": 4, "בינוני": 5, "אינטנסיבי": 6 };
+export const paceToPerDay = (pace?: string): number => PACE_PER_DAY[pace ?? ""] ?? 5;
+
 export type StopKind = "nature" | "food" | "culture" | "rest" | "shopping";
 
 export type Stop = {

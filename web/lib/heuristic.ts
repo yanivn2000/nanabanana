@@ -11,7 +11,7 @@ const KIND_FROM_CAT: Record<string, StopKind> = {
   sport: "nature", food: "food", shopping: "shopping",
   historic: "culture", tourism: "culture", leisure: "nature",
 };
-const SLOT_TIMES = ["09:30", "11:30", "14:30", "16:30"];
+const SLOT_TIMES = ["09:30", "11:30", "14:30", "16:30", "18:00", "19:30"];
 
 function kindOf(a: Attraction): StopKind {
   return KIND_FROM_CAT[a.category] ?? "culture";
@@ -22,7 +22,8 @@ export function buildHeuristicItinerary(
   country: string,
   days: number,
   attractions: Attraction[],
-  isFamily = false
+  isFamily = false,
+  perDay = 5
 ): Itinerary {
   // Keep ones with coordinates, dedupe by name. The input is already
   // taste-ranked; only re-sort by family_score for trips with kids.
@@ -37,7 +38,8 @@ export function buildHeuristicItinerary(
     });
   if (isFamily) pool = [...pool].sort((a, b) => familyFit(b) - familyFit(a));
 
-  const perDay = 3;
+  // perDay comes from the trip's pace (רגוע 4 / בינוני 5 / אינטנסיבי 6) so the
+  // built plan matches the capacity the city page promised.
   const dayList = [];
   let idx = 0;
   for (let d = 0; d < days && idx < pool.length; d++) {
@@ -92,11 +94,12 @@ export function buildHeuristicItinerary(
 // numbering. Used when AI is unavailable for a multi-city trip.
 export function buildMultiHeuristicItinerary(
   segments: { city: string; country: string; days: number; attractions: Attraction[] }[],
-  isFamily = false
+  isFamily = false,
+  perDay = 5
 ): Itinerary {
   const days: Itinerary["days"] = [];
   for (const s of segments) {
-    const part = buildHeuristicItinerary(s.city, s.country, s.days, s.attractions, isFamily);
+    const part = buildHeuristicItinerary(s.city, s.country, s.days, s.attractions, isFamily, perDay);
     for (const d of part.days) {
       days.push({ ...d, label: `יום ${days.length + 1}`, base: s.city });
     }

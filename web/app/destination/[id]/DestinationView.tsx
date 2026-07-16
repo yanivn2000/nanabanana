@@ -14,11 +14,11 @@ import { useProfile, useTrips, useCitySelection, type Choice } from "@/lib/store
 const RADIUS_HOURS = [0.5, 1, 2, 3];
 const RADIUS_HE = ["קרוב מאוד", "עד שעה", "עד שעתיים", "גם רחוק"];
 
-// Trip pace (existing profile parameter) → attractions/day, matching the builder
-// ranges. Drives the capacity estimate so it reflects the chosen intensity.
+// Trip pace (existing profile parameter). PACE_PER_DAY is the shared capacity
+// source (city page promise == heuristic builder output).
 const PACES = ["רגוע", "בינוני", "אינטנסיבי"] as const;
 type Pace = (typeof PACES)[number];
-const PACE_PER_DAY: Record<Pace, number> = { "רגוע": 4, "בינוני": 5, "אינטנסיבי": 6 };
+import { PACE_PER_DAY } from "@/lib/trip-types";
 import { deriveTaste, tasteScore, INTEREST_TASTE, INTEREST_CATS } from "@/lib/taste";
 import { CategoryTile } from "@/components/CategoryTiles";
 import type { Attraction, Destination, Insight } from "@/lib/db";
