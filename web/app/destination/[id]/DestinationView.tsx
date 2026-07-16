@@ -215,10 +215,6 @@ export function DestinationView({
     }
     openBuild();
   };
-  // "select all must-see" — a one-click way to mark every חובה place as כן.
-  const mustSeeIds = useMemo(() => attractions.filter((a) => a.must_see === 1).map((a) => a.id), [attractions]);
-  const allMustSeeYes = mustSeeIds.length > 0 && mustSeeIds.every((id) => choices[id] === "yes");
-  const toggleAllMustSee = () => setMany(mustSeeIds, allMustSeeYes ? null : "yes");
   // Capacity follows the chosen pace, so the estimate matches what the builder
   // will actually schedule (רגוע ~4/day, בינוני ~5, אינטנסיבי ~6).
   const buildCapacity = buildDays * PACE_PER_DAY[buildPace];
@@ -533,20 +529,6 @@ export function DestinationView({
               </button>
               {filtersOpen && (
                 <div className="absolute z-40 mt-1 w-60 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]">
-                  {/* action — mark every must-see place as כן in one tap */}
-                  {mustSeeIds.length > 0 && (
-                    <>
-                      <button onClick={toggleAllMustSee}
-                        className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]">
-                        <span className="font-medium" style={{ color: allMustSeeYes ? "var(--brand-ink)" : "var(--text)" }}>
-                          ⭐ אתרי חובה
-                          <span className="font-normal text-[var(--text-3)]"> {allMustSeeYes ? "· נבחרו" : `· סמן הכל (${mustSeeIds.length})`}</span>
-                        </span>
-                        {allMustSeeYes ? <Check size={15} className="text-[var(--brand)]" /> : <Sparkles size={14} className="text-[var(--brand)]" />}
-                      </button>
-                      <div className="my-1 h-px bg-[var(--border)]" />
-                    </>
-                  )}
                   {([["free", "חינם"], ["indoor", "מקורה"],
                      ...(isFamily ? [["top", "מומלץ למשפחות"]] : []),
                      ["withInsights", "💬 עם תובנות מטיילים"]] as [keyof typeof flags, string][]).map(([k, label]) => (
