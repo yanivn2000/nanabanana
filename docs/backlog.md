@@ -4,6 +4,26 @@ Items found during the content-quality campaign (bulk re-ingest, signal quality,
 dedupe, must-see images, taste-tagging) that are worth doing and not yet done.
 Ordered within each section by rough priority. ✅ = done 2026-07-14.
 
+## 🌟 Approved future features
+- **AI Hebrew enrichment for food/shopping/nightlife rows** (approved as a future
+  feature 2026-07-16): the Wikipedia-gated ingest (pipeline_food.py) leaves ~90%
+  of the new rows with English-only names — niche pubs/shops have no Hebrew
+  Wikidata label, and the grounded pipeline never invents names. A paid AI batch
+  (enrich.py-style) should: (1) transliterate/translate names into Hebrew,
+  (2) write short taglines grounded in the stored Wikipedia article. Scope: all
+  cities' `category IN ('food','shopping')` rows missing name_he/tagline_he.
+  Costs API credits — run per-city and QA a sample first.
+
+## 📋 New-city ingest runbook (standard steps, in order)
+1. `pipeline_osm.fetch_city(...)` — base tourism/leisure/historic/natural ingest.
+2. `pipeline_food.ingest(dest_id, 14, apply=True)` — Wikipedia-gated
+   food/shopping/nightlife (part of the standard flow since 2026-07-16).
+3. `dedupe.py` + scratchpad cross_dedupe — flag duplicates.
+4. `story_filter.py` — hide no-story filler.
+5. `fill_names.py --apply` (Hebrew from Wikidata) + `pipeline_images.fetch_images(destination_id=...)`.
+6. `fill_duration.py` + `taste_tag.py` — durations + taste tags.
+7. `enrich_grounded.py` — grounded Hebrew descriptions for must-see/notable.
+
 ## 🐞 Bugs & data errors
 - ✅ **duration_minutes was 0%** → now 100% via fill_duration.py (category/subcategory
   heuristic). Feeds the itinerary builder + attraction "משך".

@@ -68,8 +68,12 @@ export const INTEREST_CATS: Record<string, { cats?: string[]; subs?: string[] }>
   "תרבות": { cats: ["museum", "historic"] },
   "מוזיאונים": { cats: ["museum"] },
   "קניות": { cats: ["shopping"] },
-  "וינטג'": { cats: ["shopping"] },
-  "יוקרה": { cats: ["shopping"] },
+  // וינטג' / יוקרה are FLAVORS of shopping, not all of it — mapping them to the
+  // whole shopping category made their tiles clone קניות. Match by the shop-kind
+  // subcategory (mirrors pipeline_food.py's VINTAGE_SHOPS / LUXURY_SHOPS) — the
+  // vintage_shopping / luxury_shopping taste tags still match on top.
+  "וינטג'": { subs: ["antiques", "second_hand", "charity", "books", "vintage", "market", "marketplace"] },
+  "יוקרה": { subs: ["jewelry", "watches", "perfumery", "department_store", "boutique", "bag", "fashion_accessories"] },
   "ספורט": { cats: ["sport"] },
   "היסטוריה": { cats: ["historic"] },
   "פארקי שעשועים": { subs: ["theme_park", "water_park"] },
