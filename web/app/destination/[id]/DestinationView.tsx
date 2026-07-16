@@ -349,6 +349,14 @@ export function DestinationView({
     [attractions, choices]
   );
   const [fitNonce, setFitNonce] = useState(0);
+  // Mobile: the 240px sticky map strip eats most of the screen — let the
+  // traveler collapse it. Desktop always shows the map rail. A window resize
+  // event after the toggle makes Leaflet re-measure its container.
+  const [mapOpen, setMapOpen] = useState(true);
+  const toggleMap = () => {
+    setMapOpen((v) => !v);
+    window.setTimeout(() => window.dispatchEvent(new Event("resize")), 350);
+  };
 
   // How many must-see places are actually VISIBLE in the list — i.e. must-see,
   // not hidden by a ✕ interest (an explicit כן/אולי keeps it), within the same
@@ -707,7 +715,7 @@ export function DestinationView({
 
       <div className="lg:flex lg:items-start">
         {/* map — a narrow sticky rail on desktop; full-width strip on mobile */}
-        <div className="relative sticky top-0 z-10 h-[240px] w-full overflow-hidden border-y border-[var(--border)] lg:order-2 lg:h-[calc(100dvh-164px)] lg:top-[164px] lg:w-[380px] lg:shrink-0 lg:border-y-0 lg:border-s">
+        <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-2 lg:!h-[calc(100dvh-164px)] lg:top-[164px] lg:w-[380px] lg:shrink-0 lg:border-y-0 lg:border-s`}>
           <MapClient attractions={visible} center={[dest.lat, dest.lng]} selected={selected}
             picks={pickedAttractions} fitNonce={fitNonce} onBounds={setBounds} />
           {pickedAttractions.length > 0 && (
@@ -716,13 +724,18 @@ export function DestinationView({
               <MapPin size={14} /> מקד את הנבחרים · {pickedAttractions.length}
             </button>
           )}
+          {/* mobile: collapse the map to free the screen for the cards */}
+          <button onClick={toggleMap}
+            className="absolute bottom-2 left-2 z-[1000] rounded-full bg-black/55 px-3 py-1 text-[12.5px] font-medium text-white shadow-sm backdrop-blur-sm lg:hidden">
+            הסתר מפה ▲
+          </button>
         </div>
 
         {/* attraction cards — a grid on desktop, single column on mobile */}
         <section id="picks" className="scroll-mt-[120px] px-5 lg:order-1 lg:min-w-0 lg:flex-1 lg:px-8 lg:pb-16">
           {/* mobile filter header (search + categories + quick tags) — desktop
               uses the toolbar above */}
-          <div className="sticky top-[240px] z-20 -mx-5 bg-[var(--bg)] px-5 pb-2 pt-4 shadow-[0_8px_10px_-10px_rgba(16,29,43,0.2)] lg:hidden">
+          <div className={`sticky ${mapOpen ? "top-[240px]" : "top-0"} z-20 -mx-5 bg-[var(--bg)] px-5 pb-2 pt-4 shadow-[0_8px_10px_-10px_rgba(16,29,43,0.2)] lg:hidden`}>
             <div className="mb-3 flex items-center gap-2.5 border-b border-[var(--border)] pb-2">
               <span className="serif shrink-0 text-[16px] font-bold text-[var(--text)]">{dest.city_he || dest.city}</span>
               <span className="h-4 w-px shrink-0 bg-[var(--border)]" />
@@ -732,6 +745,12 @@ export function DestinationView({
                 className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]" />
             </div>
             <div className="flex flex-wrap gap-2">
+              {!mapOpen && (
+                <button onClick={toggleMap}
+                  className="rounded-full border border-[var(--brand)] bg-[var(--surface)] px-3 py-1.5 text-[13.5px] font-medium text-[var(--brand-ink)]">
+                  🗺️ הצג מפה ▾
+                </button>
+              )}
               {!soloInterest && !selectedOnly && (
                 <button onClick={() => setMustOnly((v) => !v)}
                   className="rounded-full px-3 py-1.5 text-[13.5px] font-medium transition"
