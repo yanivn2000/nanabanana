@@ -117,11 +117,12 @@ function ChoiceBtn({ tone, active, onClick, icon, label }: {
 
 export function DestinationView({
   dest,
-  attractions,
+  attractions: baseAttractions,
   insights = {},
   placeGroups = [],
   passes = [],
   coveredIds = [],
+  isEditor = false,
 }: {
   dest: Destination;
   attractions: Attraction[];
@@ -129,8 +130,29 @@ export function DestinationView({
   placeGroups?: { name: string; items: Insight[] }[];
   passes?: Pass[];
   coveredIds?: number[];
+  isEditor?: boolean;
 }) {
   const covered = new Set(coveredIds);
+  // Editor curation: optimistic overrides of the effective must-see flag while
+  // the write to editor_picks is in flight. Overlays onto the server data so the
+  // ⭐ badge, filtering and sort react instantly. Consumers never see this UI.
+  const [pickOverrides, setPickOverrides] = useState<Record<number, boolean>>({});
+  const attractions = useMemo(
+    () => (Object.keys(pickOverrides).length === 0
+      ? baseAttractions
+      : baseAttractions.map((a) => (a.id in pickOverrides ? { ...a, must_see: pickOverrides[a.id] ? 1 : 0 } : a))),
+    [baseAttractions, pickOverrides]
+  );
+  const toggleEditorPick = (a: Attraction) => {
+    const next = a.must_see !== 1;
+    setPickOverrides((o) => ({ ...o, [a.id]: next }));
+    fetch("/api/editor/pick", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ destination_id: dest.id, attraction_id: a.id, pick: next }),
+    })
+      .then((r) => { if (!r.ok) throw new Error(String(r.status)); })
+      .catch(() => setPickOverrides((o) => ({ ...o, [a.id]: !next })));  // revert on failure
+  };
   // family_score is a family-friendliness metric — only surface it (the
   // "מומלץ למשפחות" filter, the score star) when the traveler has kids.
   // The profile is editable right here: the interest tiles are the same 3-state
@@ -312,6 +334,11 @@ export function DestinationView({
 
   return (
     <main className="mx-auto w-full max-w-[440px] pb-28 lg:max-w-none lg:pb-0">
+      {isEditor && (
+        <div className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-[#3d2c0a] px-4 py-1.5 text-center text-[12.5px] font-medium text-[var(--amber-fill)]">
+          <span>✎ מצב עורך — סמנו על כל כרטיס מה “בחירת העורך” לעיר הזו. השינויים נשמרים מיד.</span>
+        </div>
+      )}
       {/* compact card hero — a small landscape thumbnail + flag/city + a
           personalized CTA (the trip page's hero language), so the map + list
           are reachable right away */}
@@ -683,6 +710,11 @@ export function DestinationView({
                       {a.must_see === 1 && (
                         <span className="absolute left-2 top-2 rounded-full bg-[var(--accent)] px-2 py-0.5 text-[11px] font-medium text-white shadow-sm">⭐ חובה</span>
                       )}
+                      {/* editor reference — what OSM flagged, regardless of the
+                          current curated pick, so the editor curates informed */}
+                      {isEditor && a.osm_must_see === 1 && (
+                        <span className="absolute bottom-2 left-2 rounded-full bg-black/55 px-2 py-0.5 text-[10.5px] font-medium text-white shadow-sm backdrop-blur-sm">OSM ★ חובה</span>
+                      )}
                     </div>
                     <div className="flex min-w-0 flex-1 flex-col p-3">
                       <p className="serif truncate text-[17px] font-bold leading-tight">{a.name_he || a.name_en}</p>
@@ -717,6 +749,16 @@ export function DestinationView({
                       )}
                     </div>
                   </button>
+                  {/* editor curation — toggle this place in/out of the city's
+                      "בחירת העורך" set. Writes to editor_picks immediately. */}
+                  {isEditor && (
+                    <button onClick={() => toggleEditorPick(a)}
+                      className="flex items-center justify-center gap-1.5 border-t border-[var(--border)] py-2 text-[13px] font-semibold transition"
+                      style={{ background: a.must_see === 1 ? "var(--accent)" : "var(--surface-2)",
+                               color: a.must_see === 1 ? "#fff" : "var(--text-2)" }}>
+                      {a.must_see === 1 ? "★ בחירת העורך" : "☆ סמן כבחירת העורך"}
+                    </button>
+                  )}
                   {/* yes / maybe / no marks — the traveler's picks for this city.
                       RTL order: כן first (right), then אולי, then לא. */}
                   <div className="grid grid-cols-3 gap-1.5 border-t border-[var(--border)] p-2">
