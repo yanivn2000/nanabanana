@@ -20,7 +20,7 @@ const PACES = ["רגוע", "בינוני", "אינטנסיבי"] as const;
 type Pace = (typeof PACES)[number];
 const PACE_PER_DAY: Record<Pace, number> = { "רגוע": 4, "בינוני": 5, "אינטנסיבי": 6 };
 import { deriveTaste, tasteScore, INTEREST_TASTE, INTEREST_CATS } from "@/lib/taste";
-import { CATEGORY_ICONS } from "@/components/CategoryTiles";
+import { CategoryTile } from "@/components/CategoryTiles";
 import type { Attraction, Destination, Insight } from "@/lib/db";
 
 // Every interest in the profile vocabulary — used as the fallback tile set when
@@ -81,26 +81,6 @@ const TONE: Record<Choice, { on: string; ink: string; off: string }> = {
 };
 // A 3-state interest pill (the same values as the profile page): tap cycles
 // neutral → ✓ מעוניין → ✕ לא מעוניין → neutral. It edits the profile in place.
-function InterestTile({ interest, state, count, onClick }: {
-  interest: string; state: "yes" | "no" | "none"; count: number; onClick: () => void;
-}) {
-  const yes = state === "yes", no = state === "no";
-  return (
-    <button onClick={onClick}
-      className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[14px] transition"
-      style={{ background: yes ? "var(--brand-soft)" : "var(--surface)", borderColor: yes ? "var(--brand)" : "var(--border)",
-               color: no ? "var(--text-3)" : yes ? "var(--brand-ink)" : "var(--text-2)", opacity: no ? 0.65 : 1, fontWeight: yes ? 600 : 400 }}>
-      {CATEGORY_ICONS[interest] && (
-        <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden className="shrink-0" style={{ filter: no ? "grayscale(1)" : "none" }}>{CATEGORY_ICONS[interest]}</svg>
-      )}
-      <span style={no ? { textDecoration: "line-through" } : undefined}>{interest}</span>
-      <span className="opacity-60">{count}</span>
-      {yes && <Check size={13} className="text-[var(--brand)]" />}
-      {no && <X size={13} />}
-    </button>
-  );
-}
-
 function ChoiceBtn({ tone, active, onClick, icon, label }: {
   tone: Choice; active: boolean; onClick: () => void; icon: React.ReactNode; label: string;
 }) {
@@ -403,37 +383,17 @@ export function DestinationView({
               </span>
             </div>
           </div>
-          {/* actions — build CTA (opens the days/distance modal, then builds a
-              trip from the city marks), pass toggle to its left (secondary). */}
-          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-            <button onClick={tryBuild}
-              className="flex items-center justify-center gap-2 rounded-full border-[1.5px] border-transparent bg-[var(--brand)] px-5 py-3 text-[15px] font-medium text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
-              <Sparkles size={17} /> {canBuild ? `בנו לי טיול · ${yesCount}` : "בחרו אטרקציות לטיול"}
-            </button>
-            {passes.length > 0 && (
+          {/* pass toggle (the build CTA lives in the always-on bottom bar) */}
+          {passes.length > 0 && (
+            <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
               <button onClick={() => setShowPasses((v) => !v)}
                 className="flex items-center justify-center gap-2 rounded-full border-[1.5px] border-[var(--brand)] bg-[var(--surface)] px-5 py-3 text-[15px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
                 💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </header>
-
-      {/* how-it-works — teaches the flow up front, then gets out of the way once
-          the traveler starts marking places */}
-      {yesCount === 0 && (
-        <div className="px-5 pb-1 pt-1 lg:px-8">
-          <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-[var(--text-2)]">
-            <span className="font-semibold text-[var(--brand-ink)]">איך בונים טיול?</span>
-            <span className="inline-flex items-center gap-1"><b className="text-[var(--text)]">1</b> בחרו נושאים שאתם אוהבים</span>
-            <ChevronRight size={13} className="text-[var(--text-3)]" />
-            <span className="inline-flex items-center gap-1"><b className="text-[var(--text)]">2</b> סמנו “כן” על אטרקציות שאהבתם</span>
-            <ChevronRight size={13} className="text-[var(--text-3)]" />
-            <span className="inline-flex items-center gap-1"><b className="text-[var(--text)]">3</b> נרכיב לכם את הטיול</span>
-          </div>
-        </div>
-      )}
 
       {/* pass panel — reveals smoothly under the hero so the poster never jumps */}
       {passes.length > 0 && (
@@ -465,35 +425,52 @@ export function DestinationView({
         </div>
       )}
 
-      {/* desktop toolbar — one sticky block under the hero: categories + search
-          (row 1), then quick tags · sort · filters (row 2). Sits on the cream
-          page background (not a white slab) so the hero card floats above it. */}
+      {/* the flow's opening step — how-it-works + the interests picker, up here
+          in the top area as the profile's square tiles (not thin pills). Marks
+          write straight to the profile; each tile shows how many places match. */}
+      <section className="px-5 pt-1 pb-2 lg:px-8">
+        <div className="mx-auto max-w-[1600px]">
+          {yesCount === 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-[var(--text-2)]">
+              <span className="font-semibold text-[var(--brand-ink)]">איך בונים טיול?</span>
+              <span className="inline-flex items-center gap-1"><b className="text-[var(--text)]">1</b> בחרו נושאים שאתם אוהבים</span>
+              <ChevronRight size={13} className="text-[var(--text-3)]" />
+              <span className="inline-flex items-center gap-1"><b className="text-[var(--text)]">2</b> סמנו “כן” על אטרקציות שאהבתם</span>
+              <ChevronRight size={13} className="text-[var(--text-3)]" />
+              <span className="inline-flex items-center gap-1"><b className="text-[var(--text)]">3</b> נרכיב לכם את הטיול</span>
+            </div>
+          )}
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+            <h2 className="text-[15px] font-semibold text-[var(--text)]">מה מעניין אתכם?</h2>
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-[var(--text-3)]">
+              <span>הקישו כדי לעבור בין:</span>
+              <span className="inline-flex items-center gap-1"><span className="grid size-4 place-items-center rounded-full bg-[var(--brand)] text-[10px] font-bold text-white">✓</span> מעוניין</span>
+              <span className="inline-flex items-center gap-1"><span className="grid size-4 place-items-center rounded-full bg-[var(--text-3)] text-[10px] font-bold text-white">✕</span> לא מעוניין</span>
+              <span>· ריק = ניטרלי</span>
+            </p>
+          </div>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(102px,1fr))] gap-2.5">
+            {interestTiles.map(({ key, count }) => (
+              <CategoryTile key={key} label={key} state={interestState(key)} count={count} onClick={() => cycleInterest(key)} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* desktop toolbar — sticky filters/search above the list. Interests moved
+          up into the top block; this keeps must-see · bulk · sort · filters. */}
       <div className="sticky top-[57px] z-30 hidden bg-[var(--bg)] shadow-[0_10px_12px_-12px_rgba(16,29,43,0.12)] lg:block">
         <div className="mx-auto max-w-[1600px] px-8">
-          {/* row 1 — interest tiles (the profile, editable in place) + the
-              "editor picks" filter + search. The must-see toggle lives here (not
-              in row 2) and is additive: it narrows the grid but never rewrites
-              the interest counts above. */}
-          <div className="flex items-start gap-4 border-b border-[var(--border)] py-2">
-            <span className="shrink-0 pt-1.5 text-[12.5px] font-medium text-[var(--text-3)]">מה מעניין אתכם?</span>
-            {/* wrap onto as many lines as needed so every interest is visible —
-                a single scrolling line clipped tiles behind the search box */}
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-              {interestTiles.map(({ key, count }) => (
-                <InterestTile key={key} interest={key} state={interestState(key)} count={count} onClick={() => cycleInterest(key)} />
-              ))}
-            </div>
-            <div className="flex w-[280px] shrink-0 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
+          {/* filters row — search · must-see facet · bulk-select · sort · filters.
+              (Interests moved to the square-tile block above.) */}
+          <div className="flex items-center gap-2.5 py-2">
+            <div className="flex w-[300px] shrink-0 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
               <Search size={16} className="shrink-0 text-[var(--text-3)]" />
               <input value={query} onChange={(e) => setQuery(e.target.value)}
                 placeholder="חיפוש אטרקציה, שכונה או סוג מקום…"
                 className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]" />
             </div>
-          </div>
-
-          {/* row 2 (below the topics) — the must-see facet (with its count in the
-              selected topics) · bulk-select the current view · sort · filters */}
-          <div className="flex items-center gap-2.5 py-2">
+            <span className="mx-1 h-5 w-px shrink-0 bg-[var(--border)]" />
             <button onClick={() => setMustOnly((v) => !v)}
               className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
               style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
@@ -645,12 +622,6 @@ export function DestinationView({
               <input value={query} onChange={(e) => setQuery(e.target.value)}
                 placeholder="חיפוש אטרקציה…"
                 className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]" />
-            </div>
-            <p className="mb-1.5 text-[12.5px] font-medium text-[var(--text-3)]">מה מעניין אתכם? <span className="text-[var(--text-3)] opacity-70">(✓/✕)</span></p>
-            <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-              {interestTiles.map(({ key, count }) => (
-                <InterestTile key={key} interest={key} state={interestState(key)} count={count} onClick={() => cycleInterest(key)} />
-              ))}
             </div>
             <div className="flex flex-wrap gap-2">
               <button onClick={() => setMustOnly((v) => !v)}

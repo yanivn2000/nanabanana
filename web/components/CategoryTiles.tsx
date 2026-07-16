@@ -131,8 +131,8 @@ export const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 // `state` = tri-state (yes / no / none) for the profile's single preference list.
 export type TileState = "yes" | "no" | "none";
 
-export function CategoryTile({ label, selected, state, onClick }: {
-  label: string; selected?: boolean; state?: TileState; onClick?: () => void;
+export function CategoryTile({ label, selected, state, count, onClick }: {
+  label: string; selected?: boolean; state?: TileState; count?: number; onClick?: () => void;
 }) {
   const icon = CATEGORY_ICONS[label];
   const s: TileState = state ?? (selected ? "yes" : "none");
@@ -163,6 +163,11 @@ export function CategoryTile({ label, selected, state, onClick }: {
           textDecoration: s === "no" ? "line-through" : "none",
           opacity: s === "no" ? 0.6 : 1,
         }}>{label}</span>
+      {count != null && (
+        <span className="text-[11.5px] tabular-nums leading-none text-[var(--text-3)]" style={{ opacity: s === "no" ? 0.6 : 1 }}>
+          {count}
+        </span>
+      )}
     </button>
   );
 }
