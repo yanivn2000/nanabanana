@@ -21,7 +21,11 @@ export const INTEREST_TASTE: Record<string, string[]> = {
   // Kids = the whole family-friendly set: the curated "family" tag PLUS the
   // kid subcategories. Broader than amusement parks by design.
   "ילדים": ["family"],
-  "היסטוריה": ["history", "landmark"],
+  // History = the topical "history" tag (+ the historic category below) ONLY.
+  // "landmark" is a structural iconic-sight tag carried by nearly every
+  // must-see (museums, markets, viewpoints) — including it meant ✕ היסטוריה
+  // dimmed/hid the entire must-see set of a city.
+  "היסטוריה": ["history"],
   // finer taste chips (added to the editor for real divergence):
   "מוזיקה חיה": ["live_music"],
   "חיי לילה": ["nightlife"],

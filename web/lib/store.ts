@@ -31,7 +31,9 @@ export type FamilyProfile = {
 export const DEFAULT_PROFILE: FamilyProfile = {
   adults: 2,
   kids: [],
-  interests: ["טבע"],
+  // Blank slate — onboarding says "בחרו נושאים שאתם אוהבים"; a pre-checked
+  // interest contradicted that and silently dimmed everything else on day one.
+  interests: [],
   dislikes: [],
   pace: "בינוני",
   budget: "בינוני",

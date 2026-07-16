@@ -653,7 +653,11 @@ export function DestinationView({
             </div>
 
             <div className="mr-auto flex shrink-0 items-center gap-3">
-              <span className="text-[13px] text-[var(--text-3)]">{matchedIds.length} מקומות</span>
+              <span className="text-[13px] text-[var(--text-3)]">
+                {matchedIds.length > 0 || sortedItems.length === 0
+                  ? `${matchedIds.length} מקומות`
+                  : `${sortedItems.length} מקומות · מחוץ להעדפות`}
+              </span>
             </div>
           </div>
         </div>
@@ -802,7 +806,11 @@ export function DestinationView({
                 {a.id === firstDimId && (
                   <div className="col-span-full mt-1 flex items-center gap-3 pb-1 pt-2">
                     <div className="h-px flex-1 bg-[var(--border)]" />
-                    <span className="shrink-0 text-[12.5px] text-[var(--text-3)]">מחוץ להעדפות שלכם — אפשר בכל זאת לסמן</span>
+                    <span className="shrink-0 text-[12.5px] text-[var(--text-3)]">
+                      {matchedIds.length === 0
+                        ? "כל התוצאות כאן מחוץ להעדפות שסימנתם (✕) — לכן הן מעומעמות. אפשר בכל זאת לסמן, או לשחרר ✕ בנושאים למעלה"
+                        : "מחוץ להעדפות שלכם — אפשר בכל זאת לסמן"}
+                    </span>
                     <div className="h-px flex-1 bg-[var(--border)]" />
                   </div>
                 )}
