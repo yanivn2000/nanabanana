@@ -13,6 +13,12 @@ import { useProfile, useTrips, useCitySelection, type Choice } from "@/lib/store
 // distance slider index → per-trip dailyDriveHours (same scale as the old flow)
 const RADIUS_HOURS = [0.5, 1, 2, 3];
 const RADIUS_HE = ["קרוב מאוד", "עד שעה", "עד שעתיים", "גם רחוק"];
+
+// Trip pace (existing profile parameter) → attractions/day, matching the builder
+// ranges. Drives the capacity estimate so it reflects the chosen intensity.
+const PACES = ["רגוע", "בינוני", "אינטנסיבי"] as const;
+type Pace = (typeof PACES)[number];
+const PACE_PER_DAY: Record<Pace, number> = { "רגוע": 4, "בינוני": 5, "אינטנסיבי": 6 };
 import { deriveTaste, tasteScore, coarseFits } from "@/lib/taste";
 import type { Attraction, Destination, Insight } from "@/lib/db";
 
@@ -112,7 +118,10 @@ export function DestinationView({
   const [buildOpen, setBuildOpen] = useState(false);
   const [buildDays, setBuildDays] = useState(4);
   const [buildRadius, setBuildRadius] = useState(1);
+  const [buildPace, setBuildPace] = useState<Pace>("בינוני");
   const [building, setBuilding] = useState(false);
+  // Open the build modal seeded with the traveler's saved pace.
+  const openBuild = () => { setBuildPace((profile.pace as Pace) ?? "בינוני"); setBuildOpen(true); };
   const PAGE = 200;
   const [visibleCount, setVisibleCount] = useState(PAGE);
   const yesCount = Object.values(choices).filter((c) => c === "yes").length;
@@ -121,10 +130,9 @@ export function DestinationView({
   const mustSeeIds = useMemo(() => attractions.filter((a) => a.must_see === 1).map((a) => a.id), [attractions]);
   const allMustSeeYes = mustSeeIds.length > 0 && mustSeeIds.every((id) => choices[id] === "yes");
   const toggleAllMustSee = () => setMany(mustSeeIds, allMustSeeYes ? null : "yes");
-  // Match the builder's own pace ("3-4 עצירות משמעותיות ביום") so the estimate
-  // is honest — ~4 attractions/day, i.e. what actually gets scheduled.
-  const PER_DAY = 4;
-  const buildCapacity = buildDays * PER_DAY;
+  // Capacity follows the chosen pace, so the estimate matches what the builder
+  // will actually schedule (רגוע ~4/day, בינוני ~5, אינטנסיבי ~6).
+  const buildCapacity = buildDays * PACE_PER_DAY[buildPace];
   const overPick = yesCount > buildCapacity;
 
   const cats = useMemo(
@@ -254,7 +262,7 @@ export function DestinationView({
       destinationId: dest.id,
       days: buildDays,
       month: new Date().getMonth() + 1,   // a default season; exact dates are set on the trip page
-      profile: { ...profile, taste, dailyDriveHours: RADIUS_HOURS[buildRadius] },
+      profile: { ...profile, pace: buildPace, taste, dailyDriveHours: RADIUS_HOURS[buildRadius] },
       ...(yes.length || maybe.length || no.length ? { selection: { yes, maybe, no } } : {}),
     });
     router.push(`/trip/${trip.id}?build=1`);
@@ -293,7 +301,7 @@ export function DestinationView({
           {/* actions — build CTA (opens the days/distance modal, then builds a
               trip from the city marks), pass toggle to its left (secondary). */}
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-            <button onClick={() => setBuildOpen(true)}
+            <button onClick={openBuild}
               className="flex items-center justify-center gap-2 rounded-full border-[1.5px] border-transparent bg-[var(--brand)] px-5 py-3 text-[15px] font-medium text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
               <Sparkles size={17} /> בנו לי טיול
             </button>
@@ -718,7 +726,7 @@ export function DestinationView({
               <span className="font-semibold text-[var(--text)]">{yesCount}</span> נבחרו לטיול
               {maybeCount ? <span className="text-[var(--text-3)]"> · {maybeCount} אולי</span> : null}
             </p>
-            <button onClick={() => setBuildOpen(true)}
+            <button onClick={openBuild}
               className="flex items-center gap-2 rounded-full bg-[var(--brand)] px-6 py-2.5 text-[14px] font-medium text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
               <Sparkles size={16} /> בנו טיול
             </button>
@@ -767,6 +775,24 @@ export function DestinationView({
               <input type="range" min={0} max={3} value={buildRadius} dir="ltr"
                 onChange={(e) => setBuildRadius(Number(e.target.value))}
                 className="w-full accent-[var(--brand)]" />
+            </div>
+            <div className="mb-5">
+              <div className="mb-1.5 flex items-center justify-between text-[13.5px]">
+                <span>קצב הטיול</span>
+                <span className="text-[var(--text-3)]">~{PACE_PER_DAY[buildPace]} אטרקציות ביום</span>
+              </div>
+              <div className="flex gap-1 rounded-full bg-[var(--surface-2)] p-1">
+                {PACES.map((p) => {
+                  const on = buildPace === p;
+                  return (
+                    <button key={p} onClick={() => setBuildPace(p)}
+                      className="flex-1 rounded-full py-1.5 text-[13px] font-medium transition"
+                      style={{ background: on ? "var(--brand)" : "transparent", color: on ? "#fff" : "var(--text-2)" }}>
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div className="flex gap-2">
               {overPick && (
