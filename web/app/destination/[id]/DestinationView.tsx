@@ -367,13 +367,13 @@ export function DestinationView({
               filling the rest (left), so there's no dead whitespace between them */}
           <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)] lg:p-4">
             {yesCount === 0 && (
-              <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-[var(--border)] pb-3 text-[13px] text-[var(--text-2)]">
-                <span className="font-semibold text-[var(--brand-ink)]">איך בונים טיול?</span>
-                <span className="inline-flex items-center gap-1"><b className="text-[var(--text)]">1</b> בחרו נושאים שאתם אוהבים</span>
-                <ChevronRight size={13} className="text-[var(--text-3)]" />
-                <span className="inline-flex items-center gap-1"><b className="text-[var(--text)]">2</b> סמנו “כן” על אטרקציות שאהבתם</span>
-                <ChevronRight size={13} className="text-[var(--text-3)]" />
-                <span className="inline-flex items-center gap-1"><b className="text-[var(--text)]">3</b> נרכיב לכם את הטיול</span>
+              <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[var(--border)] pb-3 text-[15px] text-[var(--text-2)]">
+                <span className="text-[16px] font-bold text-[var(--brand-ink)]">איך בונים טיול?</span>
+                <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">1</b> בחרו נושאים שאתם אוהבים</span>
+                <ChevronRight size={16} className="text-[var(--text-3)]" />
+                <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">2</b> סמנו “כן” על אטרקציות שאהבתם</span>
+                <ChevronRight size={16} className="text-[var(--text-3)]" />
+                <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">3</b> נרכיב לכם את הטיול</span>
               </div>
             )}
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-5">
@@ -408,12 +408,12 @@ export function DestinationView({
               <div className="hidden w-px self-stretch bg-[var(--border)] lg:block" />
               {/* interests — fill the rest (left in RTL) */}
               <div className="min-w-0 flex-1">
-                <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                  <h2 className="text-[14px] font-semibold text-[var(--text)]">מה מעניין אתכם?</h2>
-                  <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-[var(--text-3)]">
+                <div className="mb-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+                  <h2 className="text-[16px] font-bold text-[var(--text)]">מה מעניין אתכם?</h2>
+                  <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13.5px] text-[var(--text-2)]">
                     <span>הקישו כדי לעבור בין:</span>
-                    <span className="inline-flex items-center gap-1"><span className="grid size-4 place-items-center rounded-full bg-[var(--brand)] text-[10px] font-bold text-white">✓</span> מעוניין</span>
-                    <span className="inline-flex items-center gap-1"><span className="grid size-4 place-items-center rounded-full bg-[var(--text-3)] text-[10px] font-bold text-white">✕</span> לא מעוניין</span>
+                    <span className="inline-flex items-center gap-1.5"><span className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">✓</span> מעוניין</span>
+                    <span className="inline-flex items-center gap-1.5"><span className="grid size-[20px] place-items-center rounded-full bg-[var(--text-3)] text-[12px] font-bold text-white">✕</span> לא מעוניין</span>
                     <span>· ריק = ניטרלי</span>
                   </p>
                 </div>
