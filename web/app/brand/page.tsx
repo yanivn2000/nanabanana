@@ -203,7 +203,7 @@ export default function BrandBoard() {
             {/* category tiles — two-tone filled icon set (live component) */}
             <p className="mb-2 mt-6 text-[14px] font-bold" style={{ color: C.ink }}>קטגוריות</p>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-              {["תרבות", "טבע", "לילדים", "אוכל", "קניות", "חופים"].map((l, i) => (
+              {["תרבות", "טבע", "ילדים", "אוכל", "קניות", "חופים"].map((l, i) => (
                 <CategoryTile key={l} label={l} selected={i === 1} />
               ))}
             </div>
