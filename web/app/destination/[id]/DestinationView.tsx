@@ -222,7 +222,17 @@ export function DestinationView({
   const [filtersOpen, setFiltersOpen] = useState(false);
   // Per-city yes/maybe/no marks (the "city profile") + the build modal.
   const { create } = useTrips();
-  const { choices, setChoice, setMany } = useCitySelection(dest.id);
+  const { choices, setChoice, setMany, clear } = useCitySelection(dest.id);
+  // Selections persist across visits (by design) — so give a way to wipe them
+  // all, not just the current view. Confirm first: it kills the whole city's
+  // marks, including ones hidden by the active filters.
+  const clearAllChoices = () => {
+    const n = Object.keys(choices).length;
+    if (window.confirm(`למחוק את כל ${n} הסימונים ששמרתם לעיר הזו (כולל מביקורים קודמים)?`)) {
+      clear();
+      setSelectedOnly(false);
+    }
+  };
   const [buildOpen, setBuildOpen] = useState(false);
   const [buildDays, setBuildDays] = useState(4);
   const [buildRadius, setBuildRadius] = useState(1);
@@ -583,13 +593,19 @@ export function DestinationView({
               </>
             )}
             {yesCount + maybeCount > 0 && (
-              <button onClick={toggleSelectedOnly}
-                className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
-                style={{ background: selectedOnly ? "var(--brand)" : "var(--brand-soft)",
-                         color: selectedOnly ? "#fff" : "var(--brand-ink)",
-                         borderColor: selectedOnly ? "var(--brand)" : "transparent" }}>
-                <Check size={14} /> אטרקציות שנבחרו <span className="opacity-70">{yesCount}{maybeCount ? `+${maybeCount}` : ""}</span>
-              </button>
+              <>
+                <button onClick={toggleSelectedOnly}
+                  className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
+                  style={{ background: selectedOnly ? "var(--brand)" : "var(--brand-soft)",
+                           color: selectedOnly ? "#fff" : "var(--brand-ink)",
+                           borderColor: selectedOnly ? "var(--brand)" : "transparent" }}>
+                  <Check size={14} /> אטרקציות שנבחרו <span className="opacity-70">{yesCount}{maybeCount ? `+${maybeCount}` : ""}</span>
+                </button>
+                <button onClick={clearAllChoices} title="מחיקת כל הסימונים בעיר, כולל מביקורים קודמים"
+                  className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[13px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f]">
+                  <X size={13} /> נקה הכל
+                </button>
+              </>
             )}
             <span className="mx-1 h-5 w-px shrink-0 bg-[var(--border)]" />
             {viewIds.length > 0 && (
@@ -599,9 +615,9 @@ export function DestinationView({
                   <Check size={14} /> בחר הכל · {viewIds.length}
                 </button>
                 {viewSelected > 0 && (
-                  <button onClick={() => setMany(viewIds, null)}
+                  <button onClick={() => setMany(viewIds, null)} title="מנקה רק את המקומות שמוצגים בסינון הנוכחי"
                     className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-[13.5px] font-medium text-[var(--text-2)] transition hover:border-[#c0453f] hover:text-[#c0453f]">
-                    <X size={14} /> נקה · {viewSelected}
+                    <X size={14} /> נקה בתצוגה · {viewSelected}
                   </button>
                 )}
                 <span className="mx-1 h-5 w-px shrink-0 bg-[var(--border)]" />
@@ -760,13 +776,19 @@ export function DestinationView({
                 </button>
               )}
               {yesCount + maybeCount > 0 && (
-                <button onClick={toggleSelectedOnly}
-                  className="flex items-center gap-1 rounded-full border px-3 py-1.5 text-[13.5px] font-medium transition"
-                  style={{ background: selectedOnly ? "var(--brand)" : "var(--brand-soft)",
-                           color: selectedOnly ? "#fff" : "var(--brand-ink)",
-                           borderColor: selectedOnly ? "var(--brand)" : "transparent" }}>
-                  <Check size={13} /> {selectedOnly ? "הצג הכל" : `הצג נבחרים · ${yesCount}${maybeCount ? `+${maybeCount}` : ""}`}
-                </button>
+                <>
+                  <button onClick={toggleSelectedOnly}
+                    className="flex items-center gap-1 rounded-full border px-3 py-1.5 text-[13.5px] font-medium transition"
+                    style={{ background: selectedOnly ? "var(--brand)" : "var(--brand-soft)",
+                             color: selectedOnly ? "#fff" : "var(--brand-ink)",
+                             borderColor: selectedOnly ? "var(--brand)" : "transparent" }}>
+                    <Check size={13} /> {selectedOnly ? "הצג הכל" : `הצג נבחרים · ${yesCount}${maybeCount ? `+${maybeCount}` : ""}`}
+                  </button>
+                  <button onClick={clearAllChoices}
+                    className="rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--text-3)]">
+                    ✗ נקה הכל
+                  </button>
+                </>
               )}
               {viewIds.length > 0 && (
                 <>
@@ -777,7 +799,7 @@ export function DestinationView({
                   {viewSelected > 0 && (
                     <button onClick={() => setMany(viewIds, null)}
                       className="rounded-full border border-[var(--border)] px-3 py-1.5 text-[13.5px] font-medium text-[var(--text-2)]">
-                      ✗ נקה · {viewSelected}
+                      ✗ נקה בתצוגה · {viewSelected}
                     </button>
                   )}
                 </>
