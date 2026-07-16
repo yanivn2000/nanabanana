@@ -87,11 +87,20 @@ export function coarseFits(
   return false;
 }
 
+// Family-fit for kid trips: the editor's kids rating overrides the data score —
+// "yes" forces a strong weight (a curated kid pick always ranks up), "no" zeroes
+// it (kept out of the family ordering even if family_score is high), else use
+// family_score. Shared with the heuristic builder so both agree.
+export function familyFit(a: Attraction): number {
+  if (a.editor_kids === "yes") return Math.max(a.family_score ?? 0, 9);
+  if (a.editor_kids === "no") return 0;
+  return a.family_score ?? 0;
+}
+
 // Re-rank attractions by taste (primary), then must-see, and — ONLY for trips
-// with kids — family_score. `family_score` is a family-friendliness score (how
-// much a family with kids would enjoy it), so applying it to a couples'/friends'
-// trip pushes kid-oriented places; it's gated on `isFamily`. Returns the top `n`;
-// falls back to source order when there's no taste signal.
+// with kids — family fit (family_score, overridden by the editor's kids rating).
+// It's gated on `isFamily`; couples'/friends' trips rank by taste + must-see
+// only. Returns the top `n`; falls back to source order when there's no taste.
 export function rankByTaste(
   attractions: Attraction[],
   taste: Record<string, number> | undefined,
@@ -102,7 +111,7 @@ export function rankByTaste(
   const scored = attractions.map((a) => ({
     a,
     s: tasteScore(a.taste_tags, taste) * 3
-      + (isFamily ? (a.family_score ?? 0) : 0)
+      + (isFamily ? familyFit(a) : 0)
       + (a.must_see === 1 ? 2 : 0),
   }));
   scored.sort((x, y) => y.s - x.s);

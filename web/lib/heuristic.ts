@@ -4,6 +4,7 @@
 import type { Attraction } from "./db";
 import type { Itinerary, Stop, StopKind } from "./trip-types";
 import { descriptor } from "./labels";
+import { familyFit } from "./taste";
 
 const KIND_FROM_CAT: Record<string, StopKind> = {
   nature: "nature", museum: "culture", attraction: "culture",
@@ -34,7 +35,7 @@ export function buildHeuristicItinerary(
       seen.add(n);
       return true;
     });
-  if (isFamily) pool = [...pool].sort((a, b) => (b.family_score ?? 0) - (a.family_score ?? 0));
+  if (isFamily) pool = [...pool].sort((a, b) => familyFit(b) - familyFit(a));
 
   const perDay = 3;
   const dayList = [];

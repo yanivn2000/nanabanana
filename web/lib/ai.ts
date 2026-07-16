@@ -92,8 +92,12 @@ function attractionsBlock(attractions: Attraction[], isFamily = false): string {
         indoor_outdoor: a.indoor_outdoor,
         season: a.best_season,
         // family_score is a family-friendliness score — only hint it to the model
-        // for trips with kids, so adults-only plans aren't nudged toward it.
-        ...(isFamily ? { family_score: a.family_score } : {}),
+        // for trips with kids, so adults-only plans aren't nudged toward it. The
+        // editor's kids rating overrides it: "no" → drop the hint (keep it out of
+        // family plans), "yes" → force a top score.
+        ...(isFamily && a.editor_kids !== "no"
+          ? { family_score: a.editor_kids === "yes" ? 10 : a.family_score }
+          : {}),
         tip: a.tips_he,
       })
     )

@@ -92,51 +92,60 @@ export async function getDestination(id: number): Promise<Destination | null> {
   return rows[0] ?? null;
 }
 
+// --- Editor overlay -------------------------------------------------------
+// Join the editor's per-attraction ratings and derive the effective must-see.
+// A city is "rank-curated" once it has ANY importance rank; there, effective
+// must_see = (rank='must'), else the raw OSM flag. `has_ranks` is per the row's
+// OWN destination, so the same overlay is correct for single- or
+// multi-destination result sets (map, builder pool, and by-id picks alike).
+const EDITOR_JOIN = `
+  LEFT JOIN editor_picks ep ON ep.destination_id = a.destination_id AND ep.attraction_id = a.id
+  LEFT JOIN (SELECT destination_id FROM editor_picks WHERE rank IS NOT NULL GROUP BY destination_id) hr
+    ON hr.destination_id = a.destination_id`;
+const EFF_MUST = `CASE WHEN hr.destination_id IS NOT NULL THEN (ep.rank = 'must')::int ELSE a.must_see END`;
+// ATTR_COLS with must_see swapped for the effective value + the editor columns
+// (osm_must_see kept as the raw reference; editor_rank/editor_kids surfaced).
+const ATTR_COLS_EFF = ATTR_COLS.replace(/\bmust_see\b/,
+  `${EFF_MUST} AS must_see, a.must_see AS osm_must_see, ep.rank AS editor_rank, ep.kids AS editor_kids`);
+
 export async function topAttractions(destinationId: number, limit = 40): Promise<Attraction[]> {
-  // Prefer AI-kept, high-score attractions; fall back to any if none enriched yet.
+  // The builder's auto pool. Uses the editor's effective must-see and EXCLUDES
+  // editor-rejected places (rank='no') so a demoted tourist trap never anchors.
   return query<Attraction>(
-    `SELECT ${ATTR_COLS}
-       FROM attractions
-       WHERE destination_id = $1
-         AND (quality_keep = 1 OR quality_keep IS NULL)
-         AND (is_duplicate IS NULL OR is_duplicate = 0)
-         AND (is_component IS NULL OR is_component = 0)
-       ORDER BY COALESCE(must_see, 0) DESC,
-                COALESCE(quality_keep = 1, false) DESC,
+    `SELECT ${ATTR_COLS_EFF}
+       FROM attractions a ${EDITOR_JOIN}
+       WHERE a.destination_id = $1
+         AND (a.quality_keep = 1 OR a.quality_keep IS NULL)
+         AND (a.is_duplicate IS NULL OR a.is_duplicate = 0)
+         AND (a.is_component IS NULL OR a.is_component = 0)
+         AND (ep.rank IS NULL OR ep.rank <> 'no')
+       ORDER BY COALESCE(${EFF_MUST}, 0) DESC,
+                COALESCE(a.quality_keep = 1, false) DESC,
                 ${NOTABLE} DESC,
-                COALESCE(family_score, 0) DESC, name_en
+                COALESCE(a.family_score, 0) DESC, a.name_en
        LIMIT $2`,
     [destinationId, limit]
   );
 }
 
-// Fetch specific attractions by id — used so the itinerary builder always has
-// the traveler's exact picks as candidates, even ones ranked below the top pool.
+// Fetch specific attractions by id — the traveler's exact picks. Keeps
+// editor-rejected ones (the user explicitly chose them; their choice wins), but
+// still carries the effective must_see + editor ratings.
 export async function attractionsByIds(ids: number[]): Promise<Attraction[]> {
   if (!ids.length) return [];
-  return query<Attraction>(`SELECT ${ATTR_COLS} FROM attractions WHERE id = ANY($1)`, [ids]);
+  return query<Attraction>(
+    `SELECT ${ATTR_COLS_EFF} FROM attractions a ${EDITOR_JOIN} WHERE a.id = ANY($1)`, [ids]);
 }
 
-// Effective must-see: once a city has ANY editor importance rank, that set is
-// authoritative (must-see iff the editor ranked it 'must'); otherwise fall back
-// to the raw OSM flag. `osm_must_see` is always the raw OSM value; `editor_rank`
-// / `editor_kids` are the editor's two 3-state ratings, surfaced for the UI.
-const EFFECTIVE_MUST_SEE =
-  `CASE WHEN hp.has_ranks THEN (ep.rank = 'must')::int ELSE a.must_see END`;
-
 export async function attractionsForMap(destinationId: number, limit = 200): Promise<Attraction[]> {
-  const cols = ATTR_COLS.replace(/\bmust_see\b/,
-    `${EFFECTIVE_MUST_SEE} AS must_see, a.must_see AS osm_must_see, ep.rank AS editor_rank, ep.kids AS editor_kids`);
   return query<Attraction>(
-    `SELECT ${cols}
-       FROM attractions a
-       LEFT JOIN editor_picks ep ON ep.destination_id = a.destination_id AND ep.attraction_id = a.id
-       CROSS JOIN (SELECT EXISTS(SELECT 1 FROM editor_picks WHERE destination_id = $1 AND rank IS NOT NULL) AS has_ranks) hp
+    `SELECT ${ATTR_COLS_EFF}
+       FROM attractions a ${EDITOR_JOIN}
        WHERE a.destination_id = $1 AND a.lat IS NOT NULL AND a.lng IS NOT NULL
          AND (a.quality_keep = 1 OR a.quality_keep IS NULL)
          AND (a.is_duplicate IS NULL OR a.is_duplicate = 0)
          AND (a.is_component IS NULL OR a.is_component = 0)
-       ORDER BY COALESCE(${EFFECTIVE_MUST_SEE}, 0) DESC,
+       ORDER BY COALESCE(${EFF_MUST}, 0) DESC,
                 (ep.rank = 'no') ASC,
                 COALESCE(a.quality_keep = 1, false) DESC,
                 ${NOTABLE} DESC,
