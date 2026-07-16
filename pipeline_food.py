@@ -41,7 +41,9 @@ LUXURY_SHOPS = {"jewelry", "watches", "perfumery", "department_store", "boutique
 # when the building/business happens to have a Wikipedia article.
 SHOP_DENY = {"hairdresser", "travel_agency", "car", "paint", "frame", "beauty",
              "weapons", "supermarket", "stationery", "variety_store", "homewares",
-             "convenience", "newsagent", "electronics", "video;music"}
+             "convenience", "newsagent", "electronics", "video;music",
+             # gambling + e-commerce pickup points (Tbilisi: Adjarabet, Wildberries)
+             "bookmaker", "lottery", "outpost"}
 
 
 def _query(lat, lng, radius_m):
