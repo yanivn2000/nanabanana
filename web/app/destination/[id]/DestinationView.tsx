@@ -295,6 +295,24 @@ export function DestinationView({
   const viewIds = matchedIds;
   const viewSelected = viewIds.filter((id) => choices[id]).length;
 
+  // How many must-see places sit inside the currently selected topics — a stable
+  // facet count (independent of the "אתרי חובה" toggle itself), same search/map/
+  // popover scope as the list. Shown on the must-see chip below the topics.
+  const mustSeeCount = useMemo(() => {
+    const q = query.toLowerCase();
+    return attractions.filter((a) => {
+      if (a.must_see !== 1 || !profileMatch(a)) return false;
+      if (flags.free && a.cost_level !== 0) return false;
+      if (flags.indoor && !(a.indoor_outdoor === "indoor" || a.indoor_outdoor === "both")) return false;
+      if (flags.top && (a.family_score ?? 0) < 8) return false;
+      if (flags.withInsights && !insights[a.id]?.length) return false;
+      if (mapOnly && bounds && !(a.lat != null && a.lng != null &&
+        a.lat <= bounds.north && a.lat >= bounds.south && a.lng <= bounds.east && a.lng >= bounds.west)) return false;
+      if (q && !`${a.name_he ?? ""} ${a.name_en} ${descriptor(a)}`.toLowerCase().includes(q)) return false;
+      return true;
+    }).length;
+  }, [attractions, profileMatch, flags, insights, mapOnly, bounds, query]);
+
   // Active popover filters (for the "פילטרים · N" badge).
   const moreFilterCount = (flags.free ? 1 : 0) + (flags.indoor ? 1 : 0) + (flags.withInsights ? 1 : 0) + (mapOnly ? 1 : 0);
 
@@ -464,12 +482,6 @@ export function DestinationView({
               {interestTiles.map(({ key, count }) => (
                 <InterestTile key={key} interest={key} state={interestState(key)} count={count} onClick={() => cycleInterest(key)} />
               ))}
-              <button onClick={() => setMustOnly((v) => !v)}
-                className="flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
-                style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
-                         color: mustOnly ? "#fff" : "var(--text-2)", borderColor: mustOnly ? "var(--brand)" : "var(--border)" }}>
-                ⭐ רק אתרי חובה
-              </button>
             </div>
             <div className="flex w-[280px] shrink-0 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
               <Search size={16} className="shrink-0 text-[var(--text-3)]" />
@@ -479,8 +491,16 @@ export function DestinationView({
             </div>
           </div>
 
-          {/* row 2 — bulk-select the current view · sort · filters */}
+          {/* row 2 (below the topics) — the must-see facet (with its count in the
+              selected topics) · bulk-select the current view · sort · filters */}
           <div className="flex items-center gap-2.5 py-2">
+            <button onClick={() => setMustOnly((v) => !v)}
+              className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
+              style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
+                       color: mustOnly ? "#fff" : "var(--text-2)", borderColor: mustOnly ? "var(--brand)" : "var(--border)" }}>
+              ⭐ אתרי חובה <span className={mustOnly ? "opacity-80" : "opacity-60"}>{mustSeeCount}</span>
+            </button>
+            <span className="mx-1 h-5 w-px shrink-0 bg-[var(--border)]" />
             {viewIds.length > 0 && (
               <>
                 <button onClick={() => setMany(viewIds, "yes")}
@@ -626,21 +646,19 @@ export function DestinationView({
                 placeholder="חיפוש אטרקציה…"
                 className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]" />
             </div>
-            <div className="mb-1.5 flex items-center justify-between gap-2">
-              <p className="text-[12.5px] font-medium text-[var(--text-3)]">מה מעניין אתכם? <span className="text-[var(--text-3)] opacity-70">(✓/✕)</span></p>
-              <button onClick={() => setMustOnly((v) => !v)}
-                className="shrink-0 rounded-full px-3 py-1 text-[13px] font-medium transition"
-                style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
-                         color: mustOnly ? "#fff" : "var(--text-2)", border: `1px solid ${mustOnly ? "var(--brand)" : "var(--border)"}` }}>
-                ⭐ רק אתרי חובה
-              </button>
-            </div>
+            <p className="mb-1.5 text-[12.5px] font-medium text-[var(--text-3)]">מה מעניין אתכם? <span className="text-[var(--text-3)] opacity-70">(✓/✕)</span></p>
             <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
               {interestTiles.map(({ key, count }) => (
                 <InterestTile key={key} interest={key} state={interestState(key)} count={count} onClick={() => cycleInterest(key)} />
               ))}
             </div>
             <div className="flex flex-wrap gap-2">
+              <button onClick={() => setMustOnly((v) => !v)}
+                className="rounded-full px-3 py-1.5 text-[13.5px] font-medium transition"
+                style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
+                         color: mustOnly ? "#fff" : "var(--text-2)", border: `1px solid ${mustOnly ? "var(--brand)" : "var(--border)"}` }}>
+                ⭐ אתרי חובה <span className="opacity-70">{mustSeeCount}</span>
+              </button>
               {yesCount + maybeCount > 0 && (
                 <button onClick={() => setSelectedOnly((v) => !v)}
                   className="flex items-center gap-1 rounded-full border px-3 py-1.5 text-[13.5px] font-medium transition"
