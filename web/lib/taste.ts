@@ -27,7 +27,7 @@ export const INTEREST_TASTE: Record<string, string[]> = {
   // dimmed/hid the entire must-see set of a city.
   "היסטוריה": ["history"],
   // finer taste chips (added to the editor for real divergence):
-  "מוזיקה חיה": ["live_music"],
+  "מוזיקה": ["live_music"],
   "חיי לילה": ["nightlife"],
   "מחזמר ותיאטרון": ["theatre"],
   "בלט ואופרה": ["classical_opera"],
@@ -128,7 +128,7 @@ export function rankByTaste(
 
 // Top-weighted taste tags → a short Hebrew emphasis line for the AI prompt.
 const TAG_HE: Record<string, string> = {
-  live_music: "מוזיקה חיה", nightlife: "חיי לילה", vintage_shopping: "שווקי וינטג'",
+  live_music: "מוזיקה", nightlife: "חיי לילה", vintage_shopping: "שווקי וינטג'",
   luxury_shopping: "קניות יוקרה", theatre: "תיאטרון ומחזות", classical_opera: "בלט ואופרה",
   sports: "ספורט", food: "אוכל", art: "אמנות ומוזיאונים", history: "היסטוריה",
   nature: "טבע ופארקים", family: "פעילויות משפחתיות", culture: "תרבות",

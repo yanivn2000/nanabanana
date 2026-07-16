@@ -68,7 +68,7 @@ export const CATEGORY_ICONS: Record<string, React.ReactNode> = {
       <path d="M16 4 V0.8 l6-.0 -2 2 2 2 -6 0 Z" fill={A} transform="translate(0 1)" />
     </g>
   ),
-  "מוזיקה חיה": (
+  "מוזיקה": (
     <g fill={G}>
       <path d="M12.5 6 L26 3.4 v4.2 L15.5 9.8 V23 a4.6 4.6 0 1 1 -3-4.3 Z" />
       <circle cx="23" cy="21.5" r="4" />

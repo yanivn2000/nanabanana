@@ -45,6 +45,13 @@ export const DEFAULT_PROFILE: FamilyProfile = {
 
 const KEY = "nanabanana.profile.v1";
 
+// Renamed interest chips — migrate saved profiles on hydrate so old selections
+// keep working under the new vocabulary.
+const INTEREST_RENAMES: Record<string, string> = { "מוזיקה חיה": "מוזיקה" };
+function migrateInterests(list: unknown): string[] {
+  return Array.isArray(list) ? [...new Set(list.map((v) => INTEREST_RENAMES[v as string] ?? (v as string)))] : [];
+}
+
 // localStorage-backed state. SSR-safe (starts from default, hydrates on mount).
 export function useProfile(): [FamilyProfile, (p: FamilyProfile) => void, boolean] {
   const [profile, setProfile] = useState<FamilyProfile>(DEFAULT_PROFILE);
@@ -53,7 +60,11 @@ export function useProfile(): [FamilyProfile, (p: FamilyProfile) => void, boolea
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) setProfile({ ...DEFAULT_PROFILE, ...JSON.parse(raw) });
+      if (raw) {
+        const p = JSON.parse(raw);
+        setProfile({ ...DEFAULT_PROFILE, ...p,
+          interests: migrateInterests(p.interests), dislikes: migrateInterests(p.dislikes) });
+      }
     } catch {}
     setLoaded(true);
   }, []);
