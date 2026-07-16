@@ -14,7 +14,12 @@ export const INTEREST_TASTE: Record<string, string[]> = {
   // subcategory below. Mapping to "nature" made every park a "beach" (London
   // showed 16 "beaches") — kept empty so it stays distinct from טבע.
   "חופים": [],
-  "פארקי שעשועים": ["family"],
+  // Amusement parks = the theme_park/water_park subcategory only (INTEREST_CATS)
+  // — NOT the broad "family" tag, which made regular parks/zoos look like
+  // amusement parks and identical to "ילדים".
+  "פארקי שעשועים": [],
+  // Kids = the whole family-friendly set: the curated "family" tag PLUS the
+  // kid subcategories. Broader than amusement parks by design.
   "ילדים": ["family"],
   "היסטוריה": ["history", "landmark"],
   // finer taste chips (added to the editor for real divergence):
