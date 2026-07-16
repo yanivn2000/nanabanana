@@ -199,6 +199,21 @@ export function DestinationView({
   const [visibleCount, setVisibleCount] = useState(PAGE);
   const yesCount = Object.values(choices).filter((c) => c === "yes").length;
   const maybeCount = Object.values(choices).filter((c) => c === "maybe").length;
+  // The trip needs enough anchors to be worth building. Gate the CTA on a soft
+  // minimum of "כן" marks (fewer in a tiny city) so the flow reads clearly:
+  // pick topics → mark attractions → build. Clicking early nudges + explains.
+  const minPicks = Math.min(7, attractions.length || 7);
+  const canBuild = yesCount >= minPicks;
+  const [buildHint, setBuildHint] = useState(false);
+  const tryBuild = () => {
+    if (!canBuild) {
+      setBuildHint(true);
+      document.getElementById("picks")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.setTimeout(() => setBuildHint(false), 4500);
+      return;
+    }
+    openBuild();
+  };
   // "select all must-see" — a one-click way to mark every חובה place as כן.
   const mustSeeIds = useMemo(() => attractions.filter((a) => a.must_see === 1).map((a) => a.id), [attractions]);
   const allMustSeeYes = mustSeeIds.length > 0 && mustSeeIds.every((id) => choices[id] === "yes");
@@ -333,7 +348,7 @@ export function DestinationView({
   }
 
   return (
-    <main className="mx-auto w-full max-w-[440px] pb-28 lg:max-w-none lg:pb-0">
+    <main className="mx-auto w-full max-w-[440px] pb-28 lg:max-w-none lg:pb-20">
       {isEditor && (
         <div className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-[#3d2c0a] px-4 py-1.5 text-center text-[12.5px] font-medium text-[var(--amber-fill)]">
           <span>✎ מצב עורך — סמנו על כל כרטיס מה “בחירת העורך” לעיר הזו. השינויים נשמרים מיד.</span>
@@ -370,9 +385,9 @@ export function DestinationView({
           {/* actions — build CTA (opens the days/distance modal, then builds a
               trip from the city marks), pass toggle to its left (secondary). */}
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-            <button onClick={openBuild}
+            <button onClick={tryBuild}
               className="flex items-center justify-center gap-2 rounded-full border-[1.5px] border-transparent bg-[var(--brand)] px-5 py-3 text-[15px] font-medium text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
-              <Sparkles size={17} /> בנו לי טיול
+              <Sparkles size={17} /> {canBuild ? `בנו לי טיול · ${yesCount}` : "בחרו אטרקציות לטיול"}
             </button>
             {passes.length > 0 && (
               <button onClick={() => setShowPasses((v) => !v)}
@@ -383,6 +398,21 @@ export function DestinationView({
           </div>
         </div>
       </header>
+
+      {/* how-it-works — teaches the flow up front, then gets out of the way once
+          the traveler starts marking places */}
+      {yesCount === 0 && (
+        <div className="px-5 pb-1 pt-1 lg:px-8">
+          <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-[var(--text-2)]">
+            <span className="font-semibold text-[var(--brand-ink)]">איך בונים טיול?</span>
+            <span className="inline-flex items-center gap-1"><b className="text-[var(--text)]">1</b> בחרו נושאים שאתם אוהבים</span>
+            <ChevronRight size={13} className="text-[var(--text-3)]" />
+            <span className="inline-flex items-center gap-1"><b className="text-[var(--text)]">2</b> סמנו “כן” על אטרקציות שאהבתם</span>
+            <ChevronRight size={13} className="text-[var(--text-3)]" />
+            <span className="inline-flex items-center gap-1"><b className="text-[var(--text)]">3</b> נרכיב לכם את הטיול</span>
+          </div>
+        </div>
+      )}
 
       {/* pass panel — reveals smoothly under the hero so the poster never jumps */}
       {passes.length > 0 && (
@@ -591,7 +621,7 @@ export function DestinationView({
         </div>
 
         {/* attraction cards — a grid on desktop, single column on mobile */}
-        <section className="px-5 lg:order-1 lg:min-w-0 lg:flex-1 lg:px-8 lg:pb-16">
+        <section id="picks" className="scroll-mt-[120px] px-5 lg:order-1 lg:min-w-0 lg:flex-1 lg:px-8 lg:pb-16">
           {/* mobile filter header (search + categories + quick tags) — desktop
               uses the toolbar above */}
           <div className="sticky top-[240px] z-20 -mx-5 bg-[var(--bg)] px-5 pb-2 pt-4 shadow-[0_8px_10px_-10px_rgba(16,29,43,0.2)] lg:hidden">
@@ -785,21 +815,43 @@ export function DestinationView({
         </section>
       </div>
 
-      {/* floating build bar — appears once the traveler has marked places */}
-      {yesCount + maybeCount > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-3 shadow-[0_-8px_20px_rgba(16,29,43,0.08)] lg:px-8">
-          <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-3">
-            <p className="text-[14px] text-[var(--text-2)]">
-              <span className="font-semibold text-[var(--text)]">{yesCount}</span> נבחרו לטיול
-              {maybeCount ? <span className="text-[var(--text-3)]"> · {maybeCount} אולי</span> : null}
-            </p>
-            <button onClick={openBuild}
-              className="flex items-center gap-2 rounded-full bg-[var(--brand)] px-6 py-2.5 text-[14px] font-medium text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
-              <Sparkles size={16} /> בנו טיול
+      {/* persistent build bar — the flow's finish line, always visible so the
+          goal is unmistakable: mark attractions, then build. Progress fills
+          toward the minimum; the CTA activates once there are enough picks. */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 shadow-[0_-8px_20px_rgba(16,29,43,0.08)] lg:px-8">
+        <div className="mx-auto max-w-[1600px]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              {/* progress track toward the minimum */}
+              <div className="hidden h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-[var(--surface-2)] sm:block lg:w-32">
+                <div className="h-full rounded-full bg-[var(--brand)] transition-all duration-300"
+                  style={{ width: `${Math.min(100, (yesCount / minPicks) * 100)}%` }} />
+              </div>
+              <p className="min-w-0 truncate text-[13.5px] text-[var(--text-2)]">
+                {canBuild ? (
+                  <><span className="font-semibold text-[var(--text)]">{yesCount} אטרקציות</span> נבחרו — מוכנים לבנות!{maybeCount ? <span className="text-[var(--text-3)]"> · {maybeCount} אולי</span> : null}</>
+                ) : yesCount === 0 ? (
+                  <>סמנו אטרקציות שאהבתם <span className="font-medium text-[var(--brand-ink)]">(כן 👍)</span> — לפחות {minPicks} — ונרכיב לכם טיול</>
+                ) : (
+                  <><span className="font-semibold text-[var(--text)]">{yesCount}/{minPicks}</span> — בחרו עוד {minPicks - yesCount} כדי לבנות טיול</>
+                )}
+              </p>
+            </div>
+            <button onClick={tryBuild}
+              className="flex shrink-0 items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition"
+              style={canBuild
+                ? { background: "var(--brand)", color: "#fff", boxShadow: "0 6px 16px rgba(14,107,94,.3)" }
+                : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
+              <Sparkles size={16} /> {canBuild ? `בנו לי טיול · ${yesCount}` : "בנו לי טיול"}
             </button>
           </div>
+          {buildHint && !canBuild && (
+            <p className="mt-2 rounded-[var(--radius-sm)] bg-[var(--amber-soft)] px-3 py-1.5 text-[12.5px] text-[var(--amber)]">
+              כדי לבנות טיול מותאם, סמנו לפחות {minPicks} אטרקציות שאהבתם בכפתור “כן” 👍 מהרשימה{yesCount ? ` (בחרתם ${yesCount} עד כה)` : ""}.
+            </p>
+          )}
         </div>
-      )}
+      </div>
 
       {/* build modal — days + distance, then hand off to the trip page */}
       {buildOpen && (
