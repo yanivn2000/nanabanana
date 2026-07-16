@@ -138,28 +138,35 @@ export const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 
 // A category tile. `selected` = binary (interested / not) for simple pickers;
 // `state` = tri-state (yes / no / none) for the profile's single preference list.
-export type TileState = "yes" | "no" | "none";
+// "solo" = the city page's focus state (show only this topic) — solid brand.
+export type TileState = "yes" | "no" | "none" | "solo";
 
-export function CategoryTile({ label, selected, state, count, onClick }: {
-  label: string; selected?: boolean; state?: TileState; count?: number; onClick?: () => void;
+export function CategoryTile({ label, selected, state, count, dim, onClick }: {
+  label: string; selected?: boolean; state?: TileState; count?: number; dim?: boolean; onClick?: () => void;
 }) {
   const icon = CATEGORY_ICONS[label];
   const s: TileState = state ?? (selected ? "yes" : "none");
+  const solo = s === "solo";
   const box =
-    s === "yes" ? { background: "var(--brand-soft)", border: "1.5px solid var(--brand)" }
+    solo ? { background: "var(--brand)", border: "1.5px solid var(--brand)" }
+    : s === "yes" ? { background: "var(--brand-soft)", border: "1.5px solid var(--brand)" }
     : s === "no" ? { background: "var(--surface-2)", border: "1.5px solid var(--border)" }
     : { background: "var(--surface)", border: "1.5px solid var(--border)" };
   return (
-    <button type="button" onClick={onClick} aria-pressed={s === "yes"}
+    <button type="button" onClick={onClick} aria-pressed={s === "yes" || solo}
       className="relative flex flex-col items-center justify-center gap-1.5 rounded-[18px] px-1 py-3 transition"
-      style={box}>
-      {s !== "none" && (
+      style={{ ...box, opacity: dim ? 0.4 : 1 }}>
+      {solo ? (
+        <span className="absolute end-1.5 top-1.5 grid size-[18px] place-items-center rounded-full bg-white">
+          <span className="size-[7px] rounded-full bg-[var(--brand)]" />
+        </span>
+      ) : s !== "none" && (
         <span className="absolute end-1.5 top-1.5 grid size-[18px] place-items-center rounded-full text-[11px] font-bold leading-none text-white"
           style={{ background: s === "yes" ? "var(--brand)" : "var(--text-3)" }}>
           {s === "yes" ? "✓" : "✕"}
         </span>
       )}
-      <span style={{ opacity: s === "no" ? 0.5 : 1 }}>
+      <span style={{ opacity: s === "no" ? 0.5 : 1, filter: solo ? "brightness(0) invert(1)" : undefined }}>
         {icon ? (
           <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden>{icon}</svg>
         ) : (
@@ -168,12 +175,13 @@ export function CategoryTile({ label, selected, state, count, onClick }: {
       </span>
       <span className="text-[13px] font-medium leading-tight"
         style={{
-          color: s === "yes" ? "var(--brand-ink)" : "var(--text-2)",
+          color: solo ? "#fff" : s === "yes" ? "var(--brand-ink)" : "var(--text-2)",
           textDecoration: s === "no" ? "line-through" : "none",
           opacity: s === "no" ? 0.6 : 1,
         }}>{label}</span>
       {count != null && (
-        <span className="text-[11.5px] tabular-nums leading-none text-[var(--text-3)]" style={{ opacity: s === "no" ? 0.6 : 1 }}>
+        <span className="text-[11.5px] tabular-nums leading-none"
+          style={{ color: solo ? "rgba(255,255,255,.8)" : "var(--text-3)", opacity: s === "no" ? 0.6 : 1 }}>
           {count}
         </span>
       )}

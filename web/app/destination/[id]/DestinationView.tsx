@@ -184,13 +184,19 @@ export function DestinationView({
   // control as the profile page, writing to profile.interests / profile.dislikes.
   const [profile, setProfile] = useProfile();
   const isFamily = profile.kids.length > 0;
-  const interestState = (v: string): "yes" | "no" | "none" =>
-    profile.interests.includes(v) ? "yes" : profile.dislikes.includes(v) ? "no" : "none";
-  const cycleInterest = (v: string) => {   // none → מעוניין → לא מעוניין → none
+  // "solo" — a transient focus (not saved to the profile): show ONLY this topic.
+  // Single-select. It's the 4th step of the tile cycle, after "לא מעוניין".
+  const [soloInterest, setSoloInterest] = useState<string | null>(null);
+  const interestState = (v: string): "yes" | "no" | "none" | "solo" =>
+    soloInterest === v ? "solo"
+      : profile.interests.includes(v) ? "yes"
+      : profile.dislikes.includes(v) ? "no" : "none";
+  const cycleInterest = (v: string) => {   // none → מעוניין → לא מעוניין → רק אותו → none
     const s = interestState(v);
     if (s === "none") setProfile({ ...profile, interests: [...profile.interests, v], dislikes: profile.dislikes.filter((x) => x !== v) });
     else if (s === "yes") setProfile({ ...profile, interests: profile.interests.filter((x) => x !== v), dislikes: [...profile.dislikes, v] });
-    else setProfile({ ...profile, dislikes: profile.dislikes.filter((x) => x !== v) });
+    else if (s === "no") { setProfile({ ...profile, dislikes: profile.dislikes.filter((x) => x !== v) }); setSoloInterest(v); }
+    else setSoloInterest(null);   // solo → none
   };
   const hasPrefs = profile.interests.length > 0 || profile.dislikes.length > 0;
   const [selected, setSelected] = useState<Attraction | null>(null);
@@ -258,9 +264,12 @@ export function DestinationView({
         // "הצג רק נבחרים" overrides the other filters: show exactly the places
         // the traveler marked (כן/אולי), so a lone pick is always findable.
         if (selectedOnly) return choices[a.id] === "yes" || choices[a.id] === "maybe";
+        // solo focus: show ONLY the focused topic (still respecting search / map /
+        // popover flags below); the profile's other likes/dislikes are ignored.
+        if (soloInterest) { if (!matchesInterest(a, soloInterest)) return false; }
         // ✕ interests hide entirely — e.g. "ילדים" on a couples' trip removes
         // every kid-oriented place, not even dimmed. An explicit כן/אולי keeps it.
-        if (!choices[a.id] && profile.dislikes.some((it) => matchesInterest(a, it))) return false;
+        else if (!choices[a.id] && profile.dislikes.some((it) => matchesInterest(a, it))) return false;
         if (mustOnly && a.must_see !== 1) return false;
         if (flags.free && a.cost_level !== 0) return false;
         if (flags.indoor && !(a.indoor_outdoor === "indoor" || a.indoor_outdoor === "both")) return false;
@@ -272,7 +281,7 @@ export function DestinationView({
         }
         return true;
       }),
-    [attractions, mustOnly, query, flags, insights, selectedOnly, choices, profile.dislikes]
+    [attractions, mustOnly, query, flags, insights, selectedOnly, choices, profile.dislikes, soloInterest]
   );
   // Does an attraction match the traveler's profile? A ✓ interest includes it;
   // a ✕ interest excludes it; no interests set = everything matches (default).
@@ -310,13 +319,13 @@ export function DestinationView({
     // Matches lead; the profile-cut tail is dimmed below (still markable). In
     // "selected only" mode there's no dimming — every pick shows in full.
     const matched: Attraction[] = [], dimmed: Attraction[] = [];
-    for (const a of listItems) ((selectedOnly || profileMatch(a)) ? matched : dimmed).push(a);
+    for (const a of listItems) ((selectedOnly || soloInterest || profileMatch(a)) ? matched : dimmed).push(a);
     matched.sort(cmp); dimmed.sort(cmp);
     return { sortedItems: [...matched, ...dimmed], dimmedIds: new Set(dimmed.map((a) => a.id)), matchedIds: matched.map((a) => a.id) };
-  }, [listItems, sort, cityTasteTagged, taste, profileMatch, selectedOnly]);
+  }, [listItems, sort, cityTasteTagged, taste, profileMatch, selectedOnly, soloInterest]);
 
   // Paginate: show PAGE at a time; reset to page 1 on any change.
-  useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, selectedOnly, profile.interests, profile.dislikes]);
+  useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, selectedOnly, soloInterest, profile.interests, profile.dislikes]);
   // Never leave the traveler stranded in an empty "selected only" view.
   useEffect(() => { if (selectedOnly && yesCount + maybeCount === 0) setSelectedOnly(false); }, [selectedOnly, yesCount, maybeCount]);
   const visible = sortedItems.slice(0, visibleCount);
@@ -472,14 +481,27 @@ export function DestinationView({
                     <span>הקישו כדי לעבור בין:</span>
                     <span className="inline-flex items-center gap-1.5"><span className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">✓</span> מעוניין</span>
                     <span className="inline-flex items-center gap-1.5"><span className="grid size-[20px] place-items-center rounded-full bg-[var(--text-3)] text-[12px] font-bold text-white">✕</span> לא מעוניין</span>
-                    <span>· ריק = ניטרלי</span>
+                    <span className="inline-flex items-center gap-1.5"><span className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)]"><span className="size-[7px] rounded-full bg-white" /></span> רק אותו</span>
                   </p>
                 </div>
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(92px,1fr))] gap-2">
                   {interestTiles.map(({ key, count }) => (
-                    <CategoryTile key={key} label={key} state={interestState(key)} count={count} onClick={() => cycleInterest(key)} />
+                    <CategoryTile key={key} label={key} state={interestState(key)} count={count}
+                      dim={soloInterest != null && soloInterest !== key}
+                      onClick={() => cycleInterest(key)} />
                   ))}
                 </div>
+                {soloInterest && (
+                  <div className="mt-2 flex items-center justify-between gap-2 rounded-full bg-[var(--brand)] px-4 py-1.5 text-[13px] font-medium text-white">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="grid size-[16px] place-items-center rounded-full bg-white"><span className="size-[6px] rounded-full bg-[var(--brand)]" /></span>
+                      מציג רק: {soloInterest}
+                    </span>
+                    <button onClick={() => setSoloInterest(null)} className="rounded-full bg-white/20 px-3 py-0.5 text-[12.5px] font-semibold transition hover:bg-white/30">
+                      הצג הכל
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
