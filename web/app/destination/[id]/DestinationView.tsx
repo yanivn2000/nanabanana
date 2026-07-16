@@ -173,6 +173,7 @@ export function DestinationView({
   const [showPlaces, setShowPlaces] = useState(false);
   const [showPasses, setShowPasses] = useState(false);
   const [mustOnly, setMustOnly] = useState(true);   // "רק אתרי חובה" — default ON
+  const [selectedOnly, setSelectedOnly] = useState(false);  // "הצג רק נבחרים"
   const [flags, setFlags] = useState({
     free: false, indoor: false, top: false, withInsights: false,
   });
@@ -233,6 +234,9 @@ export function DestinationView({
   const filtered = useMemo(
     () =>
       attractions.filter((a) => {
+        // "הצג רק נבחרים" overrides the other filters: show exactly the places
+        // the traveler marked (כן/אולי), so a lone pick is always findable.
+        if (selectedOnly) return choices[a.id] === "yes" || choices[a.id] === "maybe";
         if (mustOnly && a.must_see !== 1) return false;
         if (flags.free && a.cost_level !== 0) return false;
         if (flags.indoor && !(a.indoor_outdoor === "indoor" || a.indoor_outdoor === "both")) return false;
@@ -244,7 +248,7 @@ export function DestinationView({
         }
         return true;
       }),
-    [attractions, mustOnly, query, flags, insights]
+    [attractions, mustOnly, query, flags, insights, selectedOnly, choices]
   );
   // Does an attraction match the traveler's profile? A ✓ interest includes it;
   // a ✕ interest excludes it; no interests set = everything matches (default).
@@ -277,15 +281,18 @@ export function DestinationView({
       return (b.family_score ?? 0) - (a.family_score ?? 0);
     };
     const cmp = (a: Attraction, b: Attraction) => ms(b) - ms(a) || img(b) - img(a) || within(a, b);
-    // Matches lead; the profile-cut tail is dimmed below (still markable).
+    // Matches lead; the profile-cut tail is dimmed below (still markable). In
+    // "selected only" mode there's no dimming — every pick shows in full.
     const matched: Attraction[] = [], dimmed: Attraction[] = [];
-    for (const a of listItems) (profileMatch(a) ? matched : dimmed).push(a);
+    for (const a of listItems) ((selectedOnly || profileMatch(a)) ? matched : dimmed).push(a);
     matched.sort(cmp); dimmed.sort(cmp);
     return { sortedItems: [...matched, ...dimmed], dimmedIds: new Set(dimmed.map((a) => a.id)), matchedIds: matched.map((a) => a.id) };
-  }, [listItems, sort, cityTasteTagged, taste, profileMatch]);
+  }, [listItems, sort, cityTasteTagged, taste, profileMatch, selectedOnly]);
 
   // Paginate: show PAGE at a time; reset to page 1 on any change.
-  useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, profile.interests, profile.dislikes]);
+  useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, selectedOnly, profile.interests, profile.dislikes]);
+  // Never leave the traveler stranded in an empty "selected only" view.
+  useEffect(() => { if (selectedOnly && yesCount + maybeCount === 0) setSelectedOnly(false); }, [selectedOnly, yesCount, maybeCount]);
   const visible = sortedItems.slice(0, visibleCount);
   const firstDimId = visible.find((a) => dimmedIds.has(a.id))?.id;
   // Bulk marks over the matched set (the primary view).
@@ -562,9 +569,13 @@ export function DestinationView({
 
             <div className="mr-auto flex shrink-0 items-center gap-3">
               {yesCount + maybeCount > 0 && (
-                <span className="flex items-center gap-1.5 rounded-full bg-[var(--brand-soft)] px-3 py-1 text-[13px] font-medium text-[var(--brand-ink)]">
-                  <Check size={14} /> נבחרו {yesCount}{maybeCount ? ` · ${maybeCount} אולי` : ""}
-                </span>
+                <button onClick={() => setSelectedOnly((v) => !v)}
+                  className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] font-medium transition"
+                  style={{ background: selectedOnly ? "var(--brand)" : "var(--brand-soft)",
+                           color: selectedOnly ? "#fff" : "var(--brand-ink)",
+                           borderColor: selectedOnly ? "var(--brand)" : "transparent" }}>
+                  <Check size={14} /> {selectedOnly ? "מציג נבחרים · הצג הכל" : `הצג נבחרים · ${yesCount}${maybeCount ? `+${maybeCount}` : ""}`}
+                </button>
               )}
               <span className="text-[13px] text-[var(--text-3)]">{matchedIds.length} מקומות</span>
             </div>
@@ -649,9 +660,13 @@ export function DestinationView({
             </div>
             <div className="flex flex-wrap gap-2">
               {yesCount + maybeCount > 0 && (
-                <span className="flex items-center gap-1 rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-[13.5px] font-medium text-[var(--brand-ink)]">
-                  <Check size={13} /> נבחרו {yesCount}{maybeCount ? ` · ${maybeCount}` : ""}
-                </span>
+                <button onClick={() => setSelectedOnly((v) => !v)}
+                  className="flex items-center gap-1 rounded-full border px-3 py-1.5 text-[13.5px] font-medium transition"
+                  style={{ background: selectedOnly ? "var(--brand)" : "var(--brand-soft)",
+                           color: selectedOnly ? "#fff" : "var(--brand-ink)",
+                           borderColor: selectedOnly ? "var(--brand)" : "transparent" }}>
+                  <Check size={13} /> {selectedOnly ? "הצג הכל" : `הצג נבחרים · ${yesCount}${maybeCount ? `+${maybeCount}` : ""}`}
+                </button>
               )}
               {viewIds.length > 0 && (
                 <>
@@ -837,13 +852,24 @@ export function DestinationView({
                 )}
               </p>
             </div>
-            <button onClick={tryBuild}
-              className="flex shrink-0 items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition"
-              style={canBuild
-                ? { background: "var(--brand)", color: "#fff", boxShadow: "0 6px 16px rgba(14,107,94,.3)" }
-                : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
-              <Sparkles size={16} /> {canBuild ? `בנו לי טיול · ${yesCount}` : "בנו לי טיול"}
-            </button>
+            <div className="flex shrink-0 items-center gap-2">
+              {yesCount + maybeCount > 0 && (
+                <button onClick={() => setSelectedOnly((v) => !v)}
+                  className="hidden items-center gap-1.5 rounded-full border px-4 py-2.5 text-[13.5px] font-medium transition sm:flex"
+                  style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)",
+                           color: selectedOnly ? "#fff" : "var(--brand-ink)",
+                           borderColor: selectedOnly ? "var(--brand)" : "var(--brand)" }}>
+                  {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
+                </button>
+              )}
+              <button onClick={tryBuild}
+                className="flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition"
+                style={canBuild
+                  ? { background: "var(--brand)", color: "#fff", boxShadow: "0 6px 16px rgba(14,107,94,.3)" }
+                  : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
+                <Sparkles size={16} /> {canBuild ? `בנו לי טיול · ${yesCount}` : "בנו לי טיול"}
+              </button>
+            </div>
           </div>
           {buildHint && !canBuild && (
             <p className="mt-2 rounded-[var(--radius-sm)] bg-[var(--amber-soft)] px-3 py-1.5 text-[12.5px] text-[var(--amber)]">
