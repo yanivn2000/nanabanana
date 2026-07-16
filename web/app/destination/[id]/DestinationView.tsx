@@ -264,13 +264,17 @@ export function DestinationView({
         // "הצג רק נבחרים" overrides the other filters: show exactly the places
         // the traveler marked (כן/אולי), so a lone pick is always findable.
         if (selectedOnly) return choices[a.id] === "yes" || choices[a.id] === "maybe";
-        // solo focus: show ONLY the focused topic (still respecting search / map /
-        // popover flags below); the profile's other likes/dislikes are ignored.
+        // solo focus: show ALL of the focused topic (matching its tile count),
+        // still respecting search / map / popover flags below. It deliberately
+        // bypasses the must-see toggle — otherwise soloing "אוכל 1" could show 0
+        // when that one place isn't an editor pick. Likes/dislikes are ignored.
         if (soloInterest) { if (!matchesInterest(a, soloInterest)) return false; }
-        // ✕ interests hide entirely — e.g. "ילדים" on a couples' trip removes
-        // every kid-oriented place, not even dimmed. An explicit כן/אולי keeps it.
-        else if (!choices[a.id] && profile.dislikes.some((it) => matchesInterest(a, it))) return false;
-        if (mustOnly && a.must_see !== 1) return false;
+        else {
+          // ✕ interests hide entirely — e.g. "ילדים" on a couples' trip removes
+          // every kid place, not even dimmed. An explicit כן/אולי keeps it.
+          if (!choices[a.id] && profile.dislikes.some((it) => matchesInterest(a, it))) return false;
+          if (mustOnly && a.must_see !== 1) return false;
+        }
         if (flags.free && a.cost_level !== 0) return false;
         if (flags.indoor && !(a.indoor_outdoor === "indoor" || a.indoor_outdoor === "both")) return false;
         if (flags.top && (a.family_score ?? 0) < 8) return false;
