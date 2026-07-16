@@ -423,19 +423,21 @@ export function DestinationView({
               "editor picks" filter + search. The must-see toggle lives here (not
               in row 2) and is additive: it narrows the grid but never rewrites
               the interest counts above. */}
-          <div className="flex items-center gap-4 border-b border-[var(--border)] py-2">
-            <span className="shrink-0 text-[12.5px] font-medium text-[var(--text-3)]">מה מעניין אתכם?</span>
-            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+          <div className="flex items-start gap-4 border-b border-[var(--border)] py-2">
+            <span className="shrink-0 pt-1.5 text-[12.5px] font-medium text-[var(--text-3)]">מה מעניין אתכם?</span>
+            {/* wrap onto as many lines as needed so every interest is visible —
+                a single scrolling line clipped tiles behind the search box */}
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
               {interestTiles.map(({ key, count }) => (
                 <InterestTile key={key} interest={key} state={interestState(key)} count={count} onClick={() => cycleInterest(key)} />
               ))}
+              <button onClick={() => setMustOnly((v) => !v)}
+                className="flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
+                style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
+                         color: mustOnly ? "#fff" : "var(--text-2)", borderColor: mustOnly ? "var(--brand)" : "var(--border)" }}>
+                ⭐ רק אתרי חובה
+              </button>
             </div>
-            <button onClick={() => setMustOnly((v) => !v)}
-              className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
-              style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
-                       color: mustOnly ? "#fff" : "var(--text-2)", borderColor: mustOnly ? "var(--brand)" : "var(--border)" }}>
-              ⭐ רק אתרי חובה
-            </button>
             <div className="flex w-[280px] shrink-0 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
               <Search size={16} className="shrink-0 text-[var(--text-3)]" />
               <input value={query} onChange={(e) => setQuery(e.target.value)}
