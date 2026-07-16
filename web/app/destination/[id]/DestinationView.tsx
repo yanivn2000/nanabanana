@@ -595,11 +595,12 @@ export function DestinationView({
             {yesCount + maybeCount > 0 && (
               <>
                 <button onClick={toggleSelectedOnly}
+                  title="כל הסימונים ששמורים לעיר — כולל כאלה שמוסתרים בסינון הנוכחי. לחיצה מציגה רק אותם."
                   className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
                   style={{ background: selectedOnly ? "var(--brand)" : "var(--brand-soft)",
                            color: selectedOnly ? "#fff" : "var(--brand-ink)",
                            borderColor: selectedOnly ? "var(--brand)" : "transparent" }}>
-                  <Check size={14} /> אטרקציות שנבחרו <span className="opacity-70">{yesCount}{maybeCount ? `+${maybeCount}` : ""}</span>
+                  <Check size={14} /> אטרקציות שנבחרו <span className="opacity-70">{yesCount}{maybeCount ? `+${maybeCount}` : ""}</span> <span className="text-[11.5px] opacity-60">בכל העיר</span>
                 </button>
                 <button onClick={clearAllChoices} title="מחיקת כל הסימונים בעיר, כולל מביקורים קודמים"
                   className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[13px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f]">
@@ -610,14 +611,17 @@ export function DestinationView({
             <span className="mx-1 h-5 w-px shrink-0 bg-[var(--border)]" />
             {viewIds.length > 0 && (
               <>
+                {/* view-scoped bulk actions — the label names the scope so the
+                    number can't be confused with the city-wide selection count */}
+                <span className="shrink-0 text-[12.5px] text-[var(--text-3)]">על {viewIds.length} המוצגים:</span>
                 <button onClick={() => setMany(viewIds, "yes")}
                   className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-3.5 py-1.5 text-[13.5px] font-medium text-[var(--brand-ink)] transition">
-                  <Check size={14} /> בחר הכל · {viewIds.length}
+                  <Check size={14} /> סמנו הכל
                 </button>
                 {viewSelected > 0 && (
-                  <button onClick={() => setMany(viewIds, null)} title="מנקה רק את המקומות שמוצגים בסינון הנוכחי"
+                  <button onClick={() => setMany(viewIds, null)}
                     className="flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-[13.5px] font-medium text-[var(--text-2)] transition hover:border-[#c0453f] hover:text-[#c0453f]">
-                    <X size={14} /> נקה בתצוגה · {viewSelected}
+                    <X size={14} /> נקו · {viewSelected}
                   </button>
                 )}
                 <span className="mx-1 h-5 w-px shrink-0 bg-[var(--border)]" />
@@ -791,18 +795,19 @@ export function DestinationView({
                 </>
               )}
               {viewIds.length > 0 && (
-                <>
+                <span className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] py-0.5 pe-0.5 ps-2.5">
+                  <span className="text-[12px] text-[var(--text-3)]">על {viewIds.length} המוצגים:</span>
                   <button onClick={() => setMany(viewIds, "yes")}
-                    className="rounded-full border border-[var(--brand)] px-3 py-1.5 text-[13.5px] font-medium text-[var(--brand-ink)]">
-                    ✓ בחר הכל · {viewIds.length}
+                    className="rounded-full border border-[var(--brand)] bg-[var(--surface)] px-2.5 py-1 text-[13px] font-medium text-[var(--brand-ink)]">
+                    ✓ סמנו הכל
                   </button>
                   {viewSelected > 0 && (
                     <button onClick={() => setMany(viewIds, null)}
-                      className="rounded-full border border-[var(--border)] px-3 py-1.5 text-[13.5px] font-medium text-[var(--text-2)]">
-                      ✗ נקה בתצוגה · {viewSelected}
+                      className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[13px] font-medium text-[var(--text-2)]">
+                      ✗ נקו · {viewSelected}
                     </button>
                   )}
-                </>
+                </span>
               )}
               {([["free", "חינם"], ["indoor", "מקורה"]] as [keyof typeof flags, string][]).map(([k, label]) => (
                 <button key={k} onClick={() => toggleFlag(k)}
