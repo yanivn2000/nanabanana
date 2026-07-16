@@ -10,7 +10,10 @@ export const INTEREST_TASTE: Record<string, string[]> = {
   "תרבות": ["art", "theatre", "classical_opera", "culture"],
   "קניות": ["vintage_shopping", "luxury_shopping"],
   "ספורט": ["sports"],
-  "חופים": ["nature"],
+  // Beaches have no dedicated taste tag; matched only via the `beach`
+  // subcategory below. Mapping to "nature" made every park a "beach" (London
+  // showed 16 "beaches") — kept empty so it stays distinct from טבע.
+  "חופים": [],
   "פארקי שעשועים": ["family"],
   "היסטוריה": ["history", "landmark"],
   // finer taste chips (added to the editor for real divergence):
@@ -50,7 +53,7 @@ export function tasteScore(tags: string[] | null, w: Record<string, number>): nu
 // taste_tags, but it lets "מתאים לי" work in every city. (#63)
 export const INTEREST_CATS: Record<string, { cats?: string[]; subs?: string[] }> = {
   "טבע": { cats: ["nature"] },
-  "חופים": { cats: ["nature"], subs: ["beach"] },
+  "חופים": { subs: ["beach"] },
   "אוכל": { cats: ["food"] },
   "תרבות": { cats: ["museum", "historic"] },
   "מוזיאונים": { cats: ["museum"] },
