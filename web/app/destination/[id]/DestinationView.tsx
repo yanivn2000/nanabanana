@@ -478,6 +478,15 @@ export function DestinationView({
                        color: mustOnly ? "#fff" : "var(--text-2)", borderColor: mustOnly ? "var(--brand)" : "var(--border)" }}>
               ⭐ אתרי חובה <span className={mustOnly ? "opacity-80" : "opacity-60"}>{mustSeeCount}</span>
             </button>
+            {yesCount + maybeCount > 0 && (
+              <button onClick={() => setSelectedOnly((v) => !v)}
+                className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition"
+                style={{ background: selectedOnly ? "var(--brand)" : "var(--brand-soft)",
+                         color: selectedOnly ? "#fff" : "var(--brand-ink)",
+                         borderColor: selectedOnly ? "var(--brand)" : "transparent" }}>
+                <Check size={14} /> אטרקציות שנבחרו <span className="opacity-70">{yesCount}{maybeCount ? `+${maybeCount}` : ""}</span>
+              </button>
+            )}
             <span className="mx-1 h-5 w-px shrink-0 bg-[var(--border)]" />
             {viewIds.length > 0 && (
               <>
@@ -548,15 +557,6 @@ export function DestinationView({
             </div>
 
             <div className="mr-auto flex shrink-0 items-center gap-3">
-              {yesCount + maybeCount > 0 && (
-                <button onClick={() => setSelectedOnly((v) => !v)}
-                  className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] font-medium transition"
-                  style={{ background: selectedOnly ? "var(--brand)" : "var(--brand-soft)",
-                           color: selectedOnly ? "#fff" : "var(--brand-ink)",
-                           borderColor: selectedOnly ? "var(--brand)" : "transparent" }}>
-                  <Check size={14} /> {selectedOnly ? "מציג נבחרים · הצג הכל" : `הצג נבחרים · ${yesCount}${maybeCount ? `+${maybeCount}` : ""}`}
-                </button>
-              )}
               <span className="text-[13px] text-[var(--text-3)]">{matchedIds.length} מקומות</span>
             </div>
           </div>
