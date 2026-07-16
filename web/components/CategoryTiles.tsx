@@ -110,12 +110,13 @@ export const CATEGORY_ICONS: Record<string, React.ReactNode> = {
     </g>
   ),
   "ילדים": (
+    // parent + child figures, hand in hand — reads at tile size, not "babyish"
     <g>
-      <ellipse cx="11.5" cy="11" rx="7.5" ry="9" fill={G} />
-      <path d="M11.5 20 l-1.4 2.2 h2.8 Z" fill={G} />
-      <path d="M11.5 22 c0 3 4.5 3.2 4.5 6.5" stroke={A} strokeWidth="1.8" fill="none" strokeLinecap="round" />
-      <ellipse cx="23" cy="15" rx="5.5" ry="6.6" fill={A} />
-      <path d="M23 21.6 l-1 1.6 h2 Z" fill={A} />
+      <circle cx="10" cy="7.5" r="4.2" fill={G} />
+      <path d="M3.5 29 v-8 a6.5 6.5 0 0 1 13 0 v8 h-3.6 v-6.5 h-2 V29 Z" fill={G} />
+      <circle cx="23" cy="12.5" r="3.3" fill={A} />
+      <path d="M18 29 v-6 a5 5 0 0 1 10 0 v6 h-3 v-4.8 h-1.6 V29 Z" fill={A} />
+      <path d="M15.5 20.5 L19 21.8" stroke={A} strokeWidth="2" strokeLinecap="round" />
     </g>
   ),
   "מוזיאונים": (
