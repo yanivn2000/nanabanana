@@ -288,6 +288,110 @@ export async function updateDestination(id: number, fields: Record<string, unkno
   return true;
 }
 
+// --- Admin: insights ingest (the knowledge layer) ----------------------------
+// Port of the Streamlit tool's save/match (insights.py): distilled traveller
+// insights are saved per-author as `sources` rows, each insight matched to one
+// of our attractions by token overlap where possible.
+
+export type IngestItem = { place: string; kind: string; text_he: string; sentiment: string; author?: string };
+
+const MATCH_STOP = new Set([
+  "the", "de", "van", "der", "den", "het", "een", "a", "of", "and", "und",
+  "la", "le", "el", "il", "at", "in", "on", "st",
+  "park", "garden", "gardens", "museum", "house", "home", "palace", "castle",
+  "church", "square", "market", "street", "bridge", "tower", "cathedral",
+  "gallery", "center", "centre", "old", "new", "great", "royal",
+  "פארק", "גן", "גני", "מוזיאון", "בית", "הבית", "ארמון", "טירה", "כנסייה",
+  "כיכר", "שוק", "רחוב", "גשר", "מגדל", "קתדרלה", "גלריה", "מרכז", "של", "עם",
+]);
+const mNorm = (s: string | null | undefined) =>
+  (s ?? "").toLowerCase().split("").filter((ch) => /[\p{L}\p{N}\s]/u.test(ch)).join("").trim();
+const mToks = (s: string | null | undefined) =>
+  new Set(mNorm(s).split(/\s+/).filter((t) => t.length >= 2));
+const diff = (a: Set<string>, b: Set<string>) => new Set([...a].filter((x) => !b.has(x)));
+const okAnchor = (core: Set<string>) =>
+  core.size >= 2 || (core.size === 1 && [...core][0].length >= 4);
+
+type MatchRow = { id: number; name_en: string; name_he: string | null; fs: number; ms: number };
+
+function matchAttraction(rows: MatchRow[], city: Set<string>, placeName: string): number | null {
+  const place = mNorm(placeName);
+  const pcore = diff(diff(mToks(placeName), MATCH_STOP), city);
+  if (place.length < 3 || !pcore.size) return null;
+  let best: { s: number; id: number } | null = null;
+  for (const r of rows) {
+    let cand: number | null = null;
+    for (const name of [r.name_en, r.name_he]) {
+      const n = mNorm(name);
+      if (!n) continue;
+      const ncore = diff(diff(mToks(name), MATCH_STOP), city);
+      let s: number | null = null;
+      const inter = new Set([...pcore].filter((x) => ncore.has(x)));
+      if (n === place) s = 100;
+      else if (pcore.size && ncore.size && inter.size === pcore.size && okAnchor(pcore))
+        s = 68 + Math.floor(24 * pcore.size / ncore.size);
+      else if (pcore.size && ncore.size && inter.size === ncore.size && okAnchor(ncore))
+        s = 62 + Math.floor(20 * ncore.size / pcore.size);
+      else if (inter.size) {
+        const jac = inter.size / new Set([...pcore, ...ncore]).size;
+        if (jac >= 0.6 && okAnchor(inter)) s = 55 + Math.floor(18 * jac);
+      }
+      if (s !== null && (cand === null || s > cand)) cand = s;
+    }
+    if (cand === null) continue;
+    cand += 0.1 * r.fs + (r.ms ? 2 : 0);
+    if (!best || cand > best.s) best = { s: cand, id: r.id };
+  }
+  return best && best.s >= 62 ? best.id : null;
+}
+
+// Persist approved insights, grouped per author into `sources` rows.
+export async function saveInsights(
+  destinationId: number, url: string | null, defaultAuthor: string | null,
+  rawText: string, items: IngestItem[]
+): Promise<{ sources: number; saved: number; matched: number }> {
+  const dest = await query<{ city: string; city_he: string | null }>(
+    `SELECT city, city_he FROM destinations WHERE id = $1`, [destinationId]);
+  const city = new Set([...mToks(dest[0]?.city), ...mToks(dest[0]?.city_he)]);
+  const rows = await query<MatchRow>(
+    `SELECT id, name_en, name_he, COALESCE(family_score,0)::int AS fs, COALESCE(must_see,0)::int AS ms
+       FROM attractions WHERE destination_id = $1
+        AND (is_duplicate IS NULL OR is_duplicate = 0)
+        AND (is_component IS NULL OR is_component = 0)`, [destinationId]);
+
+  const groups = new Map<string | null, IngestItem[]>();
+  for (const it of items) {
+    const author = (it.author || defaultAuthor || "").trim() || null;
+    (groups.get(author) ?? groups.set(author, []).get(author)!).push(it);
+  }
+  let saved = 0, matched = 0, sources = 0;
+  for (const [author, group] of groups) {
+    const src = await query<{ id: number }>(
+      `INSERT INTO sources (destination_id, url, author, raw_text, created_at)
+       VALUES ($1,$2,$3,$4,now()) RETURNING id`, [destinationId, url, author, rawText]);
+    const sourceId = src[0].id;
+    sources++;
+    for (const it of group) {
+      const aid = matchAttraction(rows, city, it.place || "");
+      const place = it.place || null;
+      const dup = await query(
+        `SELECT 1 FROM insights WHERE destination_id=$1 AND text_he=$2
+           AND attraction_id IS NOT DISTINCT FROM $3
+           AND place_name IS NOT DISTINCT FROM $4 LIMIT 1`,
+        [destinationId, it.text_he, aid, place]);
+      if (dup.length) continue;
+      if (aid) matched++;
+      await query(
+        `INSERT INTO insights (source_id, destination_id, attraction_id, place_name,
+                               kind, text_he, sentiment, status, weight, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'approved',1,now())`,
+        [sourceId, destinationId, aid, place, it.kind, it.text_he, it.sentiment]);
+      saved++;
+    }
+  }
+  return { sources, saved, matched };
+}
+
 // --- User feedback ("מצאתם באג? יש רעיון?") ---------------------------------
 export type Feedback = {
   id: number; created_at: string; kind: string | null;

@@ -3,10 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Loader2, Check, ExternalLink } from "lucide-react";
+import { InsightsIngest } from "./InsightsIngest";
 import type { AdminDestination, Feedback } from "@/lib/db";
 
 const TABS = [
   { key: "cities", label: "🏙️ ערים" },
+  { key: "insights", label: "📥 תובנות" },
   { key: "feedback", label: "💬 פידבק" },
   { key: "posters", label: "🖼️ פוסטרים" },
 ] as const;
@@ -138,6 +140,15 @@ export function AdminView({ destinations, feedback, email }: {
             {destinations.length} ערים · הקישו על עיר לעריכת הפרטים. עריכת אטרקציות (דירוג/ילדים) נעשית בדף העיר במצב עורך.
           </p>
           {destinations.map((d) => <CityRow key={d.id} d={d} />)}
+        </section>
+      )}
+
+      {tab === "insights" && (
+        <section>
+          <p className="mb-3 text-[13px] text-[var(--text-3)]">
+            קליטת המלצות מטיילים אמיתיים לשכבת הידע — הדביקו פוסט או גררו קובץ, Claude מזקק תובנות, אתם מאשרים.
+          </p>
+          <InsightsIngest destinations={destinations} />
         </section>
       )}
 
