@@ -29,6 +29,12 @@ const ALL_INTERESTS = Object.keys(INTEREST_TASTE);
 // Does an attraction belong to an interest? taste-tags first (precise), then the
 // coarse category/subcategory map so it works in half-tagged cities too.
 function matchesInterest(a: Attraction, interest: string): boolean {
+  // The editor's kids rating overrides the tag/subcategory guess: an explicit
+  // "yes"/"no" is authoritative; "maybe"/unset falls back to the data signals.
+  if (interest === "ילדים" && a.editor_kids) {
+    if (a.editor_kids === "yes") return true;
+    if (a.editor_kids === "no") return false;
+  }
   const tags = INTEREST_TASTE[interest];
   if (tags && a.taste_tags && a.taste_tags.some((t) => tags.includes(t))) return true;
   const m = INTEREST_CATS[interest];
@@ -81,6 +87,34 @@ const TONE: Record<Choice, { on: string; ink: string; off: string }> = {
 };
 // A 3-state interest pill (the same values as the profile page): tap cycles
 // neutral → ✓ מעוניין → ✕ לא מעוניין → neutral. It edits the profile in place.
+// Editor-only 3-state rating row (importance / kids). Click the active option
+// again to clear it.
+function EditorRateRow({ label, value, options, onPick }: {
+  label: string;
+  value: string | null;
+  options: { v: string; t: string; bg: string; ink: string }[];
+  onPick: (v: string) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 px-2">
+      <span className="w-11 shrink-0 text-[11px] font-semibold text-[var(--text-3)]">{label}</span>
+      <div className="grid flex-1 grid-cols-3 gap-1">
+        {options.map((o) => {
+          const on = value === o.v;
+          return (
+            <button key={o.v} onClick={() => onPick(o.v)}
+              className="rounded-full border py-1 text-[12px] font-medium transition"
+              style={{ background: on ? o.bg : "var(--surface)", color: on ? o.ink : "var(--text-2)",
+                       borderColor: on ? o.bg : "var(--border)" }}>
+              {o.t}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ChoiceBtn({ tone, active, onClick, icon, label }: {
   tone: Choice; active: boolean; onClick: () => void; icon: React.ReactNode; label: string;
 }) {
@@ -113,25 +147,36 @@ export function DestinationView({
   isEditor?: boolean;
 }) {
   const covered = new Set(coveredIds);
-  // Editor curation: optimistic overrides of the effective must-see flag while
-  // the write to editor_picks is in flight. Overlays onto the server data so the
-  // ⭐ badge, filtering and sort react instantly. Consumers never see this UI.
-  const [pickOverrides, setPickOverrides] = useState<Record<number, boolean>>({});
+  // Editor curation: optimistic overrides of the two ratings while the write to
+  // editor_picks is in flight. Overlays onto the server data so the ⭐ badge,
+  // sort, kids matching and the controls react instantly. Consumers never see
+  // this UI. A rank of 'must' drives the effective must_see flag.
+  const [ratingOverrides, setRatingOverrides] = useState<Record<number, { rank?: string | null; kids?: string | null }>>({});
   const attractions = useMemo(
-    () => (Object.keys(pickOverrides).length === 0
+    () => (Object.keys(ratingOverrides).length === 0
       ? baseAttractions
-      : baseAttractions.map((a) => (a.id in pickOverrides ? { ...a, must_see: pickOverrides[a.id] ? 1 : 0 } : a))),
-    [baseAttractions, pickOverrides]
+      : baseAttractions.map((a) => {
+          const o = ratingOverrides[a.id];
+          if (!o) return a;
+          const rank = "rank" in o ? o.rank : a.editor_rank;
+          const kids = "kids" in o ? o.kids : a.editor_kids;
+          const must_see = "rank" in o ? (rank === "must" ? 1 : 0) : a.must_see;
+          return { ...a, editor_rank: rank ?? null, editor_kids: kids ?? null, must_see };
+        })),
+    [baseAttractions, ratingOverrides]
   );
-  const toggleEditorPick = (a: Attraction) => {
-    const next = a.must_see !== 1;
-    setPickOverrides((o) => ({ ...o, [a.id]: next }));
+  // Set one rating axis (click the active value again to clear it). Optimistic,
+  // reverts on failure.
+  const setRating = (a: Attraction, field: "rank" | "kids", value: string | null) => {
+    const prev = field === "rank" ? a.editor_rank : a.editor_kids;
+    const next = prev === value ? null : value;   // toggle off if re-picking the same
+    setRatingOverrides((o) => ({ ...o, [a.id]: { ...o[a.id], [field]: next } }));
     fetch("/api/editor/pick", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ destination_id: dest.id, attraction_id: a.id, pick: next }),
+      body: JSON.stringify({ destination_id: dest.id, attraction_id: a.id, field, value: next }),
     })
       .then((r) => { if (!r.ok) throw new Error(String(r.status)); })
-      .catch(() => setPickOverrides((o) => ({ ...o, [a.id]: !next })));  // revert on failure
+      .catch(() => setRatingOverrides((o) => ({ ...o, [a.id]: { ...o[a.id], [field]: prev } })));
   };
   // family_score is a family-friendliness metric — only surface it (the
   // "מומלץ למשפחות" filter, the score star) when the traveler has kids.
@@ -254,12 +299,14 @@ export function DestinationView({
   const { sortedItems, dimmedIds, matchedIds } = useMemo(() => {
     const ms = (a: Attraction) => (a.must_see === 1 ? 1 : 0);
     const img = (a: Attraction) => (a.image_url ? 1 : 0);
+    // The editor's "ממש לא" is the floor — those always sink to the very bottom.
+    const demote = (a: Attraction) => (a.editor_rank === "no" ? 1 : 0);
     const within = (a: Attraction, b: Attraction) => {
       if (sort === "name") return (a.name_he || a.name_en).localeCompare(b.name_he || b.name_en, "he");
       if (sort === "match" && cityTasteTagged) return tasteScore(b.taste_tags, taste) - tasteScore(a.taste_tags, taste);
       return (b.family_score ?? 0) - (a.family_score ?? 0);
     };
-    const cmp = (a: Attraction, b: Attraction) => ms(b) - ms(a) || img(b) - img(a) || within(a, b);
+    const cmp = (a: Attraction, b: Attraction) => demote(a) - demote(b) || ms(b) - ms(a) || img(b) - img(a) || within(a, b);
     // Matches lead; the profile-cut tail is dimmed below (still markable). In
     // "selected only" mode there's no dimming — every pick shows in full.
     const matched: Attraction[] = [], dimmed: Attraction[] = [];
@@ -363,7 +410,7 @@ export function DestinationView({
     <main className="mx-auto w-full max-w-[440px] pb-28 lg:max-w-none lg:pb-20">
       {isEditor && (
         <div className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-[#3d2c0a] px-4 py-1.5 text-center text-[12.5px] font-medium text-[var(--amber-fill)]">
-          <span>✎ מצב עורך — סמנו על כל כרטיס מה “בחירת העורך” לעיר הזו. השינויים נשמרים מיד.</span>
+          <span>✎ מצב עורך — דרגו כל אטרקציה: חשיבות (חובה / אולי / ממש לא) והתאמה לילדים. השינויים נשמרים מיד.</span>
         </div>
       )}
       {/* compact card hero — a small landscape thumbnail + flag/city + a
@@ -786,15 +833,21 @@ export function DestinationView({
                       )}
                     </div>
                   </button>
-                  {/* editor curation — toggle this place in/out of the city's
-                      "בחירת העורך" set. Writes to editor_picks immediately. */}
+                  {/* editor curation — two 3-state ratings written immediately:
+                      importance (חובה/אולי/ממש לא) and kids fit (מתאים/אולי/לא) */}
                   {isEditor && (
-                    <button onClick={() => toggleEditorPick(a)}
-                      className="flex items-center justify-center gap-1.5 border-t border-[var(--border)] py-2 text-[13px] font-semibold transition"
-                      style={{ background: a.must_see === 1 ? "var(--accent)" : "var(--surface-2)",
-                               color: a.must_see === 1 ? "#fff" : "var(--text-2)" }}>
-                      {a.must_see === 1 ? "★ בחירת העורך" : "☆ סמן כבחירת העורך"}
-                    </button>
+                    <div className="flex flex-col gap-1.5 border-t border-[var(--border)] bg-[var(--surface-2)] py-2">
+                      <EditorRateRow label="דירוג" value={a.editor_rank}
+                        onPick={(v) => setRating(a, "rank", v)}
+                        options={[{ v: "must", t: "חובה", bg: "var(--brand)", ink: "#fff" },
+                                  { v: "maybe", t: "אולי", bg: "var(--amber-fill)", ink: "#3d2c0a" },
+                                  { v: "no", t: "ממש לא", bg: "#c0453f", ink: "#fff" }]} />
+                      <EditorRateRow label="ילדים" value={a.editor_kids}
+                        onPick={(v) => setRating(a, "kids", v)}
+                        options={[{ v: "yes", t: "מתאים", bg: "var(--brand)", ink: "#fff" },
+                                  { v: "maybe", t: "אולי", bg: "var(--amber-fill)", ink: "#3d2c0a" },
+                                  { v: "no", t: "ממש לא", bg: "#c0453f", ink: "#fff" }]} />
+                    </div>
                   )}
                   {/* yes / maybe / no marks — the traveler's picks for this city.
                       RTL order: כן first (right), then אולי, then לא. */}

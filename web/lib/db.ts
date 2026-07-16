@@ -42,8 +42,10 @@ export type Attraction = {
   best_time_he: string | null;
   dress_he: string | null;
   cost_level: number | null;
-  must_see: number | null;      // EFFECTIVE: editor picks (curated cities) else OSM
+  must_see: number | null;      // EFFECTIVE: editor rank='must' (curated) else OSM
   osm_must_see: number | null;  // the raw OSM flag, kept as an editor reference
+  editor_rank: string | null;   // editor importance: 'must' | 'maybe' | 'no' | null
+  editor_kids: string | null;   // editor kids fit: 'yes' | 'maybe' | 'no' | null
   description_he: string | null;
   taste_tags: string[] | null;
 };
@@ -115,25 +117,27 @@ export async function attractionsByIds(ids: number[]): Promise<Attraction[]> {
   return query<Attraction>(`SELECT ${ATTR_COLS} FROM attractions WHERE id = ANY($1)`, [ids]);
 }
 
-// Effective must-see: once a city has ANY editor pick, the curated set is
-// authoritative (each attraction is must-see iff it's in editor_picks);
-// otherwise fall back to the raw OSM flag. `osm_must_see` is always the raw OSM
-// value, kept so the editor UI can show what OSM thought while curating.
+// Effective must-see: once a city has ANY editor importance rank, that set is
+// authoritative (must-see iff the editor ranked it 'must'); otherwise fall back
+// to the raw OSM flag. `osm_must_see` is always the raw OSM value; `editor_rank`
+// / `editor_kids` are the editor's two 3-state ratings, surfaced for the UI.
 const EFFECTIVE_MUST_SEE =
-  `CASE WHEN hp.has_picks THEN (ep.attraction_id IS NOT NULL)::int ELSE a.must_see END`;
+  `CASE WHEN hp.has_ranks THEN (ep.rank = 'must')::int ELSE a.must_see END`;
 
 export async function attractionsForMap(destinationId: number, limit = 200): Promise<Attraction[]> {
-  const cols = ATTR_COLS.replace(/\bmust_see\b/, `${EFFECTIVE_MUST_SEE} AS must_see, a.must_see AS osm_must_see`);
+  const cols = ATTR_COLS.replace(/\bmust_see\b/,
+    `${EFFECTIVE_MUST_SEE} AS must_see, a.must_see AS osm_must_see, ep.rank AS editor_rank, ep.kids AS editor_kids`);
   return query<Attraction>(
     `SELECT ${cols}
        FROM attractions a
        LEFT JOIN editor_picks ep ON ep.destination_id = a.destination_id AND ep.attraction_id = a.id
-       CROSS JOIN (SELECT EXISTS(SELECT 1 FROM editor_picks WHERE destination_id = $1) AS has_picks) hp
+       CROSS JOIN (SELECT EXISTS(SELECT 1 FROM editor_picks WHERE destination_id = $1 AND rank IS NOT NULL) AS has_ranks) hp
        WHERE a.destination_id = $1 AND a.lat IS NOT NULL AND a.lng IS NOT NULL
          AND (a.quality_keep = 1 OR a.quality_keep IS NULL)
          AND (a.is_duplicate IS NULL OR a.is_duplicate = 0)
          AND (a.is_component IS NULL OR a.is_component = 0)
        ORDER BY COALESCE(${EFFECTIVE_MUST_SEE}, 0) DESC,
+                (ep.rank = 'no') ASC,
                 COALESCE(a.quality_keep = 1, false) DESC,
                 ${NOTABLE} DESC,
                 COALESCE(a.family_score, 0) DESC, a.name_en
@@ -142,42 +146,46 @@ export async function attractionsForMap(destinationId: number, limit = 200): Pro
   );
 }
 
-// Editor curation: add/remove an attraction from a city's "בחירת העורך" set.
-// The FIRST edit to an uncurated city forks the OSM must-see set into
-// editor_picks (seed), so that from then on the curated set is authoritative
-// and a "remove" actually sticks — otherwise deleting an OSM pick from an empty
-// table would be a no-op and revert on reload.
-export async function setEditorPick(
-  destinationId: number, attractionId: number, pick: boolean, by: string
+// Editor curation: set one of an attraction's two 3-state ratings —
+// `rank` (importance: must | maybe | no) or `kids` (fit: yes | maybe | no);
+// null clears it. The FIRST rank edit to an uncurated city forks the OSM
+// must-see set into editor_picks (rank='must'), so a demotion actually sticks
+// instead of no-op'ing against an empty table.
+export async function setEditorRating(
+  destinationId: number, attractionId: number,
+  field: "rank" | "kids", value: string | null, by: string
 ): Promise<void> {
-  const seeded = await query<{ has_picks: boolean }>(
-    `SELECT EXISTS(SELECT 1 FROM editor_picks WHERE destination_id = $1) AS has_picks`,
-    [destinationId]
+  if (field === "rank") {
+    const seeded = await query<{ has_ranks: boolean }>(
+      `SELECT EXISTS(SELECT 1 FROM editor_picks WHERE destination_id = $1 AND rank IS NOT NULL) AS has_ranks`,
+      [destinationId]
+    );
+    if (!seeded[0]?.has_ranks) {
+      await query(
+        `INSERT INTO editor_picks (destination_id, attraction_id, rank, created_by)
+         SELECT destination_id, id, 'must', $2 FROM attractions
+         WHERE destination_id = $1 AND must_see = 1 AND lat IS NOT NULL AND lng IS NOT NULL
+           AND (quality_keep = 1 OR quality_keep IS NULL)
+           AND (is_duplicate IS NULL OR is_duplicate = 0)
+           AND (is_component IS NULL OR is_component = 0)
+         ON CONFLICT (destination_id, attraction_id) DO UPDATE SET rank = 'must'`,
+        [destinationId, by]
+      );
+    }
+  }
+  // Upsert the chosen field; keep the other axis intact.
+  const col = field === "rank" ? "rank" : "kids";
+  await query(
+    `INSERT INTO editor_picks (destination_id, attraction_id, ${col}, created_by)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (destination_id, attraction_id) DO UPDATE SET ${col} = EXCLUDED.${col}`,
+    [destinationId, attractionId, value, by]
   );
-  if (!seeded[0]?.has_picks) {
-    await query(
-      `INSERT INTO editor_picks (destination_id, attraction_id, created_by)
-       SELECT destination_id, id, $2 FROM attractions
-       WHERE destination_id = $1 AND must_see = 1 AND lat IS NOT NULL AND lng IS NOT NULL
-         AND (quality_keep = 1 OR quality_keep IS NULL)
-         AND (is_duplicate IS NULL OR is_duplicate = 0)
-         AND (is_component IS NULL OR is_component = 0)
-       ON CONFLICT (destination_id, attraction_id) DO NOTHING`,
-      [destinationId, by]
-    );
-  }
-  if (pick) {
-    await query(
-      `INSERT INTO editor_picks (destination_id, attraction_id, created_by)
-       VALUES ($1, $2, $3) ON CONFLICT (destination_id, attraction_id) DO NOTHING`,
-      [destinationId, attractionId, by]
-    );
-  } else {
-    await query(
-      `DELETE FROM editor_picks WHERE destination_id = $1 AND attraction_id = $2`,
-      [destinationId, attractionId]
-    );
-  }
+  // Tidy: drop rows that no longer carry any rating.
+  await query(
+    `DELETE FROM editor_picks WHERE destination_id = $1 AND attraction_id = $2 AND rank IS NULL AND kids IS NULL`,
+    [destinationId, attractionId]
+  );
 }
 
 // Per-destination "what it offers" summary — feeds the destination recommender.
