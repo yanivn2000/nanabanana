@@ -35,6 +35,7 @@ export const POSTER_SLUG: Record<number, string> = {
   23: "tbilisi",
   24: "nice",
   25: "rhodes",
+  26: "lefkada",
 };
 
 // Landmark-anchored Pexels search per city — used by the admin poster picker to
@@ -65,6 +66,7 @@ export const POSTER_QUERY: Record<number, string> = {
   23: "Tbilisi old town Narikala",
   24: "Nice French Riviera Promenade des Anglais",
   25: "Rhodes old town medieval harbour Greece",
+  26: "Lefkada Porto Katsiki cliffs turquoise beach",
 };
 
 // Ordered candidate srcs: the preferred crop first, the other as fallback.
