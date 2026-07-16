@@ -448,6 +448,15 @@ export async function getPosterPicks(): Promise<PosterPick[]> {
   );
 }
 
+// The picked poster for one destination — serves the live /api/poster redirect,
+// so a pick made in the admin is published immediately (no file step).
+export async function getPosterPick(destId: number): Promise<{ src_url: string } | null> {
+  const rows = await query<{ src_url: string }>(
+    `SELECT src_url FROM poster_picks WHERE dest_id = $1 ORDER BY (variant='default') DESC LIMIT 1`,
+    [destId]);
+  return rows[0] ?? null;
+}
+
 export async function setPosterPick(p: {
   dest_id: number; variant?: string; source: string; photo_id: string;
   photographer: string; photographer_url: string; src_url: string;

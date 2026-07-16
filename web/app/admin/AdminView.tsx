@@ -171,7 +171,8 @@ export function AdminView({ destinations, feedback, email }: {
 
       {tab === "posters" && (
         <section className="py-6 text-center">
-          <p className="mb-3 text-[14.5px] text-[var(--text-2)]">בחירת תמונות פוסטר לערים נמצאת בכלי ייעודי.</p>
+          <p className="mb-1 text-[14.5px] text-[var(--text-2)]">בחירת תמונות פוסטר לערים נמצאת בכלי ייעודי.</p>
+          <p className="mb-3 text-[13px] text-[var(--text-3)]">תמונה שבוחרים שם עולה לאתר אוטומטית (עד שעה בגלל קאש) — אין צורך בשלב נוסף.</p>
           <Link href="/admin/posters" className="inline-block rounded-full bg-[var(--brand)] px-6 py-2.5 text-[14.5px] font-medium text-white">
             פתחו את בוחר הפוסטרים
           </Link>

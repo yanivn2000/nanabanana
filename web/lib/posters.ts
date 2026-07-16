@@ -69,18 +69,19 @@ export const POSTER_QUERY: Record<number, string> = {
   26: "Lefkada Porto Katsiki cliffs turquoise beach",
 };
 
-// Ordered candidate srcs: the preferred crop first, the other as fallback.
-// Real-photo posters ship in two crops — 4x2 (wide) and 3x4 (tall); the old 4x3
-// "landscape" crops were retired, so both banner and landscape use the wide 4x2.
-// Empty when the city has no poster.
+// Ordered candidate srcs. The admin poster pick (served live via /api/poster)
+// comes FIRST — picking a photo in the admin publishes it immediately, no
+// materialization step. The static crops (4x2 wide / 3x4 tall) are the
+// fallback, then CityPoster's brand gradient.
 export function posterSrcs(
   destinationId: number | null | undefined,
   prefer: "banner" | "landscape" | "portrait" = "landscape"
 ): string[] {
   if (destinationId == null) return [];
+  const live = `/api/poster/${destinationId}?o=${prefer}`;
   const slug = POSTER_SLUG[destinationId];
-  if (!slug) return [];
+  if (!slug) return [live];
   const banner = `/posters/${slug}-4x2.jpg`;   // wide real photo
   const port = `/posters/${slug}-3x4.jpg`;     // tall real photo
-  return prefer === "portrait" ? [port, banner] : [banner, port];
+  return prefer === "portrait" ? [live, port, banner] : [live, banner, port];
 }
