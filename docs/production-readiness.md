@@ -19,14 +19,14 @@ Effort: S ≈ <½ day · M ≈ ½–1 day · L ≈ 2+ days.
 - Verified E2E. Remaining idea (future): also honeypot the publish flow if a
   bot-fillable form ever appears there.
 
-### P2. Throttle + cap the AI cost surface · M
-`/api/itinerary` (and insights distill in `/api/admin/insights`) call Claude with
-no throttle. Public + unthrottled = someone can burn the Anthropic budget in a
-loop.
-- Per-IP rate limit on `/api/itinerary` (e.g. ≤ 10 builds/hour/IP).
-- A global daily spend circuit-breaker (count calls in a table / Redis; refuse
-  past a ceiling) so a runaway can't exceed a known daily cost.
-- Alert when the daily counter crosses ~70%.
+### P2. Throttle + cap the AI cost surface · M — ✅ DONE (commit 14f7280)
+- `/api/itinerary` (generate/revise): per-IP hourly limit + global daily
+  circuit-breaker, env-tunable (`AI_PER_IP_HOURLY`=15, `AI_DAILY_CAP`=500).
+  Over cap → 429; 70% → console.warn (real alerting = P6).
+- `/api/admin/insights` distill: modest per-IP limit (editor-gated).
+- Added `maxDuration=120` to the itinerary route (builds measured ~51s; Vercel
+  would 504 otherwise).
+- **Tune** `AI_DAILY_CAP` in Vercel env once real traffic volume is known.
 
 ### P3. Switch production DB to transaction mode · S — ✅ DONE (2026-07-17)
 - Vercel `DATABASE_URL` switched `:5432` → `:6543` (transaction mode) + redeploy.
