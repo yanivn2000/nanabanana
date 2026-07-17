@@ -6,7 +6,9 @@ import { getSharedTrip, getPosterPick } from "@/lib/db";
 // The Facebook/WhatsApp preview card — this IS the ad when a trip link lands
 // in a travel group: destination photo, Hebrew title, trip stats, Yalle mark.
 export const size = { width: 1200, height: 630 };
-export const contentType = "image/png";
+// JPEG, not PNG: a photo background as PNG weighs >1MB and WhatsApp silently
+// drops preview images above ~500KB. Satori renders PNG → sharp → JPEG ~120KB.
+export const contentType = "image/jpeg";
 
 // Satori (the OG renderer) has no bidi — Hebrew comes out mirrored. Apply the
 // visual order manually: reverse word order, reverse chars inside Hebrew words
@@ -33,7 +35,7 @@ export default async function OgImage({ params }: { params: Promise<{ slug: stri
   const days = trip?.itinerary.days.length ?? 0;
   const stops = trip?.itinerary.days.reduce((n, d) => n + d.stops.length, 0) ?? 0;
 
-  return new ImageResponse(
+  const png = new ImageResponse(
     (
       <div style={{
         width: "100%", height: "100%", display: "flex", flexDirection: "column",
@@ -78,4 +80,13 @@ export default async function OgImage({ params }: { params: Promise<{ slug: stri
       ],
     }
   );
+  // PNG → JPEG (WhatsApp's preview size limit)
+  const sharp = (await import("sharp")).default;
+  const jpg = await sharp(Buffer.from(await png.arrayBuffer())).jpeg({ quality: 82 }).toBuffer();
+  return new Response(new Uint8Array(jpg), {
+    headers: {
+      "Content-Type": "image/jpeg",
+      "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
+    },
+  });
 }
