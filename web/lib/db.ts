@@ -392,6 +392,114 @@ export async function saveInsights(
   return { sources, saved, matched };
 }
 
+// --- Shared trips (the community layer, phase 0+1) ---------------------------
+// A published, read-only copy of a local trip with a public slug URL. Owned by
+// an anonymous owner_token (returned at publish, kept in the publisher's
+// localStorage) — no login needed to share or to manage your own share.
+import type { Itinerary } from "./trip-types";
+
+export type SharedTrip = {
+  id: number; slug: string; title: string;
+  city: string | null; city_he: string | null; country: string | null; country_he: string | null;
+  destination_id: number | null; days: number | null; month: number | null;
+  composition: string | null; pace: string | null;
+  itinerary: Itinerary; views: number; likes: number; remix_of: string | null;
+  created_at: string; updated_at: string;
+};
+
+export type TripComment = {
+  id: number; day_index: number | null; author_name: string; body: string;
+  helpful: boolean; created_at: string;
+};
+
+const SLUG_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+function makeSlug(city: string | null | undefined): string {
+  const base = (city ?? "trip").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 24) || "trip";
+  let rand = "";
+  for (let i = 0; i < 5; i++) rand += SLUG_ALPHABET[Math.floor(Math.random() * SLUG_ALPHABET.length)];
+  return `${base}-${rand}`;
+}
+
+// Publish (or, with slug+token, update) a shared trip. Returns {slug, token}.
+export async function publishSharedTrip(t: {
+  title: string; city?: string | null; city_he?: string | null; country?: string | null;
+  country_he?: string | null; destination_id?: number | null; days?: number | null;
+  month?: number | null; composition?: string | null; pace?: string | null;
+  itinerary: Itinerary; remix_of?: string | null;
+  slug?: string | null; owner_token?: string | null;
+}): Promise<{ slug: string; token: string } | null> {
+  if (t.slug && t.owner_token) {
+    const upd = await query<{ slug: string }>(
+      `UPDATE shared_trips SET title=$3, itinerary=$4, days=$5, month=$6, composition=$7,
+              pace=$8, updated_at=now()
+        WHERE slug=$1 AND owner_token=$2 RETURNING slug`,
+      [t.slug, t.owner_token, t.title, JSON.stringify(t.itinerary), t.days ?? null,
+       t.month ?? null, t.composition ?? null, t.pace ?? null]);
+    if (upd.length) return { slug: t.slug, token: t.owner_token };
+    return null; // wrong token / gone
+  }
+  const token = crypto.randomUUID();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const slug = makeSlug(t.city);
+    try {
+      await query(
+        `INSERT INTO shared_trips (slug, owner_token, title, city, city_he, country, country_he,
+             destination_id, days, month, composition, pace, itinerary, remix_of)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+        [slug, token, t.title, t.city ?? null, t.city_he ?? null, t.country ?? null,
+         t.country_he ?? null, t.destination_id ?? null, t.days ?? null, t.month ?? null,
+         t.composition ?? null, t.pace ?? null, JSON.stringify(t.itinerary), t.remix_of ?? null]);
+      return { slug, token };
+    } catch { /* slug collision — retry */ }
+  }
+  return null;
+}
+
+export async function getSharedTrip(slug: string): Promise<SharedTrip | null> {
+  const rows = await query<SharedTrip>(`SELECT * FROM shared_trips WHERE slug = $1`, [slug]);
+  return rows[0] ?? null;
+}
+
+export async function bumpSharedTripViews(slug: string): Promise<void> {
+  await query(`UPDATE shared_trips SET views = views + 1 WHERE slug = $1`, [slug]);
+}
+
+export async function unpublishSharedTrip(slug: string, token: string): Promise<boolean> {
+  const rows = await query<{ id: number }>(
+    `DELETE FROM shared_trips WHERE slug = $1 AND owner_token = $2 RETURNING id`, [slug, token]);
+  return rows.length > 0;
+}
+
+export async function getTripComments(sharedTripId: number): Promise<TripComment[]> {
+  return query<TripComment>(
+    `SELECT id, day_index, author_name, body, helpful, created_at
+       FROM trip_comments WHERE shared_trip_id = $1 AND hidden = false
+       ORDER BY helpful DESC, id ASC`, [sharedTripId]);
+}
+
+export async function addTripComment(
+  slug: string, dayIndex: number | null, authorName: string, body: string
+): Promise<TripComment | null> {
+  const rows = await query<TripComment>(
+    `INSERT INTO trip_comments (shared_trip_id, day_index, author_name, body)
+     SELECT id, $2, $3, $4 FROM shared_trips WHERE slug = $1
+     RETURNING id, day_index, author_name, body, helpful, created_at`,
+    [slug, dayIndex, authorName, body]);
+  return rows[0] ?? null;
+}
+
+// The trip owner (proven by owner_token) marks a comment as "עזר לי".
+export async function setCommentHelpful(
+  slug: string, token: string, commentId: number, on: boolean
+): Promise<boolean> {
+  const rows = await query<{ id: number }>(
+    `UPDATE trip_comments c SET helpful = $4
+       FROM shared_trips s
+      WHERE c.id = $3 AND c.shared_trip_id = s.id AND s.slug = $1 AND s.owner_token = $2
+      RETURNING c.id`, [slug, token, commentId, on]);
+  return rows.length > 0;
+}
+
 // --- User feedback ("מצאתם באג? יש רעיון?") ---------------------------------
 export type Feedback = {
   id: number; created_at: string; kind: string | null;

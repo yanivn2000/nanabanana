@@ -18,6 +18,7 @@ import type { Attraction } from "@/lib/db";
 import { useTrips, useProfile, useHotels, profileText, profileSummary, MONTHS_HE, datesToInfo } from "@/lib/store";
 import { deriveTaste } from "@/lib/taste";
 import { ProfileEditor } from "@/components/ProfileEditor";
+import { ShareTrip } from "@/components/ShareTrip";
 import { WhyFits } from "@/components/Signature";
 import { MapArt } from "@/components/Illustrations";
 import { CityPoster } from "@/components/CityPoster";
@@ -360,6 +361,10 @@ export function TripView({ tripId }: { tripId: string }) {
                   style={{ background: editTravelers ? "var(--brand-soft)" : "var(--surface)", color: "var(--brand-ink)" }}>
                   <Users size={14} /> מי נוסע
                 </button>
+                {trip && (
+                  <ShareTrip trip={trip} profile={tripProfile}
+                    onShared={(shared) => update(tripId, { shared })} />
+                )}
               </div>
             </div>
 
