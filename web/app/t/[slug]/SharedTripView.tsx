@@ -82,18 +82,26 @@ export function SharedTripView({ trip, comments: initialComments }: {
         </div>
       </div>
 
-      {/* CTA row — the retention hooks */}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button onClick={remix}
-          className="flex items-center gap-2 rounded-full bg-[var(--brand)] px-5 py-2.5 text-[14.5px] font-semibold text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
-          <Copy size={15} /> העתיקו וערכו אצלכם — חינם
-        </button>
-        {trip.destination_id && (
-          <Link href={`/destination/${trip.destination_id}`}
-            className="flex items-center gap-2 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-5 py-2.5 text-[14.5px] font-medium text-[var(--brand-ink)]">
-            <Sparkles size={15} /> בנו טיול משלכם ל{trip.city_he || trip.city}
-          </Link>
-        )}
+      {/* CTA — the retention hook. The primary action gets an explainer so the
+          visitor knows exactly what "remix" does (own editable copy; original
+          untouched) and what it's for (improve → re-share back to the asker). */}
+      <div className="mt-4 rounded-[var(--radius-card)] border border-[var(--brand)]/30 bg-[var(--brand-soft)] p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <button onClick={remix}
+            className="flex items-center gap-2 rounded-full bg-[var(--brand)] px-5 py-2.5 text-[14.5px] font-semibold text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
+            <Copy size={15} /> העתיקו וערכו אצלכם — חינם
+          </button>
+          {trip.destination_id && (
+            <Link href={`/destination/${trip.destination_id}`}
+              className="flex items-center gap-2 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-5 py-2.5 text-[14.5px] font-medium text-[var(--brand-ink)]">
+              <Sparkles size={15} /> בנו טיול משלכם ל{trip.city_he || trip.city}
+            </Link>
+          )}
+        </div>
+        <p className="mt-2.5 text-[12.5px] leading-relaxed text-[var(--brand-ink)]">
+          נוצר עותק פרטי משלכם לעריכה — הוסיפו ימים, שנו מסלול או בנו מחדש עם ה-AI.
+          הטיול המקורי לא משתנה. סיימתם? שתפו קישור חדש בחזרה בקבוצה: <span className="font-semibold">״הכנתי לך גרסה מותאמת 👇״</span>
+        </p>
       </div>
 
       <div className="mt-5 lg:flex lg:items-start lg:gap-5">

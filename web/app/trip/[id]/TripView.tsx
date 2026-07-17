@@ -7,7 +7,7 @@ import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, Pencil, ChevronUp, ChevronDown,
   ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon, Route, Users, Luggage, ListChecks, Wallet, CalendarDays,
-  PersonStanding, Clock, MapPin, Ruler, Footprints,
+  PersonStanding, Clock, MapPin, Ruler, Footprints, Copy,
 } from "lucide-react";
 import { googleMapsUrl, haversineKm, formatDistance } from "@/lib/geo";
 import { stopColor } from "@/lib/labels";
@@ -389,6 +389,20 @@ export function TripView({ tripId }: { tripId: string }) {
           </div>
         </header>
       </div>
+
+      {/* remixed-trip loop: this trip was copied from a community share, so nudge
+          the visitor to make it theirs and share a fresh link BACK to the asker */}
+      {trip?.remixOf && (
+        <div className="px-5 pt-4 lg:px-8">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-[var(--radius-sm)] border border-[var(--brand)]/30 bg-[var(--brand-soft)] px-4 py-2.5 text-[13px] text-[var(--brand-ink)]">
+            <span className="flex items-center gap-1.5"><Copy size={14} /> העתק שלכם לעריכה — המקור לא נגע.</span>
+            <span className="text-[var(--text-2)]">שיפרתם? שתפו קישור חדש בחזרה בקבוצה 👈</span>
+            <Link href={`/t/${trip.remixOf}`} className="mr-auto text-[12.5px] font-medium underline underline-offset-2">
+              לטיול המקורי
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* expandable panels — sit below the hero on the page canvas */}
       {(editTravelers || (!canBuild && !multiTrip)) && (
