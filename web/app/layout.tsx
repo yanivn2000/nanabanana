@@ -3,6 +3,7 @@ import { Assistant, Fredoka } from "next/font/google";
 import "./globals.css";
 import { BottomNav } from "@/components/BottomNav";
 import { TopNav } from "@/components/TopNav";
+import { SITE_URL } from "@/lib/site";
 
 const assistant = Assistant({
   variable: "--font-assistant",
@@ -19,6 +20,7 @@ const fredoka = Fredoka({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL), // resolves OG/canonical relative URLs for SEO
   title: "Yalle · תבנה לי טיול",
   description:
     "תבנה לי טיול — האפליקציה שבונה לכם את הטיול המשפחתי המושלם, בעברית, מותאם למשפחה שלכם.",

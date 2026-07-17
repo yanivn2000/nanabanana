@@ -526,6 +526,12 @@ export async function countSharedTripsForDestination(destId: number): Promise<nu
   return rows[0]?.n ?? 0;
 }
 
+// Public (non-hidden) shared trips for the sitemap — slug + last-modified only.
+export async function listPublicSharedTripSlugs(): Promise<{ slug: string; updated_at: string }[]> {
+  return query<{ slug: string; updated_at: string }>(
+    `SELECT slug, updated_at FROM shared_trips WHERE hidden = false ORDER BY updated_at DESC LIMIT 5000`);
+}
+
 // --- Moderation (P4) ---------------------------------------------------------
 // Anyone can flag a comment or a shared trip; a report just bumps a counter
 // (idempotency isn't critical here — the counter is a triage signal, not a vote).
