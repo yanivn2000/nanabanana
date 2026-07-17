@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Share2, Copy, Check, Loader2, X, Trash2 } from "lucide-react";
 import type { Trip, FamilyProfile } from "@/lib/store";
 
@@ -84,9 +85,11 @@ export function ShareTrip({ trip, profile, onShared }: {
         <Share2 size={14} /> {trip.shared ? "משותף" : "שתפו"}
       </button>
 
-      {open && (
+      {/* portal to <body>: the trip header has a transform/blur, which turns
+          position:fixed into header-relative and clipped the dialog */}
+      {open && createPortal(
         <div className="fixed inset-0 z-[60] grid place-items-center bg-black/40 p-5" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-md rounded-[var(--radius-card)] bg-[var(--surface)] p-5 shadow-[var(--shadow)]"
+          <div className="max-h-[88vh] w-full min-w-0 max-w-md overflow-y-auto rounded-[var(--radius-card)] bg-[var(--surface)] p-5 shadow-[var(--shadow)]"
             onClick={(e) => e.stopPropagation()}>
             <div className="mb-2 flex items-center justify-between">
               <h3 className="serif text-[19px] font-bold">שיתוף הטיול</h3>
@@ -135,7 +138,8 @@ export function ShareTrip({ trip, profile, onShared }: {
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
