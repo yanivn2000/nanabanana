@@ -50,9 +50,10 @@ function StopIcon({ kind }: { kind: Stop["kind"] }) {
   const meta = KIND_META[kind];
   const Icon = ICONS[meta.icon as keyof typeof ICONS] ?? Coffee;
   return (
-    <div className="grid size-10 shrink-0 place-items-center rounded-[12px]"
+    // same footprint as the photo thumbnail (size-12) so image/icon rows align
+    <div className="grid size-12 shrink-0 place-items-center rounded-[12px]"
          style={{ background: meta.soft, color: meta.color }}>
-      <Icon size={19} />
+      <Icon size={22} />
     </div>
   );
 }
