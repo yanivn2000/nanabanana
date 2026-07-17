@@ -28,11 +28,13 @@ loop.
   past a ceiling) so a runaway can't exceed a known daily cost.
 - Alert when the daily counter crosses ~70%.
 
-### P3. Switch production DB to transaction mode · S
-`DATABASE_URL` in Vercel still points at port `:5432` (session mode, 15-client
-cap). Under real concurrency it throws `EMAXCONNSESSION`.
-- Vercel → Settings → Environment Variables → change `:5432/` → `:6543/`.
-- Redeploy, then load-check the city + gallery pages.
+### P3. Switch production DB to transaction mode · S — ✅ DONE (2026-07-17)
+- Vercel `DATABASE_URL` switched `:5432` → `:6543` (transaction mode) + redeploy.
+- Local `.env.local` also moved to 6543 (stops dev/scripts saturating the pool).
+- Verified: 12 concurrent city-page requests all 200, no `EMAXCONNSESSION`, and
+  ~2.5s vs ~4s before. NOTE: saw transient 500s on the home + city pages during
+  the redeploy window itself (deploy propagation / cold-start) — self-resolved
+  once instances warmed. A brief blip during any redeploy is expected.
 - Code already hardened (`web/lib/db.ts`: max 4, idle/connection timeouts) and
   documented (`web/.env.example`).
 
