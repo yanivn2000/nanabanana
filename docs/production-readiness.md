@@ -79,10 +79,12 @@ no must-sees, no Hebrew names/taglines/descriptions. Run the same curation pass
 we did for Lefkada (editor must-sees + Hebrew). Rome/Athens food coverage thin —
 consider a wider ingest gate there.
 
-### P9. robots.txt + sitemap · S
-For the link-sharing/SEO strategy: add `web/app/robots.ts` and a `sitemap.ts`
-that includes destinations and public shared trips. Confirm OG/twitter tags are
-right (they are for `/t/[slug]`).
+### P9. robots.txt + sitemap · S — ✅ DONE (commit eb8dddd)
+- `app/robots.ts` (allow public, disallow /admin /api/ /trip/ /trips) +
+  `app/sitemap.ts` (home + cities + galleries + public shared trips) +
+  `lib/site.ts` SITE_URL + layout `metadataBase`.
+- Verified render (56 urls). **Follow-up:** submit the sitemap in Google Search
+  Console once there's a custom domain (or now, with the vercel.app URL).
 
 ---
 
