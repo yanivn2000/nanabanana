@@ -58,11 +58,14 @@ B2C collecting emails (feedback) and hosting user-generated public content, with
 EU destinations. Need `/legal/terms` + `/legal/privacy` pages and links in the
 footer. Note: shared trips already sanitize kid names — document that.
 
-### P6. Error tracking + alerting · S
-No observability today — a prod failure is invisible. This is what would have
-auto-caught the pooler saturation.
-- Add Sentry (`@sentry/nextjs`) for client + server errors.
-- Alert on: DB connection errors, AI 4xx/5xx, elevated 500 rate.
+### P6. Error tracking + alerting · S — ✅ DONE (commit 606ba62)
+- `@sentry/nextjs` wired (server/edge/client configs + instrumentation.ts
+  onRequestError + app/global-error.tsx). **Inert until `NEXT_PUBLIC_SENTRY_DSN`
+  is set** — SDK disabled, zero network, app builds/runs the same.
+- Explicit captures where errors were swallowed: rate-limiter fail-open catch +
+  AI-budget 70% warning (captureMessage).
+- **User action:** create a Sentry project → add `NEXT_PUBLIC_SENTRY_DSN` in
+  Vercel → configure alert rules (email/Slack on new issues). Then it's live.
 
 ### P7. Cold-start the community galleries · M
 Empty "טיולים של מטיילים" galleries read as a dead product. Per the strategy,
