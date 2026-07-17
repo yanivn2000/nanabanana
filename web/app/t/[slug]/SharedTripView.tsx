@@ -215,6 +215,7 @@ function CommentsSection({ slug, days, comments, setComments, ownerToken }: {
   const [body, setBody] = useState("");
   const [dayIndex, setDayIndex] = useState<number | null>(null);
   const [state, setState] = useState<"idle" | "sending" | "error">("idle");
+  const [hp, setHp] = useState(""); // honeypot — real users leave it empty
 
   async function submit() {
     if (name.trim().length < 2 || body.trim().length < 3 || state === "sending") return;
@@ -223,11 +224,11 @@ function CommentsSection({ slug, days, comments, setComments, ownerToken }: {
       localStorage.setItem("nanabanana.commenter", name.trim());
       const res = await fetch("/api/trips/comments", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, day_index: dayIndex, author_name: name.trim(), body: body.trim() }),
+        body: JSON.stringify({ slug, day_index: dayIndex, author_name: name.trim(), body: body.trim(), hp }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setComments([...comments, data.comment]);
+      if (data.comment) setComments([...comments, data.comment]); // null = dropped (honeypot)
       setBody(""); setState("idle");
     } catch { setState("error"); }
   }
@@ -293,6 +294,10 @@ function CommentsSection({ slug, days, comments, setComments, ownerToken }: {
             ))}
           </select>
         </div>
+        {/* honeypot: off-screen, aria-hidden, not tabbable — a bot fills it, a human never sees it */}
+        <input type="text" value={hp} onChange={(e) => setHp(e.target.value)} tabIndex={-1}
+          autoComplete="off" aria-hidden="true"
+          className="absolute -left-[9999px] h-0 w-0 opacity-0" name="website" />
         <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3}
           placeholder="טיפ / תיקון / המלצה… (למשל: ׳יותר מדי זמן בבראשוב — תעברו יום לסיביו׳)"
           className="mb-2 w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] p-3 text-[14px] outline-none focus:border-[var(--brand)]" />

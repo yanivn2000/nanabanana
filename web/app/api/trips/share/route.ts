@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { publishSharedTrip, unpublishSharedTrip } from "@/lib/db";
+import { rateLimit, honeypotTripped } from "@/lib/ratelimit";
 import type { Itinerary } from "@/lib/trip-types";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +10,10 @@ export const dynamic = "force-dynamic";
 // The payload is SANITIZED here — only itinerary + trip meta; never the raw
 // profile (no kid names, no emails).
 export async function POST(req: NextRequest) {
+  const limited = await rateLimit(req, "share", 5, 60);
+  if (limited) return limited;
   const b = await req.json().catch(() => null);
+  if (honeypotTripped(b)) return NextResponse.json({ error: "no_itinerary" }, { status: 400 });
   const it = b?.itinerary as Itinerary | undefined;
   if (!b || !it || !Array.isArray(it.days) || it.days.length === 0) {
     return NextResponse.json({ error: "no_itinerary" }, { status: 400 });

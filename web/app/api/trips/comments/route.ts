@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addTripComment, setCommentHelpful } from "@/lib/db";
+import { rateLimit, honeypotTripped } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 
 // Community comments on a shared trip — open to everyone, name + text only
 // (the Facebook-group experience, anchored to a specific day when relevant).
 export async function POST(req: NextRequest) {
+  const limited = await rateLimit(req, "comment", 8, 60);
+  if (limited) return limited;
   const b = await req.json().catch(() => null);
+  // silently accept-and-drop honeypot hits so bots don't learn they were caught
+  if (honeypotTripped(b)) return NextResponse.json({ comment: null });
   const name = typeof b?.author_name === "string" ? b.author_name.trim() : "";
   const body = typeof b?.body === "string" ? b.body.trim() : "";
   const slug = typeof b?.slug === "string" ? b.slug : "";

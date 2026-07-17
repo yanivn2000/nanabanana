@@ -30,6 +30,33 @@ async function query<T>(text: string, params: unknown[] = []): Promise<T[]> {
   return res.rows as T[];
 }
 
+// --- Abuse protection (P1) ---------------------------------------------------
+// Fixed-window rate limiter backed by Postgres (works across serverless
+// instances, unlike in-memory). One atomic round-trip per check. Fails OPEN if
+// the DB is unreachable — we never want the limiter to take the site down.
+export async function checkRateLimit(
+  bucket: string, limit: number, windowSec: number
+): Promise<{ ok: boolean; count: number }> {
+  try {
+    // $2 = window seconds (limit is compared in JS, so it isn't a bind param —
+    // an unused bind param makes Postgres fail to infer its type).
+    const rows = await query<{ count: number }>(
+      `INSERT INTO rate_limits (bucket, count, window_start)
+         VALUES ($1, 1, now())
+       ON CONFLICT (bucket) DO UPDATE SET
+         count = CASE WHEN rate_limits.window_start < now() - ($2::int * interval '1 second')
+                      THEN 1 ELSE rate_limits.count + 1 END,
+         window_start = CASE WHEN rate_limits.window_start < now() - ($2::int * interval '1 second')
+                             THEN now() ELSE rate_limits.window_start END
+       RETURNING count`,
+      [bucket, windowSec]);
+    const count = rows[0]?.count ?? 1;
+    return { ok: count <= limit, count };
+  } catch {
+    return { ok: true, count: 0 }; // fail open
+  }
+}
+
 export type Attraction = {
   id: number;
   name_he: string | null;
@@ -494,14 +521,33 @@ export async function countSharedTripsForDestination(destId: number): Promise<nu
   return rows[0]?.n ?? 0;
 }
 
-// Anonymous like toggle (dedup is client-side via localStorage). Clamped ≥ 0.
-export async function likeSharedTrip(slug: string, on: boolean): Promise<number | null> {
-  const rows = await query<{ likes: number }>(
-    `UPDATE shared_trips
-        SET likes = GREATEST(0, likes + $2)
-      WHERE slug = $1 RETURNING likes`,
-    [slug, on ? 1 : -1]);
-  return rows[0]?.likes ?? null;
+// Anonymous like toggle, deduped server-side by (slug, ip): a given client can
+// only move the counter once per trip, so the localStorage dedup can't be
+// bypassed to inflate likes. Returns the authoritative count (null if no trip).
+export async function likeSharedTrip(
+  slug: string, ip: string, on: boolean
+): Promise<number | null> {
+  const exists = await query<{ id: number }>(`SELECT 1 AS id FROM shared_trips WHERE slug = $1`, [slug]);
+  if (!exists.length) return null;
+  let changed = false;
+  if (on) {
+    const ins = await query<{ slug: string }>(
+      `INSERT INTO trip_likes (slug, ip) VALUES ($1, $2)
+         ON CONFLICT (slug, ip) DO NOTHING RETURNING slug`, [slug, ip]);
+    changed = ins.length > 0;
+  } else {
+    const del = await query<{ slug: string }>(
+      `DELETE FROM trip_likes WHERE slug = $1 AND ip = $2 RETURNING slug`, [slug, ip]);
+    changed = del.length > 0;
+  }
+  if (changed) {
+    const rows = await query<{ likes: number }>(
+      `UPDATE shared_trips SET likes = GREATEST(0, likes + $2) WHERE slug = $1 RETURNING likes`,
+      [slug, on ? 1 : -1]);
+    return rows[0]?.likes ?? null;
+  }
+  const cur = await query<{ likes: number }>(`SELECT likes FROM shared_trips WHERE slug = $1`, [slug]);
+  return cur[0]?.likes ?? null;
 }
 
 export async function bumpSharedTripViews(slug: string): Promise<void> {
