@@ -8,6 +8,8 @@ import {
   reviseItinerary,
 } from "@/lib/ai";
 import { buildHeuristicItinerary, buildMultiHeuristicItinerary } from "@/lib/heuristic";
+import { checkRateLimit } from "@/lib/db";
+import { rateLimit } from "@/lib/ratelimit";
 import { paceToPerDay } from "@/lib/trip-types";
 import { rankByTaste, tasteEmphasis } from "@/lib/taste";
 import { haversineKm } from "@/lib/geo";
@@ -15,6 +17,17 @@ import type { TripHotel } from "@/lib/ai";
 import type { Itinerary } from "@/lib/trip-types";
 
 export const dynamic = "force-dynamic";
+// A multi-day / multi-segment Claude build can take ~30-60s; without this Vercel
+// would kill the function at its lower default and the build would 504.
+export const maxDuration = 120;
+
+// AI cost guard (P2). The generate/revise paths call Claude; details/heuristic
+// don't. Two ceilings, both env-tunable without a redeploy:
+//  - per-IP hourly: stops one abuser looping the builder.
+//  - global daily: a hard circuit-breaker so a runaway can't exceed a known
+//    daily spend. At 70% we log a warning (real alerting is P6/Sentry).
+const AI_PER_IP_HOURLY = Number(process.env.AI_PER_IP_HOURLY ?? 15);
+const AI_DAILY_CAP = Number(process.env.AI_DAILY_CAP ?? 500);
 
 // Match by city name; otherwise (e.g. a hotel in a village we didn't ingest)
 // pick the nearest ingested destination by coordinates.
@@ -123,6 +136,21 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "bad json" }, { status: 400 });
+  }
+
+  // Cost guard — only the AI-spending modes (details/heuristic are free).
+  if ((body.mode === "generate" || body.mode === "revise") && aiConfigured()) {
+    const ipLimited = await rateLimit(req, "itinerary", AI_PER_IP_HOURLY, 3600);
+    if (ipLimited) return ipLimited;
+    const daily = await checkRateLimit("ai:builds:daily", AI_DAILY_CAP, 86_400);
+    if (!daily.ok) {
+      return NextResponse.json(
+        { error: "ai_daily_cap", message: "בונה הטיולים עמוס כרגע — נסו שוב מאוחר יותר." },
+        { status: 429, headers: { "Retry-After": "3600" } });
+    }
+    if (daily.count === Math.floor(AI_DAILY_CAP * 0.7)) {
+      console.warn(`[ai-budget] daily builds at ${daily.count}/${AI_DAILY_CAP} (70%)`);
+    }
   }
 
   const near = body.hotels?.[0];

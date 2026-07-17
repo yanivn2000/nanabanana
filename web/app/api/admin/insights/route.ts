@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { editorEmail } from "@/lib/admin";
 import { saveInsights, type IngestItem } from "@/lib/db";
 import { distillPost } from "@/lib/insights-ingest";
+import { rateLimit } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // distilling a long thread takes a while
@@ -19,6 +20,10 @@ export async function POST(req: NextRequest) {
   }
 
   if (b.action === "distill") {
+    // distill calls Claude — throttle even though it's editor-gated (a stuck
+    // loop or compromised session shouldn't run up the bill).
+    const limited = await rateLimit(req, "insights-distill", 20, 3600);
+    if (limited) return limited;
     const text = typeof b.text === "string" ? b.text.trim() : "";
     if (text.length < 30) return NextResponse.json({ error: "text_too_short" }, { status: 400 });
     const destName = typeof b.dest_name === "string" ? b.dest_name : String(b.destination_id);
