@@ -320,71 +320,69 @@ export function TripView({ tripId }: { tripId: string }) {
     <main className="mx-auto w-full max-w-[440px] pb-16 lg:max-w-[1600px]">
       {/* compact header card — data beside a square poster; map + days stay above the fold */}
       <div className="px-5 pt-2 lg:px-8 lg:pt-2.5">
-        <Link href="/trips" className="eyebrow mb-1.5 inline-flex items-center gap-1 text-[var(--text-2)]">
-          <ChevronRight size={14} /> הטיולים שלי
-        </Link>
-        {/* compact hero — a wide LANDSCAPE thumbnail beside tight trip data, so
-            the day tabs + map + timeline all sit above the fold */}
+        {/* breadcrumb + primary actions on ONE row — the actions live in the top
+            bar (like the city page) instead of stacking inside the poster card,
+            so the header stays short and the day tabs sit right below it */}
+        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+          <Link href="/trips" className="eyebrow inline-flex items-center gap-1 text-[var(--text-2)]">
+            <ChevronRight size={14} /> הטיולים שלי
+          </Link>
+          <div className="flex items-center gap-2">
+            <button onClick={generate} disabled={!!busy || !canBuild}
+              className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-1.5 text-[14px] font-medium text-white disabled:opacity-50">
+              {busy === "generate" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {busy === "generate" ? "בונה…" : itinerary ? "בנה מחדש" : "בנה לו\"ז"}
+            </button>
+            <button onClick={() => setEditTravelers((v) => !v)}
+              className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-3.5 py-1.5 text-[14px] font-medium"
+              style={{ background: editTravelers ? "var(--brand-soft)" : "var(--surface)", color: "var(--brand-ink)" }}>
+              <Users size={14} /> מי נוסע
+            </button>
+            {trip && (
+              <ShareTrip trip={trip} profile={tripProfile}
+                onShared={(shared) => update(tripId, { shared })} />
+            )}
+          </div>
+        </div>
+        {/* compact hero — a wide LANDSCAPE thumbnail beside tight trip data */}
         <header className="rise flex overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[var(--shadow)]">
           {/* landscape thumbnail (wide, not tall) */}
-          <div className="relative w-[150px] shrink-0 sm:w-[240px] lg:w-[300px]">
+          <div className="relative w-[120px] shrink-0 sm:w-[190px] lg:w-[240px]">
             <CityPoster destinationId={trip?.destinationId} cityHe={cityHe}
               orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
           </div>
 
-          {/* body: title + meta + actions on one line, dates tucked under */}
-          <div className="min-w-0 flex-1 p-3 lg:px-4 lg:py-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h1 className="serif text-[20px] font-bold leading-tight lg:text-[24px]">{trip?.title ?? "…"}</h1>
-                <p className="mt-0.5 text-[14px] text-[var(--text-2)]">
-                  {trip?.segments && trip.segments.length > 1
-                    ? `${trip.segments.map((s) => s.cityHe || s.city).join(" → ")} · `
-                    : cityHe ? `${cityHe} · ` : ""}
-                  {trip?.days} ימים
-                  {trip?.month ? ` · ${MONTHS_HE[trip.month - 1]}` : ""}
-                  {trip?.segments && trip.segments.length > 1 ? ` · ${trip.segments.length} ערים` : ""}
-                  {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
-                </p>
-                <p className="mt-0.5 truncate text-[12.5px] text-[var(--text-3)]">
-                  נוסעים: {profileSummary(tripProfile)}{trip?.profile ? "" : " · ברירת מחדל"}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                <button onClick={generate} disabled={!!busy || !canBuild}
-                  className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-[14.5px] font-medium text-white disabled:opacity-50">
-                  {busy === "generate" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                  {busy === "generate" ? "בונה…" : itinerary ? "בנה מחדש" : "בנה לו\"ז"}
-                </button>
-                <button onClick={() => setEditTravelers((v) => !v)}
-                  className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-3.5 py-2 text-[14.5px] font-medium"
-                  style={{ background: editTravelers ? "var(--brand-soft)" : "var(--surface)", color: "var(--brand-ink)" }}>
-                  <Users size={14} /> מי נוסע
-                </button>
-                {trip && (
-                  <ShareTrip trip={trip} profile={tripProfile}
-                    onShared={(shared) => update(tripId, { shared })} />
-                )}
-              </div>
-            </div>
-
-            {/* exact dates → powers season, length and (soon) the live-events feed (#64) */}
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px] text-[var(--text-2)]">
-              <CalendarDays size={14} className="text-[var(--text-3)]" />
-              <span>תאריכים:</span>
+          {/* body: title, then meta + dates on compact lines */}
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 p-3 lg:px-4">
+            <h1 className="serif text-[20px] font-bold leading-tight lg:text-[23px]">{trip?.title ?? "…"}</h1>
+            <p className="flex flex-wrap items-center gap-x-1.5 text-[13.5px] text-[var(--text-2)]">
+              <span>
+                {trip?.segments && trip.segments.length > 1
+                  ? `${trip.segments.map((s) => s.cityHe || s.city).join(" → ")} · `
+                  : cityHe ? `${cityHe} · ` : ""}
+                {trip?.days} ימים
+                {trip?.month ? ` · ${MONTHS_HE[trip.month - 1]}` : ""}
+                {trip?.segments && trip.segments.length > 1 ? ` · ${trip.segments.length} ערים` : ""}
+                {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
+              </span>
+              <span className="text-[var(--text-3)]">· {profileSummary(tripProfile)}</span>
+            </p>
+            {/* exact dates → powers season, length and the live-events feed (#64) */}
+            <div className="flex flex-wrap items-center gap-1.5 text-[12.5px] text-[var(--text-3)]">
+              <CalendarDays size={13} />
               <input type="date" value={trip?.startDate ?? ""}
                 onChange={(e) => {
                   const info = datesToInfo(e.target.value, trip?.endDate);
                   update(tripId, { startDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
                 }}
-                className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[13px] text-[var(--text)] outline-none" />
+                className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[12.5px] text-[var(--text)] outline-none" />
               <span>–</span>
               <input type="date" value={trip?.endDate ?? ""} min={trip?.startDate}
                 onChange={(e) => {
                   const info = datesToInfo(trip?.startDate, e.target.value);
                   update(tripId, { endDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
                 }}
-                className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[13px] text-[var(--text)] outline-none" />
+                className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[12.5px] text-[var(--text)] outline-none" />
             </div>
           </div>
         </header>
@@ -470,12 +468,12 @@ export function TripView({ tripId }: { tripId: string }) {
             })}
           </div>
 
-          {/* day summary toolbar: theme + at-a-glance stats + day actions */}
-          <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5">
-            <div className="min-w-0 flex-1">
-              <h2 className="serif truncate text-[18px] font-bold leading-tight lg:text-[20px]">{dayLabels[curIdx]}</h2>
-              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px] text-[var(--text-2)]">
-                <span className="flex items-center gap-1"><MapPin size={13} className="text-[var(--text-3)]" /> {stopPoints.length} תחנות</span>
+          {/* day summary toolbar: theme + at-a-glance stats + day actions — one
+              tight line; the stop count already lives on the day tab above */}
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-1">
+              <h2 className="serif truncate text-[17px] font-bold leading-tight lg:text-[19px]">{dayLabels[curIdx]}</h2>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-[var(--text-2)]">
                 {dayTotalKm > 0 && <span className="flex items-center gap-1"><Ruler size={13} className="text-[var(--text-3)]" /> {formatDistance(dayTotalKm)}</span>}
                 {dayTotalWalkMin > 0 && <span className="flex items-center gap-1"><Footprints size={13} className="text-[var(--text-3)]" /> ~{dayTotalWalkMin} דק׳ הליכה</span>}
                 {dayStart && dayEnd && <span className="flex items-center gap-1" dir="ltr"><Clock size={13} className="text-[var(--text-3)]" /> {dayStart}–{dayEnd}</span>}
