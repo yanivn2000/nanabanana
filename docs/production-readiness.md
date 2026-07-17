@@ -38,14 +38,16 @@ Effort: S ≈ <½ day · M ≈ ½–1 day · L ≈ 2+ days.
 - Code already hardened (`web/lib/db.ts`: max 4, idle/connection timeouts) and
   documented (`web/.env.example`).
 
-### P4. Comment / trip moderation · M
-Public user content under the brand, but no way to report or take down.
-- "🚩 דיווח" button on each comment + on shared trips → sets a `reported` flag
-  (add column) / notifies admin.
-- Admin moderation view: list reported items, one-click hide (the
-  `trip_comments.hidden` column already exists; `shared_trips` needs a `hidden`
-  flag + filtering in `getSharedTrip`/gallery queries).
-- Basic word-block list on comment submit as a first filter.
+### P4. Comment / trip moderation · M — ✅ DONE (commit a8136fc)
+- Schema: `trip_comments.reported`, `shared_trips.hidden`+`reported`. Hidden
+  trips filtered from every public read (getSharedTrip→404, gallery, count).
+- Public 🚩 report (`/api/trips/report`, rate-limited) on each comment + a
+  trip-level report at the page footer.
+- Admin "🚩 מודרציה" tab: reported/hidden queue, one-click hide/unhide
+  (`/api/admin/moderation`, editor-gated).
+- Conservative spam pre-filter (`lib/content-filter.ts`): 2+ links / scam
+  wordlist / char-runs → accept-and-drop.
+- Verified E2E. **All 🔴 blockers now cleared.**
 
 ---
 
