@@ -64,8 +64,8 @@ footer. Note: shared trips already sanitize kid names — document that.
   is set** — SDK disabled, zero network, app builds/runs the same.
 - Explicit captures where errors were swallowed: rate-limiter fail-open catch +
   AI-budget 70% warning (captureMessage).
-- **User action:** create a Sentry project → add `NEXT_PUBLIC_SENTRY_DSN` in
-  Vercel → configure alert rules (email/Slack on new issues). Then it's live.
+- ✅ **LIVE** — DSN set in Vercel, pipeline verified end-to-end (test message +
+  exception delivered, flushed:true). Alert: "high priority issues" + email.
 
 ### P7. Cold-start the community galleries · M
 Empty "טיולים של מטיילים" galleries read as a dead product. Per the strategy,
