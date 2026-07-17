@@ -369,22 +369,26 @@ export function TripView({ tripId }: { tripId: string }) {
                 </span>
                 <span className="text-[var(--text-3)]">· {profileSummary(tripProfile)}</span>
               </p>
-              {/* exact dates → powers season, length and the live-events feed (#64) */}
-              <div className="flex flex-wrap items-center gap-1.5 text-[12.5px] text-[var(--text-3)]">
-                <CalendarDays size={13} />
-                <input type="date" value={trip?.startDate ?? ""}
-                  onChange={(e) => {
-                    const info = datesToInfo(e.target.value, trip?.endDate);
-                    update(tripId, { startDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
-                  }}
-                  className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[12.5px] text-[var(--text)] outline-none" />
-                <span>–</span>
-                <input type="date" value={trip?.endDate ?? ""} min={trip?.startDate}
-                  onChange={(e) => {
-                    const info = datesToInfo(trip?.startDate, e.target.value);
-                    update(tripId, { endDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
-                  }}
-                  className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[12.5px] text-[var(--text)] outline-none" />
+              {/* exact dates → powers season, length and the live-events feed (#64).
+                  The two native date inputs are too wide to share a line in the
+                  narrow identity column, so stack them left-aligned at equal width
+                  instead of letting them wrap into a staggered shape */}
+              <div className="flex items-start gap-1.5 text-[12.5px] text-[var(--text-3)]">
+                <CalendarDays size={13} className="mt-[7px] shrink-0" />
+                <div className="flex flex-col gap-1">
+                  <input type="date" value={trip?.startDate ?? ""} aria-label="תאריך התחלה"
+                    onChange={(e) => {
+                      const info = datesToInfo(e.target.value, trip?.endDate);
+                      update(tripId, { startDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
+                    }}
+                    className="w-[132px] rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[12.5px] text-[var(--text)] outline-none" />
+                  <input type="date" value={trip?.endDate ?? ""} min={trip?.startDate} aria-label="תאריך סיום"
+                    onChange={(e) => {
+                      const info = datesToInfo(trip?.startDate, e.target.value);
+                      update(tripId, { endDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
+                    }}
+                    className="w-[132px] rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[12.5px] text-[var(--text)] outline-none" />
+                </div>
               </div>
             </div>
           </div>
