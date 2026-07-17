@@ -593,20 +593,20 @@ export function TripView({ tripId }: { tripId: string }) {
                          onMouseLeave={() => setActive(null)}
                          onClick={() => hasDetails && setExpanded(isOpen ? null : key)}>
                       {/* photo (falls back to the kind icon) */}
-                      <div className="py-3.5 pr-1">
+                      <div className="py-2.5 pr-1">
                         {s.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={s.image} alt="" loading="lazy"
-                            className="size-14 rounded-[12px] object-cover" />
+                            className="size-12 rounded-[12px] object-cover" />
                         ) : (
                           <StopIcon kind={s.kind} />
                         )}
                       </div>
                       {/* name + details */}
-                      <div className="min-w-0 flex-1 py-3.5">
+                      <div className="min-w-0 flex-1 py-2.5">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex min-w-0 items-center gap-1.5">
-                            <p className="truncate text-[16px] font-medium leading-tight">{s.name}</p>
+                            <p className="line-clamp-2 text-[16px] font-medium leading-tight">{s.name}</p>
                             {fromSelection && s.anchor === true && (
                               <span className="shrink-0 rounded-full bg-[var(--brand-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--brand-ink)]">עוגן</span>
                             )}
@@ -614,7 +614,9 @@ export function TripView({ tripId }: { tripId: string }) {
                               <span className="shrink-0 rounded-full bg-[var(--surface-2)] px-1.5 py-0.5 text-[11px] text-[var(--text-3)]">אם יש זמן</span>
                             )}
                           </div>
-                          <div className="flex shrink-0 items-center gap-1.5">
+                          <div className="flex shrink-0 items-center gap-2">
+                            {/* duration sits opposite the title on the same line, not on its own row */}
+                            {s.duration && <span className="text-[12.5px] text-[var(--text-3)]">{s.duration}</span>}
                             {/* fixed-width so the star column lines up across every row */}
                             <span className="flex min-w-[34px] items-center justify-end gap-1 text-[13px] font-medium text-[var(--accent-ink)]">
                               {!!s.score && (<><Star size={13} fill="currentColor" /><span className="tabular-nums">{s.score}</span></>)}
@@ -629,7 +631,6 @@ export function TripView({ tripId }: { tripId: string }) {
                             </span>
                           </div>
                         </div>
-                        {s.duration && <p className="mt-0.5 text-[13px] text-[var(--text-3)]">{s.duration}</p>}
                         {s.note && <p className={`mt-1 text-[13.5px] leading-snug text-[var(--text-2)] ${isOpen ? "" : "line-clamp-2"}`}>{s.note}</p>}
                         {editing && (
                           <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-[var(--border)] pt-2.5"
@@ -666,18 +667,20 @@ export function TripView({ tripId }: { tripId: string }) {
                         <div className="min-h-[16px] w-px flex-1" style={{ background: last ? "transparent" : spine }} />
                       </div>
                       {/* time */}
-                      <div className="w-11 shrink-0 py-3.5">
+                      <div className="w-11 shrink-0 py-2.5">
                         <p className="text-[14px] font-semibold text-[var(--text-2)]" dir="ltr">{s.time}</p>
                       </div>
                     </div>
 
                     {isOpen && (
-                      <div className="border-t border-[var(--border)] pb-4 pt-3">
+                      <div className="border-t border-[var(--border)] pb-3.5 pt-3">
                         {s.image && (
                           // eslint-disable-next-line @next/next/no-img-element
+                          // capped banner — never upscale past the ~640px source; a
+                          // full-width 4:3 was a huge block on the wide desktop column
                           <img src={bigImage(s.image)} alt="" loading="lazy"
                             onError={(e) => { const t = e.currentTarget; if (s.image && t.src !== s.image) t.src = s.image; }}
-                            className="mb-3 aspect-[4/3] w-full rounded-[10px] object-cover" />
+                            className="mb-3 h-[220px] w-full max-w-[480px] rounded-[10px] object-cover" />
                         )}
                         {s.tagline && s.tagline !== s.note && (
                           <p className="mb-2 text-[14.5px] italic text-[var(--text-2)]">{s.tagline}</p>
@@ -710,10 +713,10 @@ export function TripView({ tripId }: { tripId: string }) {
                     {/* transport to the next stop — a straight-line walking estimate */}
                     {leg && !editing && !last && (
                       <div className="flex items-stretch gap-3">
-                        <div className="w-14 shrink-0 pr-1" />
-                        <div className="min-w-0 flex-1 py-1">
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-2.5 py-1 text-[12.5px] text-[var(--text-2)]">
-                            <PersonStanding size={13} /> ~{leg.min} דק׳ הליכה · {formatDistance(leg.km)}
+                        <div className="w-12 shrink-0 pr-1" />
+                        <div className="min-w-0 flex-1">
+                          <span className="inline-flex items-center gap-1 text-[12px] text-[var(--text-3)]">
+                            <PersonStanding size={12} /> ~{leg.min} דק׳ הליכה · {formatDistance(leg.km)}
                           </span>
                         </div>
                         <div className="flex w-7 shrink-0 justify-center">
