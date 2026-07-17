@@ -10,17 +10,14 @@ Effort: S ≈ <½ day · M ≈ ½–1 day · L ≈ 2+ days.
 
 ## 🔴 Blockers — before posting any public link at scale
 
-### P1. Rate-limit the public write endpoints · M
-All anonymous, no throttle today: `/api/trips/share`, `/api/trips/comments`,
-`/api/trips/like` (`web/app/api/trips/*`). A bot can flood junk trips/comments
-under the Yalle brand.
-- Add IP-based rate limiting in `web/middleware.ts` (it already runs on every
-  request). Options: Upstash Redis (`@upstash/ratelimit`, serverless-friendly)
-  or a lightweight in-memory limiter as a stopgap.
-- Suggested limits: share ≤ 5/min/IP, comments ≤ 8/min/IP, like ≤ 30/min/IP.
-- Add a hidden honeypot field to the comment + publish payloads; reject if filled.
-- Server-side dedup for likes (right now dedup is client-only localStorage —
-  trivially bypassed). At minimum cap total likes per IP per trip.
+### P1. Rate-limit the public write endpoints · M — ✅ DONE (commit d384263)
+- Postgres-backed fixed-window limiter (`rate_limits` table, `checkRateLimit`
+  in `lib/db.ts`, fails open) + `lib/ratelimit.ts` (`clientIp`, `rateLimit`,
+  `honeypotTripped`). Applied: share ≤5/min, comments ≤8/min, likes ≤30/min.
+- Likes deduped SERVER-side by (slug, ip) via `trip_likes` table.
+- Honeypot on the comment form; filled → silently dropped.
+- Verified E2E. Remaining idea (future): also honeypot the publish flow if a
+  bot-fillable form ever appears there.
 
 ### P2. Throttle + cap the AI cost surface · M
 `/api/itinerary` (and insights distill in `/api/admin/insights`) call Claude with
