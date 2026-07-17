@@ -10,7 +10,14 @@ function pool(): Pool | null {
     g._nbPool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false }, // Supabase pooler uses TLS
-      max: 5,
+      // max stays >1 so a page's parallel Promise.all queries don't serialize.
+      // The real capacity fix is the pooler PORT: use 6543 (transaction mode) in
+      // production — connections return after each query, so many serverless
+      // instances share them. Port 5432 (session mode) holds a connection for the
+      // whole client and exhausts Supabase's 15-client cap. See .env.example.
+      max: 4,
+      idleTimeoutMillis: 10_000,      // release idle conns fast (don't hog the pool)
+      connectionTimeoutMillis: 10_000, // fail fast instead of hanging when saturated
     });
   }
   return g._nbPool;
