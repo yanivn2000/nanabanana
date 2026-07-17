@@ -2,8 +2,17 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { Share2, Copy, Check, Loader2, X, Trash2 } from "lucide-react";
+import { Share2, Copy, Check, Loader2, X, Trash2, MessageCircle, Send } from "lucide-react";
 import type { Trip, FamilyProfile } from "@/lib/store";
+
+// lucide dropped its brand glyphs — inline the Facebook "f"
+function Facebook({ size = 18, className }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.99 3.657 9.128 8.438 9.878v-6.987H7.898V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.99 22 12z" />
+    </svg>
+  );
+}
 
 // "שתפו את הטיול" — publishes a sanitized, read-only copy to a public URL
 // (phase 0 of the community layer). Ownership is an anonymous token kept in
@@ -20,6 +29,7 @@ export function ShareTrip({ trip, profile, onShared }: {
 
   if (!trip.itinerary) return null;
   const url = trip.shared ? `${typeof window !== "undefined" ? window.location.origin : ""}/t/${trip.shared.slug}` : null;
+  const shareText = `${trip.title} — תוכנית יום-אחר-יום עם מפה:\n${url}`;
 
   function composition(): string {
     const kids = profile.kids ?? [];
@@ -120,18 +130,37 @@ export function ShareTrip({ trip, profile, onShared }: {
                     {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? "הועתק!" : "העתיקו"}
                   </button>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <a href={`https://wa.me/?text=${encodeURIComponent(`${trip.title} — תוכנית יום-אחר-יום עם מפה:\n${url}`)}`}
+                {/* one-tap share targets. WhatsApp & Telegram carry our text;
+                    Facebook's sharer ignores text and just pulls the OG card —
+                    still the primary channel for the group-posting flow. */}
+                <div className="mb-3 grid grid-cols-3 gap-2">
+                  <a href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
                     target="_blank" rel="noreferrer"
-                    className="rounded-full border border-[var(--brand)] px-4 py-1.5 text-[13px] font-medium text-[var(--brand-ink)]">
-                    שתפו בוואטסאפ
+                    className="flex flex-col items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--border)] py-2.5 text-[12.5px] font-medium text-[var(--text-2)] transition hover:border-[#25D366] hover:text-[#128C4B]">
+                    <MessageCircle size={18} className="text-[#25D366]" /> וואטסאפ
                   </a>
+                  <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url ?? "")}`}
+                    target="_blank" rel="noreferrer"
+                    className="flex flex-col items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--border)] py-2.5 text-[12.5px] font-medium text-[var(--text-2)] transition hover:border-[#1877F2] hover:text-[#1877F2]">
+                    <Facebook size={18} className="text-[#1877F2]" /> פייסבוק
+                  </a>
+                  <a href={`https://t.me/share/url?url=${encodeURIComponent(url ?? "")}&text=${encodeURIComponent(shareText)}`}
+                    target="_blank" rel="noreferrer"
+                    className="flex flex-col items-center gap-1 rounded-[var(--radius-sm)] border border-[var(--border)] py-2.5 text-[12.5px] font-medium text-[var(--text-2)] transition hover:border-[#229ED9] hover:text-[#229ED9]">
+                    <Send size={18} className="text-[#229ED9]" /> טלגרם
+                  </a>
+                </div>
+                <p className="mb-2 text-[11.5px] leading-relaxed text-[var(--text-3)]">
+                  💡 בפייסבוק שתפו בקבוצת היעד כתשובה למי ששאל — הכרטיס עם התמונה נמשך אוטומטית.
+                </p>
+                <div className="flex items-center gap-2 border-t border-[var(--border)] pt-2.5">
                   <button onClick={publish}
-                    className="rounded-full border border-[var(--border)] px-4 py-1.5 text-[13px] text-[var(--text-2)]">
-                    עדכנו את הגרסה המשותפת
+                    title="דוחף את השינויים שעשית בטיול לגרסה הציבורית (אותו קישור)"
+                    className="rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[12.5px] text-[var(--text-2)]">
+                    רעננו את הקישור לגרסה העדכנית
                   </button>
                   <button onClick={unpublish}
-                    className="mr-auto flex items-center gap-1 rounded-full px-2 py-1.5 text-[12.5px] text-[var(--text-3)] hover:text-[#c0453f]">
+                    className="mr-auto flex items-center gap-1 rounded-full px-2 py-1.5 text-[12px] text-[var(--text-3)] hover:text-[#c0453f]">
                     <Trash2 size={13} /> הסירו שיתוף
                   </button>
                 </div>
