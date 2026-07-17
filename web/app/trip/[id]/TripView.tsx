@@ -344,47 +344,84 @@ export function TripView({ tripId }: { tripId: string }) {
             )}
           </div>
         </div>
-        {/* compact hero — a wide LANDSCAPE thumbnail beside tight trip data */}
-        <header className="rise flex overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[var(--shadow)]">
-          {/* landscape thumbnail (wide, not tall) */}
-          <div className="relative w-[120px] shrink-0 sm:w-[190px] lg:w-[240px]">
-            <CityPoster destinationId={trip?.destinationId} cityHe={cityHe}
-              orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
-          </div>
-
-          {/* body: title, then meta + dates on compact lines */}
-          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 p-3 lg:px-4">
-            <h1 className="serif text-[20px] font-bold leading-tight lg:text-[23px]">{trip?.title ?? "…"}</h1>
-            <p className="flex flex-wrap items-center gap-x-1.5 text-[13.5px] text-[var(--text-2)]">
-              <span>
-                {trip?.segments && trip.segments.length > 1
-                  ? `${trip.segments.map((s) => s.cityHe || s.city).join(" → ")} · `
-                  : cityHe ? `${cityHe} · ` : ""}
-                {trip?.days} ימים
-                {trip?.month ? ` · ${MONTHS_HE[trip.month - 1]}` : ""}
-                {trip?.segments && trip.segments.length > 1 ? ` · ${trip.segments.length} ערים` : ""}
-                {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
-              </span>
-              <span className="text-[var(--text-3)]">· {profileSummary(tripProfile)}</span>
-            </p>
-            {/* exact dates → powers season, length and the live-events feed (#64) */}
-            <div className="flex flex-wrap items-center gap-1.5 text-[12.5px] text-[var(--text-3)]">
-              <CalendarDays size={13} />
-              <input type="date" value={trip?.startDate ?? ""}
-                onChange={(e) => {
-                  const info = datesToInfo(e.target.value, trip?.endDate);
-                  update(tripId, { startDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
-                }}
-                className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[12.5px] text-[var(--text)] outline-none" />
-              <span>–</span>
-              <input type="date" value={trip?.endDate ?? ""} min={trip?.startDate}
-                onChange={(e) => {
-                  const info = datesToInfo(trip?.startDate, e.target.value);
-                  update(tripId, { endDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
-                }}
-                className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[12.5px] text-[var(--text)] outline-none" />
+        {/* header mirrors the city page: trip identity on one side, a grid of
+            day tiles (same cube size as the city's category tiles) on the other,
+            so moving between the two pages feels continuous */}
+        <header className="rise overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[var(--shadow)] lg:flex lg:items-stretch">
+          {/* identity: landscape thumbnail + tight trip data */}
+          <div className="flex lg:w-[400px] lg:shrink-0">
+            <div className="relative w-[120px] shrink-0 sm:w-[190px] lg:w-[200px]">
+              <CityPoster destinationId={trip?.destinationId} cityHe={cityHe}
+                orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 p-3 lg:px-4">
+              <h1 className="serif text-[20px] font-bold leading-tight lg:text-[23px]">{trip?.title ?? "…"}</h1>
+              <p className="flex flex-wrap items-center gap-x-1.5 text-[13.5px] text-[var(--text-2)]">
+                <span>
+                  {trip?.segments && trip.segments.length > 1
+                    ? `${trip.segments.map((s) => s.cityHe || s.city).join(" → ")} · `
+                    : cityHe ? `${cityHe} · ` : ""}
+                  {trip?.days} ימים
+                  {trip?.month ? ` · ${MONTHS_HE[trip.month - 1]}` : ""}
+                  {trip?.segments && trip.segments.length > 1 ? ` · ${trip.segments.length} ערים` : ""}
+                  {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
+                </span>
+                <span className="text-[var(--text-3)]">· {profileSummary(tripProfile)}</span>
+              </p>
+              {/* exact dates → powers season, length and the live-events feed (#64) */}
+              <div className="flex flex-wrap items-center gap-1.5 text-[12.5px] text-[var(--text-3)]">
+                <CalendarDays size={13} />
+                <input type="date" value={trip?.startDate ?? ""}
+                  onChange={(e) => {
+                    const info = datesToInfo(e.target.value, trip?.endDate);
+                    update(tripId, { startDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
+                  }}
+                  className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[12.5px] text-[var(--text)] outline-none" />
+                <span>–</span>
+                <input type="date" value={trip?.endDate ?? ""} min={trip?.startDate}
+                  onChange={(e) => {
+                    const info = datesToInfo(trip?.startDate, e.target.value);
+                    update(tripId, { endDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
+                  }}
+                  className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[12.5px] text-[var(--text)] outline-none" />
+              </div>
             </div>
           </div>
+
+          {/* vertical divider (desktop) mirrors the city page's identity|grid split */}
+          <div className="hidden w-px shrink-0 self-stretch bg-[var(--border)] lg:block" />
+
+          {/* day tiles — same cube size/style as the city page's category tiles */}
+          {itinerary && allDays.length > 0 && (
+            <div className="border-t border-[var(--border)] p-3 lg:min-w-0 lg:flex-1 lg:self-center lg:border-t-0">
+              <div className="flex flex-wrap gap-2">
+                {allDays.map((d, i) => {
+                  const on = i === curIdx;
+                  const dd = dayDate(i);
+                  const today = i === todayIndex;
+                  return (
+                    <button key={i} onClick={() => { setDayIdx(i); setExpanded(null); setActive(null); }}
+                      className="flex w-[84px] flex-col items-center justify-center gap-1 rounded-[18px] border-[1.5px] px-1 py-2.5 transition"
+                      style={{ background: on ? "var(--brand)" : "var(--surface)",
+                               borderColor: on ? "var(--brand)" : today ? "var(--accent)" : "var(--border)" }}>
+                      <span className="grid size-[28px] place-items-center rounded-full text-[14px] font-bold leading-none"
+                        style={{ background: on ? "#fff" : "var(--brand-soft)", color: on ? "var(--brand)" : "var(--brand-ink)" }}>
+                        {i + 1}
+                      </span>
+                      <span className="text-[12.5px] font-medium leading-tight"
+                        style={{ color: on ? "#fff" : "var(--text-2)" }}>
+                        {today ? "היום" : dd ? dd.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" }) : `יום ${i + 1}`}
+                      </span>
+                      <span className="text-[11px] tabular-nums leading-none"
+                        style={{ color: on ? "rgba(255,255,255,.8)" : "var(--text-3)" }}>
+                        {d.stops.length} תחנות
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </header>
       </div>
 
@@ -439,35 +476,10 @@ export function TripView({ tripId }: { tripId: string }) {
         </div>
       )}
 
-      {/* ── full-width day navigation + summary — spans BOTH columns (#3 #4) ── */}
+      {/* ── selected-day summary — spans BOTH columns (day tabs now live in the
+           header as tiles, mirroring the city page) ── */}
       {itinerary && day && (
         <div className="px-5 pt-2 lg:px-8 lg:pt-2.5">
-          {/* wide day tabs: number · date · stop count; selected = brand green */}
-          <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 lg:mx-0 lg:px-0"
-               style={{ scrollbarWidth: "none" }}>
-            {allDays.map((d, i) => {
-              const on = i === curIdx;
-              const dd = dayDate(i);
-              return (
-                <button key={i} onClick={() => { setDayIdx(i); setExpanded(null); setActive(null); }}
-                  className="min-w-[116px] shrink-0 rounded-[var(--radius-sm)] border px-4 py-2.5 text-right transition"
-                  style={{ background: on ? "var(--brand)" : "var(--surface)",
-                           borderColor: on ? "var(--brand)" : "var(--border)",
-                           boxShadow: on ? "var(--shadow)" : "none" }}>
-                  <span className="block text-[15px] font-semibold leading-tight"
-                        style={{ color: on ? "#fff" : "var(--text)" }}>
-                    יום {i + 1}{i === todayIndex ? " · היום" : ""}
-                  </span>
-                  <span className="mt-0.5 block text-[12.5px]"
-                        style={{ color: on ? "rgba(255,255,255,.85)" : "var(--text-3)" }}>
-                    {dd ? dd.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" }) : ""}
-                    {dd ? " · " : ""}{d.stops.length} תחנות
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
           {/* day summary toolbar: theme + at-a-glance stats + day actions — one
               tight line; the stop count already lives on the day tab above */}
           <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2">
