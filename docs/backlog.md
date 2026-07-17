@@ -16,6 +16,10 @@ Ordered within each section by rough priority. ✅ = done 2026-07-14.
 
 ## 📋 New-city ingest runbook (standard steps, in order)
 1. `pipeline_osm.fetch_city(...)` — base tourism/leisure/historic/natural ingest.
+   For islands / elongated destinations, ingest from SEVERAL centers with
+   OVERLAPPING radii (Lefkada lesson: Kathisma beach fell between 3 non-touching
+   circles). Afterwards, name-probe Overpass for the destination's famous spots
+   that are missing — some carry odd tags the pipeline can't cover.
 2. `pipeline_food.ingest(dest_id, 14, apply=True)` — Wikipedia-gated
    food/shopping/nightlife (part of the standard flow since 2026-07-16).
 3. `dedupe.py` + scratchpad cross_dedupe — flag duplicates.

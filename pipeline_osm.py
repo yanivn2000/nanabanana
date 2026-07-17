@@ -63,6 +63,11 @@ CATEGORY_MAP = {
     "natural=beach":        ("nature", "outdoor", 9),
     # thermal/public baths — a genuine attraction (Tbilisi sulphur, Budapest)
     "amenity=public_bath":  ("attraction", "indoor", 7),
+    # gaps found on Lefkada (2026-07-17): waterfalls are usually tagged
+    # waterway=waterfall (not natural=), and monasteries — major attractions in
+    # Greece/Georgia — are amenity=monastery.
+    "waterway=waterfall":   ("nature", "outdoor", 8),
+    "amenity=monastery":    ("attraction", "both", 6),
 }
 
 
@@ -93,6 +98,12 @@ def _build_query(lat, lng, radius_m):
         # thermal/public baths (Tbilisi sulphur baths, Budapest spa baths)
         'node["amenity"="public_bath"]',
         'way["amenity"="public_bath"]',
+        # waterfalls are usually waterway=waterfall (Dimosari/Lefkada was missed)
+        'node["waterway"="waterfall"]',
+        # monasteries (Faneromeni/Lefkada, Jvari/Georgia…) are amenity=monastery
+        'node["amenity"="monastery"]',
+        'way["amenity"="monastery"]',
+        'relation["amenity"="monastery"]',
     ]
     body = "".join(f'{f}(around:{radius_m},{lat},{lng});' for f in filters)
     return f"[out:json][timeout:60];({body});out center tags;"
@@ -106,12 +117,13 @@ def _classify(tags):
             if mapped:
                 return mapped
             return (key, "both", 5)  # known top-level key, unmapped value
-    # amenity is a huge namespace — accept ONLY explicitly mapped values.
-    amen = tags.get("amenity")
-    if amen:
-        mapped = CATEGORY_MAP.get(f"amenity={amen}")
-        if mapped:
-            return mapped
+    # amenity/waterway are huge namespaces — accept ONLY explicitly mapped values.
+    for key in ("amenity", "waterway"):
+        val = tags.get(key)
+        if val:
+            mapped = CATEGORY_MAP.get(f"{key}={val}")
+            if mapped:
+                return mapped
     return (None, "both", 5)
 
 
@@ -184,7 +196,8 @@ def fetch_city(city, country, lat, lng, radius_km=15, sleep=1.0):
             lng=el_lng,
             category=category,
             subcategory=tags.get("tourism") or tags.get("leisure")
-                        or tags.get("historic") or tags.get("natural"),
+                        or tags.get("historic") or tags.get("natural")
+                        or tags.get("waterway") or tags.get("amenity"),
             indoor_outdoor=indoor_outdoor,
             family_score=fam,
             opening_hours=tags.get("opening_hours"),
