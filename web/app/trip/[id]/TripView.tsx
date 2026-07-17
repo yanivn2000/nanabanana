@@ -405,7 +405,13 @@ export function TripView({ tripId }: { tripId: string }) {
 
           {/* day tiles — same cube size/style as the city page's category tiles */}
           {itinerary && allDays.length > 0 && (
-            <div className="flex flex-col gap-3 border-t border-[var(--border)] p-3 lg:min-w-0 lg:flex-1 lg:justify-center lg:border-t-0">
+            <div className="flex flex-col gap-2.5 border-t border-[var(--border)] p-3 lg:min-w-0 lg:flex-1 lg:justify-center lg:border-t-0">
+              {/* section header — parallels the city page's "מה מעניין אתכם?" so
+                  the day selector reads as a titled block, not a floating row */}
+              <div className="hidden items-baseline justify-between gap-3 lg:flex">
+                <h2 className="text-[15px] font-bold text-[var(--text)]">ימי הטיול</h2>
+                <span className="text-[12px] text-[var(--text-3)]">לחצו על יום כדי לראות את התוכנית שלו</span>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {allDays.map((d, i) => {
                   const on = i === curIdx;
@@ -436,7 +442,7 @@ export function TripView({ tripId }: { tripId: string }) {
                   "why" (split in half), so the map + timeline reach the fold
                   without scrolling. Mobile keeps these as the toolbar/panel below. */}
               {day && (
-                <div className="hidden gap-4 lg:flex lg:items-start">
+                <div className="hidden gap-4 border-t border-[var(--border)] pt-2.5 lg:flex lg:items-start">
                   {/* summary half */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
