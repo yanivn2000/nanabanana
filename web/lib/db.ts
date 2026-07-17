@@ -1,4 +1,5 @@
 import { Pool } from "pg";
+import * as Sentry from "@sentry/nextjs";
 
 // Postgres (Supabase) connection. Reads DATABASE_URL from the environment.
 // A single pool is reused across hot-reloads / serverless invocations.
@@ -52,8 +53,11 @@ export async function checkRateLimit(
       [bucket, windowSec]);
     const count = rows[0]?.count ?? 1;
     return { ok: count <= limit, count };
-  } catch {
-    return { ok: true, count: 0 }; // fail open
+  } catch (e) {
+    // fail OPEN, but surface it — a persistent failure here means the limiter
+    // is silently off (and usually signals a DB problem worth alerting on).
+    Sentry.captureException(e);
+    return { ok: true, count: 0 };
   }
 }
 

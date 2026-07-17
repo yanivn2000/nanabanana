@@ -10,6 +10,7 @@ import {
 import { buildHeuristicItinerary, buildMultiHeuristicItinerary } from "@/lib/heuristic";
 import { checkRateLimit } from "@/lib/db";
 import { rateLimit } from "@/lib/ratelimit";
+import * as Sentry from "@sentry/nextjs";
 import { paceToPerDay } from "@/lib/trip-types";
 import { rankByTaste, tasteEmphasis } from "@/lib/taste";
 import { haversineKm } from "@/lib/geo";
@@ -149,7 +150,9 @@ export async function POST(req: NextRequest) {
         { status: 429, headers: { "Retry-After": "3600" } });
     }
     if (daily.count === Math.floor(AI_DAILY_CAP * 0.7)) {
-      console.warn(`[ai-budget] daily builds at ${daily.count}/${AI_DAILY_CAP} (70%)`);
+      const msg = `[ai-budget] daily builds at ${daily.count}/${AI_DAILY_CAP} (70%)`;
+      console.warn(msg);
+      Sentry.captureMessage(msg, "warning"); // alert while there's still headroom
     }
   }
 
