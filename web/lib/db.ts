@@ -490,7 +490,8 @@ export async function publishSharedTrip(t: {
 }
 
 export async function getSharedTrip(slug: string): Promise<SharedTrip | null> {
-  const rows = await query<SharedTrip>(`SELECT * FROM shared_trips WHERE slug = $1`, [slug]);
+  // hidden = taken down by a moderator → 404 for the public.
+  const rows = await query<SharedTrip>(`SELECT * FROM shared_trips WHERE slug = $1 AND hidden = false`, [slug]);
   return rows[0] ?? null;
 }
 
@@ -509,7 +510,7 @@ export async function listSharedTripsForDestination(
             COALESCE((SELECT SUM(jsonb_array_length(d->'stops'))
                         FROM jsonb_array_elements(itinerary->'days') d), 0)::int AS stops
        FROM shared_trips
-      WHERE destination_id = $1
+      WHERE destination_id = $1 AND hidden = false
       ORDER BY likes DESC, created_at DESC
       LIMIT $2`,
     [destId, limit]);
@@ -517,8 +518,58 @@ export async function listSharedTripsForDestination(
 
 export async function countSharedTripsForDestination(destId: number): Promise<number> {
   const rows = await query<{ n: number }>(
-    `SELECT COUNT(*)::int AS n FROM shared_trips WHERE destination_id = $1`, [destId]);
+    `SELECT COUNT(*)::int AS n FROM shared_trips WHERE destination_id = $1 AND hidden = false`, [destId]);
   return rows[0]?.n ?? 0;
+}
+
+// --- Moderation (P4) ---------------------------------------------------------
+// Anyone can flag a comment or a shared trip; a report just bumps a counter
+// (idempotency isn't critical here — the counter is a triage signal, not a vote).
+export async function reportComment(id: number): Promise<boolean> {
+  const rows = await query<{ id: number }>(
+    `UPDATE trip_comments SET reported = reported + 1 WHERE id = $1 RETURNING id`, [id]);
+  return rows.length > 0;
+}
+
+export async function reportSharedTrip(slug: string): Promise<boolean> {
+  const rows = await query<{ id: number }>(
+    `UPDATE shared_trips SET reported = reported + 1 WHERE slug = $1 RETURNING id`, [slug]);
+  return rows.length > 0;
+}
+
+// Editor moderation: hide/unhide. Hidden content vanishes from all public reads.
+export async function setCommentHidden(id: number, hidden: boolean): Promise<void> {
+  await query(`UPDATE trip_comments SET hidden = $2 WHERE id = $1`, [id, hidden]);
+}
+export async function setSharedTripHidden(slug: string, hidden: boolean): Promise<void> {
+  await query(`UPDATE shared_trips SET hidden = $2 WHERE slug = $1`, [slug, hidden]);
+}
+
+export type ModerationComment = {
+  id: number; slug: string; trip_title: string; author_name: string; body: string;
+  reported: number; hidden: boolean; created_at: string;
+};
+export type ModerationTrip = {
+  slug: string; title: string; city_he: string | null; reported: number;
+  hidden: boolean; likes: number; views: number; created_at: string;
+};
+
+// The moderation queue: reported or already-hidden items, worst first.
+export async function listModerationQueue(): Promise<{
+  comments: ModerationComment[]; trips: ModerationTrip[];
+}> {
+  const comments = await query<ModerationComment>(
+    `SELECT c.id, s.slug, s.title AS trip_title, c.author_name, c.body,
+            c.reported, c.hidden, c.created_at
+       FROM trip_comments c JOIN shared_trips s ON s.id = c.shared_trip_id
+      WHERE c.reported > 0 OR c.hidden = true
+      ORDER BY c.hidden ASC, c.reported DESC, c.id DESC LIMIT 200`);
+  const trips = await query<ModerationTrip>(
+    `SELECT slug, title, city_he, reported, hidden, likes, views, created_at
+       FROM shared_trips
+      WHERE reported > 0 OR hidden = true
+      ORDER BY hidden ASC, reported DESC, id DESC LIMIT 200`);
+  return { comments, trips };
 }
 
 // Anonymous like toggle, deduped server-side by (slug, ip): a given client can

@@ -41,6 +41,19 @@ export function SharedTripView({ trip, comments: initialComments }: {
     if (typeof window === "undefined") return false;
     try { return new Set(JSON.parse(localStorage.getItem("nanabanana.likes.v1") ?? "[]")).has(trip.slug); } catch { return false; }
   });
+  const [tripReported, setTripReported] = useState(false);
+  async function reportTrip() {
+    if (tripReported) return;
+    if (!window.confirm("לדווח על הטיול הזה כתוכן לא ראוי? הצוות יבדוק.")) return;
+    setTripReported(true);
+    try {
+      await fetch("/api/trips/report", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "trip", slug: trip.slug }),
+      });
+    } catch { /* best-effort */ }
+  }
+
   async function toggleLike() {
     const on = !liked;
     setLiked(on); setLikes((n) => Math.max(0, n + (on ? 1 : -1)));
@@ -202,6 +215,14 @@ export function SharedTripView({ trip, comments: initialComments }: {
       {/* community comments — the Facebook-thread experience, on our turf */}
       <CommentsSection slug={trip.slug} days={days.length} comments={comments}
         setComments={setComments} ownerToken={ownerToken} />
+
+      {/* quiet trip-level report */}
+      <div className="mt-8 border-t border-[var(--border)] pt-4 text-center">
+        <button onClick={reportTrip} disabled={tripReported}
+          className="text-[12px] text-[var(--text-3)] transition hover:text-[#c0453f] disabled:opacity-60">
+          {tripReported ? "✓ הטיול דווח — תודה, נבדוק" : "🚩 דיווח על הטיול (תוכן לא ראוי)"}
+        </button>
+      </div>
     </main>
   );
 }
@@ -216,6 +237,18 @@ function CommentsSection({ slug, days, comments, setComments, ownerToken }: {
   const [dayIndex, setDayIndex] = useState<number | null>(null);
   const [state, setState] = useState<"idle" | "sending" | "error">("idle");
   const [hp, setHp] = useState(""); // honeypot — real users leave it empty
+  const [reported, setReported] = useState<Set<number>>(new Set());
+
+  async function reportComment(id: number) {
+    if (reported.has(id)) return;
+    setReported((s) => new Set(s).add(id)); // optimistic; report is fire-and-forget
+    try {
+      await fetch("/api/trips/report", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "comment", comment_id: id }),
+      });
+    } catch { /* ignore — the flag is best-effort */ }
+  }
 
   async function submit() {
     if (name.trim().length < 2 || body.trim().length < 3 || state === "sending") return;
@@ -275,6 +308,10 @@ function CommentsSection({ slug, days, comments, setComments, ownerToken }: {
                   {c.helpful ? "בטלו סימון" : "✔ עזר לי"}
                 </button>
               )}
+              <button onClick={() => reportComment(c.id)} title="דיווח על תגובה"
+                className={`${ownerToken ? "" : "mr-auto"} rounded-full px-1.5 py-0.5 text-[11px] transition hover:text-[#c0453f] ${reported.has(c.id) ? "text-[#c0453f]" : "text-[var(--text-3)]"}`}>
+                {reported.has(c.id) ? "✓ דווח" : "🚩 דיווח"}
+              </button>
             </div>
             <p className="whitespace-pre-wrap text-[14px] leading-relaxed">{c.body}</p>
           </div>

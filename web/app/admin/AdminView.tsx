@@ -4,11 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Loader2, Check, ExternalLink } from "lucide-react";
 import { InsightsIngest } from "./InsightsIngest";
+import { Moderation } from "./Moderation";
 import type { AdminDestination, Feedback } from "@/lib/db";
 
 const TABS = [
   { key: "cities", label: "🏙️ ערים" },
   { key: "insights", label: "📥 תובנות" },
+  { key: "moderation", label: "🚩 מודרציה" },
   { key: "feedback", label: "💬 פידבק" },
   { key: "posters", label: "🖼️ פוסטרים" },
 ] as const;
@@ -151,6 +153,8 @@ export function AdminView({ destinations, feedback, email }: {
           <InsightsIngest destinations={destinations} />
         </section>
       )}
+
+      {tab === "moderation" && <Moderation />}
 
       {tab === "feedback" && (
         <section className="flex flex-col gap-2">

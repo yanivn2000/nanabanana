@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addTripComment, setCommentHelpful } from "@/lib/db";
 import { rateLimit, honeypotTripped } from "@/lib/ratelimit";
+import { looksLikeSpam } from "@/lib/content-filter";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,8 @@ export async function POST(req: NextRequest) {
   if (!slug || name.length < 2 || name.length > 40 || body.length < 3 || body.length > 2000) {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
+  // obvious spam → accept-and-drop (same silent treatment as the honeypot)
+  if (looksLikeSpam(body) || looksLikeSpam(name)) return NextResponse.json({ comment: null });
   const dayIndex = typeof b.day_index === "number" && b.day_index >= 0 ? Math.floor(b.day_index) : null;
   const comment = await addTripComment(slug, dayIndex, name, body);
   if (!comment) return NextResponse.json({ error: "trip_not_found" }, { status: 404 });
