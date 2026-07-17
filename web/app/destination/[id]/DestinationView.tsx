@@ -137,6 +137,7 @@ export function DestinationView({
   passes = [],
   coveredIds = [],
   isEditor = false,
+  communityCount = 0,
 }: {
   dest: Destination;
   attractions: Attraction[];
@@ -145,6 +146,7 @@ export function DestinationView({
   passes?: Pass[];
   coveredIds?: number[];
   isEditor?: boolean;
+  communityCount?: number;
 }) {
   const covered = new Set(coveredIds);
   // Editor curation: optimistic overrides of the two ratings while the write to
@@ -496,6 +498,12 @@ export function DestinationView({
                         className="inline-flex items-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-2.5 py-1 text-[12px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
                         💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
                       </button>
+                    )}
+                    {communityCount > 0 && (
+                      <Link href={`/destination/${dest.id}/trips`}
+                        className="inline-flex items-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-2.5 py-1 text-[12px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
+                        ❤️ {communityCount} טיולים של מטיילים
+                      </Link>
                     )}
                   </div>
                 </div>

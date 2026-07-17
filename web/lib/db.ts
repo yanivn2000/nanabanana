@@ -460,6 +460,43 @@ export async function getSharedTrip(slug: string): Promise<SharedTrip | null> {
   return rows[0] ?? null;
 }
 
+// A lightweight card for the per-city community gallery — stop count computed in
+// SQL so we never ship full itineraries just to list them.
+export type SharedTripCard = {
+  slug: string; title: string; days: number | null; composition: string | null;
+  likes: number; views: number; stops: number; created_at: string;
+};
+
+export async function listSharedTripsForDestination(
+  destId: number, limit = 60
+): Promise<SharedTripCard[]> {
+  return query<SharedTripCard>(
+    `SELECT slug, title, days, composition, likes, views, created_at,
+            COALESCE((SELECT SUM(jsonb_array_length(d->'stops'))
+                        FROM jsonb_array_elements(itinerary->'days') d), 0)::int AS stops
+       FROM shared_trips
+      WHERE destination_id = $1
+      ORDER BY likes DESC, created_at DESC
+      LIMIT $2`,
+    [destId, limit]);
+}
+
+export async function countSharedTripsForDestination(destId: number): Promise<number> {
+  const rows = await query<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM shared_trips WHERE destination_id = $1`, [destId]);
+  return rows[0]?.n ?? 0;
+}
+
+// Anonymous like toggle (dedup is client-side via localStorage). Clamped ≥ 0.
+export async function likeSharedTrip(slug: string, on: boolean): Promise<number | null> {
+  const rows = await query<{ likes: number }>(
+    `UPDATE shared_trips
+        SET likes = GREATEST(0, likes + $2)
+      WHERE slug = $1 RETURNING likes`,
+    [slug, on ? 1 : -1]);
+  return rows[0]?.likes ?? null;
+}
+
 export async function bumpSharedTripViews(slug: string): Promise<void> {
   await query(`UPDATE shared_trips SET views = views + 1 WHERE slug = $1`, [slug]);
 }

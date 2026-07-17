@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Copy, Loader2, MapPin, Sparkles, Star } from "lucide-react";
+import { Check, Copy, Heart, Loader2, MapPin, Sparkles, Star } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
 import { CityPoster } from "@/components/CityPoster";
 import { useTrips, MONTHS_HE } from "@/lib/store";
@@ -34,6 +34,28 @@ export function SharedTripView({ trip, comments: initialComments }: {
   const ownerToken = typeof window !== "undefined"
     ? (() => { try { return JSON.parse(localStorage.getItem("nanabanana.shares.v1") ?? "{}")[trip.slug] ?? null; } catch { return null; } })()
     : null;
+
+  // ❤️ — one like per browser, deduped in localStorage (shared with the gallery)
+  const [likes, setLikes] = useState(trip.likes);
+  const [liked, setLiked] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try { return new Set(JSON.parse(localStorage.getItem("nanabanana.likes.v1") ?? "[]")).has(trip.slug); } catch { return false; }
+  });
+  async function toggleLike() {
+    const on = !liked;
+    setLiked(on); setLikes((n) => Math.max(0, n + (on ? 1 : -1)));
+    try {
+      const set = new Set<string>(JSON.parse(localStorage.getItem("nanabanana.likes.v1") ?? "[]"));
+      if (on) set.add(trip.slug); else set.delete(trip.slug);
+      localStorage.setItem("nanabanana.likes.v1", JSON.stringify([...set]));
+      const res = await fetch("/api/trips/like", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: trip.slug, on }),
+      });
+      const data = await res.json();
+      if (res.ok && typeof data.likes === "number") setLikes(data.likes);
+    } catch { /* optimistic value stands */ }
+  }
 
   const mapStops = (day?.stops ?? []).filter((s) => s.lat != null && s.lng != null);
   const stopPoints = useMemo(() => mapStops.map((s, i) => ({
@@ -90,6 +112,12 @@ export function SharedTripView({ trip, comments: initialComments }: {
           <button onClick={remix}
             className="flex items-center gap-2 rounded-full bg-[var(--brand)] px-5 py-2.5 text-[14.5px] font-semibold text-white shadow-[0_6px_16px_rgba(14,107,94,.3)]">
             <Copy size={15} /> העתיקו וערכו אצלכם — חינם
+          </button>
+          <button onClick={toggleLike} aria-label="אהבתי"
+            className="flex items-center gap-1.5 rounded-full border px-4 py-2.5 text-[14.5px] font-medium transition"
+            style={{ borderColor: liked ? "#ff5a5f" : "var(--border)", color: liked ? "#ff5a5f" : "var(--text-2)",
+                     background: liked ? "rgba(255,90,95,.08)" : "var(--surface)" }}>
+            <Heart size={15} className={liked ? "fill-[#ff5a5f]" : ""} /> אהבתי{likes > 0 ? ` · ${likes}` : ""}
           </button>
           {trip.destination_id && (
             <Link href={`/destination/${trip.destination_id}`}
