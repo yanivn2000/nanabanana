@@ -458,17 +458,20 @@ export function DestinationView({
           are reachable right away */}
       <header className="rise px-5 pt-3 pb-2.5 lg:px-8 lg:pt-4 lg:pb-3">
         <div className="mx-auto max-w-[1600px]">
-          <Link href="/" className="eyebrow mb-2 inline-flex items-center gap-1 text-[var(--text-2)]">
-            <ChevronRight size={14} /> בית
-          </Link>
-          {/* one unified top bar: city identity (right) + the interests picker
-              filling the rest (left), so there's no dead whitespace between them */}
           {/* the top city section sits directly on the cream page background (no
-              white card) — shares the same visual foundation as the trip page.
-              Padding kept so nothing shifts. */}
-          <div className="p-3.5 lg:p-4">
+              white card). Structured like the TRIP header: a horizontal identity
+              (breadcrumb | title · places · badges) with the destination image on
+              the far right spanning it, and the interests as a full-width row
+              below — no divider between the image and the info to its left. */}
+          <div className="p-3.5 lg:relative lg:p-4">
+            {/* destination image — far right, spans the header (like the trip) */}
+            <div className="hidden overflow-hidden rounded-[var(--radius-sm)] lg:absolute lg:top-4 lg:block lg:h-[105px] lg:w-[160px]"
+                 style={{ insetInlineStart: "16px" }}>
+              <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
+                orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
+            </div>
             {yesCount === 0 && (
-              <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[var(--border)] pb-3 text-[15px] text-[var(--text-2)]">
+              <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[var(--border)] pb-3 text-[15px] text-[var(--text-2)] lg:pr-[176px]">
                 <span className="text-[16px] font-bold text-[var(--brand-ink)]">איך בונים טיול?</span>
                 <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">1</b> בחרו נושאים שאתם אוהבים</span>
                 <ChevronRight size={16} className="text-[var(--text-3)]" />
@@ -477,44 +480,40 @@ export function DestinationView({
                 <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">3</b> נרכיב לכם את הטיול</span>
               </div>
             )}
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-5">
-              {/* city identity — right in RTL */}
-              <div className="flex shrink-0 items-center gap-3 sm:gap-4 lg:w-[340px]">
-                <div className="relative aspect-[3/2] w-[104px] shrink-0 overflow-hidden rounded-[var(--radius-sm)] sm:w-[150px] lg:aspect-auto lg:h-[105px] lg:w-[160px]">
-                  <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
-                    orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
-                </div>
-                <div className="min-w-0">
-                  <h1 className="serif flex items-center gap-2 text-[20px] font-bold leading-tight lg:text-[22px]">
-                    <span className="text-[0.72em]">{countryFlag(dest.country)}</span>
-                    {dest.city_he || dest.city}
-                  </h1>
-                  <p className="mt-0.5 text-[13.5px] font-semibold text-[var(--text)]">
-                    {dest.attraction_count.toLocaleString("he")} מקומות לגלות בעיר
-                  </p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--brand-ink)]">
-                      <Sparkles size={11} /> מותאם לפרופיל שלכם
-                    </span>
-                    {passes.length > 0 && (
-                      <button onClick={() => setShowPasses((v) => !v)}
-                        className="inline-flex items-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
-                        💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
-                      </button>
-                    )}
-                    {communityCount > 0 && (
-                      <Link href={`/destination/${dest.id}/trips`}
-                        className="inline-flex items-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-2 py-0.5 text-[11.5px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
-                        ❤️ {communityCount} טיולים של מטיילים
-                      </Link>
-                    )}
-                  </div>
-                </div>
+
+            {/* identity row — breadcrumb | title · places · badges, all inline */}
+            <div className="flex flex-col gap-3 lg:pr-[176px]">
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                <Link href="/" className="eyebrow inline-flex items-center gap-1 text-[var(--text-2)]">
+                  <ChevronRight size={14} /> בית
+                </Link>
+                <span className="h-3.5 w-px bg-[var(--border)]" />
+                <h1 className="serif flex items-center gap-1.5 text-[20px] font-bold leading-tight lg:text-[22px]">
+                  <span className="text-[0.72em]">{countryFlag(dest.country)}</span>
+                  {dest.city_he || dest.city}
+                </h1>
+                <span className="text-[13px] font-semibold text-[var(--text-2)]">
+                  · {dest.attraction_count.toLocaleString("he")} מקומות לגלות בעיר
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--brand-ink)]">
+                  <Sparkles size={11} /> מותאם לפרופיל שלכם
+                </span>
+                {passes.length > 0 && (
+                  <button onClick={() => setShowPasses((v) => !v)}
+                    className="inline-flex items-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
+                    💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
+                  </button>
+                )}
+                {communityCount > 0 && (
+                  <Link href={`/destination/${dest.id}/trips`}
+                    className="inline-flex items-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-2 py-0.5 text-[11.5px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
+                    ❤️ {communityCount} טיולים של מטיילים
+                  </Link>
+                )}
               </div>
-              {/* divider */}
-              <div className="hidden w-px self-stretch bg-[var(--border)] lg:block" />
-              {/* interests — fill the rest (left in RTL) */}
-              <div className="min-w-0 flex-1">
+
+              {/* interests — full-width row below the identity */}
+              <div className="min-w-0">
                 <div className="mb-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
                   <h2 className="text-[16px] font-bold text-[var(--text)]">מה מעניין אתכם?</h2>
                   <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13.5px] text-[var(--text-2)]">
