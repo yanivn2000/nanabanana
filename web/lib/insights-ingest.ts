@@ -19,10 +19,15 @@ const INSIGHT_SCHEMA = {
   additionalProperties: false,
 } as const;
 
+const PROFILE_ENUM = ["family", "couple", "friends", "solo", "general"] as const;
+
 const OUTPUT_SCHEMA = {
   type: "object",
-  properties: { insights: { type: "array", items: INSIGHT_SCHEMA } },
-  required: ["insights"],
+  properties: {
+    author_profile: { type: "string", enum: PROFILE_ENUM },
+    insights: { type: "array", items: INSIGHT_SCHEMA },
+  },
+  required: ["author_profile", "insights"],
   additionalProperties: false,
 } as const;
 
@@ -35,9 +40,10 @@ const THREAD_SCHEMA = {
         type: "object",
         properties: {
           author: { type: "string" },
+          author_profile: { type: "string", enum: PROFILE_ENUM },
           insights: { type: "array", items: INSIGHT_SCHEMA },
         },
-        required: ["author", "insights"],
+        required: ["author", "author_profile", "insights"],
         additionalProperties: false,
       },
     },
@@ -64,6 +70,12 @@ const SYSTEM =
   "fluff, no marketing, no repeating the place name unnecessarily — just the " +
   "insight itself. " +
   "`sentiment`: pos / neg / neutral. " +
+  "ALSO determine `author_profile` — who wrote this post — one of: 'family' " +
+  "(travelling with children), 'couple' (two partners), 'friends' (a group of " +
+  "friends / adults, no kids), 'solo' (one traveller), or 'general' (the text " +
+  "does not reveal who travelled). Infer ONLY from what the post says about the " +
+  "travellers themselves (e.g. 'הלכנו עם הילדים', 'טיול זוגי', 'נסענו חבר׳ה'); " +
+  "when in doubt use 'general'. " +
   "Prefer specific, non-obvious, first-hand information over generic filler. " +
   "Do NOT invent anything not supported by the post. De-duplicate. If the post " +
   "has nothing useful, return an empty list.";
@@ -81,6 +93,9 @@ const SYSTEM_THREAD =
   "25-73', 'שתי חברות ותיקות', 'קבוצה · טירה + זאנסה + וולנדם'. Make each label " +
   "DISTINCT from the others. Only if a group has no distinguishing detail at " +
   "all, fall back to 'מטייל 1', 'מטייל 2', ... in order of appearance. " +
+  "`author_profile` = that group's traveller type — one of 'family' (with " +
+  "children), 'couple', 'friends' (adults, no kids), 'solo', or 'general' " +
+  "(unclear) — inferred only from that group's own words. " +
   "`insights` = that group's insights, using these rules per insight: " +
   "`place` = the specific place, written EXACTLY as in the text (keep original " +
   'language); "" only for a destination-wide tip. ' +
@@ -118,9 +133,11 @@ export async function distillPost(
   if (thread) {
     const items: IngestItem[] = [];
     for (const fam of data.families ?? []) {
-      for (const it of fam.insights ?? []) items.push({ ...it, author: fam.author || "" });
+      for (const it of fam.insights ?? [])
+        items.push({ ...it, author: fam.author || "", author_profile: fam.author_profile || "general" });
     }
     return items;
   }
-  return data.insights ?? [];
+  const profile = data.author_profile || "general";
+  return (data.insights ?? []).map((it: IngestItem) => ({ ...it, author_profile: profile }));
 }

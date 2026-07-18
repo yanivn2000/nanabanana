@@ -273,6 +273,7 @@ export type AdminInsight = {
   id: number; place_name: string | null; attraction_id: number | null;
   attraction_name: string | null; kind: string; text_he: string;
   sentiment: string | null; status: string; created_at: string;
+  author_profile: string | null;
 };
 
 // Per-city insight counts, for the admin "which cities have insights" list.
@@ -289,8 +290,11 @@ export async function adminInsightsForCity(destId: number): Promise<AdminInsight
   return query<AdminInsight>(
     `SELECT i.id, i.place_name, i.attraction_id,
             COALESCE(a.name_he, a.name_en) AS attraction_name,
-            i.kind, i.text_he, i.sentiment, i.status, i.created_at
-       FROM insights i LEFT JOIN attractions a ON a.id = i.attraction_id
+            i.kind, i.text_he, i.sentiment, i.status, i.created_at,
+            s.author_profile
+       FROM insights i
+       LEFT JOIN attractions a ON a.id = i.attraction_id
+       LEFT JOIN sources s ON s.id = i.source_id
       WHERE i.destination_id = $1
       ORDER BY i.weight DESC, i.id DESC`, [destId]);
 }
@@ -363,7 +367,12 @@ export async function updateDestination(id: number, fields: Record<string, unkno
 // insights are saved per-author as `sources` rows, each insight matched to one
 // of our attractions by token overlap where possible.
 
-export type IngestItem = { place: string; kind: string; text_he: string; sentiment: string; author?: string };
+export type IngestItem = { place: string; kind: string; text_he: string; sentiment: string; author?: string; author_profile?: string };
+
+// Traveller-type of the SOURCE (who wrote the post) — the seed of real, non-AI
+// audience signal ("N couples recommended this"). Inferred at distill, confirmed
+// by the editor at ingest. 'general' = can't tell.
+export const SOURCE_PROFILES = new Set(["family", "couple", "friends", "solo", "general"]);
 
 const MATCH_STOP = new Set([
   "the", "de", "van", "der", "den", "het", "een", "a", "of", "and", "und",
@@ -436,9 +445,12 @@ export async function saveInsights(
   }
   let saved = 0, matched = 0, sources = 0;
   for (const [author, group] of groups) {
+    // all items in a group share one author → one source → one profile
+    const p = group[0]?.author_profile ?? "";
+    const profile = SOURCE_PROFILES.has(p) ? p : null;
     const src = await query<{ id: number }>(
-      `INSERT INTO sources (destination_id, url, author, raw_text, created_at)
-       VALUES ($1,$2,$3,$4,now()) RETURNING id`, [destinationId, url, author, rawText]);
+      `INSERT INTO sources (destination_id, url, author, raw_text, author_profile, created_at)
+       VALUES ($1,$2,$3,$4,$5,now()) RETURNING id`, [destinationId, url, author, rawText, profile]);
     const sourceId = src[0].id;
     sources++;
     for (const it of group) {

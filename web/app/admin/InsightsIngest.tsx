@@ -4,11 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, Upload, Sparkles, Check, X, Trash2 } from "lucide-react";
 import type { AdminDestination, AdminInsight } from "@/lib/db";
 
-type Item = { place: string; kind: string; text_he: string; sentiment: string; author?: string; keep: boolean };
+type Item = { place: string; kind: string; text_he: string; sentiment: string; author?: string; author_profile?: string; keep: boolean };
 
 const KIND_HE: Record<string, string> = {
   tip: "💡 טיפ", warning: "⚠️ אזהרה", verdict: "👍 שווה/לא", food: "🍽️ אוכל", season: "🗓️ עונה", access: "♿ נגישות",
 };
+
+// who wrote the post — the seed of real audience signal ("N couples recommended")
+const PROFILE_HE: Record<string, string> = {
+  family: "👨‍👩‍👧 משפחה", couple: "💑 זוג", friends: "🎉 חברים", solo: "🎒 סולו", general: "🧭 כללי",
+};
+const PROFILE_OPTS = ["family", "couple", "friends", "solo", "general"];
 
 // טאב "תובנות" — קליטת המלצות מטיילים: הדבקה או גרירת קובץ, ניתוח עם Claude,
 // סקירה ואישור, ושמירה לשכבת הידע (אותו פייפליין כמו כלי הסטרימליט).
@@ -110,6 +116,11 @@ export function InsightsIngest({ destinations }: { destinations: AdminDestinatio
 
   const kept = items.filter((i) => i.keep).length;
   const authors = [...new Set(items.map((i) => i.author).filter(Boolean))];
+  // distinct source-authors → each gets one profile (who wrote it); Claude pre-fills, editor confirms
+  const authorList = [...new Set(items.map((i) => i.author || ""))];
+  const profileOf = (a: string) => items.find((i) => (i.author || "") === a)?.author_profile || "general";
+  const setProfile = (a: string, profile: string) =>
+    setItems((s) => s.map((x) => (x.author || "") === a ? { ...x, author_profile: profile } : x));
 
   if (state === "saved" && summary) {
     return (
@@ -133,6 +144,23 @@ export function InsightsIngest({ destinations }: { destinations: AdminDestinatio
             Claude מצא {items.length} תובנות{authors.length > 1 ? ` מ-${authors.length} מטיילים` : ""} — בטלו מה שלא שווה שמירה:
           </p>
           <button onClick={() => setState("idle")} className="text-[13px] text-[var(--text-3)]">→ חזרה לעריכת הטקסט</button>
+        </div>
+        {/* who wrote it — the source-profile tag (Claude suggests, editor confirms). Real audience signal. */}
+        <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] p-3">
+          <p className="mb-2 text-[13px] font-semibold">
+            מי כתב? <span className="font-normal text-[var(--text-3)]">— Claude שיער, אשרו או תקנו</span>
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {authorList.map((a) => (
+              <div key={a || "_"} className="flex items-center justify-between gap-3">
+                <span className="min-w-0 flex-1 truncate text-[13.5px] text-[var(--text-2)]">{a || "הפוסט"}</span>
+                <select value={profileOf(a)} onChange={(e) => setProfile(a, e.target.value)}
+                  className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-[13.5px] text-[var(--text)]">
+                  {PROFILE_OPTS.map((p) => <option key={p} value={p}>{PROFILE_HE[p]}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
         </div>
         <div className="flex flex-col gap-1.5">
           {items.map((it, i) => (
@@ -259,6 +287,9 @@ export function InsightsIngest({ destinations }: { destinations: AdminDestinatio
                       <span className="font-medium text-[var(--text-2)]">
                         {it.attraction_name || it.place_name}{it.attraction_name ? " 🔗" : ""}
                       </span>
+                    )}
+                    {it.author_profile && it.author_profile !== "general" && (
+                      <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 text-[var(--brand-ink)]">{PROFILE_HE[it.author_profile] ?? it.author_profile}</span>
                     )}
                     {it.status !== "approved" && <span className="text-[var(--accent-ink)]">· {it.status}</span>}
                   </div>
