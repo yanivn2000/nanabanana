@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Upload, Sparkles, Check, X, Trash2 } from "lucide-react";
-import type { AdminDestination, AdminInsight } from "@/lib/db";
+import type { AdminDestination, AdminInsight, RematchChange } from "@/lib/db";
 
 type Item = { place: string; kind: string; text_he: string; sentiment: string; author?: string; author_profile?: string; keep: boolean };
 
@@ -35,6 +35,29 @@ export function InsightsIngest({ destinations }: { destinations: AdminDestinatio
   const [existing, setExisting] = useState<AdminInsight[]>([]);
   const [loadingList, setLoadingList] = useState(false);
   const [removing, setRemoving] = useState<number | null>(null);
+  // re-match: repair insight→attraction pins for the selected city
+  const [rmState, setRmState] = useState<"idle" | "previewing" | "preview" | "applying">("idle");
+  const [rmData, setRmData] = useState<{ total: number; distinct: number; changed: RematchChange[]; applied: boolean } | null>(null);
+  const [rmErr, setRmErr] = useState("");
+
+  async function rematch(apply: boolean) {
+    setRmState(apply ? "applying" : "previewing"); setRmErr("");
+    if (!apply) setRmData(null);
+    try {
+      const res = await fetch("/api/admin/rematch", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ destination_id: destId, apply }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || res.statusText);
+      setRmData(d);
+      setRmState(apply ? "idle" : "preview");
+      if (apply) void loadExisting();
+    } catch (e) {
+      setRmErr((e as Error).message);
+      setRmState(apply ? "preview" : "idle");
+    }
+  }
 
   async function loadExisting() {
     setLoadingList(true);
@@ -262,6 +285,51 @@ export function InsightsIngest({ destinations }: { destinations: AdminDestinatio
         {state === "distilling" ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
         {state === "distilling" ? "Claude מנתח…" : "נתחו עם Claude"}
       </button>
+
+      {/* re-match: repair insight→attraction pins for the selected city */}
+      <div className="mt-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-4">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[14.5px] font-bold">🔗 רה־התאמה לפינים</h3>
+            <p className="text-[12.5px] text-[var(--text-3)]">מריץ את המַתְאֵם המשופר (Claude) על התובנות הקיימות ומראה מה ישתנה — לפני שמחילים.</p>
+          </div>
+          <button onClick={() => rematch(false)} disabled={rmState === "previewing" || rmState === "applying"}
+            className="flex items-center gap-1.5 rounded-full border border-[var(--brand)] px-4 py-2 text-[13.5px] font-medium text-[var(--brand-ink)] disabled:opacity-50">
+            {rmState === "previewing" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            {rmState === "previewing" ? "בודק…" : "בדיקת שינויים"}
+          </button>
+        </div>
+        {rmErr && <p className="mt-2 text-[13px] text-[#c0453f]">{rmErr}</p>}
+        {rmData && rmState !== "previewing" && (
+          <div className="mt-3">
+            <p className="mb-2 text-[13px] text-[var(--text-2)]">
+              {rmData.applied ? "✅ הוחל · " : ""}{rmData.changed.length} שינויים מתוך {rmData.distinct} מקומות · {rmData.total} תובנות
+            </p>
+            {rmData.changed.length > 0 && (
+              <>
+                <div className="mb-3 flex max-h-64 flex-col gap-1 overflow-auto">
+                  {rmData.changed.map((c, i) => (
+                    <div key={i} className="flex items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--surface)] px-2 py-1.5 text-[12.5px]">
+                      <span className="shrink-0 font-medium text-[var(--text-2)]">{c.place}</span>
+                      <span className="truncate text-[var(--text-3)]">{c.oldName || "—"}</span>
+                      <span className="shrink-0 text-[var(--text-3)]">→</span>
+                      <span className={`shrink-0 ${c.newName ? "font-medium text-[var(--brand-ink)]" : "text-[#c0453f]"}`}>{c.newName || "ניתוק"}</span>
+                      <span className="mr-auto shrink-0 text-[var(--text-3)]">×{c.count}</span>
+                    </div>
+                  ))}
+                </div>
+                {!rmData.applied && (
+                  <button onClick={() => rematch(true)} disabled={rmState === "applying"}
+                    className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-5 py-2 text-[13.5px] font-medium text-white disabled:opacity-50">
+                    {rmState === "applying" ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                    החל {rmData.changed.length} שינויים
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* existing insights for the selected city — browse + prune */}
       <div className="mt-2 border-t border-[var(--border)] pt-4">

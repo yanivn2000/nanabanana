@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import * as Sentry from "@sentry/nextjs";
+import { resolvePlaces, type MatchAttraction } from "./match";
 
 // Postgres (Supabase) connection. Reads DATABASE_URL from the environment.
 // A single pool is reused across hot-reloads / serverless invocations.
@@ -304,6 +305,63 @@ export async function deleteInsight(id: number): Promise<boolean> {
   return rows.length > 0;
 }
 
+export type RematchChange = {
+  place: string; oldId: number | null; oldName: string | null;
+  newId: number | null; newName: string | null; count: number;
+};
+
+// Re-run the (fixed) matcher over one city's stored insights. Groups by
+// place_name, re-resolves each to an attraction (or null), and reports every
+// change; only writes when apply=true. This is how we repair pins matched by
+// the old buggy matcher, and the editor's "re-match" control.
+export async function rematchDestination(
+  destinationId: number, apply: boolean
+): Promise<{ total: number; distinct: number; changed: RematchChange[]; applied: boolean }> {
+  const dest = await query<{ city: string; city_he: string | null }>(
+    `SELECT city, city_he FROM destinations WHERE id = $1`, [destinationId]);
+  const atts = await query<MatchAttraction>(
+    `SELECT id, name_en, name_he FROM attractions WHERE destination_id = $1
+        AND (is_duplicate IS NULL OR is_duplicate = 0)
+        AND (is_component IS NULL OR is_component = 0)`, [destinationId]);
+  const cityNames = [dest[0]?.city, dest[0]?.city_he].filter(Boolean) as string[];
+  const nameById = new Map(atts.map((a) => [a.id, a.name_he ?? a.name_en]));
+
+  const rows = await query<{ place_name: string; attraction_id: number | null; count: number }>(
+    `SELECT place_name, attraction_id, COUNT(*)::int AS count FROM insights
+      WHERE destination_id = $1 AND place_name IS NOT NULL AND length(place_name) >= 2
+      GROUP BY place_name, attraction_id`, [destinationId]);
+
+  // aggregate current attraction_id(s) + total count per distinct place
+  const byPlace = new Map<string, { old: Set<number | null>; count: number }>();
+  for (const r of rows) {
+    const e = byPlace.get(r.place_name) ?? { old: new Set<number | null>(), count: 0 };
+    e.old.add(r.attraction_id); e.count += r.count; byPlace.set(r.place_name, e);
+  }
+  const places = [...byPlace.keys()];
+  const resolved = await resolvePlaces(places, cityNames, atts, await getModel());
+
+  const changed: RematchChange[] = [];
+  for (const [place, info] of byPlace) {
+    const newId = resolved.get(place) ?? null;
+    const olds = [...info.old];
+    const allSame = olds.length === 1 && olds[0] === newId;
+    if (allSame) continue;
+    const oldId = olds.length === 1 ? olds[0] : null;
+    changed.push({
+      place, oldId, oldName: oldId ? (nameById.get(oldId) ?? null) : null,
+      newId, newName: newId ? (nameById.get(newId) ?? null) : null, count: info.count,
+    });
+  }
+  if (apply) {
+    for (const [place] of byPlace) {
+      await query(`UPDATE insights SET attraction_id = $1 WHERE destination_id = $2 AND place_name = $3`,
+        [resolved.get(place) ?? null, destinationId, place]);
+    }
+  }
+  changed.sort((a, b) => b.count - a.count);
+  return { total: rows.reduce((s, r) => s + r.count, 0), distinct: places.length, changed, applied: apply };
+}
+
 // Group a destination's insights by attraction id (for card display / prompts).
 export async function insightsByAttraction(
   destinationId: number
@@ -363,9 +421,8 @@ export async function updateDestination(id: number, fields: Record<string, unkno
 }
 
 // --- Admin: insights ingest (the knowledge layer) ----------------------------
-// Port of the Streamlit tool's save/match (insights.py): distilled traveller
-// insights are saved per-author as `sources` rows, each insight matched to one
-// of our attractions by token overlap where possible.
+// Distilled traveller insights are saved per-author as `sources` rows, each
+// insight matched to one of our attractions by the hybrid resolver (./match).
 
 export type IngestItem = { place: string; kind: string; text_he: string; sentiment: string; author?: string; author_profile?: string };
 
@@ -374,69 +431,23 @@ export type IngestItem = { place: string; kind: string; text_he: string; sentime
 // by the editor at ingest. 'general' = can't tell.
 export const SOURCE_PROFILES = new Set(["family", "couple", "friends", "solo", "general"]);
 
-const MATCH_STOP = new Set([
-  "the", "de", "van", "der", "den", "het", "een", "a", "of", "and", "und",
-  "la", "le", "el", "il", "at", "in", "on", "st",
-  "park", "garden", "gardens", "museum", "house", "home", "palace", "castle",
-  "church", "square", "market", "street", "bridge", "tower", "cathedral",
-  "gallery", "center", "centre", "old", "new", "great", "royal",
-  "פארק", "גן", "גני", "מוזיאון", "בית", "הבית", "ארמון", "טירה", "כנסייה",
-  "כיכר", "שוק", "רחוב", "גשר", "מגדל", "קתדרלה", "גלריה", "מרכז", "של", "עם",
-]);
-const mNorm = (s: string | null | undefined) =>
-  (s ?? "").toLowerCase().split("").filter((ch) => /[\p{L}\p{N}\s]/u.test(ch)).join("").trim();
-const mToks = (s: string | null | undefined) =>
-  new Set(mNorm(s).split(/\s+/).filter((t) => t.length >= 2));
-const diff = (a: Set<string>, b: Set<string>) => new Set([...a].filter((x) => !b.has(x)));
-const okAnchor = (core: Set<string>) =>
-  core.size >= 2 || (core.size === 1 && [...core][0].length >= 4);
-
-type MatchRow = { id: number; name_en: string; name_he: string | null; fs: number; ms: number };
-
-function matchAttraction(rows: MatchRow[], city: Set<string>, placeName: string): number | null {
-  const place = mNorm(placeName);
-  const pcore = diff(diff(mToks(placeName), MATCH_STOP), city);
-  if (place.length < 3 || !pcore.size) return null;
-  let best: { s: number; id: number } | null = null;
-  for (const r of rows) {
-    let cand: number | null = null;
-    for (const name of [r.name_en, r.name_he]) {
-      const n = mNorm(name);
-      if (!n) continue;
-      const ncore = diff(diff(mToks(name), MATCH_STOP), city);
-      let s: number | null = null;
-      const inter = new Set([...pcore].filter((x) => ncore.has(x)));
-      if (n === place) s = 100;
-      else if (pcore.size && ncore.size && inter.size === pcore.size && okAnchor(pcore))
-        s = 68 + Math.floor(24 * pcore.size / ncore.size);
-      else if (pcore.size && ncore.size && inter.size === ncore.size && okAnchor(ncore))
-        s = 62 + Math.floor(20 * ncore.size / pcore.size);
-      else if (inter.size) {
-        const jac = inter.size / new Set([...pcore, ...ncore]).size;
-        if (jac >= 0.6 && okAnchor(inter)) s = 55 + Math.floor(18 * jac);
-      }
-      if (s !== null && (cand === null || s > cand)) cand = s;
-    }
-    if (cand === null) continue;
-    cand += 0.1 * r.fs + (r.ms ? 2 : 0);
-    if (!best || cand > best.s) best = { s: cand, id: r.id };
-  }
-  return best && best.s >= 62 ? best.id : null;
-}
-
-// Persist approved insights, grouped per author into `sources` rows.
+// Persist approved insights, grouped per author into `sources` rows. Places are
+// matched to attractions via the hybrid resolver in ./match (fuzzy shortlist +
+// LLM), which handles transliteration and rejects non-attractions.
 export async function saveInsights(
   destinationId: number, url: string | null, defaultAuthor: string | null,
   rawText: string, items: IngestItem[]
 ): Promise<{ sources: number; saved: number; matched: number }> {
   const dest = await query<{ city: string; city_he: string | null }>(
     `SELECT city, city_he FROM destinations WHERE id = $1`, [destinationId]);
-  const city = new Set([...mToks(dest[0]?.city), ...mToks(dest[0]?.city_he)]);
-  const rows = await query<MatchRow>(
-    `SELECT id, name_en, name_he, COALESCE(family_score,0)::int AS fs, COALESCE(must_see,0)::int AS ms
-       FROM attractions WHERE destination_id = $1
+  const atts = await query<MatchAttraction>(
+    `SELECT id, name_en, name_he FROM attractions WHERE destination_id = $1
         AND (is_duplicate IS NULL OR is_duplicate = 0)
         AND (is_component IS NULL OR is_component = 0)`, [destinationId]);
+  const cityNames = [dest[0]?.city, dest[0]?.city_he].filter(Boolean) as string[];
+  // one batched LLM resolution for all distinct places, up front
+  const resolved = await resolvePlaces(
+    items.map((it) => it.place || "").filter(Boolean), cityNames, atts, await getModel());
 
   const groups = new Map<string | null, IngestItem[]>();
   for (const it of items) {
@@ -454,7 +465,7 @@ export async function saveInsights(
     const sourceId = src[0].id;
     sources++;
     for (const it of group) {
-      const aid = matchAttraction(rows, city, it.place || "");
+      const aid = (it.place && resolved.get(it.place)) || null;
       const place = it.place || null;
       const dup = await query(
         `SELECT 1 FROM insights WHERE destination_id=$1 AND text_he=$2
