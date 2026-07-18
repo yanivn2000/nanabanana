@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Loader2, Upload, Sparkles, Check, X } from "lucide-react";
-import type { AdminDestination } from "@/lib/db";
+import { useEffect, useRef, useState } from "react";
+import { Loader2, Upload, Sparkles, Check, X, Trash2 } from "lucide-react";
+import type { AdminDestination, AdminInsight } from "@/lib/db";
 
 type Item = { place: string; kind: string; text_he: string; sentiment: string; author?: string; keep: boolean };
 
@@ -25,6 +25,36 @@ export function InsightsIngest({ destinations }: { destinations: AdminDestinatio
   const [items, setItems] = useState<Item[]>([]);
   const [summary, setSummary] = useState<{ sources: number; saved: number; matched: number } | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  // existing insights for the selected city (browse + prune)
+  const [existing, setExisting] = useState<AdminInsight[]>([]);
+  const [loadingList, setLoadingList] = useState(false);
+  const [removing, setRemoving] = useState<number | null>(null);
+
+  async function loadExisting() {
+    setLoadingList(true);
+    try {
+      const res = await fetch("/api/admin/insights", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "list", destination_id: destId }),
+      });
+      const data = await res.json();
+      setExisting(res.ok ? (data.insights ?? []) : []);
+    } finally { setLoadingList(false); }
+  }
+  // reload the table whenever the city changes, or after a save
+  useEffect(() => { void loadExisting(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [destId]);
+
+  async function removeInsight(id: number) {
+    if (!window.confirm("למחוק את התובנה הזו לצמיתות?")) return;
+    setRemoving(id);
+    try {
+      const res = await fetch("/api/admin/insights", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", id }),
+      });
+      if (res.ok) setExisting((s) => s.filter((x) => x.id !== id));
+    } finally { setRemoving(null); }
+  }
 
   async function readFile(f: File) {
     const name = f.name.toLowerCase();
@@ -75,6 +105,7 @@ export function InsightsIngest({ destinations }: { destinations: AdminDestinatio
 
   function reset() {
     setText(""); setFileName(null); setItems([]); setSummary(null); setState("idle"); setError("");
+    void loadExisting(); // the table should include what was just saved
   }
 
   const kept = items.filter((i) => i.keep).length;
@@ -203,6 +234,46 @@ export function InsightsIngest({ destinations }: { destinations: AdminDestinatio
         {state === "distilling" ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
         {state === "distilling" ? "Claude מנתח…" : "נתחו עם Claude"}
       </button>
+
+      {/* existing insights for the selected city — browse + prune */}
+      <div className="mt-2 border-t border-[var(--border)] pt-4">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-[14.5px] font-bold">
+            תובנות קיימות {loadingList ? "" : `· ${existing.length}`}
+          </h3>
+          {loadingList && <Loader2 size={15} className="animate-spin text-[var(--text-3)]" />}
+        </div>
+        {!loadingList && existing.length === 0 && (
+          <p className="rounded-[var(--radius-sm)] border border-dashed border-[var(--border)] p-4 text-center text-[13.5px] text-[var(--text-3)]">
+            אין עדיין תובנות לעיר הזו.
+          </p>
+        )}
+        {existing.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            {existing.map((it) => (
+              <div key={it.id} className="flex items-start gap-2.5 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-2.5">
+                <div className="min-w-0 flex-1">
+                  <div className="mb-0.5 flex flex-wrap items-center gap-1.5 text-[12px] text-[var(--text-3)]">
+                    <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5">{KIND_HE[it.kind] ?? it.kind}</span>
+                    {(it.attraction_name || it.place_name) && (
+                      <span className="font-medium text-[var(--text-2)]">
+                        {it.attraction_name || it.place_name}{it.attraction_name ? " 🔗" : ""}
+                      </span>
+                    )}
+                    {it.status !== "approved" && <span className="text-[var(--accent-ink)]">· {it.status}</span>}
+                  </div>
+                  <p className="text-[14px] leading-snug">{it.text_he}</p>
+                </div>
+                <button onClick={() => removeInsight(it.id)} disabled={removing === it.id}
+                  aria-label="מחק תובנה"
+                  className="grid size-8 shrink-0 place-items-center rounded-md text-[var(--text-3)] transition hover:bg-[var(--surface-2)] hover:text-[#c0453f] disabled:opacity-40">
+                  {removing === it.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={15} />}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

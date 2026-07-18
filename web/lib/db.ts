@@ -268,6 +268,38 @@ export async function insightsForDestination(destinationId: number): Promise<Ins
   );
 }
 
+// --- Admin: browse + prune the stored insights ------------------------------
+export type AdminInsight = {
+  id: number; place_name: string | null; attraction_id: number | null;
+  attraction_name: string | null; kind: string; text_he: string;
+  sentiment: string | null; status: string; created_at: string;
+};
+
+// Per-city insight counts, for the admin "which cities have insights" list.
+export async function adminInsightCounts(): Promise<{ destination_id: number; city: string; count: number }[]> {
+  return query<{ destination_id: number; city: string; count: number }>(
+    `SELECT i.destination_id, COALESCE(d.city_he, d.city) AS city, COUNT(*)::int AS count
+       FROM insights i JOIN destinations d ON d.id = i.destination_id
+      GROUP BY i.destination_id, d.city_he, d.city
+      ORDER BY count DESC`);
+}
+
+// Every insight for one city (all statuses), with its linked attraction name.
+export async function adminInsightsForCity(destId: number): Promise<AdminInsight[]> {
+  return query<AdminInsight>(
+    `SELECT i.id, i.place_name, i.attraction_id,
+            COALESCE(a.name_he, a.name_en) AS attraction_name,
+            i.kind, i.text_he, i.sentiment, i.status, i.created_at
+       FROM insights i LEFT JOIN attractions a ON a.id = i.attraction_id
+      WHERE i.destination_id = $1
+      ORDER BY i.weight DESC, i.id DESC`, [destId]);
+}
+
+export async function deleteInsight(id: number): Promise<boolean> {
+  const rows = await query<{ id: number }>(`DELETE FROM insights WHERE id = $1 RETURNING id`, [id]);
+  return rows.length > 0;
+}
+
 // Group a destination's insights by attraction id (for card display / prompts).
 export async function insightsByAttraction(
   destinationId: number

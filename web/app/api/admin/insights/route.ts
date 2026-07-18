@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { editorEmail } from "@/lib/admin";
-import { saveInsights, type IngestItem } from "@/lib/db";
+import { saveInsights, adminInsightsForCity, deleteInsight, type IngestItem } from "@/lib/db";
 import { distillPost } from "@/lib/insights-ingest";
 import { rateLimit } from "@/lib/ratelimit";
 
@@ -11,12 +11,26 @@ const KINDS = new Set(["tip", "warning", "verdict", "food", "season", "access"])
 
 // Team-only: the insights-ingest flow (טאב "תובנות" באדמין).
 // action="distill": run Claude over a pasted/dropped post → structured items.
-// action="save": persist the reviewed items (matched to attractions).
+// action="save": persist the reviewed items. action="list"/"delete": browse+prune.
 export async function POST(req: NextRequest) {
   if (!(await editorEmail())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => null);
-  if (!b || typeof b.destination_id !== "number") {
+  if (!b) return NextResponse.json({ error: "bad_request" }, { status: 400 });
+
+  // delete a single stored insight (id only — no destination_id needed)
+  if (b.action === "delete") {
+    if (typeof b.id !== "number") return NextResponse.json({ error: "bad_request" }, { status: 400 });
+    const ok = await deleteInsight(b.id);
+    return ok ? NextResponse.json({ ok: true }) : NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
+  if (typeof b.destination_id !== "number") {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
+  }
+
+  // list existing insights for a city (admin table)
+  if (b.action === "list") {
+    return NextResponse.json({ insights: await adminInsightsForCity(b.destination_id) });
   }
 
   if (b.action === "distill") {
