@@ -790,7 +790,7 @@ export function TripView({ tripId }: { tripId: string }) {
           {(stopPoints.length > 0 || hotelPoints.length > 0) && (
             <div className="hidden lg:block">
               <div className="relative">
-                <div className="h-[calc(100dvh-104px)] max-h-[860px] min-h-[520px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
+                <div className="h-[calc(100dvh-265px)] max-h-[700px] min-h-[440px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
                   <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
                     hotels={hotelPoints} focus={focus} colors={stopColors} activeIdx={active}
                     onStopClick={(li) => { const si = locatedToStop[li]; if (si == null) return;
