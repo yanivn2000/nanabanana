@@ -355,7 +355,7 @@ export function TripView({ tripId }: { tripId: string }) {
         {/* header mirrors the city page: trip identity on one side, a grid of
             day tiles (same cube size as the city's category tiles) on the other,
             so moving between the two pages feels continuous */}
-        <header className="rise overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[var(--shadow)] lg:flex lg:items-stretch">
+        <header className="rise overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] lg:flex lg:items-stretch">
           {/* identity: landscape thumbnail + tight trip data */}
           <div className="flex lg:w-[340px] lg:shrink-0">
             <div className="relative w-[120px] shrink-0 sm:w-[190px] lg:w-[200px]">
@@ -403,36 +403,31 @@ export function TripView({ tripId }: { tripId: string }) {
           {/* vertical divider (desktop) mirrors the city page's identity|grid split */}
           <div className="hidden w-px shrink-0 self-stretch bg-[var(--border)] lg:block" />
 
-          {/* day tiles — same cube size/style as the city page's category tiles */}
+          {/* day selector — compact tiles, no extra label chrome (workspace feel) */}
           {itinerary && allDays.length > 0 && (
-            <div className="flex flex-col gap-2.5 border-t border-[var(--border)] p-3 lg:min-w-0 lg:flex-1 lg:justify-center lg:border-t-0">
-              {/* section header — parallels the city page's "מה מעניין אתכם?" so
-                  the day selector reads as a titled block, not a floating row */}
-              <div className="hidden items-baseline justify-between gap-3 lg:flex">
-                <h2 className="text-[15px] font-bold text-[var(--text)]">ימי הטיול</h2>
-                <span className="text-[12px] text-[var(--text-3)]">לחצו על יום כדי לראות את התוכנית שלו</span>
-              </div>
-              <div className="flex flex-wrap gap-2 lg:justify-center">
+            <div className="flex flex-col justify-center gap-2 border-t border-[var(--border)] p-3 lg:min-w-0 lg:flex-1 lg:border-t-0">
+              <span className="hidden text-[12px] font-semibold text-[var(--text-3)] lg:block">ימי הטיול</span>
+              <div className="flex flex-wrap gap-1.5 lg:justify-center">
                 {allDays.map((d, i) => {
                   const on = i === curIdx;
                   const dd = dayDate(i);
                   const today = i === todayIndex;
                   return (
                     <button key={i} onClick={() => { setDayIdx(i); setExpanded(null); setActive(null); }}
-                      className="flex w-[80px] flex-col items-center justify-center gap-1 rounded-[16px] border-[1.5px] px-1 py-2.5 transition"
+                      className="flex w-[72px] flex-col items-center gap-0.5 rounded-[13px] border-[1.5px] px-1 py-1.5 transition"
                       style={{ background: on ? "var(--brand)" : "var(--surface)",
                                borderColor: on ? "var(--brand)" : today ? "var(--accent)" : "var(--border)" }}>
-                      <span className="grid size-[28px] place-items-center rounded-full text-[14px] font-bold leading-none"
+                      <span className="grid size-[24px] place-items-center rounded-full text-[13px] font-bold leading-none"
                         style={{ background: on ? "#fff" : "var(--brand-soft)", color: on ? "var(--brand)" : "var(--brand-ink)" }}>
                         {i + 1}
                       </span>
-                      <span className="text-[12.5px] font-medium leading-tight"
+                      <span className="text-[12px] font-medium leading-tight"
                         style={{ color: on ? "#fff" : "var(--text-2)" }}>
-                        {today ? "היום" : dd ? dd.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" }) : `יום ${i + 1}`}
+                        {today ? "היום" : `יום ${i + 1}`}
                       </span>
-                      <span className="text-[11px] tabular-nums leading-none"
+                      <span className="text-[10.5px] tabular-nums leading-none"
                         style={{ color: on ? "rgba(255,255,255,.8)" : "var(--text-3)" }}>
-                        {d.stops.length} תחנות
+                        {dd ? dd.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" }) : `${d.stops.length} תחנות`}
                       </span>
                     </button>
                   );
@@ -450,7 +445,7 @@ export function TripView({ tripId }: { tripId: string }) {
                 <p className="flex items-center gap-1 text-[12px] font-semibold text-[var(--brand-ink)]">
                   <Lightbulb size={13} className="text-[var(--accent)]" /> למה בנינו את היום ככה?
                 </p>
-                <p className="mt-1 line-clamp-4 text-[12.5px] leading-snug text-[var(--text-2)]">{day.why}</p>
+                <p className="mt-1 line-clamp-3 text-[12.5px] leading-snug text-[var(--text-2)]">{day.why}</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {DAY_RESHAPES.map((q) => (
                     <button key={q.l} disabled={!!busy}
@@ -550,7 +545,7 @@ export function TripView({ tripId }: { tripId: string }) {
         </div>
       )}
 
-      <div className="lg:flex lg:items-start lg:gap-8 lg:px-8 lg:pt-2">
+      <div className="lg:flex lg:items-start lg:gap-4 lg:px-8 lg:pt-2.5">
         {/* main column (right on desktop): the day timeline */}
         <div className="lg:min-w-0 lg:flex-1">
       {error && (
@@ -605,9 +600,11 @@ export function TripView({ tripId }: { tripId: string }) {
             </div>
           )}
 
-          {/* the day as a timeline — photo · stop · numbered spine · time */}
+          {/* the day as a timeline — photo · stop · numbered spine · time.
+              Flat bordered panel (not a floating shadow card) so it pairs with
+              the map as one continuous workspace */}
           <div className={mobileTab === "map" ? "hidden lg:block" : ""}>
-            <div className="mt-3 rounded-[var(--radius-card)] bg-[var(--surface)] px-3 shadow-[var(--shadow)] lg:mt-0 lg:px-4">
+            <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-3 lg:mt-0 lg:px-4">
               {day.stops.map((s, si) => {
                 const key = `${curIdx}-${si}`;
                 const isOpen = expanded === key;
@@ -624,8 +621,8 @@ export function TripView({ tripId }: { tripId: string }) {
                 const leg = legAfter[si];
                 return (
                   <div key={si} ref={(el) => { stopRefs.current[si] = el; }}>
-                    <div className={`flex gap-3 rounded-[12px] transition ${hasDetails ? "cursor-pointer" : ""}`}
-                         style={{ background: isActive ? `color-mix(in srgb, ${col} 8%, transparent)` : undefined }}
+                    <div className={`-mx-2 flex gap-3 rounded-[12px] px-2 transition-colors ${hasDetails ? "cursor-pointer" : ""}`}
+                         style={{ background: isActive ? `color-mix(in srgb, ${col} 12%, transparent)` : "transparent" }}
                          onMouseEnter={() => ci != null && setActive(ci)}
                          onMouseLeave={() => setActive(null)}
                          onClick={() => hasDetails && setExpanded(isOpen ? null : key)}>
