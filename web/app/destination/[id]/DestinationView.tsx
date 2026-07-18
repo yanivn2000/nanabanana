@@ -463,7 +463,10 @@ export function DestinationView({
           </Link>
           {/* one unified top bar: city identity (right) + the interests picker
               filling the rest (left), so there's no dead whitespace between them */}
-          <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow)] lg:p-4">
+          {/* the top city section sits directly on the cream page background (no
+              white card) — shares the same visual foundation as the trip page.
+              Padding kept so nothing shifts. */}
+          <div className="p-3.5 lg:p-4">
             {yesCount === 0 && (
               <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[var(--border)] pb-3 text-[15px] text-[var(--text-2)]">
                 <span className="text-[16px] font-bold text-[var(--brand-ink)]">איך בונים טיול?</span>
