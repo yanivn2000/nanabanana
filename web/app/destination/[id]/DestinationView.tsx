@@ -580,8 +580,9 @@ export function DestinationView({
       <div className="sticky top-[57px] z-30 hidden bg-[var(--bg)] shadow-[0_10px_12px_-12px_rgba(16,29,43,0.12)] lg:block">
         <div className="mx-auto max-w-[1600px] px-8">
           {/* filters row — search · must-see facet · bulk-select · sort · filters.
-              (Interests moved to the square-tile block above.) */}
-          <div className="flex items-center gap-2.5 py-2">
+              Wraps to a second line when the controls (esp. with selections
+              active) exceed the width, instead of overflowing off the edge. */}
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 py-2">
             <div className="flex w-[300px] shrink-0 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
               <Search size={16} className="shrink-0 text-[var(--text-3)]" />
               <input value={query} onChange={(e) => setQuery(e.target.value)}
