@@ -267,12 +267,20 @@ export function TripView({ tripId }: { tripId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoBuild, loaded, !!trip, !!itinerary, canBuild, busy]);
 
-  // Auto-attach details to trips created before details existed (no AI/credit).
+  // Re-attach details (photos, coords, taglines) from the DB. Runs for trips
+  // built before details/images existed. Guard on IMAGES, not just coords —
+  // a trip enriched before its city's photos were ingested has lat/lng but no
+  // s.image, and the old "has any lat" check wrongly treated it as done, so the
+  // photos never appeared. Attempt once per mount when no stop has an image.
+  const detailsTriedRef = useRef(false);
+  useEffect(() => { detailsTriedRef.current = false; }, [tripId]);
   useEffect(() => {
     if (!itinerary || !city) return;
     const stops = itinerary.days.flatMap((d) => d.stops);
     if (stops.length === 0) return;
-    if (stops.some((s) => s.lat != null || s.image || s.website)) return; // already has details
+    if (stops.some((s) => s.image)) return;   // already has photos → enriched
+    if (detailsTriedRef.current) return;       // already refreshed this mount
+    detailsTriedRef.current = true;
     let cancelled = false;
     fetch("/api/itinerary", {
       method: "POST",
