@@ -19,7 +19,6 @@ import { useTrips, useProfile, useHotels, profileText, profileSummary, MONTHS_HE
 import { deriveTaste } from "@/lib/taste";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { ShareTrip } from "@/components/ShareTrip";
-import { WhyFits } from "@/components/Signature";
 import { MapArt } from "@/components/Illustrations";
 import { CityPoster } from "@/components/CityPoster";
 import { PackingList } from "@/components/PackingList";
@@ -77,6 +76,8 @@ export function TripView({ tripId }: { tripId: string }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [dayIdx, setDayIdx] = useState(0);                 // one day on screen — pager
   const [mobileTab, setMobileTab] = useState<"plan" | "map">("plan");
+  const [datesOpen, setDatesOpen] = useState(false);         // dates aren't permanent — a popover
+  const [whyOpen, setWhyOpen] = useState(false);             // AI "why" is on-demand, not a big card
   const [focus, setFocus] = useState<{ lat: number; lng: number; n: number } | null>(null);
   // The stop the user is pointing at — hovered in the list or clicked on the map.
   // Indexed in "located stop" space (matches the numbered map markers).
@@ -315,6 +316,12 @@ export function TripView({ tripId }: { tripId: string }) {
   const deleteStop = (di: number, si: number) =>
     mutate((it) => { it.days[di].stops.splice(si, 1); });
 
+  // compact date range for the thin top row (no permanent inputs)
+  const fmtD = (iso?: string) => { if (!iso) return null; const p = iso.split("-"); return `${+p[2]}.${+p[1]}`; };
+  const dateRangeText = trip?.startDate && trip?.endDate
+    ? `${fmtD(trip.startDate)}–${fmtD(trip.endDate)}`
+    : (fmtD(trip?.startDate) ?? null);
+
   if (loaded && !trip) {
     return (
       <main className="mx-auto max-w-[440px] px-5 pt-16 text-center">
@@ -326,140 +333,91 @@ export function TripView({ tripId }: { tripId: string }) {
 
   return (
     <main className="mx-auto w-full max-w-[440px] pb-16 lg:max-w-[1600px]">
-      {/* compact header card — data beside a square poster; map + days stay above the fold */}
-      <div className="px-5 pt-2 lg:px-8 lg:pt-2.5">
-        {/* breadcrumb + primary actions on ONE row — the actions live in the top
-            bar (like the city page) instead of stacking inside the poster card,
-            so the header stays short and the day tabs sit right below it */}
-        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-          <Link href="/trips" className="eyebrow inline-flex items-center gap-1 text-[var(--text-2)]">
-            <ChevronRight size={14} /> הטיולים שלי
-          </Link>
-          <div className="flex items-center gap-2">
-            <button onClick={generate} disabled={!!busy || !canBuild}
-              className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-1.5 text-[14px] font-medium text-white disabled:opacity-50">
-              {busy === "generate" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-              {busy === "generate" ? "בונה…" : itinerary ? "בנה מחדש" : "בנה לו\"ז"}
-            </button>
-            <button onClick={() => setEditTravelers((v) => !v)}
-              className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-3.5 py-1.5 text-[14px] font-medium"
-              style={{ background: editTravelers ? "var(--brand-soft)" : "var(--surface)", color: "var(--brand-ink)" }}>
-              <Users size={14} /> מי נוסע
-            </button>
-            {trip && (
-              <ShareTrip trip={trip} profile={tripProfile}
-                onShared={(shared) => update(tripId, { shared })} />
-            )}
-          </div>
-        </div>
-        {/* header mirrors the city page: trip identity on one side, a grid of
-            day tiles (same cube size as the city's category tiles) on the other,
-            so moving between the two pages feels continuous */}
-        <header className="rise overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] lg:flex lg:items-stretch">
-          {/* identity: landscape thumbnail + tight trip data */}
-          <div className="flex lg:w-[340px] lg:shrink-0">
-            <div className="relative w-[120px] shrink-0 sm:w-[190px] lg:w-[200px]">
-              <CityPoster destinationId={trip?.destinationId} cityHe={cityHe}
-                orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 p-3 lg:px-4">
-              <h1 className="serif text-[20px] font-bold leading-tight lg:text-[23px]">{trip?.title ?? "…"}</h1>
-              <p className="flex flex-wrap items-center gap-x-1.5 text-[13.5px] text-[var(--text-2)]">
-                <span>
-                  {trip?.segments && trip.segments.length > 1
-                    ? `${trip.segments.map((s) => s.cityHe || s.city).join(" → ")} · `
-                    : cityHe ? `${cityHe} · ` : ""}
-                  {trip?.days} ימים
-                  {trip?.month ? ` · ${MONTHS_HE[trip.month - 1]}` : ""}
-                  {trip?.segments && trip.segments.length > 1 ? ` · ${trip.segments.length} ערים` : ""}
-                  {trip?.mode === "hotels" ? " · טיול כוכב" : ""}
-                </span>
-                <span className="text-[var(--text-3)]">· {profileSummary(tripProfile)}</span>
-              </p>
-              {/* exact dates → powers season, length and the live-events feed (#64).
-                  The two native date inputs are too wide to share a line in the
-                  narrow identity column, so stack them left-aligned at equal width
-                  instead of letting them wrap into a staggered shape */}
-              <div className="flex items-start gap-1.5 text-[12.5px] text-[var(--text-3)]">
-                <CalendarDays size={13} className="mt-[7px] shrink-0" />
-                <div className="flex flex-col gap-1">
-                  <input type="date" value={trip?.startDate ?? ""} aria-label="תאריך התחלה"
-                    onChange={(e) => {
-                      const info = datesToInfo(e.target.value, trip?.endDate);
-                      update(tripId, { startDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
-                    }}
-                    className="w-[132px] rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[12.5px] text-[var(--text)] outline-none" />
-                  <input type="date" value={trip?.endDate ?? ""} min={trip?.startDate} aria-label="תאריך סיום"
-                    onChange={(e) => {
-                      const info = datesToInfo(trip?.startDate, e.target.value);
-                      update(tripId, { endDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) });
-                    }}
-                    className="w-[132px] rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[12.5px] text-[var(--text)] outline-none" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* vertical divider (desktop) mirrors the city page's identity|grid split */}
-          <div className="hidden w-px shrink-0 self-stretch bg-[var(--border)] lg:block" />
-
-          {/* day selector — compact tiles, no extra label chrome (workspace feel) */}
-          {itinerary && allDays.length > 0 && (
-            <div className="flex flex-col justify-center gap-2 border-t border-[var(--border)] p-3 lg:min-w-0 lg:flex-1 lg:border-t-0">
-              <span className="hidden text-[12px] font-semibold text-[var(--text-3)] lg:block">ימי הטיול</span>
-              <div className="flex flex-wrap gap-1.5 lg:justify-center">
-                {allDays.map((d, i) => {
-                  const on = i === curIdx;
-                  const dd = dayDate(i);
-                  const today = i === todayIndex;
-                  return (
-                    <button key={i} onClick={() => { setDayIdx(i); setExpanded(null); setActive(null); }}
-                      className="flex w-[72px] flex-col items-center gap-0.5 rounded-[13px] border-[1.5px] px-1 py-1.5 transition"
-                      style={{ background: on ? "var(--brand)" : "var(--surface)",
-                               borderColor: on ? "var(--brand)" : today ? "var(--accent)" : "var(--border)" }}>
-                      <span className="grid size-[24px] place-items-center rounded-full text-[13px] font-bold leading-none"
-                        style={{ background: on ? "#fff" : "var(--brand-soft)", color: on ? "var(--brand)" : "var(--brand-ink)" }}>
-                        {i + 1}
-                      </span>
-                      <span className="text-[12px] font-medium leading-tight"
-                        style={{ color: on ? "#fff" : "var(--text-2)" }}>
-                        {today ? "היום" : `יום ${i + 1}`}
-                      </span>
-                      <span className="text-[10.5px] tabular-nums leading-none"
-                        style={{ color: on ? "rgba(255,255,255,.8)" : "var(--text-3)" }}>
-                        {dd ? dd.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" }) : `${d.stops.length} תחנות`}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* "why we built the day" — its own card on the far side (desktop),
-              mirroring the mockup's three-column header. Mobile shows it below. */}
-          {itinerary && day?.why && (
+      {/* THREE THIN ROWS — the map + itinerary are the hero and fill the first
+          viewport, so trip info / day tabs / day summary are compressed to slim
+          horizontal strips (no big card, no poster, no permanent date inputs). */}
+      {/* row 1 — trip info + actions */}
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 px-5 pt-2 lg:px-8 lg:pt-3">
+        <Link href="/trips" className="eyebrow inline-flex items-center gap-1 text-[var(--text-2)]">
+          <ChevronRight size={14} /> הטיולים שלי
+        </Link>
+        <span className="hidden h-3.5 w-px bg-[var(--border)] sm:block" />
+        <h1 className="serif text-[17px] font-bold leading-tight lg:text-[19px]">{trip?.title ?? "…"}</h1>
+        {(cityHe || (trip?.segments && trip.segments.length > 1)) && (
+          <span className="text-[13px] text-[var(--text-2)]">
+            {trip?.segments && trip.segments.length > 1
+              ? trip.segments.map((s) => s.cityHe || s.city).join(" → ")
+              : cityHe}
+            {trip?.days ? ` · ${trip.days} ימים` : ""}
+            {trip?.month ? ` · ${MONTHS_HE[trip.month - 1]}` : ""}
+          </span>
+        )}
+        {/* dates — a compact chip that opens a small editor, not permanent inputs */}
+        <div className="relative">
+          <button onClick={() => setDatesOpen((o) => !o)}
+            className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 text-[12.5px] text-[var(--text-2)] transition hover:border-[var(--brand)]">
+            <CalendarDays size={13} /> {dateRangeText ?? "תאריכים"}
+          </button>
+          {datesOpen && (
             <>
-              <div className="hidden w-px shrink-0 self-stretch bg-[var(--border)] lg:block" />
-              <div className="hidden lg:flex lg:w-[300px] lg:shrink-0 lg:flex-col lg:justify-center lg:p-3">
-                <p className="flex items-center gap-1 text-[12px] font-semibold text-[var(--brand-ink)]">
-                  <Lightbulb size={13} className="text-[var(--accent)]" /> למה בנינו את היום ככה?
-                </p>
-                <p className="mt-1 line-clamp-3 text-[12.5px] leading-snug text-[var(--text-2)]">{day.why}</p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {DAY_RESHAPES.map((q) => (
-                    <button key={q.l} disabled={!!busy}
-                      onClick={() => revise(`שנה אך ורק את ${dayLabels[curIdx]} (היום ה-${curIdx + 1} בטיול), אל תיגע בשאר הימים. ${q.t}`)}
-                      className="flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[12px] text-[var(--text-2)] transition hover:border-[var(--brand)] disabled:opacity-50">
-                      <Sparkles size={11} className="text-[var(--brand)]" /> {q.l}
-                    </button>
-                  ))}
-                </div>
+              <div className="fixed inset-0 z-[40]" onClick={() => setDatesOpen(false)} />
+              <div className="absolute right-0 top-full z-[41] mt-1 flex flex-col gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-2.5 shadow-[var(--shadow)]">
+                <input type="date" value={trip?.startDate ?? ""} aria-label="תאריך התחלה"
+                  onChange={(e) => { const info = datesToInfo(e.target.value, trip?.endDate);
+                    update(tripId, { startDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) }); }}
+                  className="w-[150px] rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[13px] text-[var(--text)] outline-none" />
+                <input type="date" value={trip?.endDate ?? ""} min={trip?.startDate} aria-label="תאריך סיום"
+                  onChange={(e) => { const info = datesToInfo(trip?.startDate, e.target.value);
+                    update(tripId, { endDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) }); }}
+                  className="w-[150px] rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[13px] text-[var(--text)] outline-none" />
               </div>
             </>
           )}
-        </header>
+        </div>
+        {/* actions pushed to the far side */}
+        <div className="flex items-center gap-2 lg:mr-auto">
+          <button onClick={generate} disabled={!!busy || !canBuild}
+            className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-3.5 py-1.5 text-[13.5px] font-medium text-white disabled:opacity-50">
+            {busy === "generate" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            {busy === "generate" ? "בונה…" : itinerary ? "בנה מחדש" : "בנה לו\"ז"}
+          </button>
+          <button onClick={() => setEditTravelers((v) => !v)}
+            className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-3 py-1.5 text-[13.5px] font-medium"
+            style={{ background: editTravelers ? "var(--brand-soft)" : "var(--surface)", color: "var(--brand-ink)" }}>
+            <Users size={14} /> מי נוסע
+          </button>
+          {trip && (
+            <ShareTrip trip={trip} profile={tripProfile}
+              onShared={(shared) => update(tripId, { shared })} />
+          )}
+        </div>
       </div>
+
+      {/* row 2 — day tabs (thin pills) */}
+      {itinerary && allDays.length > 0 && (
+        <div className="mt-1.5 flex items-center gap-2.5 px-5 lg:px-8">
+          <span className="hidden shrink-0 text-[12px] font-semibold text-[var(--text-3)] sm:block">ימי הטיול</span>
+          <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 sm:mx-0 sm:px-0" style={{ scrollbarWidth: "none" }}>
+            {allDays.map((d, i) => {
+              const on = i === curIdx;
+              const today = i === todayIndex;
+              return (
+                <button key={i} onClick={() => { setDayIdx(i); setExpanded(null); setActive(null); }}
+                  className="flex shrink-0 items-center gap-1.5 rounded-full border-[1.5px] px-3 py-1 text-[13px] font-medium transition"
+                  style={{ background: on ? "var(--brand)" : "var(--surface)",
+                           color: on ? "#fff" : "var(--text-2)",
+                           borderColor: on ? "var(--brand)" : today ? "var(--accent)" : "var(--border)" }}>
+                  {today ? "היום" : `יום ${i + 1}`}
+                  <span className="rounded-full px-1.5 text-[11px] tabular-nums"
+                    style={{ background: on ? "rgba(255,255,255,.22)" : "var(--surface-2)", color: on ? "#fff" : "var(--text-3)" }}>
+                    {d.stops.length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* remixed-trip loop: this trip was copied from a community share, so nudge
           the visitor to make it theirs and share a fresh link BACK to the asker */}
@@ -512,34 +470,56 @@ export function TripView({ tripId }: { tripId: string }) {
         </div>
       )}
 
-      {/* ── selected-day summary — spans BOTH columns (day tabs now live in the
-           header as tiles, mirroring the city page) ── */}
+      {/* row 3 — day summary (thin strip, no card): day label + edit + stats,
+          and an on-demand "why?" toggle (no big AI explanation block) */}
       {itinerary && day && (
-        <div className="px-5 pt-2 lg:px-8 lg:pt-2.5">
-          {/* selected-day summary — a thin full-width bar under the header. Day
-              label + edit sit on the right (near the day); stats flow to the left. */}
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2">
-            <h2 className="serif text-[17px] font-bold leading-tight lg:text-[19px]">{dayLabels[curIdx]}</h2>
-            {editing && (
-              <span className="flex gap-1">
-                <button onClick={() => moveDay(curIdx, -1)} disabled={curIdx === 0} aria-label="הקדם את היום"
-                  className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronUp size={14} /></button>
-                <button onClick={() => moveDay(curIdx, 1)} disabled={curIdx === allDays.length - 1} aria-label="אחר את היום"
-                  className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronDown size={14} /></button>
-              </span>
-            )}
-            <button onClick={() => setEditing((v) => !v)}
-              className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] font-medium transition"
-              style={{ background: editing ? "var(--accent-soft)" : "var(--surface)",
-                       borderColor: editing ? "var(--accent)" : "var(--border)",
-                       color: editing ? "var(--accent-ink)" : "var(--text-2)" }}>
-              <Pencil size={13} /> {editing ? "סיום עריכה" : "שינוי סדר"}
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--border)] px-5 pb-2 lg:px-8">
+          <h2 className="serif text-[15px] font-bold leading-tight lg:text-[16px]">{dayLabels[curIdx]}</h2>
+          {editing && (
+            <span className="flex gap-1">
+              <button onClick={() => moveDay(curIdx, -1)} disabled={curIdx === 0} aria-label="הקדם את היום"
+                className="grid size-6 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronUp size={13} /></button>
+              <button onClick={() => moveDay(curIdx, 1)} disabled={curIdx === allDays.length - 1} aria-label="אחר את היום"
+                className="grid size-6 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronDown size={13} /></button>
+            </span>
+          )}
+          <button onClick={() => setEditing((v) => !v)}
+            className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[12.5px] font-medium transition"
+            style={{ background: editing ? "var(--accent-soft)" : "var(--surface)",
+                     borderColor: editing ? "var(--accent)" : "var(--border)",
+                     color: editing ? "var(--accent-ink)" : "var(--text-2)" }}>
+            <Pencil size={12} /> {editing ? "סיום" : "שינוי סדר"}
+          </button>
+          <span className="hidden h-3.5 w-px bg-[var(--border)] sm:block" />
+          <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[12.5px] text-[var(--text-2)]">
+            {dayTotalKm > 0 && <span className="flex items-center gap-1"><Ruler size={12} className="text-[var(--text-3)]" /> {formatDistance(dayTotalKm)}</span>}
+            {dayTotalWalkMin > 0 && <span className="flex items-center gap-1"><Footprints size={12} className="text-[var(--text-3)]" /> ~{dayTotalWalkMin} דק׳ הליכה</span>}
+            {dayStart && dayEnd && <span className="flex items-center gap-1" dir="ltr"><Clock size={12} className="text-[var(--text-3)]" /> {dayStart}–{dayEnd}</span>}
+            {day.base && <span className="flex items-center gap-1"><Navigation size={12} className="text-[var(--text-3)]" /> {day.base}</span>}
+          </div>
+          {day.why && (
+            <button onClick={() => setWhyOpen((o) => !o)}
+              className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[12.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)] lg:mr-auto">
+              <Lightbulb size={13} className="text-[var(--accent)]" /> למה בנינו את היום?
+              <ChevronDown size={13} className={`transition-transform ${whyOpen ? "rotate-180" : ""}`} />
             </button>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-[var(--text-2)] lg:mr-auto">
-              {dayTotalKm > 0 && <span className="flex items-center gap-1"><Ruler size={13} className="text-[var(--text-3)]" /> {formatDistance(dayTotalKm)}</span>}
-              {dayTotalWalkMin > 0 && <span className="flex items-center gap-1"><Footprints size={13} className="text-[var(--text-3)]" /> ~{dayTotalWalkMin} דק׳ הליכה</span>}
-              {dayStart && dayEnd && <span className="flex items-center gap-1" dir="ltr"><Clock size={13} className="text-[var(--text-3)]" /> {dayStart}–{dayEnd}</span>}
-              {day.base && <span className="flex items-center gap-1"><Navigation size={13} className="text-[var(--text-3)]" /> {day.base}</span>}
+          )}
+        </div>
+      )}
+
+      {/* on-demand "why" — a slim expandable strip, not a permanent block */}
+      {itinerary && day?.why && whyOpen && (
+        <div className="px-5 pt-2 lg:px-8">
+          <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] p-3">
+            <p className="text-[13px] leading-snug text-[var(--text-2)]">{day.why}</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {DAY_RESHAPES.map((q) => (
+                <button key={q.l} disabled={!!busy}
+                  onClick={() => revise(`שנה אך ורק את ${dayLabels[curIdx]} (היום ה-${curIdx + 1} בטיול), אל תיגע בשאר הימים. ${q.t}`)}
+                  className="flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[12px] text-[var(--text-2)] transition hover:border-[var(--brand)] disabled:opacity-50">
+                  <Sparkles size={11} className="text-[var(--brand)]" /> {q.l}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -766,20 +746,8 @@ export function TripView({ tripId }: { tripId: string }) {
 
             {/* why this day is shaped this way — mobile only (desktop shows it in
                 the header). AI insight + quick reshapes */}
-            {day.why && (
-              <div className="mt-3 lg:hidden">
-                <WhyFits title="למה בנינו את היום ככה">{day.why}</WhyFits>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {DAY_RESHAPES.map((q) => (
-                    <button key={q.l} disabled={!!busy}
-                      onClick={() => revise(`שנה אך ורק את ${dayLabels[curIdx]} (היום ה-${curIdx + 1} בטיול), אל תיגע בשאר הימים. ${q.t}`)}
-                      className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5 text-[13px] text-[var(--text-2)] transition hover:border-[var(--brand)] disabled:opacity-50">
-                      <Sparkles size={12} className="text-[var(--brand)]" /> {q.l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* the "why" now lives in the thin day-summary row (on-demand toggle,
+                all sizes) — no separate block here */}
           </div>
 
           {/* picks that didn't fit the days — transparent, with one-tap add */}
@@ -822,7 +790,7 @@ export function TripView({ tripId }: { tripId: string }) {
           {(stopPoints.length > 0 || hotelPoints.length > 0) && (
             <div className="hidden lg:block">
               <div className="relative">
-                <div className="h-[calc(100vh-190px)] max-h-[680px] min-h-[480px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
+                <div className="h-[calc(100dvh-104px)] max-h-[860px] min-h-[520px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
                   <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
                     hotels={hotelPoints} focus={focus} colors={stopColors} activeIdx={active}
                     onStopClick={(li) => { const si = locatedToStop[li]; if (si == null) return;
