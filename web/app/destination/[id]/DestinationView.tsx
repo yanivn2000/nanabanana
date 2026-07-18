@@ -480,31 +480,31 @@ export function DestinationView({
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-5">
               {/* city identity — right in RTL */}
               <div className="flex shrink-0 items-center gap-3 sm:gap-4 lg:w-[340px]">
-                <div className="relative aspect-[3/2] w-[104px] shrink-0 overflow-hidden rounded-[var(--radius-sm)] sm:w-[150px] lg:w-[164px]">
+                <div className="relative aspect-[3/2] w-[104px] shrink-0 overflow-hidden rounded-[var(--radius-sm)] sm:w-[150px] lg:aspect-auto lg:h-[105px] lg:w-[160px]">
                   <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
                     orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="serif flex items-center gap-2 text-[24px] font-bold leading-tight lg:text-[27px]">
+                  <h1 className="serif flex items-center gap-2 text-[20px] font-bold leading-tight lg:text-[22px]">
                     <span className="text-[0.72em]">{countryFlag(dest.country)}</span>
                     {dest.city_he || dest.city}
                   </h1>
-                  <p className="mt-1 text-[14px] font-semibold text-[var(--text)]">
+                  <p className="mt-0.5 text-[13.5px] font-semibold text-[var(--text)]">
                     {dest.attraction_count.toLocaleString("he")} מקומות לגלות בעיר
                   </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-soft)] px-2.5 py-1 text-[12px] font-medium text-[var(--brand-ink)]">
-                      <Sparkles size={12} /> מותאם לפרופיל שלכם
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--brand-ink)]">
+                      <Sparkles size={11} /> מותאם לפרופיל שלכם
                     </span>
                     {passes.length > 0 && (
                       <button onClick={() => setShowPasses((v) => !v)}
-                        className="inline-flex items-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-2.5 py-1 text-[12px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
+                        className="inline-flex items-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
                         💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
                       </button>
                     )}
                     {communityCount > 0 && (
                       <Link href={`/destination/${dest.id}/trips`}
-                        className="inline-flex items-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-2.5 py-1 text-[12px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
+                        className="inline-flex items-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-2 py-0.5 text-[11.5px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
                         ❤️ {communityCount} טיולים של מטיילים
                       </Link>
                     )}
