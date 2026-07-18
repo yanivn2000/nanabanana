@@ -521,9 +521,9 @@ export function DestinationView({
                     <span className="inline-flex items-center gap-1.5"><span className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)]"><span className="size-[7px] rounded-full bg-white" /></span> רק אותו</span>
                   </p>
                 </div>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(92px,1fr))] gap-2">
+                <div className="flex flex-wrap gap-2">
                   {interestTiles.map(({ key, count }) => (
-                    <CategoryTile key={key} label={key} state={interestState(key)} count={count}
+                    <CategoryTile key={key} label={key} state={interestState(key)} count={count} pill
                       dim={soloInterest != null && soloInterest !== key}
                       onClick={() => cycleInterest(key)} />
                   ))}

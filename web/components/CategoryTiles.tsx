@@ -134,8 +134,9 @@ export const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 // "solo" = the city page's focus state (show only this topic) — solid brand.
 export type TileState = "yes" | "no" | "none" | "solo";
 
-export function CategoryTile({ label, selected, state, count, dim, onClick }: {
+export function CategoryTile({ label, selected, state, count, dim, onClick, pill }: {
   label: string; selected?: boolean; state?: TileState; count?: number; dim?: boolean; onClick?: () => void;
+  pill?: boolean;
 }) {
   const icon = CATEGORY_ICONS[label];
   const s: TileState = state ?? (selected ? "yes" : "none");
@@ -145,6 +146,29 @@ export function CategoryTile({ label, selected, state, count, dim, onClick }: {
     : s === "yes" ? { background: "var(--brand-soft)", border: "1.5px solid var(--brand)" }
     : s === "no" ? { background: "var(--surface-2)", border: "1.5px solid var(--border)" }
     : { background: "var(--surface)", border: "1.5px solid var(--border)" };
+
+  // compact pill variant (city page) — a thin chip like the trip page's day tabs
+  if (pill) {
+    return (
+      <button type="button" onClick={onClick} aria-pressed={s === "yes" || solo}
+        className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[13px] font-medium transition"
+        style={{ ...box, opacity: dim ? 0.4 : 1 }}>
+        <span className="grid size-[17px] shrink-0 place-items-center"
+          style={{ opacity: s === "no" ? 0.5 : 1, filter: solo ? "brightness(0) invert(1)" : undefined }}>
+          {icon ? <svg width="17" height="17" viewBox="0 0 32 32" aria-hidden>{icon}</svg>
+            : <span className="text-[13px]">✦</span>}
+        </span>
+        <span style={{ color: solo ? "#fff" : s === "yes" ? "var(--brand-ink)" : "var(--text-2)",
+                       textDecoration: s === "no" ? "line-through" : "none", opacity: s === "no" ? 0.6 : 1 }}>{label}</span>
+        {count != null && (
+          <span className="rounded-full px-1.5 py-0.5 text-[11px] tabular-nums leading-none"
+            style={{ background: solo ? "rgba(255,255,255,.22)" : s === "yes" ? "rgba(14,107,94,.12)" : "var(--surface-2)",
+                     color: solo ? "rgba(255,255,255,.9)" : "var(--text-3)", opacity: s === "no" ? 0.6 : 1 }}>{count}</span>
+        )}
+      </button>
+    );
+  }
+
   return (
     <button type="button" onClick={onClick} aria-pressed={s === "yes" || solo}
       className="relative flex flex-col items-center justify-center gap-1.5 rounded-[18px] px-1 py-3 transition"
