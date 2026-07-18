@@ -344,8 +344,20 @@ export function TripView({ tripId }: { tripId: string }) {
       {/* THREE THIN ROWS — the map + itinerary are the hero and fill the first
           viewport, so trip info / day tabs / day summary are compressed to slim
           horizontal strips (no big card, no poster, no permanent date inputs). */}
+      {/* the three thin rows sit to the LEFT of a compact destination image
+          (same 160×105 landscape treatment as the city page). The image is
+          absolute so it spans the rows without adding any header height; the
+          rows reserve room on the right (lg:pr) so nothing runs under it. */}
+      <div className="lg:relative">
+        {trip?.destinationId && (
+          <div className="hidden overflow-hidden rounded-[var(--radius-sm)] lg:absolute lg:top-3 lg:block lg:h-[105px] lg:w-[160px]"
+               style={{ insetInlineStart: "32px" }}>
+            <CityPoster destinationId={trip.destinationId} cityHe={cityHe}
+              orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
+          </div>
+        )}
       {/* row 1 — trip info + actions */}
-      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 px-5 pt-2 lg:px-8 lg:pt-3">
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 px-5 pt-2 lg:pl-8 lg:pr-[204px] lg:pt-3">
         <Link href="/trips" className="eyebrow inline-flex items-center gap-1 text-[var(--text-2)]">
           <ChevronRight size={14} /> הטיולים שלי
         </Link>
@@ -403,7 +415,7 @@ export function TripView({ tripId }: { tripId: string }) {
 
       {/* row 2 — day tabs (thin pills) */}
       {itinerary && allDays.length > 0 && (
-        <div className="mt-1.5 flex items-center gap-2.5 px-5 lg:px-8">
+        <div className="mt-1.5 flex items-center gap-2.5 px-5 lg:pl-8 lg:pr-[204px]">
           <span className="hidden shrink-0 text-[12px] font-semibold text-[var(--text-3)] sm:block">ימי הטיול</span>
           <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 sm:mx-0 sm:px-0" style={{ scrollbarWidth: "none" }}>
             {allDays.map((d, i) => {
@@ -481,7 +493,7 @@ export function TripView({ tripId }: { tripId: string }) {
       {/* row 3 — day summary (thin strip, no card): day label + edit + stats,
           and an on-demand "why?" toggle (no big AI explanation block) */}
       {itinerary && day && (
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--border)] px-5 pb-2 lg:px-8">
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--border)] px-5 pb-2 lg:pl-8 lg:pr-[204px]">
           <h2 className="serif text-[15px] font-bold leading-tight lg:text-[16px]">{dayLabels[curIdx]}</h2>
           {editing && (
             <span className="flex gap-1">
@@ -514,6 +526,7 @@ export function TripView({ tripId }: { tripId: string }) {
           )}
         </div>
       )}
+      </div>{/* /lg:relative header wrapper (rows + destination image) */}
 
       {/* on-demand "why" — a slim expandable strip, not a permanent block */}
       {itinerary && day?.why && whyOpen && (
