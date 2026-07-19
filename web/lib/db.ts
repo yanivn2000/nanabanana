@@ -87,12 +87,17 @@ export type Attraction = {
   editor_kids: string | null;   // editor kids fit: 'yes' | 'maybe' | 'no' | null
   description_he: string | null;
   taste_tags: string[] | null;
+  audience_fit: AudienceFit | null;  // {families,couples,friends} 0-100 + type — the short-path signal
+  notable: boolean;                  // has a Wikipedia/Wikidata entry (worthiness input)
 };
+
+// Per-attraction audience suitability, computed by the consensus pipeline.
+export type AudienceFit = { families: number; couples: number; friends: number; type: string; why_he?: string };
 
 const ATTR_COLS = `id, name_he, name_en, lat, lng, category, subcategory,
   indoor_outdoor, family_score, tips_he, website, duration_minutes,
   image_url, tagline_he, best_season, best_time_he, dress_he, cost_level, must_see,
-  description_he, taste_tags`;
+  description_he, taste_tags, audience_fit`;
 
 export type Destination = {
   id: number;
@@ -147,7 +152,8 @@ const EDITOR_ORDER = `(CASE WHEN ep.rank = 'no' THEN 0
 // ATTR_COLS with must_see swapped for the effective value + the editor columns
 // (osm_must_see kept as the raw reference; editor_rank/editor_kids surfaced).
 const ATTR_COLS_EFF = ATTR_COLS.replace(/\bmust_see\b/,
-  `${EFF_MUST} AS must_see, a.must_see AS osm_must_see, ep.rank AS editor_rank, ep.kids AS editor_kids`);
+  `${EFF_MUST} AS must_see, a.must_see AS osm_must_see, ep.rank AS editor_rank, ep.kids AS editor_kids`)
+  + `, ${NOTABLE} AS notable`;
 
 export async function topAttractions(destinationId: number, limit = 40): Promise<Attraction[]> {
   // The builder's auto pool. Uses the editor's effective must-see and EXCLUDES

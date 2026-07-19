@@ -21,6 +21,7 @@ type Pace = (typeof PACES)[number];
 import { PACE_PER_DAY } from "@/lib/trip-types";
 import { deriveTaste, tasteScore, INTEREST_TASTE, INTEREST_CATS } from "@/lib/taste";
 import { CategoryTile } from "@/components/CategoryTiles";
+import { shortPath, PROFILES, PROFILE_HE, PROFILE_EMOJI, INTERESTS, type Profile } from "@/lib/shortpath";
 import type { Attraction, Destination, Insight } from "@/lib/db";
 
 // Every interest in the profile vocabulary — used as the fallback tile set when
@@ -216,6 +217,10 @@ export function DestinationView({
   const toggleFlag = (k: keyof typeof flags) =>
     setFlags((f) => ({ ...f, [k]: !f[k] }));
   // #13 — narrow the list to what's currently visible on the map.
+  // Short curated path: pick an audience → see ~12 places "people like you loved"
+  // (audience=null = explore-all, the full browse). boosts = optional taste tilt.
+  const [audience, setAudience] = useState<Profile | null>(null);
+  const [boosts, setBoosts] = useState<Set<string>>(new Set());
   const [mapOnly, setMapOnly] = useState(false);
   const [bounds, setBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
   // Desktop tags row: sort order + the "more filters" popover.
@@ -350,6 +355,12 @@ export function DestinationView({
   useEffect(() => { if (selectedOnly && yesCount + maybeCount === 0) setSelectedOnly(false); }, [selectedOnly, yesCount, maybeCount]);
   const visible = sortedItems.slice(0, visibleCount);
   const firstDimId = visible.find((a) => dimmedIds.has(a.id))?.id;
+  // Short-path override: when an audience is chosen, the map + grid show the
+  // curated ~12 ("people like you loved") instead of the full browse.
+  const sp = useMemo(
+    () => audience ? shortPath(attractions, (id) => insights[id]?.length ?? 0, audience, boosts) : null,
+    [audience, boosts, attractions, insights]);
+  const displayItems = sp ? sp.path.map((x) => x.a) : visible;
   // Bulk marks over the matched set (the primary view).
   const viewIds = matchedIds;
   const viewSelected = viewIds.filter((id) => choices[id]).length;
@@ -512,7 +523,8 @@ export function DestinationView({
                 )}
               </div>
 
-              {/* interests — full-width row below the identity */}
+              {/* interests — full-width row below the identity (hidden in short-path mode; the taste chips replace it) */}
+              {!sp && (
               <div className="min-w-0">
                 <div className="mb-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
                   <h2 className="text-[16px] font-bold text-[var(--text)]">מה מעניין אתכם?</h2>
@@ -542,6 +554,7 @@ export function DestinationView({
                   </div>
                 )}
               </div>
+              )}
             </div>
           </div>
         </div>
@@ -579,7 +592,7 @@ export function DestinationView({
 
       {/* desktop toolbar — sticky filters/search above the list. Interests moved
           up into the top block; this keeps must-see · bulk · sort · filters. */}
-      <div className="sticky top-[57px] z-30 hidden bg-[var(--bg)] shadow-[0_10px_12px_-12px_rgba(16,29,43,0.12)] lg:block">
+      <div className={`sticky top-[57px] z-30 hidden bg-[var(--bg)] shadow-[0_10px_12px_-12px_rgba(16,29,43,0.12)] ${sp ? "" : "lg:block"}`}>
         <div className="mx-auto max-w-[1600px] px-8">
           {/* filters row — search · must-see facet · bulk-select · sort · filters.
               Wraps to a second line when the controls (esp. with selections
@@ -744,10 +757,58 @@ export function DestinationView({
         </section>
       )}
 
+      {/* short curated path — "for whom is the trip?" · the default, less-clutter entry */}
+      <div className="mx-5 mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 lg:mx-8">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="serif text-[16px] font-bold text-[var(--text)]">בשביל מי הטיול?</span>
+          {sp
+            ? <span className="text-[12.5px] text-[var(--text-3)]">מציג את <b className="text-[var(--text-2)]">{sp.path.length}</b> המקומות שהכי אהובים על {PROFILE_HE[audience!]} · מתוך {attractions.length}</span>
+            : <span className="text-[12.5px] text-[var(--text-3)]">בחרו — ונראה לכם את המקומות שהכי אהובים על אנשים כמוכם</span>}
+        </div>
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          {PROFILES.map((p) => {
+            const on = audience === p;
+            return (
+              <button key={p} onClick={() => { setAudience(on ? null : p); if (on) setBoosts(new Set()); }}
+                className="rounded-full border px-4 py-2 text-[14px] font-semibold transition"
+                style={{ background: on ? "var(--brand)" : "var(--surface)", color: on ? "#fff" : "var(--text-2)",
+                         borderColor: on ? "var(--brand)" : "var(--border)" }}>
+                {PROFILE_EMOJI[p]} {PROFILE_HE[p]}
+              </button>
+            );
+          })}
+          {audience && (
+            <button onClick={() => { setAudience(null); setBoosts(new Set()); }}
+              className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-[14px] font-medium text-[var(--text-2)]">
+              🔎 חקור הכל
+            </button>
+          )}
+        </div>
+        {audience && (
+          <div className="mt-3 border-t border-[var(--border)] pt-3">
+            <div className="mb-1.5 text-[12.5px] text-[var(--text-3)]">אוהבים משהו במיוחד? הוסיפו דגש (לא חובה):</div>
+            <div className="flex flex-wrap gap-2">
+              {INTERESTS.map((it) => {
+                const on = boosts.has(it.key);
+                return (
+                  <button key={it.key}
+                    onClick={() => setBoosts((s) => { const n = new Set(s); if (n.has(it.key)) n.delete(it.key); else n.add(it.key); return n; })}
+                    className="rounded-full border px-3 py-1.5 text-[13px] font-medium transition"
+                    style={{ background: on ? "var(--text)" : "var(--surface)", color: on ? "#fff" : "var(--text-2)",
+                             borderColor: on ? "var(--text)" : "var(--border)" }}>
+                    {it.emoji} {it.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="lg:flex lg:items-start">
         {/* map — a narrow sticky rail on desktop; full-width strip on mobile */}
         <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-2 lg:!h-[calc(100dvh-164px)] lg:top-[164px] lg:w-[380px] lg:shrink-0 lg:border-y-0 lg:border-s`}>
-          <MapClient attractions={visible} center={[dest.lat, dest.lng]} selected={selected}
+          <MapClient attractions={displayItems} center={[dest.lat, dest.lng]} selected={selected}
             picks={pickedAttractions} fitNonce={fitNonce} onBounds={setBounds} />
           {pickedAttractions.length > 0 && (
             <button onClick={() => setFitNonce((n) => n + 1)}
@@ -766,7 +827,7 @@ export function DestinationView({
         <section id="picks" className="scroll-mt-[120px] px-5 lg:order-1 lg:min-w-0 lg:flex-1 lg:px-8 lg:pb-16">
           {/* mobile filter header (search + categories + quick tags) — desktop
               uses the toolbar above */}
-          <div className={`sticky ${mapOpen ? "top-[240px]" : "top-0"} z-20 -mx-5 bg-[var(--bg)] px-5 pb-2 pt-4 shadow-[0_8px_10px_-10px_rgba(16,29,43,0.2)] lg:hidden`}>
+          <div className={`sticky ${mapOpen ? "top-[240px]" : "top-0"} z-20 -mx-5 bg-[var(--bg)] px-5 pb-2 pt-4 shadow-[0_8px_10px_-10px_rgba(16,29,43,0.2)] ${sp ? "hidden" : "lg:hidden"}`}>
             <div className="mb-3 flex items-center gap-2.5 border-b border-[var(--border)] pb-2">
               <span className="serif shrink-0 text-[16px] font-bold text-[var(--text)]">{dest.city_he || dest.city}</span>
               <span className="h-4 w-px shrink-0 bg-[var(--border)]" />
@@ -849,7 +910,7 @@ export function DestinationView({
           {/* rich image-top cards — matches first, then the profile-cut tail
               (dimmed, still markable) after a divider */}
           <div className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-2 lg:pt-4 xl:grid-cols-3">
-            {visible.map((a) => {
+            {displayItems.map((a) => {
               const isSel = selected?.id === a.id;
               const cost = a.cost_level != null ? COST_HE[a.cost_level] : null;
               const dur = durationHe(a.duration_minutes);
@@ -967,7 +1028,7 @@ export function DestinationView({
             })}
           </div>
 
-          {visibleCount < sortedItems.length && (
+          {!sp && visibleCount < sortedItems.length && (
             <div className="mt-6 flex justify-center pb-4">
               <button onClick={() => setVisibleCount((v) => v + PAGE)}
                 className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-6 py-2.5 text-[14px] font-medium text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:border-[var(--brand)]">
