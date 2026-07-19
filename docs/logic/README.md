@@ -28,12 +28,28 @@ Example — enrich the pending attractions of city 25:
 
 Same pattern for `audience` (see `audience-fit.md`) and `matching`.
 
-## The steps
+## Two kinds of logic live here
+1. **Agent-judgment** steps (below) — the agent reads the spec and applies the
+   judgment itself; thin scripts do only DB I/O. No paid API.
+2. **Deterministic** subsystems — pure algorithms (haversine, k-means, tour
+   heuristics) implemented in code. These docs are the *design source of truth*:
+   the model, the parameters, the decisions made and the alternatives rejected, so
+   the logic is known in advance and can be changed deliberately.
+
+## The agent-judgment steps
 | spec | what it produces | stored in |
 |---|---|---|
 | [enrichment.md](./enrichment.md) | Hebrew name, family_score, must_see, tips, tagline, best-time… | `attractions.*` |
 | [audience-fit.md](./audience-fit.md) | `{families, couples, friends, type}` 0-100 | `attractions.audience_fit` |
 | [matching.md](./matching.md) | which attraction an insight's place refers to (or none) | `insights.attraction_id` |
+| [neighborhoods.md](./neighborhoods.md) (authoring half) | area name / vibe / best_for / gateway | `areas.*` |
+
+## The deterministic subsystems
+| spec | what it does | code |
+|---|---|---|
+| [routing.md](./routing.md) | walk-vs-transit leg model + the `attraction_edges` graph + walkPref | `web/lib/geo.ts`, `attraction_edges` |
+| [day-clustering.md](./day-clustering.md) | proximity day-clustering (route-first) + free gems | `web/lib/cluster.ts` |
+| [neighborhoods.md](./neighborhoods.md) (discovery half) | k-means area discovery + day annotation | `web/lib/cluster.ts`, `web/scripts/areas_*` |
 
 ## Keeping it current
 When we refine a rule (e.g. "iconic must-sees score high for every audience"),
