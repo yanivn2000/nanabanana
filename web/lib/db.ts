@@ -923,6 +923,28 @@ export async function areasForDestination(destId: number): Promise<Area[]> {
   );
 }
 
+// --- Admin: distance graph transparency --------------------------------------
+export type GraphStats = { edge_count: number; transit_edge_count: number; transit_synced_at: string | null };
+export type GraphAttraction = { id: number; name_he: string | null; name_en: string; lat: number; lng: number; must_see: number };
+
+// Graph coverage stats for a city + its top-N worthy attractions (with coords) so
+// the admin can compute & show the walk/transit distance matrix.
+export async function adminGraph(destId: number, n = 40): Promise<{ stats: GraphStats; attractions: GraphAttraction[] }> {
+  const stats = (await query<GraphStats>(
+    `SELECT (SELECT count(*)::int FROM attraction_edges WHERE destination_id = $1) AS edge_count,
+            (SELECT count(*)::int FROM attraction_edges WHERE destination_id = $1 AND transit_mode IS NOT NULL) AS transit_edge_count,
+            (SELECT transit_synced_at FROM destinations WHERE id = $1) AS transit_synced_at`,
+    [destId]))[0] ?? { edge_count: 0, transit_edge_count: 0, transit_synced_at: null };
+  const attractions = await query<GraphAttraction>(
+    `SELECT id, name_he, name_en, lat, lng, COALESCE(must_see,0) AS must_see
+       FROM attractions
+      WHERE destination_id = $1 AND lat IS NOT NULL AND lng IS NOT NULL
+      ORDER BY must_see DESC NULLS LAST, (audience_fit->>'couples')::int DESC NULLS LAST, id
+      LIMIT $2`,
+    [destId, n]);
+  return { stats, attractions };
+}
+
 // Editor-editable area fields (the admin neighbourhoods tab).
 const AREA_EDITABLE = new Set(["name_he", "name_en", "vibe_he", "gateway_he", "best_for", "approved"]);
 

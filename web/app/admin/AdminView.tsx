@@ -6,6 +6,7 @@ import { ChevronDown, Loader2, Check, ExternalLink } from "lucide-react";
 import { InsightsIngest } from "./InsightsIngest";
 import { AttractionsTable } from "./AttractionsTable";
 import { AreasTable } from "./AreasTable";
+import { GraphTable } from "./GraphTable";
 import { Moderation } from "./Moderation";
 import type { AdminDestination, Feedback } from "@/lib/db";
 
@@ -13,6 +14,7 @@ const TABS = [
   { key: "cities", label: "🏙️ ערים" },
   { key: "attractions", label: "📊 אטרקציות" },
   { key: "areas", label: "🗺️ שכונות" },
+  { key: "graph", label: "🌉 גרף מרחקים" },
   { key: "insights", label: "📥 תובנות" },
   { key: "moderation", label: "🚩 מודרציה" },
   { key: "feedback", label: "💬 פידבק" },
@@ -183,6 +185,15 @@ export function AdminView({ destinations, feedback, email }: {
             שכונות שהתגלו אוטומטית (k-means על אתרים שווי-ביקור) ותוארו ידנית. ערכו שם/אופי/רמז-הגעה ואשרו — רק אזורים מאושרים ישמשו בבנייה בהמשך.
           </p>
           <AreasTable destinations={destinations} />
+        </div>
+      )}
+
+      {tab === "graph" && (
+        <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
+          <p className="mb-3 text-[13px] text-[var(--text-3)]">
+            גרף המרחקים — כמה גשרים נשמרו בקאש מטיולים, ומטריצת זמני הליכה/תחבורה בין האתרים המובילים (מחושבת חיה מהקואורדינטות).
+          </p>
+          <GraphTable destinations={destinations} />
         </div>
       )}
 
