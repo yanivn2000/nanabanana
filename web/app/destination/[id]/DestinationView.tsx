@@ -223,6 +223,7 @@ export function DestinationView({
   const [audience, setAudience] = useState<Profile | null>(null);
   const [boosts, setBoosts] = useState<Set<string>>(new Set());
   const [exploreAll, setExploreAll] = useState(false);
+  const [shortLimit, setShortLimit] = useState(24);  // short-path "load more"
   const goExplore = () => { setAudience(null); setBoosts(new Set()); setExploreAll(true); };
   const goChoose = () => { setAudience(null); setBoosts(new Set()); setExploreAll(false); };
   const [mapOnly, setMapOnly] = useState(false);
@@ -365,8 +366,10 @@ export function DestinationView({
   // Short-path override: when an audience is chosen, the map + grid show the
   // curated ~12 ("people like you loved") instead of the full browse.
   const sp = useMemo(
-    () => audience ? shortPath(attractions, (id) => insights[id]?.length ?? 0, audience, boosts) : null,
-    [audience, boosts, attractions, insights]);
+    () => audience ? shortPath(attractions, (id) => insights[id]?.length ?? 0, audience, boosts, shortLimit) : null,
+    [audience, boosts, attractions, insights, shortLimit]);
+  // reset "load more" when switching audience
+  useEffect(() => { setShortLimit(24); }, [audience]);
   const displayItems = sp ? sp.path.map((x) => x.a) : visible;
   const mode: "choose" | "short" | "explore" = audience ? "short" : exploreAll ? "explore" : "choose";
   // Bulk marks over the matched set (the primary view).
@@ -978,6 +981,15 @@ export function DestinationView({
               <button onClick={() => setVisibleCount((v) => v + PAGE)}
                 className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-6 py-2.5 text-[14px] font-medium text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:border-[var(--brand)]">
                 הצג עוד · נותרו {sortedItems.length - visibleCount}
+              </button>
+            </div>
+          )}
+          {/* short-path "load more" — reveal the next audience-appropriate places by consensus */}
+          {mode === "short" && sp && sp.eligible > sp.path.length && (
+            <div className="mt-6 flex justify-center pb-4">
+              <button onClick={() => setShortLimit((v) => v + 24)}
+                className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-6 py-2.5 text-[14px] font-medium text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:border-[var(--brand)]">
+                הצג עוד מקומות אהובים · נותרו {sp.eligible - sp.path.length}
               </button>
             </div>
           )}
