@@ -245,6 +245,9 @@ export function DestinationView({
     }
   };
   const [buildOpen, setBuildOpen] = useState(false);
+  // mode 3: "build for <audience>" anchors on the short path, ignoring any
+  // stale per-city marks; the explore-mode bottom bar builds from marks.
+  const [buildFromSp, setBuildFromSp] = useState(false);
   const [buildDays, setBuildDays] = useState(4);
   const [buildRadius, setBuildRadius] = useState(1);
   const [buildPace, setBuildPace] = useState<Pace>("בינוני");
@@ -446,8 +449,10 @@ export function DestinationView({
     for (const [id, c] of Object.entries(choices)) {
       (c === "yes" ? yes : c === "maybe" ? maybe : no).push(Number(id));
     }
-    // Mode 3 ("build for me, no marks"): anchor on the audience short path.
-    const yesFinal = yes.length ? yes : (audience && sp ? sp.path.map((x) => x.a.id) : yes);
+    // Mode 3 ("build for <audience>"): anchor on the short path, ignoring stale
+    // marks. Otherwise build from the user's marks (explore mode).
+    const yesFinal = (buildFromSp && sp) ? sp.path.map((x) => x.a.id)
+      : yes.length ? yes : (audience && sp ? sp.path.map((x) => x.a.id) : yes);
     setBuilding(true);
     const trip = create({
       title: `טיול ל${dest.city_he || dest.city}`,
@@ -759,7 +764,7 @@ export function DestinationView({
             {mode === "short" && (
               <>
                 {/* mode 3 — build it for me, no marking needed (anchors on the short path) */}
-                <button onClick={openBuild}
+                <button onClick={() => { setBuildFromSp(true); openBuild(); }}
                   className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-2.5 text-[14.5px] font-semibold text-white transition hover:opacity-90">
                   ✨ בנו לי טיול ל{PROFILE_HE[audience!]}
                 </button>
@@ -1001,7 +1006,7 @@ export function DestinationView({
       {/* persistent build bar — the flow's finish line, always visible so the
           goal is unmistakable: mark attractions, then build. Progress fills
           toward the minimum; the CTA activates once there are enough picks. */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 shadow-[0_-8px_20px_rgba(16,29,43,0.08)] lg:px-8">
+      <div className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 shadow-[0_-8px_20px_rgba(16,29,43,0.08)] lg:px-8 ${mode === "explore" ? "" : "hidden"}`}>
         <div className="mx-auto max-w-[1600px]">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
@@ -1022,15 +1027,21 @@ export function DestinationView({
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {yesCount + maybeCount > 0 && (
-                <button onClick={toggleSelectedOnly}
-                  className="hidden items-center gap-1.5 rounded-full border px-4 py-2.5 text-[13.5px] font-medium transition sm:flex"
-                  style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)",
-                           color: selectedOnly ? "#fff" : "var(--brand-ink)",
-                           borderColor: selectedOnly ? "var(--brand)" : "var(--brand)" }}>
-                  {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
-                </button>
+                <>
+                  <button onClick={toggleSelectedOnly}
+                    className="hidden items-center gap-1.5 rounded-full border px-4 py-2.5 text-[13.5px] font-medium transition sm:flex"
+                    style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)",
+                             color: selectedOnly ? "#fff" : "var(--brand-ink)",
+                             borderColor: selectedOnly ? "var(--brand)" : "var(--brand)" }}>
+                    {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
+                  </button>
+                  <button onClick={clearAllChoices} title="נקה את כל הסימונים ששמורים לעיר"
+                    className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-2.5 text-[13px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f]">
+                    <X size={14} /> נקה
+                  </button>
+                </>
               )}
-              <button onClick={tryBuild}
+              <button onClick={() => { setBuildFromSp(false); tryBuild(); }}
                 className="flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition"
                 style={canBuild
                   ? { background: "var(--brand)", color: "#fff", boxShadow: "0 6px 16px rgba(14,107,94,.3)" }
