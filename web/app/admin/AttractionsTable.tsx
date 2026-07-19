@@ -22,6 +22,23 @@ export function AttractionsTable({ destinations }: { destinations: AdminDestinat
   const [loading, setLoading] = useState(false);
   const [bonuses, setBonuses] = useState<Record<number, { families: number; couples: number; friends: number }>>({});
   const [saving, setSaving] = useState<number | null>(null);
+  const [mustSaving, setMustSaving] = useState<number | null>(null);
+
+  // toggle "חובה" via the editor overlay: rank='must' forces must-see, 'maybe'
+  // turns it off (keeps the place, just not a must). Effective must_see updates.
+  async function toggleMust(r: AdminAttractionRow) {
+    const turningOff = r.must_see === 1;
+    setMustSaving(r.id);
+    try {
+      const res = await fetch("/api/editor/pick", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ destination_id: destId, attraction_id: r.id, field: "rank",
+          value: turningOff ? "maybe" : "must" }),
+      });
+      if (res.ok) setRows((s) => s.map((x) => x.id === r.id
+        ? { ...x, must_see: turningOff ? 0 : 1, editor_rank: turningOff ? "maybe" : "must" } : x));
+    } finally { setMustSaving(null); }
+  }
 
   async function load() {
     setLoading(true);
@@ -127,10 +144,14 @@ export function AttractionsTable({ destinations }: { destinations: AdminDestinat
                   </div>
                 </td>
                 <td className="p-2 text-center">
-                  {r.must_see === 1 ? <span className="rounded-full bg-[var(--brand)] px-1.5 py-0.5 text-[10.5px] font-bold text-white">חובה</span>
-                    : r.editor_rank === "no" ? <span className="text-[11px] text-[#c0453f]">רצפה</span>
-                    : r.editor_rank === "maybe" ? <span className="text-[11px] text-[var(--text-3)]">אולי</span>
-                    : <span className="text-[11px] text-[var(--text-3)]">—</span>}
+                  <button onClick={() => toggleMust(r)} disabled={mustSaving === r.id}
+                    title={r.must_see === 1 ? "לחצו לכבות חובה" : "לחצו לסמן כחובה"}
+                    className="rounded-full border px-2 py-0.5 text-[10.5px] font-bold transition disabled:opacity-50"
+                    style={r.must_see === 1
+                      ? { background: "var(--brand)", color: "#fff", borderColor: "var(--brand)" }
+                      : { background: "var(--surface)", color: "var(--text-3)", borderColor: "var(--border)" }}>
+                    {mustSaving === r.id ? "…" : r.must_see === 1 ? "⭐ חובה" : "סמן חובה"}
+                  </button>
                 </td>
                 <td className="p-2 text-center text-[var(--text-2)] tabular-nums">{r.traveler_count || ""}</td>
                 {AUD.map((a) => (
