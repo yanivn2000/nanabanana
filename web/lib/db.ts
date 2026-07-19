@@ -922,3 +922,15 @@ export async function areasForDestination(destId: number): Promise<Area[]> {
     [destId]
   );
 }
+
+// Editor-editable area fields (the admin neighbourhoods tab).
+const AREA_EDITABLE = new Set(["name_he", "name_en", "vibe_he", "gateway_he", "best_for", "approved"]);
+
+export async function updateArea(id: number, fields: Record<string, unknown>): Promise<boolean> {
+  const entries = Object.entries(fields).filter(([k]) => AREA_EDITABLE.has(k));
+  if (!entries.length) return false;
+  const sets = entries.map(([k], i) => `${k} = $${i + 2}`).join(", ");
+  const vals = entries.map(([, v]) => v);
+  await query(`UPDATE areas SET ${sets} WHERE id = $1`, [id, ...vals]);
+  return true;
+}
