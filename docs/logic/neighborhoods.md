@@ -41,8 +41,11 @@ centroid location + member attractions + its own geographic knowledge:
 Guidance: name by the dominant real neighbourhood even if the cluster spans two;
 keep vibe concrete and specific, not generic; gateway names the actual line/mode.
 
-Then `areas_write.mjs` inserts the areas (`source='kmeans'`, `approved=false`) and
-sets `attractions.area_id` for the members.
+Then `areas_write.mjs` inserts the areas (`source='kmeans'`, `approved=false`),
+sets `attractions.area_id` for the members, defaults `kind='landmark'`, and marks
+`headline=true` for the 2 biggest areas + any with ≥6 attractions (the author json
+may override `kind`/`headline` per area). `kind`/`headline` drive the city-page
+strip (see phase12 + `headlineAreasForCity`); the editor refines in the admin.
 
 ## Step 3 — editor approval (admin)
 `🗺️ שכונות` tab: spatial mini-map (size = attraction count, green = approved /
