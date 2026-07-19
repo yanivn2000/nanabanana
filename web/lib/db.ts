@@ -939,7 +939,7 @@ export async function headlineAreasForCity(destId: number): Promise<AreaCard[]> 
             (SELECT count(*)::int FROM attractions t WHERE t.area_id = a.id AND t.must_see = 1) AS must_count,
             (SELECT COALESCE(array_agg(t.id), '{}') FROM attractions t WHERE t.area_id = a.id) AS member_ids
        FROM areas a
-      WHERE a.destination_id = $1 AND a.headline = true
+      WHERE a.destination_id = $1 AND a.headline = true AND a.approved = true
       ORDER BY a.attraction_count DESC NULLS LAST`,
     [destId]
   );
