@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { editorEmail } from "@/lib/admin";
-import { areasForDestination, updateArea } from "@/lib/db";
+import { areasForDestination, updateArea, areaAttractions } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,10 @@ export async function POST(req: NextRequest) {
 
   if (b.action === "list") {
     if (typeof b.destination_id !== "number") return NextResponse.json({ error: "bad_request" }, { status: 400 });
-    return NextResponse.json({ rows: await areasForDestination(b.destination_id) });
+    const [rows, attractions] = await Promise.all([
+      areasForDestination(b.destination_id), areaAttractions(b.destination_id),
+    ]);
+    return NextResponse.json({ rows, attractions });
   }
   if (b.action === "save") {
     if (typeof b.id !== "number" || typeof b.fields !== "object") return NextResponse.json({ error: "bad_request" }, { status: 400 });

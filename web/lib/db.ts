@@ -926,6 +926,22 @@ export async function areasForDestination(destId: number): Promise<Area[]> {
 // Editor-editable area fields (the admin neighbourhoods tab).
 const AREA_EDITABLE = new Set(["name_he", "name_en", "vibe_he", "gateway_he", "best_for", "approved"]);
 
+// The attractions tagged into each area of a city (for the admin to inspect &
+// verify the auto-assignment).
+export type AreaAttraction = {
+  id: number; name_he: string | null; name_en: string; category: string;
+  must_see: number; area_id: number;
+};
+export async function areaAttractions(destId: number): Promise<AreaAttraction[]> {
+  return query<AreaAttraction>(
+    `SELECT id, name_he, name_en, category, COALESCE(must_see,0) AS must_see, area_id
+       FROM attractions
+      WHERE destination_id = $1 AND area_id IS NOT NULL
+      ORDER BY must_see DESC, id`,
+    [destId]
+  );
+}
+
 export async function updateArea(id: number, fields: Record<string, unknown>): Promise<boolean> {
   const entries = Object.entries(fields).filter(([k]) => AREA_EDITABLE.has(k));
   if (!entries.length) return false;

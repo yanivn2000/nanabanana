@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Check, MapPin } from "lucide-react";
-import type { AdminDestination, Area } from "@/lib/db";
+import { Loader2, Check, MapPin, ChevronDown, Star } from "lucide-react";
+import type { AdminDestination, Area, AreaAttraction } from "@/lib/db";
+
+const CAT_HE: Record<string, string> = {
+  nature: "טבע", museum: "מוזיאון", attraction: "אטרקציה", historic: "היסטוריה",
+  tourism: "תיירות", leisure: "פנאי", sport: "ספורט", food: "אוכל", shopping: "קניות",
+};
 
 // Admin view of the neighbourhood/areas layer: a spatial mini-map + an editable
 // card per area (name, vibe, "best for", gateway) with an approve toggle. Closes
@@ -11,10 +16,19 @@ export function AreasTable({ destinations }: { destinations: AdminDestination[] 
   // default to a city that actually has areas (London) if present
   const [destId, setDestId] = useState(destinations.find((d) => /london/i.test(d.city))?.id ?? destinations[0]?.id ?? 0);
   const [rows, setRows] = useState<Area[]>([]);
+  const [attractions, setAttractions] = useState<AreaAttraction[]>([]);
   const [loading, setLoading] = useState(false);
   const [draft, setDraft] = useState<Record<number, Partial<Area> & { best_for_str?: string }>>({});
   const [saving, setSaving] = useState<number | null>(null);
   const [savedId, setSavedId] = useState<number | null>(null);
+  const [openList, setOpenList] = useState<number | null>(null);
+
+  // attractions grouped by their area
+  const byArea = useMemo(() => {
+    const m = new Map<number, AreaAttraction[]>();
+    for (const a of attractions) { const g = m.get(a.area_id) ?? []; g.push(a); m.set(a.area_id, g); }
+    return m;
+  }, [attractions]);
 
   async function load() {
     setLoading(true);
@@ -26,6 +40,7 @@ export function AreasTable({ destinations }: { destinations: AdminDestination[] 
       const data = await res.json();
       const r: Area[] = res.ok ? (data.rows ?? []) : [];
       setRows(r);
+      setAttractions(res.ok ? (data.attractions ?? []) : []);
       const d: Record<number, Partial<Area> & { best_for_str?: string }> = {};
       for (const a of r) d[a.id] = {
         name_he: a.name_he, name_en: a.name_en, vibe_he: a.vibe_he, gateway_he: a.gateway_he,
@@ -121,8 +136,12 @@ export function AreasTable({ destinations }: { destinations: AdminDestination[] 
             <div key={a.id} className="flex flex-col gap-2.5 rounded-[var(--radius-card)] border p-3.5"
               style={{ borderColor: a.approved ? "var(--brand)" : "var(--border)", background: "var(--surface)" }}>
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 text-[var(--text-3)]"><MapPin size={14} />
-                  <span className="text-[12px]">{a.attraction_count} אתרים</span></div>
+                <button onClick={() => setOpenList((v) => (v === a.id ? null : a.id))}
+                  className="flex items-center gap-1 text-[var(--text-3)] transition hover:text-[var(--brand-ink)]">
+                  <MapPin size={14} />
+                  <span className="text-[12px] font-medium">{(byArea.get(a.id)?.length ?? a.attraction_count)} אתרים</span>
+                  <ChevronDown size={13} className={`transition-transform ${openList === a.id ? "rotate-180" : ""}`} />
+                </button>
                 <button onClick={() => save(a.id, { approved: !a.approved })} disabled={saving === a.id}
                   className="rounded-full border px-3 py-1 text-[12px] font-bold transition disabled:opacity-50"
                   style={a.approved
@@ -154,6 +173,22 @@ export function AreasTable({ destinations }: { destinations: AdminDestination[] 
                   {savedId === a.id ? "נשמר" : "שמירה"}
                 </button>
               </div>
+
+              {openList === a.id && (
+                <div className="mt-1 border-t border-[var(--border)] pt-2.5">
+                  <div className="flex flex-wrap gap-1.5">
+                    {(byArea.get(a.id) ?? []).map((at) => (
+                      <span key={at.id}
+                        className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[12px] text-[var(--text-2)]">
+                        {at.must_see === 1 && <Star size={10} className="text-[var(--accent-ink)]" fill="currentColor" />}
+                        {at.name_he || at.name_en}
+                        <span className="text-[10.5px] text-[var(--text-3)]">· {CAT_HE[at.category] ?? at.category}</span>
+                      </span>
+                    ))}
+                    {!(byArea.get(a.id)?.length) && <span className="text-[12px] text-[var(--text-3)]">אין אתרים מתויגים.</span>}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
