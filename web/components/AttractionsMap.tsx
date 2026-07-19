@@ -86,7 +86,12 @@ function FitBounds({
 function FlyTo({ focus }: { focus: { lat: number; lng: number; n: number } | null }) {
   const map = useMap();
   useEffect(() => {
-    if (focus) map.flyTo([focus.lat, focus.lng], 15, { duration: 0.7 });
+    if (!focus || !Number.isFinite(focus.lat) || !Number.isFinite(focus.lng)) return;
+    const to: [number, number] = [focus.lat, focus.lng];
+    // flyTo reads map.getCenter() (throws if the current view is NaN); fall back to
+    // a non-animated setView so a not-yet-sized map can't crash the click.
+    try { map.flyTo(to, 15, { duration: 0.7 }); }
+    catch { map.setView(to, 15, { animate: false }); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus?.n]);
   return null;

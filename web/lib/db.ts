@@ -909,16 +909,36 @@ export type Area = {
   lat: number; lng: number; radius_m: number | null;
   vibe_he: string | null; best_for: string[] | null; gateway_he: string | null;
   attraction_count: number | null; approved: boolean;
+  kind: string; headline: boolean;
 };
 
 // Areas for a destination, biggest first. Used to label built days with their
-// neighbourhood + gateway.
+// neighbourhood + gateway, and by the admin.
 export async function areasForDestination(destId: number): Promise<Area[]> {
   return query<Area>(
     `SELECT id, name_he, name_en, lat, lng, radius_m, vibe_he, best_for, gateway_he,
-            attraction_count, approved
+            attraction_count, approved, kind, headline
        FROM areas WHERE destination_id = $1
       ORDER BY attraction_count DESC NULLS LAST`,
+    [destId]
+  );
+}
+
+// Headline neighbourhoods shown to the traveller on the city page as first-class
+// experience cards (with how many must-sees they contain, for the framing).
+export type AreaCard = {
+  id: number; name_he: string | null; name_en: string | null; kind: string;
+  vibe_he: string | null; best_for: string[] | null; gateway_he: string | null;
+  attraction_count: number | null; must_count: number; lat: number; lng: number;
+};
+export async function headlineAreasForCity(destId: number): Promise<AreaCard[]> {
+  return query<AreaCard>(
+    `SELECT a.id, a.name_he, a.name_en, a.kind, a.vibe_he, a.best_for, a.gateway_he,
+            a.attraction_count, a.lat, a.lng,
+            (SELECT count(*)::int FROM attractions t WHERE t.area_id = a.id AND t.must_see = 1) AS must_count
+       FROM areas a
+      WHERE a.destination_id = $1 AND a.headline = true
+      ORDER BY a.attraction_count DESC NULLS LAST`,
     [destId]
   );
 }
@@ -946,7 +966,7 @@ export async function adminGraph(destId: number, n = 40): Promise<{ stats: Graph
 }
 
 // Editor-editable area fields (the admin neighbourhoods tab).
-const AREA_EDITABLE = new Set(["name_he", "name_en", "vibe_he", "gateway_he", "best_for", "approved"]);
+const AREA_EDITABLE = new Set(["name_he", "name_en", "vibe_he", "gateway_he", "best_for", "approved", "kind", "headline"]);
 
 // The attractions tagged into each area of a city (for the admin to inspect &
 // verify the auto-assignment).

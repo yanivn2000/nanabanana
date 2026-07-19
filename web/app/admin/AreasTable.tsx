@@ -142,13 +142,32 @@ export function AreasTable({ destinations }: { destinations: AdminDestination[] 
                   <span className="text-[12px] font-medium">{(byArea.get(a.id)?.length ?? a.attraction_count)} אתרים</span>
                   <ChevronDown size={13} className={`transition-transform ${openList === a.id ? "rotate-180" : ""}`} />
                 </button>
-                <button onClick={() => save(a.id, { approved: !a.approved })} disabled={saving === a.id}
-                  className="rounded-full border px-3 py-1 text-[12px] font-bold transition disabled:opacity-50"
-                  style={a.approved
-                    ? { background: "var(--brand)", color: "#fff", borderColor: "var(--brand)" }
-                    : { background: "var(--surface-2)", color: "var(--text-2)", borderColor: "var(--border)" }}>
-                  {a.approved ? "✓ מאושר" : "אשר אזור"}
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <div className="inline-flex rounded-full bg-[var(--surface-2)] p-0.5 text-[11px]">
+                    {(["landmark", "vibe"] as const).map((k) => (
+                      <button key={k} onClick={() => save(a.id, { kind: k })} disabled={saving === a.id}
+                        className="rounded-full px-2 py-0.5 font-medium transition disabled:opacity-50"
+                        style={a.kind === k ? { background: "var(--surface)", color: "var(--brand-ink)", boxShadow: "var(--shadow)" } : { color: "var(--text-3)" }}>
+                        {k === "vibe" ? "✨ אווירה" : "⭐ ציון-דרך"}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => save(a.id, { headline: !a.headline })} disabled={saving === a.id}
+                    title="להציג כחוויית-חובה בראש דף העיר"
+                    className="rounded-full border px-2 py-1 text-[11px] font-bold transition disabled:opacity-50"
+                    style={a.headline
+                      ? { background: "var(--accent-soft)", color: "var(--accent-ink)", borderColor: "var(--accent)" }
+                      : { background: "var(--surface-2)", color: "var(--text-3)", borderColor: "var(--border)" }}>
+                    {a.headline ? "★ בכותרת" : "בכותרת?"}
+                  </button>
+                  <button onClick={() => save(a.id, { approved: !a.approved })} disabled={saving === a.id}
+                    className="rounded-full border px-3 py-1 text-[12px] font-bold transition disabled:opacity-50"
+                    style={a.approved
+                      ? { background: "var(--brand)", color: "#fff", borderColor: "var(--brand)" }
+                      : { background: "var(--surface-2)", color: "var(--text-2)", borderColor: "var(--border)" }}>
+                    {a.approved ? "✓ מאושר" : "אשר"}
+                  </button>
+                </div>
               </div>
               <div className="flex gap-2">
                 <input value={d.name_he ?? ""} onChange={(e) => set(a.id, "name_he", e.target.value)} placeholder="שם (עברית)"

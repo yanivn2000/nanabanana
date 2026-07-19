@@ -22,7 +22,7 @@ import { PACE_PER_DAY } from "@/lib/trip-types";
 import { deriveTaste, tasteScore, INTEREST_TASTE, INTEREST_CATS } from "@/lib/taste";
 import { CategoryTile } from "@/components/CategoryTiles";
 import { shortPath, PROFILES, PROFILE_HE, PROFILE_EMOJI, INTERESTS, type Profile } from "@/lib/shortpath";
-import type { Attraction, Destination, Insight } from "@/lib/db";
+import type { Attraction, Destination, Insight, AreaCard } from "@/lib/db";
 
 // Every interest in the profile vocabulary — used as the fallback tile set when
 // the traveler hasn't set profile interests yet.
@@ -130,6 +130,54 @@ function ChoiceBtn({ tone, active, onClick, icon, label }: {
   );
 }
 
+// Headline neighbourhoods as first-class experiences — a strip above the
+// attractions. A "vibe" area's draw is the area itself (markets, streets); a
+// "landmark" area is a dense cluster of must-sees. Clicking flies the map there.
+function NeighbourhoodStrip({ areas, onFocus }: {
+  areas: AreaCard[]; onFocus: (a: AreaCard) => void;
+}) {
+  if (!areas.length) return null;
+  return (
+    <section className="mx-auto max-w-[1600px] px-5 pt-4 lg:px-8">
+      <div className="mb-2 flex items-baseline gap-2">
+        <h2 className="text-[17px] font-bold">שכונות שאסור לפספס</h2>
+        <span className="text-[13px] text-[var(--text-3)]">חוויית חצי-יום — לחצו כדי לראות על המפה</span>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:thin]">
+        {areas.map((a) => {
+          const vibe = a.kind === "vibe";
+          return (
+            <button key={a.id} onClick={() => onFocus(a)}
+              className="group flex w-[248px] shrink-0 flex-col rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3.5 text-right shadow-[var(--shadow)] transition hover:-translate-y-0.5 hover:border-[var(--brand)]">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <span className="rounded-full px-2 py-0.5 text-[11px] font-bold"
+                  style={vibe ? { background: "var(--accent-soft)", color: "var(--accent-ink)" } : { background: "var(--brand-soft)", color: "var(--brand-ink)" }}>
+                  {vibe ? "✨ חוויית שכונה" : "⭐ חובה"}
+                </span>
+                <span className="text-[11.5px] text-[var(--text-3)]">{a.name_en}</span>
+              </div>
+              <h3 className="text-[16.5px] font-bold leading-tight">{a.name_he}</h3>
+              {a.vibe_he && <p className="mt-1 line-clamp-3 text-[13px] leading-snug text-[var(--text-2)]">{a.vibe_he}</p>}
+              {!!a.best_for?.length && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {a.best_for.slice(0, 3).map((t) => (
+                    <span key={t} className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] text-[var(--text-2)]">{t}</span>
+                  ))}
+                </div>
+              )}
+              <p className="mt-2.5 border-t border-[var(--border)] pt-2 text-[12px] text-[var(--text-3)]">
+                {vibe
+                  ? <>השכונה עצמה היא החוויה · {a.attraction_count} מקומות</>
+                  : <><b className="text-[var(--text-2)]">{a.must_count} אתרי חובה</b> כאן · {a.attraction_count} מקומות</>}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export function DestinationView({
   dest,
   attractions: baseAttractions,
@@ -139,6 +187,7 @@ export function DestinationView({
   coveredIds = [],
   isEditor = false,
   communityCount = 0,
+  areas = [],
 }: {
   dest: Destination;
   attractions: Attraction[];
@@ -148,6 +197,7 @@ export function DestinationView({
   coveredIds?: number[];
   isEditor?: boolean;
   communityCount?: number;
+  areas?: AreaCard[];
 }) {
   const covered = new Set(coveredIds);
   // Editor curation: optimistic overrides of the two ratings while the write to
@@ -384,6 +434,7 @@ export function DestinationView({
     [attractions, choices]
   );
   const [fitNonce, setFitNonce] = useState(0);
+  const [areaFocus, setAreaFocus] = useState<{ lat: number; lng: number; n: number } | null>(null);
   // Mobile: the 240px sticky map strip eats most of the screen — let the
   // traveler collapse it. Desktop always shows the map rail. A window resize
   // event after the toggle makes Leaflet re-measure its container.
@@ -626,6 +677,12 @@ export function DestinationView({
         </div>
       </header>
 
+      {/* headline neighbourhoods — first-class experiences above the attractions */}
+      <NeighbourhoodStrip areas={areas} onFocus={(a) => {
+        setAreaFocus({ lat: a.lat, lng: a.lng, n: Date.now() });
+        if (!mapOpen) setMapOpen(true);
+      }} />
+
       {/* pass panel — reveals smoothly under the hero so the poster never jumps */}
       {passes.length > 0 && (
         <div className="grid transition-[grid-template-rows] duration-300 ease-out"
@@ -788,7 +845,7 @@ export function DestinationView({
         {/* map — a narrow sticky rail on desktop; full-width strip on mobile */}
         <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-2 lg:!h-[calc(100dvh-164px)] lg:top-[164px] lg:w-[380px] lg:shrink-0 lg:border-y-0 lg:border-s`}>
           <MapClient attractions={displayItems} center={[dest.lat, dest.lng]} selected={selected}
-            picks={pickedAttractions} fitNonce={fitNonce} onBounds={setBounds} hoveredId={hoveredId} />
+            picks={pickedAttractions} fitNonce={fitNonce} onBounds={setBounds} hoveredId={hoveredId} focus={areaFocus} />
           {pickedAttractions.length > 0 && (
             <button onClick={() => setFitNonce((n) => n + 1)}
               className="absolute left-1/2 top-3 z-[1000] flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-3.5 py-1.5 text-[13px] font-semibold text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:bg-[var(--brand-soft)]">
