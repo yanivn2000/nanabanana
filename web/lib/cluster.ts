@@ -16,7 +16,43 @@
 // travel, so they earn a slot cheaply — the "we're already here, let's pop in"
 // delight.
 import type { Attraction } from "./db";
+import type { Day } from "./trip-types";
 import { haversineKm, walkMinutes } from "./geo";
+
+// A neighbourhood, trimmed to what day-labelling needs.
+export type AreaLite = {
+  name_he: string | null; lat: number; lng: number;
+  radius_m: number | null; gateway_he: string | null;
+};
+
+// Tag each built day with the neighbourhood it mostly explores, and — for areas
+// out of the city centre — how to get there ("DLR to Cutty Sark"). Purely a label
+// pass over an already-built itinerary, so it works for both the heuristic and AI
+// plans. Matches a day to the nearest area whose centroid is within its extent.
+export function annotateDaysWithAreas(
+  days: Day[], areas: AreaLite[], center: { lat: number; lng: number }
+): void {
+  if (!areas.length) return;
+  for (const day of days) {
+    const pts = day.stops.filter((s) => s.lat != null && s.lng != null);
+    if (!pts.length) continue;
+    const clat = pts.reduce((s, p) => s + (p.lat as number), 0) / pts.length;
+    const clng = pts.reduce((s, p) => s + (p.lng as number), 0) / pts.length;
+    let best: AreaLite | null = null, bestKm = Infinity;
+    for (const a of areas) {
+      const km = haversineKm(clat, clng, a.lat, a.lng);
+      // within the area's extent (+600m slack) and the closest such area
+      if (km * 1000 <= (a.radius_m ?? 800) + 600 && km < bestKm) { bestKm = km; best = a; }
+    }
+    if (!best) continue;
+    day.area = best.name_he ?? undefined;
+    // Gateway framing only when the neighbourhood is genuinely out of the centre
+    // (> 2.5 km) — you don't tell someone to "take the train" to where they are.
+    if (best.gateway_he && haversineKm(best.lat, best.lng, center.lat, center.lng) > 2.5) {
+      day.gateway = best.gateway_he;
+    }
+  }
+}
 
 const VISIT_DEFAULT = 75, VISIT_MIN = 40, VISIT_MAX = 150;
 const CANDIDATES_PER_DAY = 8;   // top-value places that seed the tour structure

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges } from "@/lib/db";
+import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges, areasForDestination } from "@/lib/db";
+import { annotateDaysWithAreas } from "@/lib/cluster";
 import type { Attraction, Destination } from "@/lib/db";
 import {
   aiConfigured,
@@ -210,10 +211,13 @@ export async function POST(req: NextRequest) {
   // into the plan (too many for the days, or squeezed out) so the trip page can
   // offer to add them back. Empty unless this was a real selection build.
   const yesSet = new Set(body.selection?.yes ?? []);
+  // Neighbourhood layer (C): label each built day with its area + gateway.
+  const areas = await areasForDestination(dest.id);
   const respondGenerate = (itin: Itinerary, engine?: string) => {
     const scheduled = new Set<number>();
     const withDetails = attachDetails(itin, buildList, anchorIds, scheduled);
     recordTripEdges(dest, withDetails);
+    annotateDaysWithAreas(withDetails.days, areas, { lat: dest.lat, lng: dest.lng });
     const leftOut = body.selection
       ? picks.filter((a) => yesSet.has(a.id) && !scheduled.has(a.id))
           .map((a) => ({ id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category }))

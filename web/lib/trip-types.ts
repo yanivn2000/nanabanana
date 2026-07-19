@@ -39,6 +39,10 @@ export type Day = {
   base: string;
   stops: Stop[];
   why?: string;
+  // Neighbourhood framing (feature C): the area this day mostly explores, and how
+  // to get there from the centre (only set for out-of-centre areas).
+  area?: string;
+  gateway?: string;
 };
 
 export type Itinerary = {

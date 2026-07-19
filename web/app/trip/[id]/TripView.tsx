@@ -499,6 +499,11 @@ export function TripView({ tripId }: { tripId: string }) {
       {itinerary && day && (
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--border)] px-5 pb-2 lg:pl-8 lg:pr-[204px]">
           <h2 className="serif text-[15px] font-bold leading-tight lg:text-[16px]">{dayLabels[curIdx]}</h2>
+          {day.area && (
+            <span className="flex items-center gap-1 rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[12px] font-medium text-[var(--brand-ink)]">
+              <MapPin size={11} /> {day.area}
+            </span>
+          )}
           {editing && (
             <span className="flex gap-1">
               <button onClick={() => moveDay(curIdx, -1)} disabled={curIdx === 0} aria-label="הקדם את היום"
@@ -610,6 +615,12 @@ export function TripView({ tripId }: { tripId: string }) {
               the map as one continuous workspace */}
           <div className={mobileTab === "map" ? "hidden lg:block" : ""}>
             <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-3 lg:mt-0 lg:px-4">
+              {day.gateway && !editing && (
+                <div className="flex items-start gap-2 border-b border-[var(--border)] py-2.5 text-[12.5px] leading-snug text-[var(--text-2)]">
+                  <span aria-hidden className="mt-px">🚉</span>
+                  <span><b className="text-[var(--text)]">איך מגיעים לאזור:</b> {day.gateway}</span>
+                </div>
+              )}
               {day.stops.map((s, si) => {
                 const key = `${curIdx}-${si}`;
                 const isOpen = expanded === key;

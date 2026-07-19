@@ -902,3 +902,23 @@ export async function getEdges(ids: number[]): Promise<AttractionEdge[]> {
 export async function markTransitSynced(destId: number): Promise<void> {
   await query(`UPDATE destinations SET transit_synced_at = now() WHERE id = $1`, [destId]);
 }
+
+// --- Neighbourhoods / areas (feature C) --------------------------------------
+export type Area = {
+  id: number; name_he: string | null; name_en: string | null;
+  lat: number; lng: number; radius_m: number | null;
+  vibe_he: string | null; best_for: string[] | null; gateway_he: string | null;
+  attraction_count: number | null; approved: boolean;
+};
+
+// Areas for a destination, biggest first. Used to label built days with their
+// neighbourhood + gateway.
+export async function areasForDestination(destId: number): Promise<Area[]> {
+  return query<Area>(
+    `SELECT id, name_he, name_en, lat, lng, radius_m, vibe_he, best_for, gateway_he,
+            attraction_count, approved
+       FROM areas WHERE destination_id = $1
+      ORDER BY attraction_count DESC NULLS LAST`,
+    [destId]
+  );
+}
