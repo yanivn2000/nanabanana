@@ -535,6 +535,56 @@ export function DestinationView({
                 )}
               </div>
 
+              {/* audience tabs — in the top bar, transparent (no card). 'הכל' opens the deep explore filters. */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[13.5px] font-semibold text-[var(--text-2)]">בשביל מי הטיול?</span>
+                {PROFILES.map((p) => {
+                  const on = audience === p;
+                  return (
+                    <button key={p} onClick={() => { setAudience(on ? null : p); setBoosts(new Set()); setExploreAll(false); }}
+                      className="rounded-full border px-3.5 py-1.5 text-[13.5px] font-semibold transition"
+                      style={{ background: on ? "var(--brand)" : "var(--surface)", color: on ? "#fff" : "var(--text-2)",
+                               borderColor: on ? "var(--brand)" : "var(--border)" }}>
+                      {PROFILE_EMOJI[p]} {PROFILE_HE[p]}
+                    </button>
+                  );
+                })}
+                <button onClick={() => (mode === "explore" ? goChoose() : goExplore())}
+                  className="rounded-full border px-3.5 py-1.5 text-[13.5px] font-semibold transition"
+                  style={{ background: mode === "explore" ? "var(--brand)" : "var(--surface)", color: mode === "explore" ? "#fff" : "var(--text-2)",
+                           borderColor: mode === "explore" ? "var(--brand)" : "var(--border)" }}>
+                  🔎 הכל
+                </button>
+              </div>
+
+              {/* short mode — taste calibration + one-tap build, transparent (no card) */}
+              {mode === "short" && (
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[12.5px] text-[var(--text-3)]"><b className="text-[var(--text-2)]">{sp!.path.length}</b> המקומות שהכי אהובים על {PROFILE_HE[audience!]} · כיילו:</span>
+                    {INTERESTS.map((it) => {
+                      const on = boosts.has(it.key);
+                      return (
+                        <button key={it.key}
+                          onClick={() => setBoosts((s) => { const n = new Set(s); if (n.has(it.key)) n.delete(it.key); else n.add(it.key); return n; })}
+                          className="rounded-full border px-3 py-1 text-[12.5px] font-medium transition"
+                          style={{ background: on ? "var(--text)" : "var(--surface)", color: on ? "#fff" : "var(--text-2)",
+                                   borderColor: on ? "var(--text)" : "var(--border)" }}>
+                          {it.emoji} {it.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button onClick={() => { setBuildFromSp(true); openBuild(); }}
+                    className="flex items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-2.5 text-[14.5px] font-semibold text-white transition hover:opacity-90 sm:self-start sm:px-8">
+                    ✨ בנו לי טיול ל{PROFILE_HE[audience!]}
+                  </button>
+                </div>
+              )}
+              {mode === "choose" && (
+                <p className="text-[13px] text-[var(--text-3)]">בחרו למי הטיול — ונראה לכם ~12 מקומות שהכי אהובים על אנשים כמוכם. או “🔎 הכל” לחקירה מלאה.</p>
+              )}
+
               {/* interests — the deep-explore topic editor; only in explore mode */}
               {mode === "explore" && (
               <div className="min-w-0">
@@ -729,75 +779,6 @@ export function DestinationView({
           )}
         </section>
       )}
-
-      {/* three ways in: choose an audience (default) · short path + calibrate · the almost-hidden deep explore */}
-      <div className="mx-5 mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 lg:mx-8">
-        {mode === "explore" ? (
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[13.5px] text-[var(--text-2)]">🔎 חקירה מעמיקה · כל {attractions.length} האטרקציות — אתם מחליטים מה כן ומה לא</span>
-            <button onClick={goChoose}
-              className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-1.5 text-[13.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
-              ← חזרה לבחירת מסלול
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <span className="serif text-[17px] font-bold text-[var(--text)]">בשביל מי הטיול?</span>
-              {mode === "short"
-                ? <span className="text-[12.5px] text-[var(--text-3)]"><b className="text-[var(--text-2)]">{sp!.path.length}</b> המקומות שהכי אהובים על {PROFILE_HE[audience!]} — כיילו, סמנו, או בנו טיול</span>
-                : <span className="text-[12.5px] text-[var(--text-3)]">נראה לכם את המקומות שהכי אהובים על אנשים כמוכם</span>}
-            </div>
-            <div className="mt-2.5 flex flex-wrap gap-2">
-              {PROFILES.map((p) => {
-                const on = audience === p;
-                return (
-                  <button key={p} onClick={() => { setAudience(on ? null : p); setBoosts(new Set()); setExploreAll(false); }}
-                    className="rounded-full border px-4 py-2 text-[14px] font-semibold transition"
-                    style={{ background: on ? "var(--brand)" : "var(--surface)", color: on ? "#fff" : "var(--text-2)",
-                             borderColor: on ? "var(--brand)" : "var(--border)" }}>
-                    {PROFILE_EMOJI[p]} {PROFILE_HE[p]}
-                  </button>
-                );
-              })}
-            </div>
-            {mode === "short" && (
-              <>
-                {/* mode 3 — build it for me, no marking needed (anchors on the short path) */}
-                <button onClick={() => { setBuildFromSp(true); openBuild(); }}
-                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-2.5 text-[14.5px] font-semibold text-white transition hover:opacity-90">
-                  ✨ בנו לי טיול ל{PROFILE_HE[audience!]}
-                </button>
-                {/* mode 2 — calibrate the short list by taste (and mark כן/לא on cards below) */}
-                <div className="mt-3 border-t border-[var(--border)] pt-3">
-                  <div className="mb-1.5 text-[12.5px] text-[var(--text-3)]">כיילו לפי הטעם (לא חובה):</div>
-                  <div className="flex flex-wrap gap-2">
-                    {INTERESTS.map((it) => {
-                      const on = boosts.has(it.key);
-                      return (
-                        <button key={it.key}
-                          onClick={() => setBoosts((s) => { const n = new Set(s); if (n.has(it.key)) n.delete(it.key); else n.add(it.key); return n; })}
-                          className="rounded-full border px-3 py-1.5 text-[13px] font-medium transition"
-                          style={{ background: on ? "var(--text)" : "var(--surface)", color: on ? "#fff" : "var(--text-2)",
-                                   borderColor: on ? "var(--text)" : "var(--border)" }}>
-                          {it.emoji} {it.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
-            {/* mode 1 — the almost-hidden deep explore */}
-            <button onClick={goExplore}
-              className="mt-3 block text-[12.5px] text-[var(--text-3)] underline decoration-dotted underline-offset-2 transition hover:text-[var(--text-2)]">
-              {mode === "short"
-                ? `🔎 או חקרו את כל ${attractions.length} האטרקציות בעצמכם`
-                : `מעדיפים לחקור לבד? ראו את כל ${attractions.length} האטרקציות ←`}
-            </button>
-          </>
-        )}
-      </div>
 
       <div className={`lg:flex lg:items-start ${mode === "choose" ? "hidden" : ""}`}>
         {/* map — a narrow sticky rail on desktop; full-width strip on mobile */}
