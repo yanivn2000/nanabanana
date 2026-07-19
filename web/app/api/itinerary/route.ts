@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listDestinations, topAttractions, insightsForDestination, attractionsByIds } from "@/lib/db";
+import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges } from "@/lib/db";
 import type { Attraction, Destination } from "@/lib/db";
 import {
   aiConfigured,
@@ -13,7 +13,25 @@ import { rateLimit } from "@/lib/ratelimit";
 import * as Sentry from "@sentry/nextjs";
 import { paceToPerDay } from "@/lib/trip-types";
 import { rankByTaste, tasteEmphasis } from "@/lib/taste";
-import { haversineKm } from "@/lib/geo";
+import { haversineKm, estimateLeg } from "@/lib/geo";
+import type { Itinerary as ItineraryT } from "@/lib/trip-types";
+
+// Record the walking bridges between consecutive located stops of a built trip,
+// so the transport edge graph fills in from real builds (fire-and-forget — never
+// blocks or fails the response). Deterministic haversine walk; transit later.
+function recordTripEdges(dest: { id: number }, itin: ItineraryT): void {
+  const legs: { from: number; to: number; walk_m: number; walk_min: number }[] = [];
+  for (const day of itin.days) {
+    const s = day.stops;
+    for (let i = 0; i < s.length - 1; i++) {
+      const a = s[i], b = s[i + 1];
+      if (!a.id || !b.id || a.lat == null || a.lng == null || b.lat == null || b.lng == null) continue;
+      const leg = estimateLeg(a.lat, a.lng, b.lat, b.lng);
+      legs.push({ from: a.id, to: b.id, walk_m: leg.km * 1000, walk_min: leg.walkMin });
+    }
+  }
+  if (legs.length) void recordWalkEdges(dest.id, legs).catch(() => {});
+}
 import type { TripHotel } from "@/lib/ai";
 import type { Itinerary } from "@/lib/trip-types";
 
@@ -98,6 +116,7 @@ function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set
         a = list.find((x) => x.n.length >= 4 && (key.includes(x.n) || x.n.includes(key)))?.a;
       }
       if (a) {
+        s.id = a.id;
         s.image = a.image_url; s.website = a.website;
         s.lat = a.lat; s.lng = a.lng;
         s.tagline = a.tagline_he; s.bestTime = a.best_time_he;
@@ -189,6 +208,7 @@ export async function POST(req: NextRequest) {
   const respondGenerate = (itin: Itinerary, engine?: string) => {
     const scheduled = new Set<number>();
     const withDetails = attachDetails(itin, buildList, anchorIds, scheduled);
+    recordTripEdges(dest, withDetails);
     const leftOut = body.selection
       ? picks.filter((a) => yesSet.has(a.id) && !scheduled.has(a.id))
           .map((a) => ({ id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category }))

@@ -432,6 +432,7 @@ export type AdminDestination = {
   best_months: number[] | null; israeli_popularity_score: number | null;
   timezone: string | null; currency: string | null; language: string | null;
   shown_count: number; must_count: number; editor_ranked: number; img_pct: number; he_pct: number;
+  transit_synced_at: string | null; edge_count: number; transit_edge_count: number;
 };
 
 // Every destination with its full record + content-health stats for the admin.
@@ -439,7 +440,9 @@ export async function adminDestinations(): Promise<AdminDestination[]> {
   return query<AdminDestination>(
     `SELECT d.id, d.city, d.country, d.region, d.city_he, d.country_he, d.lat, d.lng,
             d.description_he, d.best_months, d.israeli_popularity_score,
-            d.timezone, d.currency, d.language,
+            d.timezone, d.currency, d.language, d.transit_synced_at,
+            (SELECT count(*)::int FROM attraction_edges e WHERE e.destination_id = d.id) AS edge_count,
+            (SELECT count(*)::int FROM attraction_edges e WHERE e.destination_id = d.id AND e.transit_mode IS NOT NULL) AS transit_edge_count,
             count(a.id) FILTER (WHERE ${SHOWN})::int AS shown_count,
             count(a.id) FILTER (WHERE ${SHOWN} AND a.must_see = 1)::int AS must_count,
             (SELECT count(*)::int FROM editor_picks ep WHERE ep.destination_id = d.id AND ep.rank IS NOT NULL) AS editor_ranked,
@@ -839,4 +842,63 @@ export async function setPosterPick(p: {
     [p.dest_id, p.variant ?? "default", p.source, p.photo_id, p.photographer,
      p.photographer_url, p.src_url, p.page_url, p.width, p.height]
   );
+}
+
+// --- Transport edge graph ("how to get from A to B") -------------------------
+// Precomputed legs between attractions, so a planned itinerary shows mode + time
+// without recomputing or hitting a paid routing API. The graph fills in from real
+// builds: every trip records the walking bridges between its consecutive stops,
+// keyed on attraction ids, and reused forever. Walk is deterministic; transit is
+// layered on later from open GTFS (leaving these walk fields intact).
+export type WalkLeg = { from: number; to: number; walk_m: number; walk_min: number };
+
+export async function recordWalkEdges(destId: number, legs: WalkLeg[]): Promise<void> {
+  const valid = legs.filter((l) => l.from && l.to && l.from !== l.to
+    && Number.isFinite(l.walk_m) && Number.isFinite(l.walk_min));
+  if (!valid.length) return;
+  // One multi-row upsert. Refresh the walk estimate + timestamp on conflict, but
+  // never touch transit_* here (a real GTFS lookup must not be clobbered by null).
+  const rows: string[] = [];
+  const params: unknown[] = [destId];
+  for (const l of valid) {
+    const b = params.length;
+    rows.push(`($1, $${b + 1}, $${b + 2}, $${b + 3}, $${b + 4}, 'haversine', now())`);
+    params.push(l.from, l.to, Math.round(l.walk_m), Math.round(l.walk_min));
+  }
+  await query(
+    `INSERT INTO attraction_edges
+       (destination_id, from_id, to_id, walk_m, walk_min, source, computed_at)
+     VALUES ${rows.join(", ")}
+     ON CONFLICT (from_id, to_id) DO UPDATE SET
+       walk_m = EXCLUDED.walk_m, walk_min = EXCLUDED.walk_min,
+       destination_id = EXCLUDED.destination_id, computed_at = now()`,
+    params
+  );
+}
+
+// Read cached edges for a set of ordered pairs (both directions accepted, since
+// walking is symmetric). Returned keyed as "from-to" for whichever direction hit.
+export type AttractionEdge = {
+  from_id: number; to_id: number; walk_m: number | null; walk_min: number | null;
+  transit_mode: string | null; transit_line: string | null;
+  transit_min: number | null; transit_transfers: number | null;
+  source: string; transit_checked_at: string | null;
+};
+
+export async function getEdges(ids: number[]): Promise<AttractionEdge[]> {
+  const clean = [...new Set(ids.filter((n) => Number.isFinite(n)))];
+  if (clean.length < 2) return [];
+  return query<AttractionEdge>(
+    `SELECT from_id, to_id, walk_m, walk_min, transit_mode, transit_line,
+            transit_min, transit_transfers, source, transit_checked_at
+       FROM attraction_edges
+      WHERE from_id = ANY($1) AND to_id = ANY($1)`,
+    [clean]
+  );
+}
+
+// Stamp a city as "transit synced now" — set when we (re)run the GTFS/OTP fill
+// for its edges, so the admin can see which cities are due a refresh.
+export async function markTransitSynced(destId: number): Promise<void> {
+  await query(`UPDATE destinations SET transit_synced_at = now() WHERE id = $1`, [destId]);
 }

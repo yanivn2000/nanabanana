@@ -15,6 +15,9 @@ export type Stop = {
   duration: string;
   score?: number;
   note?: string;
+  // DB attraction id, matched back on build — lets us key the transport edge
+  // graph (attraction_edges) on real place pairs.
+  id?: number;
   // Two-tier day (Explore build): true = day anchor (a chosen "כן"/must-see),
   // false = an "אם יש זמן" filler. Undefined = not built from a selection, or a
   // logistical stop (meal/rest) that matched no attraction.

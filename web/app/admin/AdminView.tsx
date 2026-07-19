@@ -20,6 +20,24 @@ type TabKey = (typeof TABS)[number]["key"];
 
 const KIND_HE: Record<string, string> = { bug: "🐞 באג", idea: "💡 רעיון", other: "💬 אחר" };
 
+// Transit-sync recency badge: green if fresh (<90d), amber if stale, grey if the
+// city's transit bridges were never synced — so it's clear which cities are due.
+function TransitSync({ at }: { at: string | null }) {
+  const days = at ? Math.floor((Date.now() - new Date(at).getTime()) / 86_400_000) : null;
+  const stale = days == null || days > 90;
+  const label = at
+    ? `🚇 סונכרן ${new Date(at).toLocaleDateString("he-IL", { day: "numeric", month: "short", year: "2-digit" })}`
+    : "🚇 לא סונכרן";
+  return (
+    <span className="rounded px-1.5 py-0.5"
+      style={{ background: stale ? "var(--amber-soft)" : "var(--brand-soft)",
+               color: stale ? undefined : "var(--brand-ink)" }}
+      title={at ? `תחבורה ציבורית סונכרנה לפני ${days} ימים${days! > 90 ? " — כדאי לסנכרן שוב" : ""}` : "התחבורה הציבורית של העיר טרם סונכרנה"}>
+      {label}
+    </span>
+  );
+}
+
 // Editable field spec for the city editor (order = display order).
 const FIELDS: { key: string; label: string; type: "text" | "number" | "textarea"; dir?: "ltr" }[] = [
   { key: "city_he", label: "עיר (עברית)", type: "text" },
@@ -76,6 +94,10 @@ function CityRow({ d }: { d: AdminDestination }) {
           {d.editor_ranked > 0 && <span className="rounded bg-[var(--amber-soft)] px-1.5 py-0.5">✎ {d.editor_ranked} דורגו</span>}
           <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5">🖼 {d.img_pct}%</span>
           <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5">עב׳ {d.he_pct}%</span>
+          <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5" title={`${d.edge_count} גשרי מעבר, מתוכם ${d.transit_edge_count} עם תחבורה ציבורית`}>
+            🌉 {d.edge_count}
+          </span>
+          <TransitSync at={d.transit_synced_at} />
         </span>
       </button>
       {/* editor */}

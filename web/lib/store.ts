@@ -26,6 +26,7 @@ export type FamilyProfile = {
   accessibility?: string[]; // כיסא גלגלים / ללא מדרגות / נגיש לעגלה …
   dietary?: string[];       // ללא גלוטן / צמחוני / כשר …
   taste?: Record<string, number>; // explicit taste weights (equalizer, #63/#66)
+  walkPref?: number;        // 1-5: how far the traveler will walk between stops (see WALK_PREF_KM)
 };
 
 export const DEFAULT_PROFILE: FamilyProfile = {
@@ -41,6 +42,7 @@ export const DEFAULT_PROFILE: FamilyProfile = {
   lodging: "מלון",
   accessibility: [],
   dietary: [],
+  walkPref: 3,
 };
 
 const KEY = "nanabanana.profile.v1";

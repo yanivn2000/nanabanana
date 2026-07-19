@@ -7,9 +7,9 @@ import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, Pencil, ChevronUp, ChevronDown,
   ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon, Route, Users, Luggage, ListChecks, Wallet, CalendarDays,
-  PersonStanding, Clock, MapPin, Ruler, Footprints, Copy, Lightbulb,
+  Clock, MapPin, Ruler, Footprints, Copy, Lightbulb,
 } from "lucide-react";
-import { googleMapsUrl, haversineKm, formatDistance } from "@/lib/geo";
+import { googleMapsUrl, googleDirUrl, formatDistance, estimateLeg, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
 import { stopColor } from "@/lib/labels";
 import { bigImage } from "@/lib/labels";
 import { KIND_META } from "@/lib/sample";
@@ -140,19 +140,23 @@ export function TripView({ tripId }: { tripId: string }) {
   colorIdxByStop.forEach((ci, si) => { if (ci != null) locatedToStop[ci] = si; });
   const stopColors = mapStops.map((_, i) => stopColor(i));
 
-  // Walking legs between consecutive located stops — a straight-line distance
-  // with a ~1.35 street-detour factor, at ~4.6 km/h. An honest estimate (not a
-  // routed path), keyed to a stop's index so it renders in the gap below it.
-  const legAfter: Record<number, { km: number; min: number }> = {};
+  // How to get between consecutive located stops: walk vs public transport,
+  // decided by the traveler's walk tolerance (walkPref). An honest estimate (not
+  // a routed path) — keyed to a stop's index so it renders in the gap below it.
+  // Carries the endpoint coords so the row can deep-link to live navigation.
+  type LegRow = Leg & { fromLat: number; fromLng: number; toLat: number; toLng: number };
+  const walkPref = tripProfile.walkPref ?? DEFAULT_WALK_PREF;
+  const legAfter: Record<number, LegRow> = {};
   const dstops = day?.stops ?? [];
   for (let si = 0; si < dstops.length - 1; si++) {
     const a = dstops[si], b = dstops[si + 1];
     if (a.lat == null || a.lng == null || b.lat == null || b.lng == null) continue;
-    const km = haversineKm(a.lat, a.lng, b.lat, b.lng) * 1.35;
-    legAfter[si] = { km, min: Math.max(1, Math.round((km / 4.6) * 60)) };
+    legAfter[si] = { ...estimateLeg(a.lat, a.lng, b.lat, b.lng, walkPref),
+      fromLat: a.lat, fromLng: a.lng, toLat: b.lat, toLng: b.lng };
   }
-  const dayTotalKm = Object.values(legAfter).reduce((s, l) => s + l.km, 0);
-  const dayTotalWalkMin = Object.values(legAfter).reduce((s, l) => s + l.min, 0);
+  const legs = Object.values(legAfter);
+  const dayTotalKm = legs.reduce((s, l) => s + l.km, 0);
+  const dayTotalWalkMin = legs.reduce((s, l) => s + l.walkMin, 0);
   const dayStart = dstops[0]?.time;
   const dayEnd = dstops[dstops.length - 1]?.time;
 
@@ -745,13 +749,25 @@ export function TripView({ tripId }: { tripId: string }) {
                       </div>
                     )}
 
-                    {/* transport to the next stop — a straight-line walking estimate */}
+                    {/* how to get to the next stop — walk vs transit by the
+                        traveler's tolerance, with a live-navigation deep-link */}
                     {leg && !editing && !last && (
                       <div className="flex items-stretch gap-3">
                         <div className="w-12 shrink-0 pr-1" />
-                        <div className="min-w-0 flex-1">
-                          <span className="inline-flex items-center gap-1 text-[12px] text-[var(--text-3)]">
-                            <PersonStanding size={12} /> ~{leg.min} דק׳ הליכה · {formatDistance(leg.km)}
+                        <div className="min-w-0 flex-1 py-0.5">
+                          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-[var(--text-3)]">
+                            <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                              <span aria-hidden>{leg.icon}</span>
+                              <span className="text-[var(--text-2)]">{leg.primaryHe}</span>
+                            </span>
+                            <span className="whitespace-nowrap">· {formatDistance(leg.km)}</span>
+                            {leg.altHe && <span className="whitespace-nowrap">{leg.altHe}</span>}
+                            <a href={googleDirUrl(leg.fromLat, leg.fromLng, leg.toLat, leg.toLng,
+                                 leg.recommended === "transit" ? "transit" : "walking")}
+                              target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-0.5 whitespace-nowrap text-[var(--brand-ink)] underline decoration-dotted underline-offset-2">
+                              <MapPin size={11} /> נווט
+                            </a>
                           </span>
                         </div>
                         <div className="flex w-7 shrink-0 justify-center">

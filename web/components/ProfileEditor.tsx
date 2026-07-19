@@ -3,6 +3,7 @@
 import { Minus, Plus, Trash2 } from "lucide-react";
 import type { FamilyProfile, Kid } from "@/lib/store";
 import { CategoryTile } from "@/components/CategoryTiles";
+import { WALK_PREF_KM, WALK_PREF_LABEL_HE, DEFAULT_WALK_PREF } from "@/lib/geo";
 
 const INTERESTS = ["טבע", "אוכל", "תרבות", "קניות", "ספורט", "חופים", "פארקי שעשועים", "ילדים", "היסטוריה",
   "מוזיקה", "חיי לילה", "מחזמר ותיאטרון", "בלט ואופרה", "וינטג'", "יוקרה", "מוזיאונים"];
@@ -151,6 +152,22 @@ export function ProfileEditor({ value: p, onChange: save }: {
         <input type="range" min={0.5} max={5} step={0.5} value={p.dailyDriveHours}
           onChange={(e) => save({ ...p, dailyDriveHours: Number(e.target.value) })}
           className="w-full accent-[var(--brand)]" />
+      </section>
+
+      <section>
+        <div className="mb-1 flex items-center justify-between">
+          <label className="text-[15px] font-medium">כמה ללכת ברגל בין מקומות</label>
+          <span className="text-[14px] text-[var(--brand-ink)]">{WALK_PREF_LABEL_HE[p.walkPref ?? DEFAULT_WALK_PREF]}</span>
+        </div>
+        <p className="mb-2 text-[13px] text-[var(--text-3)]">
+          עד כמה תעדיפו ללכת ברגל לפני שנציע תחבורה ציבורית (עד ~{WALK_PREF_KM[p.walkPref ?? DEFAULT_WALK_PREF]} ק״מ)
+        </p>
+        <input type="range" min={1} max={5} step={1} value={p.walkPref ?? DEFAULT_WALK_PREF}
+          onChange={(e) => save({ ...p, walkPref: Number(e.target.value) })}
+          className="w-full accent-[var(--brand)]" />
+        <div className="mt-1 flex justify-between px-0.5 text-[11px] text-[var(--text-3)]">
+          <span>🚌 פחות</span><span>🚶 יותר</span>
+        </div>
       </section>
 
       <section>
