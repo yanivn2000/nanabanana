@@ -130,23 +130,17 @@ function ChoiceBtn({ tone, active, onClick, icon, label }: {
   );
 }
 
-// Is this neighbourhood currently chosen to tour (a majority of its places marked)?
-function areaChosen(a: AreaCard, choices: Record<number, Choice>): boolean {
-  if (!a.member_ids.length) return false;
-  const yes = a.member_ids.filter((id) => choices[id] === "yes").length;
-  return yes >= Math.ceil(a.member_ids.length / 2);
-}
-
 // Headline neighbourhoods as first-class experiences — a strip above the
 // attractions. A "vibe" area's draw is the area itself (markets, streets); a
 // "landmark" area is a dense cluster of must-sees. Tapping the body flies the map;
-// "רוצה לתייר כאן" marks the area's places so the builder makes it a day.
-function NeighbourhoodStrip({ areas, choices, onFocus, onToggle, onBuild }: {
-  areas: AreaCard[]; choices: Record<number, Choice>;
-  onFocus: (a: AreaCard) => void; onToggle: (ids: number[], select: boolean) => void; onBuild: () => void;
+// "רוצה לתייר כאן" chooses the area to tour (a separate selection from the
+// attraction marks) so the builder gives it its own day.
+function NeighbourhoodStrip({ areas, chosenIds, onFocus, onToggle, onBuild }: {
+  areas: AreaCard[]; chosenIds: Set<number>;
+  onFocus: (a: AreaCard) => void; onToggle: (id: number) => void; onBuild: () => void;
 }) {
   if (!areas.length) return null;
-  const chosen = areas.filter((a) => areaChosen(a, choices));
+  const chosen = areas.filter((a) => chosenIds.has(a.id));
   return (
     <section className="mx-auto max-w-[1600px] px-5 pt-4 lg:px-8">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -164,7 +158,7 @@ function NeighbourhoodStrip({ areas, choices, onFocus, onToggle, onBuild }: {
       <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:thin]">
         {areas.map((a) => {
           const vibe = a.kind === "vibe";
-          const sel = areaChosen(a, choices);
+          const sel = chosenIds.has(a.id);
           return (
             <div key={a.id}
               className="flex w-[248px] shrink-0 flex-col rounded-[var(--radius-card)] border bg-[var(--surface)] p-3.5 shadow-[var(--shadow)] transition"
@@ -192,7 +186,7 @@ function NeighbourhoodStrip({ areas, choices, onFocus, onToggle, onBuild }: {
                     : <><b className="text-[var(--text-2)]">{a.must_count} אתרי חובה</b> כאן · {a.attraction_count} מקומות</>}
                 </p>
               </button>
-              <button onClick={() => onToggle(a.member_ids, !sel)}
+              <button onClick={() => onToggle(a.id)}
                 className="mt-2 flex items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-medium transition"
                 style={sel
                   ? { background: "var(--brand)", color: "#fff", borderColor: "var(--brand)" }
@@ -464,6 +458,12 @@ export function DestinationView({
   );
   const [fitNonce, setFitNonce] = useState(0);
   const [areaFocus, setAreaFocus] = useState<{ lat: number; lng: number; n: number } | null>(null);
+  // Neighbourhoods chosen to tour — a SEPARATE selection from the attraction
+  // yes/maybe marks, so picking an area never silently floods the attraction picks.
+  const [chosenAreas, setChosenAreas] = useState<Set<number>>(() => new Set());
+  const toggleArea = (id: number) => setChosenAreas((s) => {
+    const next = new Set(s); if (next.has(id)) next.delete(id); else next.add(id); return next;
+  });
   // Mobile: the 240px sticky map strip eats most of the screen — let the
   // traveler collapse it. Desktop always shows the map rail. A window resize
   // event after the toggle makes Leaflet re-measure its container.
@@ -539,7 +539,7 @@ export function DestinationView({
       : yes.length ? yes : (audience && sp ? sp.path.map((x) => x.a.id) : yes);
     setBuilding(true);
     // Neighbourhoods the traveller chose to tour → one guaranteed day each.
-    const chosenAreaGroups = areas.filter((a) => areaChosen(a, choices)).map((a) => a.member_ids);
+    const chosenAreaGroups = areas.filter((a) => chosenAreas.has(a.id)).map((a) => a.member_ids);
     const trip = create({
       title: `טיול ל${dest.city_he || dest.city}`,
       mode: "preferences",
@@ -710,14 +710,36 @@ export function DestinationView({
       </header>
 
       {/* headline neighbourhoods — first-class experiences above the attractions */}
-      <NeighbourhoodStrip areas={areas} choices={choices}
+      <NeighbourhoodStrip areas={areas} chosenIds={chosenAreas}
         onFocus={(a) => { setAreaFocus({ lat: a.lat, lng: a.lng, n: Date.now() }); if (!mapOpen) setMapOpen(true); }}
-        onToggle={(ids, select) => setMany(ids, select ? "yes" : null)}
+        onToggle={toggleArea}
         onBuild={() => {
-          const n = areas.filter((a) => areaChosen(a, choices)).length;
-          if (n) setBuildDays(Math.min(7, Math.max(2, n)));
+          if (chosenAreas.size) setBuildDays(Math.min(7, Math.max(2, chosenAreas.size)));
           setBuildFromSp(false); openBuild();
         }} />
+
+      {/* always-visible selection control — so marks (incl. ones saved from a past
+          visit) are never a mystery: see the count, show only them, or clear all */}
+      {(yesCount + maybeCount) > 0 && (
+        <div className="mx-auto max-w-[1600px] px-5 pt-3 lg:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--brand)] bg-[var(--brand-soft)] px-3.5 py-2">
+            <span className="text-[13.5px] font-medium text-[var(--brand-ink)]">
+              ✓ {yesCount} אטרקציות שסימנתם{maybeCount ? ` · ${maybeCount} אולי` : ""}
+            </span>
+            <div className="flex items-center gap-2">
+              <button onClick={toggleSelectedOnly}
+                className="rounded-full border border-[var(--brand)] bg-[var(--surface)] px-3 py-1 text-[12.5px] font-medium text-[var(--brand-ink)]">
+                {selectedOnly ? "הצג הכל" : "הצג רק נבחרים"}
+              </button>
+              <button onClick={clearAllChoices}
+                className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f]">
+                <X size={13} /> נקה הכל
+              </button>
+            </div>
+          </div>
+          {selectedOnly && <p className="mt-1 text-[12px] text-[var(--text-3)]">מציג רק את מה שסימנתם — לחצו שוב על 👍 בכרטיס כדי להסיר אותו.</p>}
+        </div>
+      )}
 
       {/* pass panel — reveals smoothly under the hero so the poster never jumps */}
       {passes.length > 0 && (
