@@ -88,16 +88,19 @@ export type Attraction = {
   description_he: string | null;
   taste_tags: string[] | null;
   audience_fit: AudienceFit | null;  // {families,couples,friends} 0-100 + type — the short-path signal
+  admin_bonus: AudienceBonus | null; // editor's manual per-audience points, added to consensus
   notable: boolean;                  // has a Wikipedia/Wikidata entry (worthiness input)
 };
 
 // Per-attraction audience suitability, computed by the consensus pipeline.
 export type AudienceFit = { families: number; couples: number; friends: number; type: string; why_he?: string };
+// Editor's manual boost per audience (points added to the computed consensus).
+export type AudienceBonus = { families?: number; couples?: number; friends?: number };
 
 const ATTR_COLS = `id, name_he, name_en, lat, lng, category, subcategory,
   indoor_outdoor, family_score, tips_he, website, duration_minutes,
   image_url, tagline_he, best_season, best_time_he, dress_he, cost_level, must_see,
-  description_he, taste_tags, audience_fit`;
+  description_he, taste_tags, audience_fit, admin_bonus`;
 
 export type Destination = {
   id: number;
@@ -309,6 +312,46 @@ export async function adminInsightsForCity(destId: number): Promise<AdminInsight
 export async function deleteInsight(id: number): Promise<boolean> {
   const rows = await query<{ id: number }>(`DELETE FROM insights WHERE id = $1 RETURNING id`, [id]);
   return rows.length > 0;
+}
+
+// --- Admin: full-transparency attraction table + manual per-audience bonus ---
+export type AdminAttractionRow = {
+  id: number; name_he: string | null; name_en: string; category: string;
+  must_see: number | null; editor_rank: string | null; editor_kids: string | null;
+  audience_fit: AudienceFit | null; admin_bonus: AudienceBonus | null;
+  notable: boolean; family_score: number | null; traveler_count: number;
+};
+
+// Every shown attraction for a city with its scoring signals — the admin sees
+// exactly what drives the consensus, and can add a manual per-audience bonus.
+export async function adminAttractionsForCity(destinationId: number): Promise<AdminAttractionRow[]> {
+  return query<AdminAttractionRow>(
+    `SELECT a.id, a.name_he, a.name_en, a.category,
+            ${EFF_MUST} AS must_see, ep.rank AS editor_rank, ep.kids AS editor_kids,
+            a.audience_fit, a.admin_bonus, ${NOTABLE} AS notable, a.family_score,
+            COALESCE((SELECT COUNT(DISTINCT source_id) FROM insights i
+                       WHERE i.attraction_id = a.id AND i.destination_id = $1 AND i.status='approved'), 0)::int AS traveler_count
+       FROM attractions a ${EDITOR_JOIN}
+      WHERE a.destination_id = $1
+        AND (a.quality_keep = 1 OR a.quality_keep IS NULL)
+        AND (a.is_duplicate IS NULL OR a.is_duplicate = 0)
+        AND (a.is_component IS NULL OR a.is_component = 0)
+      ORDER BY (a.audience_fit IS NOT NULL) DESC,
+               GREATEST(COALESCE((a.audience_fit->>'families')::int, 0),
+                        COALESCE((a.audience_fit->>'couples')::int, 0),
+                        COALESCE((a.audience_fit->>'friends')::int, 0)) DESC,
+               COALESCE(a.family_score, 0) DESC, a.name_en`,
+    [destinationId]);
+}
+
+export async function setAdminBonus(attractionId: number, bonus: AudienceBonus): Promise<void> {
+  const clean: AudienceBonus = {};
+  for (const k of ["families", "couples", "friends"] as const) {
+    const v = Math.round(Number(bonus[k]));
+    if (Number.isFinite(v) && v !== 0) clean[k] = Math.max(-100, Math.min(100, v));
+  }
+  const val = Object.keys(clean).length ? JSON.stringify(clean) : null;
+  await query(`UPDATE attractions SET admin_bonus = $1::jsonb WHERE id = $2`, [val, attractionId]);
 }
 
 export type RematchChange = {

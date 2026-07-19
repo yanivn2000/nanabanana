@@ -4,11 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Loader2, Check, ExternalLink } from "lucide-react";
 import { InsightsIngest } from "./InsightsIngest";
+import { AttractionsTable } from "./AttractionsTable";
 import { Moderation } from "./Moderation";
 import type { AdminDestination, Feedback } from "@/lib/db";
 
 const TABS = [
   { key: "cities", label: "🏙️ ערים" },
+  { key: "attractions", label: "📊 אטרקציות" },
   { key: "insights", label: "📥 תובנות" },
   { key: "moderation", label: "🚩 מודרציה" },
   { key: "feedback", label: "💬 פידבק" },
@@ -143,6 +145,12 @@ export function AdminView({ destinations, feedback, email }: {
           </p>
           {destinations.map((d) => <CityRow key={d.id} d={d} />)}
         </section>
+      )}
+
+      {tab === "attractions" && (
+        <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
+          <AttractionsTable destinations={destinations} />
+        </div>
       )}
 
       {tab === "insights" && (

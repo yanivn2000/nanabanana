@@ -41,7 +41,8 @@ export function shortPath(
     const ts = t ? Math.log1p(t) / Math.log1p(maxTrav) : 0;
     return Math.min(1, 0.10 + 0.28 * ts + 0.28 * (a.notable ? 1 : 0) + 0.34 * curation(a));
   };
-  const consensus = (a: Attraction) => Math.round(100 * worth(a) * ((a.audience_fit![profile] ?? 0) / 100));
+  const consensus = (a: Attraction) =>
+    Math.round(100 * worth(a) * ((a.audience_fit![profile] ?? 0) / 100)) + (a.admin_bonus?.[profile] ?? 0);
   const eligible = withFit.filter((a) => (a.audience_fit![profile] ?? 0) >= FIT_FLOOR);
   const boostMatch = (a: Attraction) =>
     boosts.size > 0 && [...boosts].some((k) => INTERESTS.find((i) => i.key === k)?.match(a));
