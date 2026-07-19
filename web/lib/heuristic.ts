@@ -25,7 +25,8 @@ export function buildHeuristicItinerary(
   attractions: Attraction[],
   isFamily = false,
   perDay = 5,
-  walkPref = 3
+  walkPref = 3,
+  seedGroups?: number[][]
 ): Itinerary {
   // The input is already taste-ranked; for kids, re-sort by family_score first so
   // the clusterer treats the family-relevant places as the higher-value ones.
@@ -35,9 +36,9 @@ export function buildHeuristicItinerary(
 
   // Proximity clustering: instead of slicing the ranked list into days (which
   // scatters each day across the city), group geographically so every day is a
-  // walkable neighbourhood. The per-day time budget is derived from the pace so
-  // tighter clusters — less travel — naturally fit MORE stops.
-  const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes: perDay * 84 });
+  // walkable neighbourhood. seedGroups (chosen-neighbourhood tour) force one day
+  // per area. The per-day budget is derived from the pace.
+  const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes: perDay * 84, seedGroups });
 
   const dayList = clustered.map((picks, d) => {
     const stops: Stop[] = [];

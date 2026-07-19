@@ -130,47 +130,76 @@ function ChoiceBtn({ tone, active, onClick, icon, label }: {
   );
 }
 
+// Is this neighbourhood currently chosen to tour (a majority of its places marked)?
+function areaChosen(a: AreaCard, choices: Record<number, Choice>): boolean {
+  if (!a.member_ids.length) return false;
+  const yes = a.member_ids.filter((id) => choices[id] === "yes").length;
+  return yes >= Math.ceil(a.member_ids.length / 2);
+}
+
 // Headline neighbourhoods as first-class experiences — a strip above the
 // attractions. A "vibe" area's draw is the area itself (markets, streets); a
-// "landmark" area is a dense cluster of must-sees. Clicking flies the map there.
-function NeighbourhoodStrip({ areas, onFocus }: {
-  areas: AreaCard[]; onFocus: (a: AreaCard) => void;
+// "landmark" area is a dense cluster of must-sees. Tapping the body flies the map;
+// "רוצה לתייר כאן" marks the area's places so the builder makes it a day.
+function NeighbourhoodStrip({ areas, choices, onFocus, onToggle, onBuild }: {
+  areas: AreaCard[]; choices: Record<number, Choice>;
+  onFocus: (a: AreaCard) => void; onToggle: (ids: number[], select: boolean) => void; onBuild: () => void;
 }) {
   if (!areas.length) return null;
+  const chosen = areas.filter((a) => areaChosen(a, choices));
   return (
     <section className="mx-auto max-w-[1600px] px-5 pt-4 lg:px-8">
-      <div className="mb-2 flex items-baseline gap-2">
-        <h2 className="text-[17px] font-bold">שכונות שאסור לפספס</h2>
-        <span className="text-[13px] text-[var(--text-3)]">חוויית חצי-יום — לחצו כדי לראות על המפה</span>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-[17px] font-bold">שכונות שאסור לפספס</h2>
+          <span className="text-[13px] text-[var(--text-3)]">בחרו לתייר — ונרכיב יום לכל שכונה</span>
+        </div>
+        {chosen.length > 0 && (
+          <button onClick={onBuild}
+            className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-1.5 text-[13.5px] font-semibold text-white shadow-[0_4px_12px_rgba(14,107,94,.25)]">
+            <Sparkles size={14} /> בנו טיול · {chosen.length} שכונות
+          </button>
+        )}
       </div>
       <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:thin]">
         {areas.map((a) => {
           const vibe = a.kind === "vibe";
+          const sel = areaChosen(a, choices);
           return (
-            <button key={a.id} onClick={() => onFocus(a)}
-              className="group flex w-[248px] shrink-0 flex-col rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3.5 text-right shadow-[var(--shadow)] transition hover:-translate-y-0.5 hover:border-[var(--brand)]">
-              <div className="mb-1 flex items-center justify-between gap-2">
-                <span className="rounded-full px-2 py-0.5 text-[11px] font-bold"
-                  style={vibe ? { background: "var(--accent-soft)", color: "var(--accent-ink)" } : { background: "var(--brand-soft)", color: "var(--brand-ink)" }}>
-                  {vibe ? "✨ חוויית שכונה" : "⭐ חובה"}
-                </span>
-                <span className="text-[11.5px] text-[var(--text-3)]">{a.name_en}</span>
-              </div>
-              <h3 className="text-[16.5px] font-bold leading-tight">{a.name_he}</h3>
-              {a.vibe_he && <p className="mt-1 line-clamp-3 text-[13px] leading-snug text-[var(--text-2)]">{a.vibe_he}</p>}
-              {!!a.best_for?.length && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {a.best_for.slice(0, 3).map((t) => (
-                    <span key={t} className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] text-[var(--text-2)]">{t}</span>
-                  ))}
+            <div key={a.id}
+              className="flex w-[248px] shrink-0 flex-col rounded-[var(--radius-card)] border bg-[var(--surface)] p-3.5 shadow-[var(--shadow)] transition"
+              style={{ borderColor: sel ? "var(--brand)" : "var(--border)", boxShadow: sel ? "0 0 0 1.5px var(--brand)" : undefined }}>
+              <button onClick={() => onFocus(a)} className="flex flex-col text-right">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <span className="rounded-full px-2 py-0.5 text-[11px] font-bold"
+                    style={vibe ? { background: "var(--accent-soft)", color: "var(--accent-ink)" } : { background: "var(--brand-soft)", color: "var(--brand-ink)" }}>
+                    {vibe ? "✨ חוויית שכונה" : "⭐ חובה"}
+                  </span>
+                  <span className="text-[11.5px] text-[var(--text-3)]">{a.name_en}</span>
                 </div>
-              )}
-              <p className="mt-2.5 border-t border-[var(--border)] pt-2 text-[12px] text-[var(--text-3)]">
-                {vibe
-                  ? <>השכונה עצמה היא החוויה · {a.attraction_count} מקומות</>
-                  : <><b className="text-[var(--text-2)]">{a.must_count} אתרי חובה</b> כאן · {a.attraction_count} מקומות</>}
-              </p>
-            </button>
+                <h3 className="text-[16.5px] font-bold leading-tight">{a.name_he}</h3>
+                {a.vibe_he && <p className="mt-1 line-clamp-3 text-[13px] leading-snug text-[var(--text-2)]">{a.vibe_he}</p>}
+                {!!a.best_for?.length && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {a.best_for.slice(0, 3).map((t) => (
+                      <span key={t} className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] text-[var(--text-2)]">{t}</span>
+                    ))}
+                  </div>
+                )}
+                <p className="mt-2.5 pt-2 text-[12px] text-[var(--text-3)]">
+                  {vibe
+                    ? <>השכונה עצמה היא החוויה · {a.attraction_count} מקומות</>
+                    : <><b className="text-[var(--text-2)]">{a.must_count} אתרי חובה</b> כאן · {a.attraction_count} מקומות</>}
+                </p>
+              </button>
+              <button onClick={() => onToggle(a.member_ids, !sel)}
+                className="mt-2 flex items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-medium transition"
+                style={sel
+                  ? { background: "var(--brand)", color: "#fff", borderColor: "var(--brand)" }
+                  : { background: "var(--surface)", color: "var(--brand-ink)", borderColor: "var(--brand)" }}>
+                {sel ? "✓ בטיול" : "רוצה לתייר כאן 🚶"}
+              </button>
+            </div>
           );
         })}
       </div>
@@ -509,6 +538,8 @@ export function DestinationView({
     const yesFinal = (buildFromSp && sp) ? sp.path.map((x) => x.a.id)
       : yes.length ? yes : (audience && sp ? sp.path.map((x) => x.a.id) : yes);
     setBuilding(true);
+    // Neighbourhoods the traveller chose to tour → one guaranteed day each.
+    const chosenAreaGroups = areas.filter((a) => areaChosen(a, choices)).map((a) => a.member_ids);
     const trip = create({
       title: `טיול ל${dest.city_he || dest.city}`,
       mode: "preferences",
@@ -520,6 +551,7 @@ export function DestinationView({
       month: new Date().getMonth() + 1,   // a default season; exact dates are set on the trip page
       profile: { ...profile, pace: buildPace, taste, dailyDriveHours: RADIUS_HOURS[buildRadius] },
       ...(yesFinal.length || maybe.length || no.length ? { selection: { yes: yesFinal, maybe, no } } : {}),
+      ...(chosenAreaGroups.length ? { areaGroups: chosenAreaGroups } : {}),
     });
     router.push(`/trip/${trip.id}?build=1`);
   }
@@ -678,10 +710,14 @@ export function DestinationView({
       </header>
 
       {/* headline neighbourhoods — first-class experiences above the attractions */}
-      <NeighbourhoodStrip areas={areas} onFocus={(a) => {
-        setAreaFocus({ lat: a.lat, lng: a.lng, n: Date.now() });
-        if (!mapOpen) setMapOpen(true);
-      }} />
+      <NeighbourhoodStrip areas={areas} choices={choices}
+        onFocus={(a) => { setAreaFocus({ lat: a.lat, lng: a.lng, n: Date.now() }); if (!mapOpen) setMapOpen(true); }}
+        onToggle={(ids, select) => setMany(ids, select ? "yes" : null)}
+        onBuild={() => {
+          const n = areas.filter((a) => areaChosen(a, choices)).length;
+          if (n) setBuildDays(Math.min(7, Math.max(2, n)));
+          setBuildFromSp(false); openBuild();
+        }} />
 
       {/* pass panel — reveals smoothly under the hero so the poster never jumps */}
       {passes.length > 0 && (

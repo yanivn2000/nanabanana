@@ -142,7 +142,7 @@ export type ClusterResult = { days: Attraction[][]; leftOut: Attraction[] };
 
 export function clusterIntoDays(
   poolIn: Attraction[], days: number,
-  opts: { walkPref?: number; dayMinutes?: number } = {}
+  opts: { walkPref?: number; dayMinutes?: number; seedGroups?: number[][] } = {}
 ): ClusterResult {
   // usable = has coords, de-duped by name; input order IS the value ranking.
   const seen = new Set<string>();
@@ -156,32 +156,50 @@ export function clusterIntoDays(
   // more; "minimise walking" (1) → shorter, tighter ones.
   const budget = (opts.dayMinutes ?? 420) * (1 + (pref - 3) * 0.11);
 
-  // Tour candidates: the top-value places. Start the tour from the most-central
-  // one so it radiates outward and the budget drops the periphery.
-  const candidates = pool.slice(0, Math.min(pool.length, days * CANDIDATES_PER_DAY));
-  let start = candidates[0], bestSum = Infinity;
-  for (const p of candidates) {
-    let s = 0; for (const q of candidates) s += walkBetween(p, q);
-    if (s < bestSum) { bestSum = s; start = p; }
-  }
-  const tour = twoOpt(nnPath(candidates, start));
-
-  // Cut the tour into contiguous day-slices by the per-day time budget. A new day
-  // starts fresh (its first stop has no travel cost — you begin the morning
-  // there), so inter-cluster jumps aren't charged as walking.
   const placed = new Set<number>();
   const groups: { stops: Attraction[]; time: number }[] = [];
-  let cur: Attraction[] = [], time = 0;
-  for (const x of tour) {
-    const leg = cur.length ? walkBetween(cur[cur.length - 1], x) : 0;
-    if (cur.length && time + visitMin(x) + leg > budget) {
-      groups.push({ stops: cur, time });
-      cur = []; time = 0;
-      if (groups.length >= days) break;   // out of days — the rest is peripheral
+
+  if (opts.seedGroups?.length) {
+    // Explicit neighbourhood tour: the traveller chose areas to tour, so build one
+    // guaranteed day per area from its members (value order, budget-trimmed).
+    // Overrides `days` — the chosen neighbourhoods define the days.
+    const byId = new Map(pool.map((a) => [a.id, a]));
+    for (const ids of opts.seedGroups) {
+      const stops: Attraction[] = []; let time = 0;
+      for (const id of ids) {
+        const x = byId.get(id);
+        if (!x || placed.has(x.id)) continue;
+        const dist = stops.length ? nearestMin(x, stops) : 0;
+        if (time + visitMin(x) + dist <= budget) { stops.push(x); time += visitMin(x) + dist; placed.add(x.id); }
+      }
+      if (stops.length) groups.push({ stops, time });
     }
-    cur.push(x); placed.add(x.id); time += visitMin(x) + (cur.length > 1 ? leg : 0);
+  } else {
+    // Tour candidates: the top-value places. Start the tour from the most-central
+    // one so it radiates outward and the budget drops the periphery.
+    const candidates = pool.slice(0, Math.min(pool.length, days * CANDIDATES_PER_DAY));
+    let start = candidates[0], bestSum = Infinity;
+    for (const p of candidates) {
+      let s = 0; for (const q of candidates) s += walkBetween(p, q);
+      if (s < bestSum) { bestSum = s; start = p; }
+    }
+    const tour = twoOpt(nnPath(candidates, start));
+
+    // Cut the tour into contiguous day-slices by the per-day time budget. A new day
+    // starts fresh (its first stop has no travel cost — you begin the morning
+    // there), so inter-cluster jumps aren't charged as walking.
+    let cur: Attraction[] = [], time = 0;
+    for (const x of tour) {
+      const leg = cur.length ? walkBetween(cur[cur.length - 1], x) : 0;
+      if (cur.length && time + visitMin(x) + leg > budget) {
+        groups.push({ stops: cur, time });
+        cur = []; time = 0;
+        if (groups.length >= days) break;   // out of days — the rest is peripheral
+      }
+      cur.push(x); placed.add(x.id); time += visitMin(x) + (cur.length > 1 ? leg : 0);
+    }
+    if (cur.length && groups.length < days) groups.push({ stops: cur, time });
   }
-  if (cur.length && groups.length < days) groups.push({ stops: cur, time });
 
   // B — free gems: pull nearby places (incl. the long tail) onto each day's route
   // while they sit within a short detour and the day still has budget.

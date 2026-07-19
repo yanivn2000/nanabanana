@@ -155,6 +155,9 @@ export async function POST(req: NextRequest) {
     // How far the traveler will walk between stops (1-5) → tunes the proximity
     // clustering: bigger = looser, larger days; smaller = tighter clusters.
     walkPref?: number;
+    // Chosen-neighbourhood tour: one member-id array per area the traveller picked
+    // to tour. Present → build one guaranteed day per area (deterministic).
+    areaGroups?: number[][];
   };
   try {
     body = await req.json();
@@ -301,6 +304,15 @@ export async function POST(req: NextRequest) {
       const code = /credit balance/i.test(msg) ? "no_credit" : undefined;
       return NextResponse.json({ error: msg, code }, { status: 500 });
     }
+  }
+
+  // Chosen-neighbourhood tour: the traveller picked areas to tour, so build one
+  // guaranteed day per area (deterministic — the neighbourhoods define the days,
+  // no dense area can swallow another). Skips the AI on purpose.
+  if (body.areaGroups?.length) {
+    return respondGenerate(
+      buildHeuristicItinerary(dest.city, dest.country, body.areaGroups.length, buildList,
+        isFamily, perDay, body.walkPref ?? 3, body.areaGroups), "neighbourhoods");
   }
 
   // Generate: try Claude, but always fall back to the heuristic so the user

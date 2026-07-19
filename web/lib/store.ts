@@ -177,6 +177,9 @@ export type Trip = {
   selection?: {            // from the Explore flow: yes = anchors, maybe = "if time"
     yes: number[]; maybe: number[]; no: number[];
   };
+  // Chosen-neighbourhood tour: one member-id array per area the traveller picked to
+  // tour → the builder makes one guaranteed day per area.
+  areaGroups?: number[][];
   // "כן" picks the last build couldn't fit — surfaced so the user can add them.
   leftOut?: { id: number; name_he: string | null; name_en: string; image_url: string | null; category: string }[];
   itinerary?: Itinerary;

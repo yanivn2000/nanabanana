@@ -930,12 +930,14 @@ export type AreaCard = {
   id: number; name_he: string | null; name_en: string | null; kind: string;
   vibe_he: string | null; best_for: string[] | null; gateway_he: string | null;
   attraction_count: number | null; must_count: number; lat: number; lng: number;
+  member_ids: number[];
 };
 export async function headlineAreasForCity(destId: number): Promise<AreaCard[]> {
   return query<AreaCard>(
     `SELECT a.id, a.name_he, a.name_en, a.kind, a.vibe_he, a.best_for, a.gateway_he,
             a.attraction_count, a.lat, a.lng,
-            (SELECT count(*)::int FROM attractions t WHERE t.area_id = a.id AND t.must_see = 1) AS must_count
+            (SELECT count(*)::int FROM attractions t WHERE t.area_id = a.id AND t.must_see = 1) AS must_count,
+            (SELECT COALESCE(array_agg(t.id), '{}') FROM attractions t WHERE t.area_id = a.id) AS member_ids
        FROM areas a
       WHERE a.destination_id = $1 AND a.headline = true
       ORDER BY a.attraction_count DESC NULLS LAST`,
