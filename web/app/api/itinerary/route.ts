@@ -195,7 +195,9 @@ export async function POST(req: NextRequest) {
   const picks = pickIds.length ? await attractionsByIds(pickIds) : [];
   const seen = new Set(base.map((a) => a.id));
   const pool = [...base, ...picks.filter((p) => !seen.has(p.id))];
-  const attractions = rankByTaste(pool, body.taste, 50, isFamily);
+  // Wider pool (was 50) so the clusterer has a long tail of minor places to pull
+  // in as "free gems" on the walking path (cluster.ts pass B).
+  const attractions = rankByTaste(pool, body.taste, 90, isFamily);
   // Explore build (F1): split into anchors + "אם יש זמן" fillers. Only used by
   // the single-city generate path below (details/revise/multi ignore it).
   const sel = body.selection ? partitionBySelection(pool, body.taste, body.selection, isFamily) : null;
@@ -239,7 +241,7 @@ export async function POST(req: NextRequest) {
     const segAttrs = await Promise.all(
       segs.map(async (x) => ({
         ...x,
-        attractions: rankByTaste(await topAttractions(x.dest.id, 150), body.taste, 50, isFamily),
+        attractions: rankByTaste(await topAttractions(x.dest.id, 150), body.taste, 90, isFamily),
         insights: await insightsForDestination(x.dest.id),
       })));
     const allAttractions = segAttrs.flatMap((x) => x.attractions);

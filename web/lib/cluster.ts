@@ -1,27 +1,27 @@
 // Proximity day-clustering — turn a value-ranked pool of attractions into
 // geographically tight days, so each day is a walkable neighbourhood rather than
-// a zig-zag across the city. This is the core of "why not pop into the place
-// we're 100m from": nearby attractions cost almost no travel time, so a tight
-// day fits MORE stops and the walking itself becomes pleasant.
+// a zig-zag across the city, and the walking itself becomes pleasant.
 //
-// We use the classic "route-first, cluster-second" heuristic (robust for the
-// Team-Orienteering shape of the problem, deterministic, no routing API / AI):
-//   1. take the top-value candidates,
-//   2. build ONE good walking tour through them (nearest-neighbour + 2-opt) —
-//      consecutive stops on a good tour are geographic neighbours,
-//   3. cut the tour into `days` contiguous slices by a per-day time budget.
-// Because the tour is geographically ordered, every slice is a tight neighbour-
-// hood AND the days come out balanced. Starting the tour from the most-central
-// candidate means the tour ends at the periphery, so when the budget is full the
-// places we drop are the outlying ones — exactly what you'd skip on foot.
+// Day STRUCTURE uses "route-first, cluster-second" (deterministic, no routing API
+// / AI): build one good walking tour through the top candidates (nearest-neighbour
+// + 2-opt) starting from the most-central one, then cut the tour into `days`
+// contiguous slices by a per-day time budget. Driving structure by GEOGRAPHY (not
+// value rank) keeps it robust to a mis-ranked outlier, produces balanced days, and
+// naturally DROPS the sparse periphery — so a dense cluster is always preferred and
+// an isolated place has to sit on the natural route to make the cut.
 //
-// Proximity enters as a weight via `walkPref`: it sets the daily time budget, so
-// a "walk everything" traveller gets bigger days and a "minimise walking" one
-// gets tighter, shorter days.
+// Then an OPPORTUNISTIC "free gems" pass (B) sweeps the FULL city pool — not just
+// the top picks — and pulls in anything a couple of minutes off the path: the nice
+// statue, the café street, the building that survived the war. They cost almost no
+// travel, so they earn a slot cheaply — the "we're already here, let's pop in"
+// delight.
 import type { Attraction } from "./db";
-import { haversineKm, walkMinutes, DEFAULT_WALK_PREF } from "./geo";
+import { haversineKm, walkMinutes } from "./geo";
 
 const VISIT_DEFAULT = 75, VISIT_MIN = 40, VISIT_MAX = 150;
+const CANDIDATES_PER_DAY = 8;   // top-value places that seed the tour structure
+const FREE_DETOUR = 4;          // minutes off-path a "free gem" may sit (B)
+const FREE_MAX_PER_DAY = 3;     // don't drown a day in minor gems
 
 // How long the traveler spends AT a place (minutes), clamped to something sane.
 function visitMin(a: Attraction): number {
@@ -33,6 +33,13 @@ function walkBetween(a: Attraction, b: Attraction): number {
   return walkMinutes(haversineKm(a.lat as number, a.lng as number, b.lat as number, b.lng as number));
 }
 
+// Nearest walk-minutes from x to any stop already in the day.
+function nearestMin(x: Attraction, day: Attraction[]): number {
+  let m = Infinity;
+  for (const s of day) { const d = walkBetween(x, s); if (d < m) m = d; }
+  return m;
+}
+
 // Total walking (minutes) along a day's ordered stops.
 export function dayWalkMinutes(day: Attraction[]): number {
   let sum = 0;
@@ -40,8 +47,7 @@ export function dayWalkMinutes(day: Attraction[]): number {
   return sum;
 }
 
-// 2-opt: reverse segments while it shortens the path (undoes crossings). Paths
-// here are short (≤ ~8 stops) so this is effectively free.
+// 2-opt: reverse segments while it shortens the path (undoes crossings).
 function twoOpt(path: Attraction[]): Attraction[] {
   for (let pass = 0; pass < 5; pass++) {
     let improved = false;
@@ -62,7 +68,7 @@ function twoOpt(path: Attraction[]): Attraction[] {
   return path;
 }
 
-// Greedy nearest-neighbour path from `start` through `items`.
+// Greedy nearest-neighbour path from `start`.
 function nnPath(items: Attraction[], start: Attraction): Attraction[] {
   const remaining = items.filter((x) => x.id !== start.id);
   const path = [start];
@@ -79,9 +85,21 @@ function nnPath(items: Attraction[], start: Attraction): Attraction[] {
   return path;
 }
 
-// Order a day's stops as a short walking chain from its first stop.
-function orderPath(stops: Attraction[]): Attraction[] {
-  return stops.length <= 2 ? stops : twoOpt(nnPath(stops, stops[0]));
+const orderPath = (stops: Attraction[]): Attraction[] =>
+  stops.length <= 2 ? stops : twoOpt(nnPath(stops, stops[0]));
+
+// Is `x` effectively the same place as something already placed? Guards against
+// near-duplicate DB rows (e.g. "Big Ben" / "Elizabeth Tower") sneaking in as a
+// "free gem" 0 minutes away from their twin.
+function isDuplicate(x: Attraction, stops: Attraction[]): boolean {
+  const nx = (x.name_he || x.name_en || "").toLowerCase();
+  for (const s of stops) {
+    if (walkBetween(x, s) <= 1) {
+      const ns = (s.name_he || s.name_en || "").toLowerCase();
+      if (ns.includes(nx) || nx.includes(ns)) return true;
+    }
+  }
+  return false;
 }
 
 export type ClusterResult = { days: Attraction[][]; leftOut: Attraction[] };
@@ -97,17 +115,14 @@ export function clusterIntoDays(
   });
   if (pool.length === 0 || days <= 0) return { days: [], leftOut: [] };
 
-  // Walk tolerance scales the day: "walk everything" (5) gets longer days that
-  // fit more; "minimise walking" (1) gets shorter, tighter ones.
-  const pref = opts.walkPref ?? DEFAULT_WALK_PREF;
-  const budget = (opts.dayMinutes ?? 420) * (1 + (pref - DEFAULT_WALK_PREF) * 0.11);
+  const pref = opts.walkPref ?? 3;
+  // Walk tolerance scales the day: "walk everything" (5) → longer days that fit
+  // more; "minimise walking" (1) → shorter, tighter ones.
+  const budget = (opts.dayMinutes ?? 420) * (1 + (pref - 3) * 0.11);
 
-  // Candidate set: the top-value places, generous enough that tight days can pack
-  // extra stops (up to ~8/day) while the budget decides the real count.
-  const candidates = pool.slice(0, Math.min(pool.length, days * 8));
-
-  // Start the tour from the most-central candidate (min total distance to the
-  // others), so the tour radiates outward and the budget drops the periphery.
+  // Tour candidates: the top-value places. Start the tour from the most-central
+  // one so it radiates outward and the budget drops the periphery.
+  const candidates = pool.slice(0, Math.min(pool.length, days * CANDIDATES_PER_DAY));
   let start = candidates[0], bestSum = Infinity;
   for (const p of candidates) {
     let s = 0; for (const q of candidates) s += walkBetween(p, q);
@@ -118,20 +133,38 @@ export function clusterIntoDays(
   // Cut the tour into contiguous day-slices by the per-day time budget. A new day
   // starts fresh (its first stop has no travel cost — you begin the morning
   // there), so inter-cluster jumps aren't charged as walking.
-  const dayGroups: Attraction[][] = [];
+  const placed = new Set<number>();
+  const groups: { stops: Attraction[]; time: number }[] = [];
   let cur: Attraction[] = [], time = 0;
-  const leftOut: Attraction[] = [];
   for (const x of tour) {
     const leg = cur.length ? walkBetween(cur[cur.length - 1], x) : 0;
     if (cur.length && time + visitMin(x) + leg > budget) {
-      dayGroups.push(cur); cur = []; time = 0;
-      if (dayGroups.length >= days) { leftOut.push(x); continue; }
+      groups.push({ stops: cur, time });
+      cur = []; time = 0;
+      if (groups.length >= days) break;   // out of days — the rest is peripheral
     }
-    if (dayGroups.length >= days) { leftOut.push(x); continue; }
-    cur.push(x); time += visitMin(x) + (cur.length > 1 ? leg : 0);
+    cur.push(x); placed.add(x.id); time += visitMin(x) + (cur.length > 1 ? leg : 0);
   }
-  if (cur.length && dayGroups.length < days) dayGroups.push(cur);
+  if (cur.length && groups.length < days) groups.push({ stops: cur, time });
 
-  const ordered = dayGroups.map(orderPath).filter((d) => d.length > 0);
+  // B — free gems: pull nearby places (incl. the long tail) onto each day's route
+  // while they sit within a short detour and the day still has budget.
+  for (const g of groups) {
+    let added = 0;
+    for (const x of pool) {
+      if (added >= FREE_MAX_PER_DAY) break;
+      if (placed.has(x.id)) continue;
+      const dist = nearestMin(x, g.stops);
+      if (dist <= FREE_DETOUR && !isDuplicate(x, g.stops) && g.time + visitMin(x) + dist <= budget) {
+        placed.add(x.id);
+        g.stops.push(x);
+        g.time += visitMin(x) + dist;
+        added++;
+      }
+    }
+  }
+
+  const ordered = groups.map((g) => orderPath(g.stops)).filter((d) => d.length > 0);
+  const leftOut = pool.filter((a) => !placed.has(a.id));
   return { days: ordered, leftOut };
 }
