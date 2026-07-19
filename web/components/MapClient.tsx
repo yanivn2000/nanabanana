@@ -29,6 +29,7 @@ export function MapClient(props: {
   onBounds?: (b: MapBounds) => void;
   picks?: Attraction[];
   fitNonce?: number;
+  hoveredId?: number | null;
 }) {
   return <AttractionsMap {...props} />;
 }

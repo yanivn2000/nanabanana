@@ -207,6 +207,7 @@ export function DestinationView({
   };
   const hasPrefs = profile.interests.length > 0 || profile.dislikes.length > 0;
   const [selected, setSelected] = useState<Attraction | null>(null);
+  const [hoveredId, setHoveredId] = useState<number | null>(null);  // card hover → grow its map marker
   const [query, setQuery] = useState("");
   const [showPlaces, setShowPlaces] = useState(false);
   const [showPasses, setShowPasses] = useState(false);
@@ -787,7 +788,7 @@ export function DestinationView({
         {/* map — a narrow sticky rail on desktop; full-width strip on mobile */}
         <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-2 lg:!h-[calc(100dvh-164px)] lg:top-[164px] lg:w-[380px] lg:shrink-0 lg:border-y-0 lg:border-s`}>
           <MapClient attractions={displayItems} center={[dest.lat, dest.lng]} selected={selected}
-            picks={pickedAttractions} fitNonce={fitNonce} onBounds={setBounds} />
+            picks={pickedAttractions} fitNonce={fitNonce} onBounds={setBounds} hoveredId={hoveredId} />
           {pickedAttractions.length > 0 && (
             <button onClick={() => setFitNonce((n) => n + 1)}
               className="absolute left-1/2 top-3 z-[1000] flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-3.5 py-1.5 text-[13px] font-semibold text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:bg-[var(--brand-soft)]">
@@ -881,6 +882,7 @@ export function DestinationView({
                   </div>
                 )}
                 <div
+                  onMouseEnter={() => setHoveredId(a.id)} onMouseLeave={() => setHoveredId((h) => (h === a.id ? null : h))}
                   className="group flex flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition hover:-translate-y-0.5"
                   style={{ borderColor: choice === "yes" || isSel ? "var(--brand)" : "var(--border)",
                            boxShadow: isSel ? "0 0 0 1.5px var(--brand)" : undefined,

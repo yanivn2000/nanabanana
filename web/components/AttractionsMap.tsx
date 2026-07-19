@@ -24,8 +24,22 @@ function Flyer({
     return () => clearTimeout(t);
   }, [map]);
   useEffect(() => {
-    if (!selected?.lat || !selected?.lng) return;
-    map.flyTo([selected.lat, selected.lng], 15, { duration: 0.7 });
+    if (!selected || !Number.isFinite(selected.lat as number) || !Number.isFinite(selected.lng as number)) return;
+    // gentle: pan to the place but keep neighbourhood context (13-14), instead
+    // of a hard zoom-15 that hides every attraction around it. Guard getZoom()
+    // (can be NaN mid-init) so we never fly to an invalid view.
+    const cz = map.getZoom();
+    const z = Math.max(13, Math.min(Number.isFinite(cz) ? cz : 14, 14));
+    const to: [number, number] = [selected.lat as number, selected.lng as number];
+    // Animated flyTo reads map.getCenter() internally, which THROWS if the map's
+    // current view is ever NaN. Fall back to a hard, non-animated setView (which
+    // sets the center directly, without reading the old one) so a corrupted view
+    // self-heals on the first click instead of crashing the map.
+    try {
+      map.flyTo(to, z, { duration: 0.6 });
+    } catch {
+      map.setView(to, z, { animate: false });
+    }
     const m = markers.current.get(selected.id);
     if (m) setTimeout(() => m.openPopup(), 400);
   }, [selected, map, markers]);
@@ -53,7 +67,7 @@ function FitBounds({
   useEffect(() => {
     if (selected) return;
     const pts = [
-      ...attractions.filter((a) => a.lat != null && a.lng != null)
+      ...attractions.filter((a) => Number.isFinite(a.lat) && Number.isFinite(a.lng))
         .map((a) => [a.lat as number, a.lng as number] as [number, number]),
       ...hotels.map((h) => [h.lat, h.lng] as [number, number]),
       ...(userPos ? [userPos] : []),
@@ -85,7 +99,7 @@ function FitToPicks({ picks, nonce }: { picks: Attraction[]; nonce: number }) {
   const map = useMap();
   useEffect(() => {
     if (!nonce) return;
-    const pts = picks.filter((a) => a.lat != null && a.lng != null)
+    const pts = picks.filter((a) => Number.isFinite(a.lat) && Number.isFinite(a.lng))
       .map((a) => [a.lat as number, a.lng as number] as [number, number]);
     if (pts.length === 1) map.flyTo(pts[0], 14, { duration: 0.6 });
     else if (pts.length > 1) map.flyToBounds(pts, { padding: [55, 55], maxZoom: 15, duration: 0.6 });
@@ -201,6 +215,7 @@ export default function AttractionsMap({
   onBounds,
   picks = [],
   fitNonce = 0,
+  hoveredId = null,
 }: {
   attractions: Attraction[];
   center: [number, number];
@@ -217,10 +232,11 @@ export default function AttractionsMap({
   onBounds?: (b: MapBounds) => void;
   picks?: Attraction[];           // the traveler's כן/אולי marks — highlighted + framed on demand
   fitNonce?: number;              // increment to frame the map to `picks`
+  hoveredId?: number | null;      // card hovered in the list — grow its marker
 }) {
   const markers = useRef<Map<number, LeafletCircleMarker>>(new Map());
   const orderedPts = ordered
-    ? attractions.filter((a) => a.lat != null && a.lng != null)
+    ? attractions.filter((a) => Number.isFinite(a.lat) && Number.isFinite(a.lng))
     : [];
   // Colour of stop i: explicit day palette when given, else by segment/category.
   const stopHue = (a: Attraction, i: number) =>
@@ -290,15 +306,15 @@ export default function AttractionsMap({
             <CircleMarker
               key={a.id}
               center={[a.lat as number, a.lng as number]}
-              radius={selected?.id === a.id ? 9 : 6}
+              radius={hoveredId === a.id ? 11 : selected?.id === a.id ? 9 : 6}
               ref={(m) => {
                 if (m) markers.current.set(a.id, m);
               }}
               pathOptions={{
-                color: catColor(a.category),
+                color: hoveredId === a.id ? "#0e6b5e" : catColor(a.category),
                 fillColor: catColor(a.category),
-                fillOpacity: selected?.id === a.id ? 1 : 0.8,
-                weight: selected?.id === a.id ? 3 : 1,
+                fillOpacity: hoveredId === a.id || selected?.id === a.id ? 1 : 0.8,
+                weight: hoveredId === a.id ? 4 : selected?.id === a.id ? 3 : 1,
               }}
             >
               <AttractionPopup a={a} />
@@ -308,7 +324,7 @@ export default function AttractionsMap({
       {/* the traveler's picks — a brand-green ring on top, so selected places
           are identifiable at a glance and every one has a marker to frame */}
       {!ordered && picks.map((a) => (
-        a.lat != null && a.lng != null && (
+        Number.isFinite(a.lat) && Number.isFinite(a.lng) && (
           <CircleMarker key={"pick" + a.id}
             center={[a.lat as number, a.lng as number]}
             radius={selected?.id === a.id ? 9 : 7}
