@@ -81,10 +81,23 @@ export function AttractionsTable({ destinations }: { destinations: AdminDestinat
         </span>
       </div>
 
-      <p className="text-[12.5px] leading-relaxed text-[var(--text-3)]">
-        <b className="text-[var(--text-2)]">שקיפות מלאה.</b> לכל אטרקציה: ציון ההתאמה של הבינה (fit), הקונצנזוס המחושב (fit×משקל+בונוס), חובה, ודירוג עורך.
-        הוסיפו <b className="text-[var(--brand-ink)]">בונוס אדמין</b> (נק' +/−) לקהל כדי להעלות/להוריד מקום ידנית — נשמר בעזיבת השדה.
-      </p>
+      <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] p-3 text-[12.5px] leading-relaxed text-[var(--text-2)]">
+        <div className="mb-1.5 font-bold text-[var(--text)]">איך קוראים את הטבלה — שני מספרים לכל קהל:</div>
+        <ul className="flex flex-col gap-1.5">
+          <li>
+            <span className="text-[var(--text-3)]">fit</span> (המספר האפור) — <b>ציון ההתאמה של הבינה</b>: עד כמה המקום מתאים לקהל הזה (0-100).
+            זהו שיפוט ה־AI, והוא <b>קבוע</b> — משתנה רק כשמריצים מחדש את הדירוג, לא מהבונוס.
+          </li>
+          <li>
+            <span className="font-semibold text-[var(--brand-ink)]">קונצנזוס</span> (המספר המודגש) — <b>ציון הדירוג בפועל</b>, שקובע את הסדר במסלול הקצר:
+            <span className="mx-1 rounded bg-[var(--surface)] px-1.5 py-0.5 font-mono text-[11.5px]">fit × worthiness + בונוס</span>.
+            <span className="text-[var(--text-3)]"> worthiness = כמה חזק התיק (מטיילים + 📚 ויקי + חובה).</span> לכן מקום מתאים מאוד יכול לדרג נמוך אם הוא פחות מוכר/מגובה.
+          </li>
+          <li>
+            <span className="font-semibold">בונוס אדמין</span> — נקודות +/− שאתם מוסיפים <b>ישירות לקונצנזוס</b> (לא ל־fit), כדי להעלות/להוריד מקום ידנית. נשמר בעזיבת השדה.
+          </li>
+        </ul>
+      </div>
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[860px] border-collapse text-[13px]">
