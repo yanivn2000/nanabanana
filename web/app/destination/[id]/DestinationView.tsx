@@ -582,7 +582,7 @@ export function DestinationView({
                 </div>
               )}
               {mode === "choose" && (
-                <p className="text-[13px] text-[var(--text-3)]">בחרו למי הטיול — ונראה לכם ~12 מקומות שהכי אהובים על אנשים כמוכם. או “🔎 הכל” לחקירה מלאה.</p>
+                <p className="text-[13px] text-[var(--text-3)]">בחרו למי הטיול — ונראה לכם את המקומות שהכי אהובים על אנשים כמוכם. או “🔎 הכל” לחקירה מלאה.</p>
               )}
 
               {/* interests — the deep-explore topic editor; only in explore mode */}

@@ -32,7 +32,7 @@ export type ShortPathItem = { a: Attraction; score: number; boosted: boolean };
 
 export function shortPath(
   attractions: Attraction[], travCount: (id: number) => number,
-  profile: Profile, boosts: Set<string>, n = 12
+  profile: Profile, boosts: Set<string>, n = 24
 ): { path: ShortPathItem[]; excluded: number; eligible: number } {
   const withFit = attractions.filter((a) => a.audience_fit && a.editor_rank !== "no");
   const maxTrav = Math.max(1, ...withFit.map((a) => travCount(a.id)));
