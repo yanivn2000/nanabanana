@@ -3,6 +3,20 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getModel } from "./db";
 import type { Attraction, DestinationSummary, Insight } from "./db";
 import type { Itinerary } from "./trip-types";
+import { clusterIntoDays, dayWalkMinutes } from "./cluster";
+
+// A deterministic geographic hint: cluster the candidate places into walkable
+// day-neighbourhoods (route-first, cluster-second) and hand the grouping to the
+// model as strong advice. This makes proximity a real weight in the AI plan —
+// days come out tight and walkable instead of zig-zagging the city — while the
+// model still owns selection, timing, "why", and the verified insights.
+function proximityBlock(pool: Attraction[], days: number, walkPref?: number): string {
+  const { days: clusters } = clusterIntoDays(pool, days, { walkPref });
+  if (clusters.length < 2) return "";
+  const lines = clusters.map((c, i) =>
+    `אזור ${i + 1} (כ-${Math.round(dayWalkMinutes(c))} דק׳ הליכה בסך הכול): ${c.map((a) => a.name_he || a.name_en).join(" · ")}`);
+  return `\nרמז גיאוגרפי (חשוב לחוויה!): קיבצנו את המקומות לאזורים הליכתיים כדי לצמצם נסיעות — ככה מספיקים יותר בכל יום וההליכה עצמה נעימה. בנֵה כל יום בתוך אזור אחד וסדר את העצירות כמסלול הליכה רציף (מהקרוב לקרוב). מותר לחרוג רק אם יש סיבה אמיתית (שעות פתיחה/אירוע) — אך אל תפזר יום אחד על פני קצוות מרוחקים של העיר:\n${lines.join("\n")}\n`;
+}
 
 const KIND_HE_INS: Record<string, string> = {
   tip: "טיפ", warning: "אזהרה", verdict: "שווה/לא שווה",
@@ -137,6 +151,7 @@ export type GenerateParams = {
   anchors?: Attraction[];
   fillers?: Attraction[];
   isFamily?: boolean;   // trip has kids → apply the family-friendliness lens
+  walkPref?: number;    // 1-5 walk tolerance → tunes the geographic day hint
 };
 
 function emphasisBlock(e?: string): string {
@@ -173,13 +188,15 @@ function hotelsBlock(hotels?: TripHotel[]): string {
 
 export async function generateItinerary(p: GenerateParams): Promise<Itinerary> {
   const isFamily = p.isFamily === true;
+  const clusterPool = p.anchors && p.anchors.length
+    ? [...p.anchors, ...(p.fillers ?? [])] : p.attractions;
   const attractionsSection = p.anchors && p.anchors.length
     ? tieredBlock(p.anchors, p.fillers ?? [], isFamily)
     : `אטרקציות זמינות (בחר מתוכן בלבד):\n${attractionsBlock(p.attractions, isFamily)}`;
   const userText = `בנה לו"ז טיול ל${p.city}, ${p.country}.
 מספר ימים: ${p.days}
 פרופיל המטיילים: ${p.profileText}
-${emphasisBlock(p.emphasis)}${seasonHint(p.month)}${hotelsBlock(p.hotels)}${verifiedBlock(p.insights, p.attractions)}
+${emphasisBlock(p.emphasis)}${seasonHint(p.month)}${hotelsBlock(p.hotels)}${verifiedBlock(p.insights, p.attractions)}${proximityBlock(clusterPool, p.days, p.walkPref)}
 ${attractionsSection}`;
   return callClaude(userText);
 }

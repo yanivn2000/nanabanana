@@ -151,6 +151,9 @@ export async function POST(req: NextRequest) {
     // Trip pace → meaningful stops/day for the heuristic builder (matches the
     // city page's capacity promise). AI path reads pace from profileText.
     pace?: string;
+    // How far the traveler will walk between stops (1-5) → tunes the proximity
+    // clustering: bigger = looser, larger days; smaller = tighter clusters.
+    walkPref?: number;
   };
   try {
     body = await req.json();
@@ -243,7 +246,7 @@ export async function POST(req: NextRequest) {
     const heuristic = () => attachDetails(
       buildMultiHeuristicItinerary(segAttrs.map((x) => ({
         city: x.dest.city, country: x.dest.country, days: x.days, attractions: x.attractions,
-      })), isFamily, perDay), allAttractions);
+      })), isFamily, perDay, body.walkPref ?? 3), allAttractions);
 
     if (!aiConfigured()) {
       return NextResponse.json({ itinerary: heuristic(), engine: "heuristic" });
@@ -275,7 +278,7 @@ export async function POST(req: NextRequest) {
   // buildList puts anchors first so the heuristic schedules them first too.
   if (body.mode !== "revise" && !aiConfigured()) {
     return respondGenerate(
-      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList, isFamily, perDay), "heuristic");
+      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList, isFamily, perDay, body.walkPref ?? 3), "heuristic");
   }
 
   if (body.mode === "revise") {
@@ -310,11 +313,12 @@ export async function POST(req: NextRequest) {
       anchors: sel?.anchors,
       fillers: sel?.fillers,
       isFamily,
+      walkPref: body.walkPref ?? 3,
     });
     return respondGenerate(itinerary);
   } catch (e) {
     console.warn(`[itinerary] AI generate failed, using heuristic: ${(e as Error).message}`);
     return respondGenerate(
-      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList, isFamily, perDay), "heuristic");
+      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList, isFamily, perDay, body.walkPref ?? 3), "heuristic");
   }
 }

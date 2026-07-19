@@ -5,6 +5,7 @@ import type { Attraction } from "./db";
 import type { Itinerary, Stop, StopKind } from "./trip-types";
 import { descriptor } from "./labels";
 import { familyFit } from "./taste";
+import { clusterIntoDays, dayWalkMinutes } from "./cluster";
 
 const KIND_FROM_CAT: Record<string, StopKind> = {
   nature: "nature", museum: "culture", attraction: "culture",
@@ -23,30 +24,22 @@ export function buildHeuristicItinerary(
   days: number,
   attractions: Attraction[],
   isFamily = false,
-  perDay = 5
+  perDay = 5,
+  walkPref = 3
 ): Itinerary {
-  // Keep ones with coordinates, dedupe by name. The input is already
-  // taste-ranked; only re-sort by family_score for trips with kids.
-  const seen = new Set<string>();
-  let pool = attractions
-    .filter((a) => a.lat && a.lng)
-    .filter((a) => {
-      const n = a.name_he || a.name_en;
-      if (seen.has(n)) return false;
-      seen.add(n);
-      return true;
-    });
-  if (isFamily) pool = [...pool].sort((a, b) => familyFit(b) - familyFit(a));
+  // The input is already taste-ranked; for kids, re-sort by family_score first so
+  // the clusterer treats the family-relevant places as the higher-value ones.
+  const pool = isFamily
+    ? [...attractions].sort((a, b) => familyFit(b) - familyFit(a))
+    : attractions;
 
-  // perDay comes from the trip's pace (רגוע 4 / בינוני 5 / אינטנסיבי 6) so the
-  // built plan matches the capacity the city page promised.
-  const dayList = [];
-  let idx = 0;
-  for (let d = 0; d < days && idx < pool.length; d++) {
-    const picks = pool.slice(idx, idx + perDay);
-    idx += perDay;
-    if (picks.length === 0) break;
+  // Proximity clustering: instead of slicing the ranked list into days (which
+  // scatters each day across the city), group geographically so every day is a
+  // walkable neighbourhood. The per-day time budget is derived from the pace so
+  // tighter clusters — less travel — naturally fit MORE stops.
+  const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes: perDay * 84 });
 
+  const dayList = clustered.map((picks, d) => {
     const stops: Stop[] = [];
     picks.forEach((a, i) => {
       // Insert a lunch slot mid-day.
@@ -73,15 +66,16 @@ export function buildHeuristicItinerary(
     const mix = kinds.has("nature") && kinds.has("culture")
       ? "שילבנו טבע ותרבות"
       : kinds.has("nature") ? "יום עם דגש על טבע" : "יום עם דגש על אטרקציות";
+    const walk = Math.round(dayWalkMinutes(picks));
 
-    dayList.push({
+    return {
       label: `יום ${d + 1}`,
       date: "",
       base: city,
-      why: `${mix}, עם הפסקת צהריים באמצע. סידרנו לפי מה שהכי מתאים לכם ב${city}. הוסיפו מפתח AI לתכנון חכם שמתחשב במרחקים ובפרופיל שלכם.`,
+      why: `${mix} — קיבצנו אזור אחד כדי לצמצם נסיעות (כ-${walk} דק׳ הליכה בין העצירות), עם הפסקת צהריים באמצע.`,
       stops,
-    });
-  }
+    };
+  });
 
   return {
     title: `טיול ב${city}`,
@@ -95,11 +89,12 @@ export function buildHeuristicItinerary(
 export function buildMultiHeuristicItinerary(
   segments: { city: string; country: string; days: number; attractions: Attraction[] }[],
   isFamily = false,
-  perDay = 5
+  perDay = 5,
+  walkPref = 3
 ): Itinerary {
   const days: Itinerary["days"] = [];
   for (const s of segments) {
-    const part = buildHeuristicItinerary(s.city, s.country, s.days, s.attractions, isFamily, perDay);
+    const part = buildHeuristicItinerary(s.city, s.country, s.days, s.attractions, isFamily, perDay, walkPref);
     for (const d of part.days) {
       days.push({ ...d, label: `יום ${days.length + 1}`, base: s.city });
     }

@@ -215,7 +215,7 @@ export function TripView({ tripId }: { tripId: string }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ city, profileText: profileText(tripProfile),
           taste: deriveTaste(tripProfile), isFamily: tripProfile.kids.length > 0,
-          pace: tripProfile.pace, ...payload }),
+          pace: tripProfile.pace, walkPref: tripProfile.walkPref, ...payload }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) {

@@ -51,6 +51,12 @@ export const DEFAULT_WALK_PREF = 3;
 // straight line haversine measures. Kept deterministic — no routing API.
 const WALK_MIN_PER_KM = 12.5 * 1.3;
 
+// Minutes on foot for a straight-line distance in km. The single walk-speed
+// model shared by the leg hints and the day clusterer.
+export function walkMinutes(km: number): number {
+  return Math.max(1, Math.round(km * WALK_MIN_PER_KM));
+}
+
 export type Leg = {
   km: number;
   walkMin: number;
@@ -71,7 +77,7 @@ export function estimateLeg(
   lat1: number, lng1: number, lat2: number, lng2: number, walkPref = DEFAULT_WALK_PREF
 ): Leg {
   const km = haversineKm(lat1, lng1, lat2, lng2);
-  const walkMin = Math.max(1, Math.round(km * WALK_MIN_PER_KM));
+  const walkMin = walkMinutes(km);
   const transitMin = Math.round(11 + (km / 20) * 60);
   const maxWalk = WALK_PREF_KM[walkPref] ?? WALK_PREF_KM[DEFAULT_WALK_PREF];
   const recommended: "walk" | "transit" = km <= maxWalk ? "walk" : "transit";
