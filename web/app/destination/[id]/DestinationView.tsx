@@ -135,10 +135,12 @@ function ChoiceBtn({ tone, active, onClick, icon, label }: {
 // "landmark" area is a dense cluster of must-sees. Tapping the body flies the map;
 // "רוצה לתייר כאן" chooses the area to tour (a separate selection from the
 // attraction marks) so the builder gives it its own day.
-function NeighbourhoodStrip({ areas, chosenIds, onFocus, onToggle, onBuild }: {
+function NeighbourhoodStrip({ areas, chosenIds, attrById, onFocus, onToggle, onBuild }: {
   areas: AreaCard[]; chosenIds: Set<number>;
+  attrById: Map<number, { name_he: string | null; name_en: string; must_see: number | null }>;
   onFocus: (a: AreaCard) => void; onToggle: (id: number) => void; onBuild: () => void;
 }) {
+  const [openId, setOpenId] = useState<number | null>(null);
   if (!areas.length) return null;
   const chosen = areas.filter((a) => chosenIds.has(a.id));
   return (
@@ -180,12 +182,26 @@ function NeighbourhoodStrip({ areas, chosenIds, onFocus, onToggle, onBuild }: {
                     ))}
                   </div>
                 )}
-                <p className="mt-2.5 pt-2 text-[12px] text-[var(--text-3)]">
+              </button>
+              <button onClick={() => setOpenId((v) => (v === a.id ? null : a.id))}
+                className="mt-2.5 flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[12px] text-[var(--text-3)]">
+                <span>
                   {vibe
                     ? <>השכונה עצמה היא החוויה · {a.attraction_count} מקומות</>
                     : <><b className="text-[var(--text-2)]">{a.must_count} אתרי חובה</b> כאן · {a.attraction_count} מקומות</>}
-                </p>
+                </span>
+                <ChevronDown size={14} className={`shrink-0 transition-transform ${openId === a.id ? "rotate-180" : ""}`} />
               </button>
+              {openId === a.id && (
+                <div className="mt-1.5 flex max-h-44 flex-wrap gap-1 overflow-y-auto">
+                  {a.member_ids.map((id) => attrById.get(id)).filter(Boolean).map((m) => (
+                    <span key={m!.name_en + m!.name_he} className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[11.5px] text-[var(--text-2)]">
+                      {m!.must_see === 1 && <span className="text-[var(--accent-ink)]">⭐</span>}
+                      {m!.name_he || m!.name_en}
+                    </span>
+                  ))}
+                </div>
+              )}
               <button onClick={() => onToggle(a.id)}
                 className="mt-2 flex items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-medium transition"
                 style={sel
@@ -243,6 +259,8 @@ export function DestinationView({
         })),
     [baseAttractions, ratingOverrides]
   );
+  // Lookup for the neighbourhood strip to list each area's attractions by id.
+  const attrById = useMemo(() => new Map(attractions.map((a) => [a.id, a])), [attractions]);
   // Set one rating axis (click the active value again to clear it). Optimistic,
   // reverts on failure.
   const setRating = (a: Attraction, field: "rank" | "kids", value: string | null) => {
@@ -710,7 +728,7 @@ export function DestinationView({
       </header>
 
       {/* headline neighbourhoods — first-class experiences above the attractions */}
-      <NeighbourhoodStrip areas={areas} chosenIds={chosenAreas}
+      <NeighbourhoodStrip areas={areas} chosenIds={chosenAreas} attrById={attrById}
         onFocus={(a) => { setAreaFocus({ lat: a.lat, lng: a.lng, n: Date.now() }); if (!mapOpen) setMapOpen(true); }}
         onToggle={toggleArea}
         onBuild={() => {
