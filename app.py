@@ -552,8 +552,10 @@ with tab_ingest:
             country_he = db.COUNTRY_HE.get(geo["country"])
             _c.execute(
                 "UPDATE destinations SET city_he=COALESCE(?, city_he), "
-                "country_he=COALESCE(?, country_he) WHERE city=? AND country=?",
-                (he, country_he, geo["city"], geo["country"]))
+                "country_he=COALESCE(?, country_he), ingest_radius_km=?, mobility=? "
+                "WHERE city=? AND country=?",
+                (he, country_he, new_radius, "car_base" if new_radius > 40 else "metro",
+                 geo["city"], geo["country"]))
             _c.commit()
             _c.close()
             st.success(
@@ -567,16 +569,33 @@ with tab_ingest:
     col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
         city = st.selectbox("עיר", list(SEED_CITIES.keys()))
+    # Per-city radius comes from the editor's setting in the admin Cities tab
+    # (destinations.ingest_radius_km + mobility). OSM ingest is free — no API credits.
+    _dc = db.get_conn()
+    _drow = _dc.execute(
+        "SELECT mobility, ingest_radius_km FROM destinations WHERE city=?", (city,)).fetchone()
+    _dc.close()
+    db_radius = int(_drow["ingest_radius_km"]) if _drow and _drow["ingest_radius_km"] else 25
+    db_mobility = (_drow["mobility"] if _drow else None) or "metro"
     with col2:
-        radius = st.slider("רדיוס (ק\"מ)", 5, 120, 25)
+        radius = st.slider("רדיוס (ק\"מ)", 5, 120, db_radius, key=f"radius_{city}",
+                           help="נטען מהגדרת העיר באדמין (סוג ניידות + רדיוס). ניתן לשנות ידנית.")
     with col3:
         st.write("")
         st.write("")
         go = st.button("התחל איסוף", type="primary")
+    st.caption(
+        f"{'🚗 עיר-בסיס לטיול רכב' if db_mobility == 'car_base' else '🚇 מטרו (הליכה/תחב\"צ)'}"
+        f" · רדיוס שמור באדמין: {db_radius} ק\"מ · קליטת OSM חינם (ללא קרדיטים)")
     if go:
         country, lat, lng = SEED_CITIES[city]
-        with st.spinner(f"מושך אטרקציות מ-{city}..."):
+        with st.spinner(f"מושך אטרקציות מ-{city} ברדיוס {radius} ק\"מ..."):
             res = pipeline_osm.fetch_city(city, country, lat, lng, radius_km=radius)
+        # keep the admin setting in sync with the radius actually used
+        _uc = db.get_conn()
+        _uc.execute("UPDATE destinations SET ingest_radius_km=? WHERE city=?", (radius, city))
+        _uc.commit()
+        _uc.close()
         st.success(f"נמצאו {res['found']} · נוספו {res['inserted']} · כפילויות {res['skipped']}")
 
     st.divider()
