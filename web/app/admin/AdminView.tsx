@@ -7,6 +7,7 @@ import { InsightsIngest } from "./InsightsIngest";
 import { AttractionsTable } from "./AttractionsTable";
 import { AreasTable } from "./AreasTable";
 import { GraphTable } from "./GraphTable";
+import { BrainEval } from "./BrainEval";
 import { Moderation } from "./Moderation";
 import type { AdminDestination, Feedback } from "@/lib/db";
 
@@ -15,6 +16,7 @@ const TABS = [
   { key: "attractions", label: "📊 אטרקציות" },
   { key: "areas", label: "🗺️ שכונות" },
   { key: "graph", label: "🌉 גרף מרחקים" },
+  { key: "brain", label: "🧠 המוח" },
   { key: "insights", label: "📥 תובנות" },
   { key: "moderation", label: "🚩 מודרציה" },
   { key: "feedback", label: "💬 פידבק" },
@@ -194,6 +196,15 @@ export function AdminView({ destinations, feedback, email }: {
             גרף המרחקים — כמה גשרים נשמרו בקאש מטיולים, ומטריצת זמני הליכה/תחבורה בין האתרים המובילים (מחושבת חיה מהקואורדינטות).
           </p>
           <GraphTable destinations={destinations} />
+        </div>
+      )}
+
+      {tab === "brain" && (
+        <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
+          <p className="mb-3 text-[13px] text-[var(--text-3)]">
+            המוח — מנוע-טיולים דטרמיניסטי (ללא AI). בונה טיול למשפחות/זוגות/חברים בכל עיר, מנקד את עצמו, ומציג ביקורת. סמנו טוב/לשיפור + הערות, הורידו דוח והעלו אותו ל-Claude Code לכיול הלוגיקה.
+          </p>
+          <BrainEval destinations={destinations} />
         </div>
       )}
 
