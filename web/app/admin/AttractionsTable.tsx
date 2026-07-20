@@ -151,6 +151,9 @@ export function AttractionsTable({ destinations }: { destinations: AdminDestinat
                       <ChevronDown size={15} className={`mt-0.5 shrink-0 text-[var(--text-3)] transition-transform ${open.has(r.id) ? "rotate-180" : ""}`} />
                       <span>
                         <span className="font-medium text-[var(--text)] group-hover:text-[var(--brand-ink)]">{r.name_he || r.name_en}</span>
+                        {r.name_en && r.name_en !== r.name_he && (
+                          <span className="ms-1.5 text-[12px] text-[var(--text-3)]" dir="ltr">{r.name_en}</span>
+                        )}
                         <span className="block text-[11px] text-[var(--text-3)]">
                           {r.category}{r.audience_fit?.type ? ` · ${TYPE_HE[r.audience_fit.type] ?? r.audience_fit.type}` : ""}{r.notable ? " · 📚" : ""}
                         </span>
