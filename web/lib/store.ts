@@ -183,6 +183,7 @@ export type Trip = {
   // "כן" picks the last build couldn't fit — surfaced so the user can add them.
   leftOut?: { id: number; name_he: string | null; name_en: string; image_url: string | null; category: string }[];
   itinerary?: Itinerary;
+  engine?: string;         // how the current itinerary was built: "heuristic" | "neighbourhoods" | "ai"
   // Community sharing (phase 0+1): the public copy's slug + the owner token
   // that proves ownership (updates / marking comments as helpful).
   shared?: { slug: string; token: string };

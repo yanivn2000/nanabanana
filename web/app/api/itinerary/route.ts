@@ -158,6 +158,10 @@ export async function POST(req: NextRequest) {
     // Chosen-neighbourhood tour: one member-id array per area the traveller picked
     // to tour. Present → build one guaranteed day per area (deterministic).
     areaGroups?: number[][];
+    // Opt-in to the paid AI build. Default (false/undefined) = free instant
+    // heuristic, so the paid API is never spent without the user asking (and can
+    // be quota-gated later). revise always uses the AI (it's an AI edit).
+    ai?: boolean;
   };
   try {
     body = await req.json();
@@ -257,7 +261,7 @@ export async function POST(req: NextRequest) {
         city: x.dest.city, country: x.dest.country, days: x.days, attractions: x.attractions,
       })), isFamily, perDay, body.walkPref ?? 3), allAttractions);
 
-    if (!aiConfigured()) {
+    if (!body.ai || !aiConfigured()) {
       return NextResponse.json({ itinerary: heuristic(), engine: "heuristic" });
     }
     try {
@@ -315,7 +319,15 @@ export async function POST(req: NextRequest) {
         isFamily, perDay, body.walkPref ?? 3, body.areaGroups), "neighbourhoods");
   }
 
-  // Generate: try Claude, but always fall back to the heuristic so the user
+  // DEFAULT: free, instant heuristic build (clustered days + distances + areas).
+  // The paid AI is a separate opt-in upgrade (body.ai === true), so a build never
+  // spends on the API without the user asking — the market-safe default.
+  if (!body.ai) {
+    return respondGenerate(
+      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList, isFamily, perDay, body.walkPref ?? 3), "heuristic");
+  }
+
+  // AI upgrade: try Claude, but always fall back to the heuristic so the user
   // gets an itinerary even if Claude errors (e.g. no credit / rate limit).
   try {
     const itinerary = await generateItinerary({

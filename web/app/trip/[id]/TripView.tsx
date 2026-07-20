@@ -226,8 +226,11 @@ export function TripView({ tripId }: { tripId: string }) {
         setError(msg);
         return;
       }
-      // `leftOut` comes back only on a selection build; keep the last value on revise.
-      update(tripId, { itinerary: data.itinerary, ...(data.leftOut !== undefined ? { leftOut: data.leftOut } : {}) });
+      // `leftOut` comes back only on a selection build; keep the last value on
+      // revise. `engine` records whether this is the free heuristic or the AI
+      // upgrade (no engine field on AI success → "ai").
+      update(tripId, { itinerary: data.itinerary, engine: data.engine ?? "ai",
+        ...(data.leftOut !== undefined ? { leftOut: data.leftOut } : {}) });
     } catch {
       setError("שגיאת רשת");
     } finally {
@@ -235,8 +238,9 @@ export function TripView({ tripId }: { tripId: string }) {
     }
   }
 
-  const generate = () => call({
+  const generate = (ai = false) => call({
     mode: "generate",
+    ai,
     days: trip?.days ?? 4,
     month: trip?.month,
     selection: trip?.selection,   // Explore build: anchors-first, "אם יש זמן" fillers (F1)
@@ -400,11 +404,17 @@ export function TripView({ tripId }: { tripId: string }) {
         </div>
         {/* actions pushed to the far side */}
         <div className="flex items-center gap-2 lg:mr-auto">
-          <button onClick={generate} disabled={!!busy || !canBuild}
+          <button onClick={() => generate(false)} disabled={!!busy || !canBuild}
             className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-3.5 py-1.5 text-[13.5px] font-medium text-white disabled:opacity-50">
             {busy === "generate" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
             {busy === "generate" ? "בונה…" : itinerary ? "בנה מחדש" : "בנה לו\"ז"}
           </button>
+          {itinerary && trip?.engine !== "ai" && (
+            <button onClick={() => generate(true)} disabled={!!busy} title="תכנון חכם יותר עם AI — סידור, נרטיב ותובנות מטיילים"
+              className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--accent)] bg-[var(--accent-soft)] px-3.5 py-1.5 text-[13.5px] font-medium text-[var(--accent-ink)] disabled:opacity-50">
+              <Sparkles size={14} /> שדרגו עם AI
+            </button>
+          )}
           <button onClick={() => setEditTravelers((v) => !v)}
             className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-3 py-1.5 text-[13.5px] font-medium"
             style={{ background: editTravelers ? "var(--brand-soft)" : "var(--surface)", color: "var(--brand-ink)" }}>
@@ -576,10 +586,11 @@ export function TripView({ tripId }: { tripId: string }) {
               ? <>נרכיב {trip?.days} ימים סביב {tripHotels[0].name} — כל יום מקובץ לפי קרבה, עם זמני הליכה/תחבורה וניווט.</>
               : <>נרכיב {trip?.days} ימים ב{cityHe} — מקובץ לפי קרבה, עם זמני הליכה/תחבורה וניווט.</>}
           </p>
-          <button onClick={generate} disabled={!!busy}
+          <button onClick={() => generate(false)} disabled={!!busy}
             className="mt-5 flex items-center gap-2 rounded-full bg-[var(--brand)] px-7 py-3 text-[16px] font-semibold text-white shadow-[0_6px_16px_rgba(14,107,94,.3)] disabled:opacity-60">
             <Sparkles size={18} /> בנו לי לו״ז
           </button>
+          <p className="mt-2 text-[12px] text-[var(--text-3)]">מיידי וחינם · אפשר לשדרג עם AI אחרי הבנייה</p>
         </div>
       )}
 
