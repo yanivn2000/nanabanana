@@ -558,9 +558,28 @@ export function TripView({ tripId }: { tripId: string }) {
       <div className="lg:flex lg:items-start lg:gap-4 lg:px-8 lg:pt-2.5">
         {/* main column (right on desktop): the day timeline */}
         <div className="lg:min-w-0 lg:flex-1">
-      {error && (
+      {error && error.trim() && (
         <div className="mx-5 mt-4 rounded-[var(--radius-card)] bg-[var(--amber-soft)] px-4 py-3 text-[14px] text-[var(--amber)] lg:mx-0">
           {error}
+        </div>
+      )}
+
+      {/* pre-build state — everything's ready but the itinerary isn't built yet
+          (e.g. arriving from "new trip · by hotel"). A clear CTA instead of a
+          confusing blank page. */}
+      {!itinerary && !busy && canBuild && !multiTrip && (
+        <div className="mx-5 mt-5 flex flex-col items-center rounded-[var(--radius-card)] border border-dashed border-[var(--brand)] bg-[var(--surface)] px-5 py-10 text-center shadow-[var(--shadow)] lg:mx-0">
+          <div className="grid size-12 place-items-center rounded-full bg-[var(--brand-soft)] text-[var(--brand-ink)]"><Sparkles size={22} /></div>
+          <p className="serif mt-3 text-[19px] font-semibold">הכול מוכן — נבנה את הלו״ז</p>
+          <p className="mt-1 max-w-sm text-[14px] leading-snug text-[var(--text-2)]">
+            {tripHotels.length
+              ? <>נרכיב {trip?.days} ימים סביב {tripHotels[0].name} — כל יום מקובץ לפי קרבה, עם זמני הליכה/תחבורה וניווט.</>
+              : <>נרכיב {trip?.days} ימים ב{cityHe} — מקובץ לפי קרבה, עם זמני הליכה/תחבורה וניווט.</>}
+          </p>
+          <button onClick={generate} disabled={!!busy}
+            className="mt-5 flex items-center gap-2 rounded-full bg-[var(--brand)] px-7 py-3 text-[16px] font-semibold text-white shadow-[0_6px_16px_rgba(14,107,94,.3)] disabled:opacity-60">
+            <Sparkles size={18} /> בנו לי לו״ז
+          </button>
         </div>
       )}
 
