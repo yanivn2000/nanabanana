@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Download, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Loader2, Download, ThumbsUp, ThumbsDown, Map as MapIcon } from "lucide-react";
 import type { AdminDestination } from "@/lib/db";
+import type { Itinerary } from "@/lib/trip-types";
+import { useTrips } from "@/lib/store";
 
 type Trip = {
-  cityId: number; city: string; audience: "families" | "couples" | "friends";
+  cityId: number; city: string; cityEn: string; country: string;
+  audience: "families" | "couples" | "friends"; days: number;
   score: number; needsWork: boolean; stops: number;
   dims: Record<string, number>;
   issues: { dim: string; severity: "critical" | "warn"; msg: string; day?: number }[];
-  days: { name: string; must: boolean; cat: string }[][];
+  itinerary: Itinerary;
+  daysNames: { name: string; must: boolean; cat: string }[][];
 };
 type Report = { summary: { version: string; trips: number; avgScore: number; needWork: number }; report: Trip[] };
 type Feedback = { verdict?: "good" | "bad"; notes?: string };
@@ -23,6 +27,7 @@ const scoreColor = (n: number) => n >= 80 ? "var(--brand)" : n >= 65 ? "#c88a3a"
 const FB_KEY = "nanabanana.brain.feedback.v1";
 
 export function BrainEval({ destinations }: { destinations: AdminDestination[] }) {
+  const { create } = useTrips();
   const [days, setDays] = useState(3);
   const [allCities, setAllCities] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -52,12 +57,24 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
       brain_version: data.summary.version, days,
       note: "Brain self-eval + editor feedback — hand this to Claude Code to calibrate lib/brain/policy.ts.",
       summary: data.summary,
-      trips: data.report.map((t) => ({ ...t, editor: fb[key(t)] ?? {} })),
+      // drop the heavy itinerary from the calibration report — keep names + critique.
+      trips: data.report.map(({ itinerary, ...t }) => ({ ...t, editor: fb[`${t.cityId}:${t.audience}`] ?? {} })),
     };
     const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob); a.download = `brain-report-v${data.summary.version}.json`; a.click();
     URL.revokeObjectURL(a.href);
+  };
+
+  // Open the Brain's exact trip as a real trip page (map + walking legs + areas) —
+  // the only way to judge closeness/flow if you don't know the city by heart.
+  const openTrip = (t: Trip) => {
+    const trip = create({
+      title: `🧠 ${t.city} · ${AUD_HE[t.audience]}`, mode: "preferences",
+      city: t.cityEn, cityHe: t.city, country: t.country, destinationId: t.cityId,
+      days: t.days, month: new Date().getMonth() + 1, itinerary: t.itinerary, engine: "heuristic",
+    });
+    window.open(`/trip/${trip.id}`, "_blank");
   };
 
   const reviewed = useMemo(() => Object.values(fb).filter((f) => f.verdict).length, [fb]);
@@ -102,7 +119,13 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
                   <span className="font-bold">{t.city}</span>
                   <span className="text-[12.5px] text-[var(--text-3)]">{AUD_HE[t.audience]}</span>
                 </div>
-                <span className="grid size-10 place-items-center rounded-full text-[15px] font-bold text-white" style={{ background: scoreColor(t.score) }}>{t.score}</span>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => openTrip(t)} title="פתח כדף טיול עם מפה"
+                    className="flex items-center gap-1 rounded-full border border-[var(--brand)] px-2.5 py-1 text-[12px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
+                    <MapIcon size={12} /> דף טיול
+                  </button>
+                  <span className="grid size-10 place-items-center rounded-full text-[15px] font-bold text-white" style={{ background: scoreColor(t.score) }}>{t.score}</span>
+                </div>
               </div>
 
               {/* dim bars */}
@@ -120,7 +143,7 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
 
               {/* days */}
               <div className="flex flex-col gap-1">
-                {t.days.map((d, i) => (
+                {t.daysNames.map((d, i) => (
                   <div key={i} className="text-[12px] text-[var(--text-2)]">
                     <span className="text-[var(--text-3)]">יום {i + 1}:</span> {d.map((a) => `${a.must ? "⭐" : ""}${a.name}`).join(" · ")}
                   </div>

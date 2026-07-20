@@ -1,14 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { editorEmail } from "@/lib/admin";
-import { listDestinations, topAttractions, type Attraction } from "@/lib/db";
-import { clusterIntoDays } from "@/lib/cluster";
+import { listDestinations, topAttractions, areasForDestination, type Attraction } from "@/lib/db";
+import { clusterIntoDays, annotateDaysWithAreas } from "@/lib/cluster";
 import { critiqueTrip } from "@/lib/brain/critique";
 import { BRAIN_VERSION, PACE_STOPS, type Audience } from "@/lib/brain/policy";
+import type { Itinerary, StopKind } from "@/lib/trip-types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const AUDIENCES: Audience[] = ["families", "couples", "friends"];
+const SLOTS = ["09:30", "11:30", "14:30", "16:30", "18:00", "19:30"];
+const KIND: Record<string, StopKind> = {
+  nature: "nature", leisure: "nature", sport: "nature", museum: "culture", historic: "culture",
+  attraction: "culture", tourism: "culture", food: "food", shopping: "shopping",
+};
+
+// Turn the Brain's clustered attractions into a real Itinerary (with coords) so the
+// admin can open it as a full trip page — map, walking legs, area labels — which is
+// the only way an editor who doesn't know the city can judge it.
+function toItinerary(clustered: Attraction[][], dest: { city: string; city_he: string | null; country: string }, audience: Audience, days: number): Itinerary {
+  return {
+    title: `טיול ל${dest.city_he || dest.city}`,
+    subtitle: `${days} ימים · ${audience}`,
+    days: clustered.map((day, i) => ({
+      label: `יום ${i + 1}`, date: "", base: dest.city_he || dest.city,
+      stops: day.map((a, k) => ({
+        name: a.name_he || a.name_en, kind: KIND[a.category] ?? "culture",
+        time: SLOTS[Math.min(k, SLOTS.length - 1)],
+        duration: a.duration_minutes ? `${Math.round(a.duration_minutes / 60)} שעות` : "1.5 שעות",
+        id: a.id, lat: a.lat, lng: a.lng, image: a.image_url, tagline: a.tagline_he,
+        score: a.audience_fit?.[audience], note: a.tips_he || a.tagline_he || undefined,
+      })),
+    })),
+  };
+}
 
 // The Brain's self-evaluation: build a family/couples/friends trip for each city
 // (deterministic — NO AI), critique each, and return a report. This is the
@@ -28,6 +54,7 @@ export async function POST(req: NextRequest) {
     if (!dest) continue;
     const attractions = await topAttractions(id, 150);
     const cityMustCount = attractions.filter((a) => a.must_see === 1).length;
+    const areas = await areasForDestination(id);
     for (const audience of AUDIENCES) {
       // audience-ranked pool: must-sees first, then by this audience's fit. The
       // clusterer treats input order as value.
@@ -36,11 +63,13 @@ export async function POST(req: NextRequest) {
         ((y.audience_fit?.[audience] ?? 0) - (x.audience_fit?.[audience] ?? 0)));
       const { days: built } = clusterIntoDays(pool, days, { walkPref: 3, dayMinutes: PACE_STOPS[audience] * 84 });
       const crit = critiqueTrip(built, audience, { cityMustCount });
+      const itinerary = toItinerary(built, dest, audience, days);
+      annotateDaysWithAreas(itinerary.days, areas, { lat: dest.lat, lng: dest.lng });
       report.push({
-        cityId: id, city: dest.city_he || dest.city, audience,
+        cityId: id, city: dest.city_he || dest.city, cityEn: dest.city, country: dest.country, audience, days,
         score: crit.score, needsWork: crit.needsWork, stops: crit.stops,
-        dims: crit.dims, issues: crit.issues,
-        days: built.map((d) => d.map((a) => ({ name: a.name_he || a.name_en, must: a.must_see === 1, cat: a.category }))),
+        dims: crit.dims, issues: crit.issues, itinerary,
+        daysNames: built.map((d) => d.map((a) => ({ name: a.name_he || a.name_en, must: a.must_see === 1, cat: a.category }))),
       });
     }
   }
