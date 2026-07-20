@@ -45,13 +45,17 @@ function TransitSync({ at }: { at: string | null }) {
 }
 
 // Editable field spec for the city editor (order = display order).
-const FIELDS: { key: string; label: string; type: "text" | "number" | "textarea"; dir?: "ltr" }[] = [
+const FIELDS: { key: string; label: string; type: "text" | "number" | "textarea" | "select"; dir?: "ltr"; options?: { value: string; label: string }[]; hint?: string }[] = [
   { key: "city_he", label: "עיר (עברית)", type: "text" },
   { key: "city", label: "City (EN)", type: "text", dir: "ltr" },
   { key: "country_he", label: "מדינה (עברית)", type: "text" },
   { key: "country", label: "Country (EN)", type: "text", dir: "ltr" },
   { key: "region", label: "אזור", type: "text" },
   { key: "israeli_popularity_score", label: "פופולריות ישראלית (1-10)", type: "number" },
+  { key: "mobility", label: "סוג ניידות", type: "select",
+    options: [{ value: "metro", label: "🚇 מטרו (הליכה/תחב״צ)" }, { value: "car_base", label: "🚗 עיר-בסיס (טיול רכב)" }] },
+  { key: "ingest_radius_km", label: "רדיוס קליטה (ק״מ)", type: "number",
+    hint: "מטרו ~25 · עיר-בסיס 60-120. אחרי שינוי — בקשו לקלוט מחדש." },
   { key: "lat", label: "Lat", type: "number", dir: "ltr" },
   { key: "lng", label: "Lng", type: "number", dir: "ltr" },
   { key: "timezone", label: "אזור זמן", type: "text", dir: "ltr" },
@@ -103,6 +107,12 @@ function CityRow({ d }: { d: AdminDestination }) {
           <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5" title={`${d.edge_count} גשרי מעבר, מתוכם ${d.transit_edge_count} עם תחבורה ציבורית`}>
             🌉 {d.edge_count}
           </span>
+          <span className="rounded px-1.5 py-0.5" title={d.mobility === "car_base" ? "עיר-בסיס לטיול רכב" : "עיר מטרו (הליכה/תחב״צ)"}
+            style={d.mobility === "car_base"
+              ? { background: "var(--amber-soft)", color: "var(--text)" }
+              : { background: "var(--surface-2)", color: "var(--text-3)" }}>
+            {d.mobility === "car_base" ? "🚗" : "🚇"} {d.ingest_radius_km}ק״מ
+          </span>
           <TransitSync at={d.transit_synced_at} />
         </span>
       </button>
@@ -117,11 +127,18 @@ function CityRow({ d }: { d: AdminDestination }) {
                   <textarea value={form[f.key]} rows={3}
                     onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
                     className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] p-2 text-[13.5px] text-[var(--text)] outline-none focus:border-[var(--brand)]" />
+                ) : f.type === "select" ? (
+                  <select value={form[f.key] || "metro"}
+                    onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
+                    className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 text-[13.5px] text-[var(--text)] outline-none focus:border-[var(--brand)]">
+                    {f.options!.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
                 ) : (
                   <input value={form[f.key]} dir={f.dir}
                     onChange={(e) => setForm((s) => ({ ...s, [f.key]: e.target.value }))}
                     className="mt-1 w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 text-[13.5px] text-[var(--text)] outline-none focus:border-[var(--brand)]" />
                 )}
+                {f.hint && <span className="mt-0.5 block text-[11px] text-[var(--text-3)]">{f.hint}</span>}
               </label>
             ))}
           </div>

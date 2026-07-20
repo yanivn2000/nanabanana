@@ -431,6 +431,7 @@ export type AdminDestination = {
   lat: number; lng: number; description_he: string | null;
   best_months: number[] | null; israeli_popularity_score: number | null;
   timezone: string | null; currency: string | null; language: string | null;
+  mobility: string; ingest_radius_km: number;
   shown_count: number; must_count: number; editor_ranked: number; img_pct: number; he_pct: number;
   transit_synced_at: string | null; edge_count: number; transit_edge_count: number;
 };
@@ -440,7 +441,7 @@ export async function adminDestinations(): Promise<AdminDestination[]> {
   return query<AdminDestination>(
     `SELECT d.id, d.city, d.country, d.region, d.city_he, d.country_he, d.lat, d.lng,
             d.description_he, d.best_months, d.israeli_popularity_score,
-            d.timezone, d.currency, d.language, d.transit_synced_at,
+            d.timezone, d.currency, d.language, d.mobility, d.ingest_radius_km, d.transit_synced_at,
             (SELECT count(*)::int FROM attraction_edges e WHERE e.destination_id = d.id) AS edge_count,
             (SELECT count(*)::int FROM attraction_edges e WHERE e.destination_id = d.id AND e.transit_mode IS NOT NULL) AS transit_edge_count,
             count(a.id) FILTER (WHERE ${SHOWN})::int AS shown_count,
@@ -460,7 +461,7 @@ export async function adminDestinations(): Promise<AdminDestination[]> {
 const DEST_EDITABLE = new Set([
   "city", "country", "region", "city_he", "country_he", "lat", "lng",
   "description_he", "best_months", "israeli_popularity_score",
-  "timezone", "currency", "language",
+  "timezone", "currency", "language", "mobility", "ingest_radius_km",
 ]);
 
 export async function updateDestination(id: number, fields: Record<string, unknown>): Promise<boolean> {
