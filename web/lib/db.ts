@@ -480,7 +480,7 @@ export type TripTemplate = {
   title_he: string; audience: string | null; days: number;
   itinerary: Itinerary; source_urls: string[]; notes: string | null;
   approved: boolean; created_by: string | null; created_at: string;
-  city?: string | null; city_he?: string | null; // joined for display
+  city?: string | null; city_he?: string | null; country?: string | null; // joined for display
 };
 
 export async function saveTripTemplate(t: {
@@ -500,7 +500,7 @@ export async function saveTripTemplate(t: {
 // Admin: all modules (with city name) newest-first. approvedOnly for the composer.
 export async function listTripTemplates(approvedOnly = false): Promise<TripTemplate[]> {
   return query<TripTemplate>(
-    `SELECT t.*, d.city, d.city_he FROM trip_templates t
+    `SELECT t.*, d.city, d.city_he, d.country FROM trip_templates t
        LEFT JOIN destinations d ON d.id = t.destination_id
      ${approvedOnly ? "WHERE t.approved = true" : ""}
      ORDER BY t.created_at DESC`);

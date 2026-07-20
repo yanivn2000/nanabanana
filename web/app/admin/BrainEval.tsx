@@ -14,7 +14,8 @@ const SALZBURG_SOURCES = [
 ];
 type Module = {
   id: string; region: string | null; title_he: string; audience: string | null;
-  days: number; city: string | null; city_he: string | null; approved: boolean; source_urls: string[];
+  days: number; city: string | null; city_he: string | null; country: string | null;
+  destination_id: number | null; itinerary: Itinerary; approved: boolean; source_urls: string[];
 };
 
 type Trip = {
@@ -75,6 +76,16 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
     if (!confirm("למחוק את המשבצת?")) return;
     const res = await fetch(`/api/admin/templates?id=${id}`, { method: "DELETE" });
     if (res.ok) await loadModules();
+  };
+  // Open a saved module exactly as a customer sees it — a real trip page with map.
+  const openModule = (m: Module) => {
+    const trip = create({
+      title: m.title_he, mode: "preferences",
+      city: m.city ?? "", cityHe: m.city_he ?? m.city ?? "", country: m.country ?? "",
+      destinationId: m.destination_id ?? undefined,
+      days: m.days, month: new Date().getMonth() + 1, itinerary: m.itinerary, engine: "module",
+    });
+    window.open(`/trip/${trip.id}`, "_blank");
   };
 
   useEffect(() => { try { const r = localStorage.getItem(FB_KEY); if (r) setFb(JSON.parse(r)); } catch {} }, []);
@@ -255,11 +266,15 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
           <div className="flex flex-col gap-1.5">
             {modules.map((m) => (
               <div key={m.id} className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]">
-                {m.approved && <span className="rounded-full bg-[var(--brand-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--brand-ink)]">מאושר</span>}
-                <span className="font-medium">{m.title_he}</span>
-                <span className="text-[var(--text-3)]">· {m.city_he || m.city || m.region} · {m.days} ימים</span>
-                {m.source_urls.length > 0 && <span className="text-[11px] text-[var(--text-3)]" title={m.source_urls.join("\n")}>📎 {m.source_urls.length} מקורות</span>}
-                <button onClick={() => delModule(m.id)} title="מחק משבצת" className="ms-auto text-[var(--text-3)] transition hover:text-[var(--terra,#c8654a)]">
+                <button onClick={() => openModule(m)} title="פתח כמסלול טיול (תצוגת לקוח, עם מפה)"
+                  className="flex min-w-0 flex-1 items-center gap-2 text-right transition hover:text-[var(--brand-ink)]">
+                  {m.approved && <span className="rounded-full bg-[var(--brand-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--brand-ink)]">מאושר</span>}
+                  <MapIcon size={13} className="shrink-0 text-[var(--brand-ink)]" />
+                  <span className="truncate font-medium">{m.title_he}</span>
+                  <span className="shrink-0 text-[var(--text-3)]">· {m.city_he || m.city || m.region} · {m.days} ימים</span>
+                  {m.source_urls.length > 0 && <span className="shrink-0 text-[11px] text-[var(--text-3)]" title={m.source_urls.join("\n")}>📎 {m.source_urls.length}</span>}
+                </button>
+                <button onClick={() => delModule(m.id)} title="מחק משבצת" className="shrink-0 text-[var(--text-3)] transition hover:text-[var(--terra,#c8654a)]">
                   <Trash2 size={13} />
                 </button>
               </div>
