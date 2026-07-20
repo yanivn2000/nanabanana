@@ -5,7 +5,7 @@ import type { Attraction } from "./db";
 import type { Itinerary, Stop, StopKind } from "./trip-types";
 import { descriptor } from "./labels";
 import { familyFit } from "./taste";
-import { clusterIntoDays, dayWalkMinutes } from "./cluster";
+import { clusterIntoDays, dayWalkMinutes, dropSamePlace } from "./cluster";
 import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget } from "./daytrips";
 import { durationHe, haversineKm, walkMinutes } from "./geo";
 
@@ -51,7 +51,8 @@ export function buildHeuristicItinerary(
   // per area. The per-day budget is derived from the pace.
   const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes: perDay * 84, seedGroups });
 
-  const dayList = clustered.map((picks, d) => {
+  const dayList = clustered.map((picksRaw, d) => {
+    const picks = dropSamePlace(picksRaw); // no "fortress + its own hill" twice
     const stops: Stop[] = [];
     // Sequential clock: arrival = running time, then add the stay + travel to the
     // next stop, so times always increase and reflect real durations. The lunch

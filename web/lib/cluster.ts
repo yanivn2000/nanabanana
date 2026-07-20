@@ -84,6 +84,24 @@ export function dayWalkMinutes(day: Attraction[]): number {
   return sum;
 }
 
+// Drop "same place" stops within a day — two things < ~90m apart are one visit
+// (a landmark and its own hill/square/garden, e.g. Hohensalzburg + Festungsberg).
+// Keeps the more valuable of the pair so the fortress wins over the hill.
+const stopWorth = (a: Attraction) =>
+  (a.must_see === 1 ? 1000 : 0) +
+  Math.max(a.audience_fit?.families ?? 0, a.audience_fit?.couples ?? 0, a.audience_fit?.friends ?? 0);
+export function dropSamePlace(day: Attraction[], minMeters = 90): Attraction[] {
+  const kept: Attraction[] = [];
+  for (const a of day) {
+    if (!Number.isFinite(a.lat) || !Number.isFinite(a.lng)) { kept.push(a); continue; }
+    const i = kept.findIndex((k) => Number.isFinite(k.lat) && Number.isFinite(k.lng) &&
+      haversineKm(a.lat as number, a.lng as number, k.lat as number, k.lng as number) * 1000 < minMeters);
+    if (i === -1) kept.push(a);
+    else if (stopWorth(a) > stopWorth(kept[i])) kept[i] = a; // keep the better of the two, in place
+  }
+  return kept;
+}
+
 // 2-opt: reverse segments while it shortens the path (undoes crossings).
 function twoOpt(path: Attraction[]): Attraction[] {
   for (let pass = 0; pass < 5; pass++) {
