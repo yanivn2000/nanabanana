@@ -7,7 +7,7 @@ import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, Pencil, ChevronUp, ChevronDown,
   ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon, Route, Users, Luggage, ListChecks, Wallet, CalendarDays,
-  Clock, MapPin, Ruler, Footprints, Copy, Lightbulb,
+  Clock, MapPin, Ruler, Footprints, Copy, Lightbulb, Car,
 } from "lucide-react";
 import { googleMapsUrl, googleDirUrl, formatDistance, estimateLeg, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
 import { stopColor } from "@/lib/labels";
@@ -509,7 +509,17 @@ export function TripView({ tripId }: { tripId: string }) {
       {itinerary && day && (
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--border)] px-5 pb-2 lg:pl-8 lg:pr-[204px]">
           <h2 className="serif text-[15px] font-bold leading-tight lg:text-[16px]">{dayLabels[curIdx]}</h2>
-          {day.area && (
+          {day.dayTrip ? (
+            <span className="flex items-center gap-1.5 rounded-full bg-[var(--amber-soft)] px-2.5 py-0.5 text-[12px] font-semibold text-[var(--text)]">
+              <Car size={13} /> יום טיול ברכב · {day.dayTrip.driveKm} ק״מ · ~{day.dayTrip.driveMin} דק׳ נסיעה
+              {day.dayTrip.anchorLat != null && day.dayTrip.anchorLng != null && (
+                <a href={googleMapsUrl(day.dayTrip.anchorLat, day.dayTrip.anchorLng)} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-0.5 text-[var(--brand-ink)] underline-offset-2 hover:underline">
+                  <Navigation size={11} /> נווט
+                </a>
+              )}
+            </span>
+          ) : day.area && (
             <span className="flex items-center gap-1 rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[12px] font-medium text-[var(--brand-ink)]">
               <MapPin size={11} /> {day.area}
             </span>
@@ -532,7 +542,7 @@ export function TripView({ tripId }: { tripId: string }) {
           <span className="hidden h-3.5 w-px bg-[var(--border)] sm:block" />
           <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[12.5px] text-[var(--text-2)]">
             {dayTotalKm > 0 && <span className="flex items-center gap-1"><Ruler size={12} className="text-[var(--text-3)]" /> {formatDistance(dayTotalKm)}</span>}
-            {dayTotalWalkMin > 0 && <span className="flex items-center gap-1"><Footprints size={12} className="text-[var(--text-3)]" /> ~{dayTotalWalkMin} דק׳ הליכה</span>}
+            {!day.dayTrip && dayTotalWalkMin > 0 && <span className="flex items-center gap-1"><Footprints size={12} className="text-[var(--text-3)]" /> ~{dayTotalWalkMin} דק׳ הליכה</span>}
             {dayStart && dayEnd && <span className="flex items-center gap-1" dir="ltr"><Clock size={12} className="text-[var(--text-3)]" /> {dayStart}–{dayEnd}</span>}
             {day.base && <span className="flex items-center gap-1"><Navigation size={12} className="text-[var(--text-3)]" /> {day.base}</span>}
           </div>

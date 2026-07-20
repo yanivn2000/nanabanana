@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { editorEmail } from "@/lib/admin";
 import { listDestinations, topAttractions, areasForDestination, type Attraction } from "@/lib/db";
 import { clusterIntoDays, annotateDaysWithAreas } from "@/lib/cluster";
+import { buildCarBaseItinerary } from "@/lib/heuristic";
+import { splitByReach, clusterDayTrips, dayTripBudget } from "@/lib/daytrips";
 import { critiqueTrip } from "@/lib/brain/critique";
 import { BRAIN_VERSION, PACE_STOPS, type Audience } from "@/lib/brain/policy";
 import type { Itinerary, StopKind } from "@/lib/trip-types";
@@ -61,10 +63,19 @@ export async function POST(req: NextRequest) {
       const pool = [...attractions].sort((x: Attraction, y: Attraction) =>
         (y.must_see ?? 0) - (x.must_see ?? 0) ||
         ((y.audience_fit?.[audience] ?? 0) - (x.audience_fit?.[audience] ?? 0)));
-      const { days: built } = clusterIntoDays(pool, days, { walkPref: 3, dayMinutes: PACE_STOPS[audience] * 84 });
+      const center = { lat: dest.lat, lng: dest.lng };
+      // car_base cities: critique only the WALKABLE in-city days (far day-trips are
+      // driven, so walkability doesn't apply), but the trip page gets the full
+      // itinerary incl. car day-trips so the editor can judge it on the map.
+      const carBase = dest.mobility === "car_base";
+      const { inCity, far } = carBase ? splitByReach(pool, center) : { inCity: pool, far: [] as Attraction[] };
+      const tripDays = carBase ? dayTripBudget(days, clusterDayTrips(far, center).length) : 0;
+      const { days: built } = clusterIntoDays(inCity, days - tripDays, { walkPref: 3, dayMinutes: PACE_STOPS[audience] * 84 });
       const crit = critiqueTrip(built, audience, { cityMustCount });
-      const itinerary = toItinerary(built, dest, audience, days);
-      annotateDaysWithAreas(itinerary.days, areas, { lat: dest.lat, lng: dest.lng });
+      const itinerary = carBase
+        ? buildCarBaseItinerary(dest.city, dest.country, days, pool, center, audience === "families", PACE_STOPS[audience])
+        : toItinerary(built, dest, audience, days);
+      annotateDaysWithAreas(itinerary.days, areas, center);
       report.push({
         cityId: id, city: dest.city_he || dest.city, cityEn: dest.city, country: dest.country, audience, days,
         score: crit.score, needsWork: crit.needsWork, stops: crit.stops,

@@ -6,6 +6,7 @@ import type { Itinerary, Stop, StopKind } from "./trip-types";
 import { descriptor } from "./labels";
 import { familyFit } from "./taste";
 import { clusterIntoDays, dayWalkMinutes } from "./cluster";
+import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget } from "./daytrips";
 
 const KIND_FROM_CAT: Record<string, StopKind> = {
   nature: "nature", museum: "culture", attraction: "culture",
@@ -82,6 +83,39 @@ export function buildHeuristicItinerary(
     title: `טיול ב${city}`,
     subtitle: `${days} ימים · ${country}`,
     days: dayList,
+  };
+}
+
+// Car "star-trip" build for car_base cities: reserve some days as CAR day-trips to
+// far worthy clusters (gorges, lakes, ice caves…), keep the rest as walkable
+// in-city days. Falls back to a plain in-city build when there are no day-trips.
+// See lib/daytrips.ts, docs/logic/mobility.md.
+export function buildCarBaseItinerary(
+  city: string,
+  country: string,
+  days: number,
+  attractions: Attraction[],
+  center: { lat: number; lng: number },
+  isFamily = false,
+  perDay = 5,
+  walkPref = 3
+): Itinerary {
+  const { inCity, far } = splitByReach(attractions, center);
+  const clusters = clusterDayTrips(far, center);
+  const tripDays = dayTripBudget(days, clusters.length);
+  const cityDays = days - tripDays;
+
+  // No worthy far clusters (or too few days) → ordinary in-city build.
+  if (tripDays < 1) return buildHeuristicItinerary(city, country, days, inCity, isFamily, perDay, walkPref);
+
+  const cityItin = buildHeuristicItinerary(city, country, cityDays, inCity, isFamily, perDay, walkPref);
+  const tripDayObjs = clusters.slice(0, tripDays).map((cl, i) =>
+    dayTripToDay(cl, city, cityDays + i + 1, isFamily));
+
+  return {
+    title: `טיול ב${city}`,
+    subtitle: `${days} ימים · ${country} · כולל ${tripDays} ${tripDays === 1 ? "יום טיול ברכב" : "ימי טיול ברכב"}`,
+    days: [...cityItin.days, ...tripDayObjs],
   };
 }
 

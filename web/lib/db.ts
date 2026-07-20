@@ -110,6 +110,7 @@ export type Destination = {
   country_he: string | null;
   lat: number;
   lng: number;
+  mobility: string;
   attraction_count: number;
 };
 
@@ -121,7 +122,7 @@ const SHOWN = `(a.quality_keep = 1 OR a.quality_keep IS NULL)
 const NOTABLE = `(info_sources IS NOT NULL AND info_sources::text NOT IN ('[]', 'null'))`;
 
 const DEST_SELECT = `SELECT dest.id, dest.city, dest.country, dest.city_he,
-         dest.country_he, dest.lat, dest.lng,
+         dest.country_he, dest.lat, dest.lng, dest.mobility,
          count(a.id) FILTER (WHERE ${SHOWN})::int AS attraction_count
   FROM destinations dest
   LEFT JOIN attractions a ON a.destination_id = dest.id`;

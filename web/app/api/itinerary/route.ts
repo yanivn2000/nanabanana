@@ -8,7 +8,7 @@ import {
   generateMultiItinerary,
   reviseItinerary,
 } from "@/lib/ai";
-import { buildHeuristicItinerary, buildMultiHeuristicItinerary } from "@/lib/heuristic";
+import { buildHeuristicItinerary, buildMultiHeuristicItinerary, buildCarBaseItinerary } from "@/lib/heuristic";
 import { checkRateLimit } from "@/lib/db";
 import { rateLimit } from "@/lib/ratelimit";
 import * as Sentry from "@sentry/nextjs";
@@ -220,6 +220,12 @@ export async function POST(req: NextRequest) {
   const yesSet = new Set(body.selection?.yes ?? []);
   // Neighbourhood layer (C): label each built day with its area + gateway.
   const areas = await areasForDestination(dest.id);
+  // car_base cities (Salzburg, Brașov, islands…) get CAR day-trips to far worthy
+  // clusters mixed with walkable in-city days; metros build in-city only.
+  const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary =>
+    d.mobility === "car_base"
+      ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp)
+      : buildHeuristicItinerary(d.city, d.country, ndays, list, fam, pd, wp);
   const respondGenerate = (itin: Itinerary, engine?: string) => {
     const scheduled = new Set<number>();
     const withDetails = attachDetails(itin, buildList, anchorIds, scheduled);
@@ -290,8 +296,7 @@ export async function POST(req: NextRequest) {
   // Generate works without a key via the heuristic builder; AI upgrades it.
   // buildList puts anchors first so the heuristic schedules them first too.
   if (body.mode !== "revise" && !aiConfigured()) {
-    return respondGenerate(
-      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList, isFamily, perDay, body.walkPref ?? 3), "heuristic");
+    return respondGenerate(heuristicFor(dest, body.days ?? 4, buildList, isFamily, perDay, body.walkPref ?? 3), "heuristic");
   }
 
   if (body.mode === "revise") {
@@ -323,8 +328,7 @@ export async function POST(req: NextRequest) {
   // The paid AI is a separate opt-in upgrade (body.ai === true), so a build never
   // spends on the API without the user asking — the market-safe default.
   if (!body.ai) {
-    return respondGenerate(
-      buildHeuristicItinerary(dest.city, dest.country, body.days ?? 4, buildList, isFamily, perDay, body.walkPref ?? 3), "heuristic");
+    return respondGenerate(heuristicFor(dest, body.days ?? 4, buildList, isFamily, perDay, body.walkPref ?? 3), "heuristic");
   }
 
   // AI upgrade: try Claude, but always fall back to the heuristic so the user

@@ -43,6 +43,10 @@ export type Day = {
   // to get there from the centre (only set for out-of-centre areas).
   area?: string;
   gateway?: string;
+  // Car star-trip day (car_base cities): this day is a drive out of the base to a
+  // far cluster, not a walkable in-city day. Drive metrics + anchor coords for a
+  // "navigate" deep-link. See lib/daytrips.ts.
+  dayTrip?: { driveMin: number; driveKm: number; anchorLat?: number | null; anchorLng?: number | null };
 };
 
 export type Itinerary = {

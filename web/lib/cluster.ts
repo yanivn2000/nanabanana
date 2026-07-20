@@ -34,6 +34,7 @@ export function annotateDaysWithAreas(
 ): void {
   if (!areas.length) return;
   for (const day of days) {
+    if (day.dayTrip) continue; // car day-trips carry their own far-area label
     const pts = day.stops.filter((s) => s.lat != null && s.lng != null);
     if (!pts.length) continue;
     const clat = pts.reduce((s, p) => s + (p.lat as number), 0) / pts.length;
