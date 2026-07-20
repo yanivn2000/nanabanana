@@ -151,7 +151,7 @@ export function TripView({ tripId }: { tripId: string }) {
   for (let si = 0; si < dstops.length - 1; si++) {
     const a = dstops[si], b = dstops[si + 1];
     if (a.lat == null || a.lng == null || b.lat == null || b.lng == null) continue;
-    legAfter[si] = { ...estimateLeg(a.lat, a.lng, b.lat, b.lng, walkPref),
+    legAfter[si] = { ...estimateLeg(a.lat, a.lng, b.lat, b.lng, walkPref, !!day?.carBase),
       fromLat: a.lat, fromLng: a.lng, toLat: b.lat, toLng: b.lng };
   }
   const legs = Object.values(legAfter);
@@ -814,7 +814,7 @@ export function TripView({ tripId }: { tripId: string }) {
                             <span className="whitespace-nowrap">· {formatDistance(leg.km)}</span>
                             {leg.altHe && <span className="whitespace-nowrap">{leg.altHe}</span>}
                             <a href={googleDirUrl(leg.fromLat, leg.fromLng, leg.toLat, leg.toLng,
-                                 leg.recommended === "transit" ? "transit" : "walking")}
+                                 leg.recommended === "transit" ? "transit" : leg.recommended === "drive" ? "driving" : "walking")}
                               target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
                               className="inline-flex items-center gap-0.5 whitespace-nowrap text-[var(--brand-ink)] underline decoration-dotted underline-offset-2">
                               <MapPin size={11} /> נווט

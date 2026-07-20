@@ -231,6 +231,8 @@ export async function POST(req: NextRequest) {
     const withDetails = attachDetails(itin, buildList, anchorIds, scheduled);
     recordTripEdges(dest, withDetails);
     annotateDaysWithAreas(withDetails.days, areas, { lat: dest.lat, lng: dest.lng });
+    // car_base city → the whole trip is a rental-car trip; legs read as driving.
+    if (dest.mobility === "car_base") withDetails.days.forEach((d) => { d.carBase = true; });
     const leftOut = body.selection
       ? picks.filter((a) => yesSet.has(a.id) && !scheduled.has(a.id))
           .map((a) => ({ id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category }))

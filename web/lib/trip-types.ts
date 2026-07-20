@@ -47,6 +47,9 @@ export type Day = {
   // far cluster, not a walkable in-city day. Drive metrics + anchor coords for a
   // "navigate" deep-link. See lib/daytrips.ts.
   dayTrip?: { driveMin: number; driveKm: number; anchorLat?: number | null; anchorLng?: number | null };
+  // The whole trip is a rental-car trip (car_base city): between-stop legs are
+  // framed as driving, not public transit.
+  carBase?: boolean;
 };
 
 export type Itinerary = {

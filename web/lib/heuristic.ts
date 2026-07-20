@@ -112,10 +112,13 @@ export function buildCarBaseItinerary(
   const tripDayObjs = clusters.slice(0, tripDays).map((cl, i) =>
     dayTripToDay(cl, city, cityDays + i + 1, isFamily));
 
+  // A car_base trip is a rental-car trip throughout: mark every day so between-stop
+  // legs read as driving, not public transit.
+  const allDays = [...cityItin.days, ...tripDayObjs].map((d) => ({ ...d, carBase: true }));
   return {
     title: `טיול ב${city}`,
     subtitle: `${days} ימים · ${country} · כולל ${tripDays} ${tripDays === 1 ? "יום טיול ברכב" : "ימי טיול ברכב"}`,
-    days: [...cityItin.days, ...tripDayObjs],
+    days: allDays,
   };
 }
 

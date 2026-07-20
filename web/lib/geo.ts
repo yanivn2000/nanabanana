@@ -61,11 +61,19 @@ export type Leg = {
   km: number;
   walkMin: number;
   transitMin: number;
-  recommended: "walk" | "transit";
-  icon: string;      // 🚶 | 🚌
+  driveMin: number;
+  recommended: "walk" | "transit" | "drive";
+  icon: string;      // 🚶 | 🚌 | 🚗
   primaryHe: string; // leading suggestion
   altHe?: string;    // the other option, shown when it's a genuine toss-up
 };
+
+// Minutes by car for a short local leg — ~32 km/h effective (local roads, parking,
+// approach), a deterministic placeholder like the transit one. Rental-car trips
+// (car_base cities) use this instead of public transit.
+export function localDriveMin(km: number): number {
+  return Math.max(4, Math.round(km / 32 * 60) + 3);
+}
 
 // Estimate the leg between two stops given the traveler's walk tolerance. Walk is
 // exact-ish (haversine); transit is a deterministic placeholder (fixed overhead +
@@ -74,21 +82,29 @@ export type Leg = {
 // hops are almost always better on foot — which is why the Amsterdam-centre →
 // Albert-Cuyp kind of hop reads as a toss-up rather than an automatic tram.
 export function estimateLeg(
-  lat1: number, lng1: number, lat2: number, lng2: number, walkPref = DEFAULT_WALK_PREF
+  lat1: number, lng1: number, lat2: number, lng2: number, walkPref = DEFAULT_WALK_PREF,
+  car = false
 ): Leg {
   const km = haversineKm(lat1, lng1, lat2, lng2);
   const walkMin = walkMinutes(km);
   const transitMin = Math.round(11 + (km / 20) * 60);
+  const driveMin = localDriveMin(km);
   const maxWalk = WALK_PREF_KM[walkPref] ?? WALK_PREF_KM[DEFAULT_WALK_PREF];
-  const recommended: "walk" | "transit" = km <= maxWalk ? "walk" : "transit";
+  const recommended: "walk" | "transit" | "drive" =
+    km <= maxWalk ? "walk" : car ? "drive" : "transit";
 
   if (recommended === "walk") {
-    // Offer transit as an alt only when the walk is on the longer side for this
+    // Offer the vehicle alt only when the walk is on the longer side for this
     // traveler (>60% of their tolerance) — otherwise just say "walk".
-    const alt = km > maxWalk * 0.6 ? `או תחבורה ציבורית · ~${transitMin} דק׳` : undefined;
-    return { km, walkMin, transitMin, recommended, icon: "🚶", primaryHe: `${walkMin} דק׳ הליכה`, altHe: alt };
+    const alt = km > maxWalk * 0.6
+      ? (car ? `או נסיעה קצרה ברכב · ~${driveMin} דק׳` : `או תחבורה ציבורית · ~${transitMin} דק׳`)
+      : undefined;
+    return { km, walkMin, transitMin, driveMin, recommended, icon: "🚶", primaryHe: `${walkMin} דק׳ הליכה`, altHe: alt };
   }
-  // Transit leads; still offer to walk if it isn't wildly far (< 2× tolerance).
+  // Vehicle leads; still offer to walk if it isn't wildly far (< 2× tolerance).
   const alt = km < maxWalk * 2 ? `או ${walkMin} דק׳ הליכה` : undefined;
-  return { km, walkMin, transitMin, recommended, icon: "🚌", primaryHe: `תחבורה ציבורית · ~${transitMin} דק׳`, altHe: alt };
+  if (recommended === "drive") {
+    return { km, walkMin, transitMin, driveMin, recommended, icon: "🚗", primaryHe: `נסיעה ברכב · ~${driveMin} דק׳`, altHe: alt };
+  }
+  return { km, walkMin, transitMin, driveMin, recommended, icon: "🚌", primaryHe: `תחבורה ציבורית · ~${transitMin} דק׳`, altHe: alt };
 }
