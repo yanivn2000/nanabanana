@@ -30,6 +30,7 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
   const { create } = useTrips();
   const [days, setDays] = useState(3);
   const [allCities, setAllCities] = useState(false);
+  const [cityId, setCityId] = useState(0); // 0 = default (first 6)
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Report | null>(null);
   const [fb, setFb] = useState<Record<string, Feedback>>({});
@@ -45,7 +46,7 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
     try {
       const res = await fetch("/api/admin/brain-eval", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ days, cities: allCities ? destinations.map((d) => d.id) : undefined }),
+        body: JSON.stringify({ days, cities: allCities ? destinations.map((d) => d.id) : cityId ? [cityId] : undefined }),
       });
       setData(res.ok ? await res.json() : null);
     } finally { setLoading(false); }
@@ -85,6 +86,13 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
         <label className="flex items-center gap-1.5 text-[13px] text-[var(--text-2)]">ימים
           <input type="number" min={2} max={7} value={days} onChange={(e) => setDays(Number(e.target.value))}
             className="w-14 rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-center" /></label>
+        <label className="flex items-center gap-1.5 text-[13px] text-[var(--text-2)]">עיר
+          <select value={cityId} onChange={(e) => { setCityId(Number(e.target.value)); if (Number(e.target.value)) setAllCities(false); }}
+            disabled={allCities}
+            className="rounded border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[13px] disabled:opacity-50">
+            <option value={0}>ברירת מחדל (6 ראשונות)</option>
+            {destinations.map((d) => <option key={d.id} value={d.id}>{d.city_he || d.city}</option>)}
+          </select></label>
         <label className="flex items-center gap-1.5 text-[13px] text-[var(--text-2)]">
           <input type="checkbox" checked={allCities} onChange={(e) => setAllCities(e.target.checked)} /> כל הערים (איטי)</label>
         <button onClick={run} disabled={loading}
