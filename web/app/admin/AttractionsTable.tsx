@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { Loader2, ChevronDown } from "lucide-react";
 import type { AdminDestination, AdminAttractionRow } from "@/lib/db";
 
 const AUD = [
@@ -23,6 +23,8 @@ export function AttractionsTable({ destinations }: { destinations: AdminDestinat
   const [bonuses, setBonuses] = useState<Record<number, { families: number; couples: number; friends: number }>>({});
   const [saving, setSaving] = useState<number | null>(null);
   const [mustSaving, setMustSaving] = useState<number | null>(null);
+  const [open, setOpen] = useState<Set<number>>(new Set());
+  const toggleOpen = (id: number) => setOpen((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   // toggle "חובה" via the editor overlay: rank='must' forces must-see, 'maybe'
   // turns it off (keeps the place, just not a must). Effective must_see updates.
@@ -61,11 +63,15 @@ export function AttractionsTable({ destinations }: { destinations: AdminDestinat
 
   // per-city max traveller count, for the same worthiness the consumer computes
   const maxTrav = useMemo(() => Math.max(1, ...rows.map((r) => r.traveler_count)), [rows]);
-  const worth = (r: AdminAttractionRow) => {
+  // Break worthiness into its parts so the number and the explanation share one
+  // source of truth. worthiness = base + travelers + wiki + must-status (0..1).
+  const worthParts = (r: AdminAttractionRow) => {
     const ts = r.traveler_count ? Math.log1p(r.traveler_count) / Math.log1p(maxTrav) : 0;
-    const cur = r.must_see === 1 ? 1 : r.editor_rank === "maybe" ? 0.5 : 0;
-    return Math.min(1, 0.10 + 0.28 * ts + 0.28 * (r.notable ? 1 : 0) + 0.34 * cur);
+    const curFactor = r.must_see === 1 ? 1 : r.editor_rank === "maybe" ? 0.5 : 0;
+    const base = 0.10, travel = 0.28 * ts, wiki = 0.28 * (r.notable ? 1 : 0), status = 0.34 * curFactor;
+    return { base, travel, wiki, status, curFactor, ts, total: Math.min(1, base + travel + wiki + status) };
   };
+  const worth = (r: AdminAttractionRow) => worthParts(r).total;
   const consensus = (r: AdminAttractionRow, k: "families" | "couples" | "friends") =>
     Math.round(100 * worth(r) * ((r.audience_fit?.[k] ?? 0) / 100)) + (bonuses[r.id]?.[k] ?? 0);
 
@@ -136,37 +142,139 @@ export function AttractionsTable({ destinations }: { destinations: AdminDestinat
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-[var(--border)] align-middle hover:bg-[var(--surface-2)]">
-                <td className="p-2">
-                  <div className="font-medium text-[var(--text)]">{r.name_he || r.name_en}</div>
-                  <div className="text-[11px] text-[var(--text-3)]">
-                    {r.category}{r.audience_fit?.type ? ` · ${TYPE_HE[r.audience_fit.type] ?? r.audience_fit.type}` : ""}{r.notable ? " · 📚" : ""}
-                  </div>
-                </td>
-                <td className="p-2 text-center">
-                  <button onClick={() => toggleMust(r)} disabled={mustSaving === r.id}
-                    title={r.must_see === 1 ? "לחצו לכבות חובה" : "לחצו לסמן כחובה"}
-                    className="rounded-full border px-2 py-0.5 text-[10.5px] font-bold transition disabled:opacity-50"
-                    style={r.must_see === 1
-                      ? { background: "var(--brand)", color: "#fff", borderColor: "var(--brand)" }
-                      : { background: "var(--surface)", color: "var(--text-3)", borderColor: "var(--border)" }}>
-                    {mustSaving === r.id ? "…" : r.must_see === 1 ? "⭐ חובה" : "סמן חובה"}
-                  </button>
-                </td>
-                <td className="p-2 text-center text-[var(--text-2)] tabular-nums">{r.traveler_count || ""}</td>
-                {AUD.map((a) => (
-                  <FragmentCell key={a.key}
-                    fit={r.audience_fit?.[a.key] ?? null}
-                    cons={r.audience_fit ? consensus(r, a.key) : null}
-                    bonus={bonuses[r.id]?.[a.key] ?? 0}
-                    onBonus={(v) => setB(r.id, a.key, v)}
-                    onSave={() => saveBonus(r.id)}
-                    saving={saving === r.id} />
-                ))}
-              </tr>
+              <Fragment key={r.id}>
+                <tr className="border-b border-[var(--border)] align-middle hover:bg-[var(--surface-2)]">
+                  <td className="p-2">
+                    <button onClick={() => toggleOpen(r.id)}
+                      title="הסבר על הציונים" aria-expanded={open.has(r.id)}
+                      className="group flex items-start gap-1.5 text-right">
+                      <ChevronDown size={15} className={`mt-0.5 shrink-0 text-[var(--text-3)] transition-transform ${open.has(r.id) ? "rotate-180" : ""}`} />
+                      <span>
+                        <span className="font-medium text-[var(--text)] group-hover:text-[var(--brand-ink)]">{r.name_he || r.name_en}</span>
+                        <span className="block text-[11px] text-[var(--text-3)]">
+                          {r.category}{r.audience_fit?.type ? ` · ${TYPE_HE[r.audience_fit.type] ?? r.audience_fit.type}` : ""}{r.notable ? " · 📚" : ""}
+                        </span>
+                      </span>
+                    </button>
+                  </td>
+                  <td className="p-2 text-center">
+                    <button onClick={() => toggleMust(r)} disabled={mustSaving === r.id}
+                      title={r.must_see === 1 ? "לחצו לכבות חובה" : "לחצו לסמן כחובה"}
+                      className="rounded-full border px-2 py-0.5 text-[10.5px] font-bold transition disabled:opacity-50"
+                      style={r.must_see === 1
+                        ? { background: "var(--brand)", color: "#fff", borderColor: "var(--brand)" }
+                        : { background: "var(--surface)", color: "var(--text-3)", borderColor: "var(--border)" }}>
+                      {mustSaving === r.id ? "…" : r.must_see === 1 ? "⭐ חובה" : "סמן חובה"}
+                    </button>
+                  </td>
+                  <td className="p-2 text-center text-[var(--text-2)] tabular-nums">{r.traveler_count || ""}</td>
+                  {AUD.map((a) => (
+                    <FragmentCell key={a.key}
+                      fit={r.audience_fit?.[a.key] ?? null}
+                      cons={r.audience_fit ? consensus(r, a.key) : null}
+                      bonus={bonuses[r.id]?.[a.key] ?? 0}
+                      onBonus={(v) => setB(r.id, a.key, v)}
+                      onSave={() => saveBonus(r.id)}
+                      saving={saving === r.id} />
+                  ))}
+                </tr>
+                {open.has(r.id) && (
+                  <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
+                    <td colSpan={3 + AUD.length * 2} className="p-0">
+                      <ScoreExplain r={r} parts={worthParts(r)} maxTrav={maxTrav} bonuses={bonuses[r.id]} consensus={(k) => consensus(r, k)} />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+type WorthParts = { base: number; travel: number; wiki: number; status: number; curFactor: number; ts: number; total: number };
+
+// Expanded row: shows exactly how each audience's consensus was derived —
+// worthiness (base + travelers + wiki + must-status) × AI fit + admin bonus —
+// plus a plain-Hebrew reason for why the score landed high or low.
+function ScoreExplain({ r, parts, maxTrav, bonuses, consensus }: {
+  r: AdminAttractionRow; parts: WorthParts; maxTrav: number;
+  bonuses?: { families: number; couples: number; friends: number };
+  consensus: (k: "families" | "couples" | "friends") => number;
+}) {
+  const pct = (n: number) => `${Math.round(n * 100)}%`;
+  const statusHe = r.must_see === 1 ? "⭐ חובה" : r.editor_rank === "maybe" ? "אולי" : "רגיל";
+  // worthiness factor rows (shared across all audiences)
+  const factors = [
+    { he: "בסיס", val: parts.base, detail: "קבוע לכל מקום" },
+    { he: "מטיילים", val: parts.travel, detail: `${r.traveler_count || 0} מטיילים · מקס׳ בעיר ${maxTrav} (סקאלה לוגריתמית)`, weak: parts.ts < 0.25, strong: parts.ts >= 0.6 },
+    { he: "ויקי 📚", val: parts.wiki, detail: r.notable ? "מסומן כבעל ערך אנציקלופדי" : "לא מופיע בוויקיפדיה", weak: !r.notable, strong: !!r.notable },
+    { he: "סטטוס חובה", val: parts.status, detail: statusHe, weak: parts.curFactor === 0, strong: parts.curFactor === 1 },
+  ];
+  // dominant reason the worthiness is what it is
+  const drags = factors.filter((f) => f.weak).map((f) => f.he.replace(" 📚", ""));
+  const lifts = factors.filter((f) => f.strong).map((f) => f.he.replace(" 📚", ""));
+
+  return (
+    <div className="flex flex-col gap-3 px-3 py-3.5 text-[12.5px]">
+      {/* worthiness */}
+      <div>
+        <div className="mb-1.5 flex items-baseline gap-2">
+          <span className="font-bold text-[var(--text)]">חשיבות המקום (worthiness)</span>
+          <span className="font-mono font-bold text-[var(--brand-ink)]">{pct(parts.total)}</span>
+          <span className="text-[var(--text-3)]">— משותפת לכל הקהלים, מכפילה את ה־fit</span>
+        </div>
+        {/* stacked contribution bar */}
+        <div className="mb-2 flex h-2.5 w-full max-w-[560px] overflow-hidden rounded-full bg-[var(--surface)]">
+          {factors.map((f, i) => f.val > 0 && (
+            <div key={i} style={{ width: pct(f.val), background: ["#c9c4bb", "var(--brand)", "#7aa06f", "#c88a3a"][i] }} title={`${f.he}: ${pct(f.val)}`} />
+          ))}
+        </div>
+        <div className="grid gap-x-5 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
+          {factors.map((f, i) => (
+            <div key={i} className="flex items-baseline gap-1.5">
+              <span className="inline-block size-2.5 shrink-0 rounded-sm" style={{ background: ["#c9c4bb", "var(--brand)", "#7aa06f", "#c88a3a"][i] }} />
+              <span className="font-medium text-[var(--text)]">{f.he}</span>
+              <span className="font-mono text-[var(--brand-ink)]">+{pct(f.val)}</span>
+              <span className="text-[11px] text-[var(--text-3)]">{f.detail}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* per-audience derivation */}
+      <div className="flex flex-col gap-1.5 border-t border-[var(--border)] pt-2.5">
+        <span className="font-bold text-[var(--text)]">קונצנזוס לכל קהל = fit × חשיבות + בונוס</span>
+        {r.audience_fit ? AUD.map((a) => {
+          const fit = r.audience_fit?.[a.key] ?? 0;
+          const bonus = bonuses?.[a.key] ?? 0;
+          const core = Math.round(fit * parts.total);
+          return (
+            <div key={a.key} className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 font-mono text-[12px]">
+              <span className="w-24 shrink-0 font-sans text-[var(--text-2)]">{a.he}</span>
+              <span className="text-[var(--text-3)]">fit</span><b className="text-[var(--text)]">{fit}</b>
+              <span className="text-[var(--text-3)]">× {pct(parts.total)} =</span>
+              <b className="text-[var(--text)]">{core}</b>
+              {bonus !== 0 && <><span className="text-[var(--text-3)]">{bonus > 0 ? "+" : "−"} בונוס {Math.abs(bonus)} =</span></>}
+              <span className="text-[var(--text-3)]">קונצנזוס</span>
+              <b className="rounded bg-[var(--surface)] px-1.5 text-[var(--brand-ink)]">{consensus(a.key)}</b>
+            </div>
+          );
+        }) : <span className="text-[var(--text-3)]">המקום עוד לא נוקד ע״י הבינה (אין fit).</span>}
+      </div>
+
+      {/* plain-language takeaway */}
+      <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-2.5 text-[12px] leading-relaxed text-[var(--text-2)]">
+        <b className="text-[var(--text)]">למה כזה ציון: </b>
+        {lifts.length > 0 && <>מחזק — {lifts.join(", ")}. </>}
+        {drags.length > 0 && <>מוריד — {drags.join(", ")}. </>}
+        {parts.total < 0.35
+          ? "החשיבות נמוכה, אז גם מקום עם fit גבוה ידורג נמוך במסלול. כדי להעלות: סמנו חובה, או הוסיפו בונוס אדמין."
+          : parts.total >= 0.7
+          ? "החשיבות גבוהה — הקונצנזוס נשען בעיקר על ה־fit של כל קהל."
+          : "חשיבות בינונית — הקונצנזוס הוא שילוב מאוזן של fit וחוזק התיק."}
       </div>
     </div>
   );
