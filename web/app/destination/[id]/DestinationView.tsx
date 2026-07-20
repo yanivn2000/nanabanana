@@ -165,7 +165,7 @@ function NeighbourhoodStrip({ areas, chosenIds, attrById, onFocus, onToggle, onB
             <div key={a.id}
               className="flex w-[248px] shrink-0 flex-col rounded-[var(--radius-card)] border bg-[var(--surface)] p-3.5 shadow-[var(--shadow)] transition"
               style={{ borderColor: sel ? "var(--brand)" : "var(--border)", boxShadow: sel ? "0 0 0 1.5px var(--brand)" : undefined }}>
-              <button onClick={() => onFocus(a)} className="flex flex-col text-right">
+              <button onClick={() => onFocus(a)} className="flex flex-1 flex-col text-right">
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <span className="rounded-full px-2 py-0.5 text-[11px] font-bold"
                     style={vibe ? { background: "var(--accent-soft)", color: "var(--accent-ink)" } : { background: "var(--brand-soft)", color: "var(--brand-ink)" }}>
