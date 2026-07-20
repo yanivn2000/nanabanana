@@ -50,6 +50,7 @@ Same pattern for `audience` (see `audience-fit.md`) and `matching`.
 | [routing.md](./routing.md) | walk-vs-transit leg model + the `attraction_edges` graph + walkPref | `web/lib/geo.ts`, `attraction_edges` |
 | [day-clustering.md](./day-clustering.md) | proximity day-clustering (route-first) + free gems | `web/lib/cluster.ts` |
 | [neighborhoods.md](./neighborhoods.md) (discovery half) | k-means area discovery + day annotation | `web/lib/cluster.ts`, `web/scripts/areas_*` |
+| [brain.md](./brain.md) | the deterministic trip engine + self-critic + editor-calibrated policy | `web/lib/brain/`, `/api/admin/brain-eval` |
 
 ## Keeping it current
 When we refine a rule (e.g. "iconic must-sees score high for every audience"),
