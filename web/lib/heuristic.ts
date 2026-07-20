@@ -62,6 +62,9 @@ export function buildHeuristicItinerary(
         duration: durationHe(a.duration_minutes),
         score: isFamily ? (a.family_score ?? undefined) : undefined,
         note: a.tips_he || descriptor(a),
+        // carry coords/id so between-stop travel legs + map pins work without
+        // depending on a later attachDetails pass (e.g. saved modules).
+        id: a.id, lat: a.lat, lng: a.lng, image: a.image_url, tagline: a.tagline_he,
       });
     });
 
