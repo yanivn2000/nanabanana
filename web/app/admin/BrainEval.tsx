@@ -1,10 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Download, ThumbsUp, ThumbsDown, Map as MapIcon } from "lucide-react";
+import { Loader2, Download, ThumbsUp, ThumbsDown, Map as MapIcon, Save, Trash2, Blocks } from "lucide-react";
 import type { AdminDestination } from "@/lib/db";
 import type { Itinerary } from "@/lib/trip-types";
 import { useTrips } from "@/lib/store";
+
+// Israeli travel sources that ground the Salzburg region module (masa.co.il).
+const SALZBURG_SOURCES = [
+  "https://www.masa.co.il/article/טיול-בזלצבורג-והסביבה-כמה-ירוק-ככה-מתו/",
+  "https://www.masa.co.il/article/זלצבורג-עשרת-הגדולים/",
+  "https://www.masa.co.il/article/חבל-טירול-וזלצבורג-עם-ילדים/",
+];
+type Module = {
+  id: string; region: string | null; title_he: string; audience: string | null;
+  days: number; city: string | null; city_he: string | null; approved: boolean; source_urls: string[];
+};
 
 type Trip = {
   cityId: number; city: string; cityEn: string; country: string;
@@ -34,6 +45,37 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Report | null>(null);
   const [fb, setFb] = useState<Record<string, Feedback>>({});
+  const [modules, setModules] = useState<Module[]>([]);
+  const [savingMod, setSavingMod] = useState<string | null>(null);
+
+  const loadModules = async () => {
+    const res = await fetch("/api/admin/templates");
+    if (res.ok) setModules((await res.json()).templates ?? []);
+  };
+  useEffect(() => { void loadModules(); }, []);
+
+  // Save this built trip as a reusable, approved regional module ("משבצת") that can
+  // later be composed into a multi-city trip. Grounded in the masa sources per city.
+  const saveModule = async (t: Trip) => {
+    setSavingMod(key(t));
+    try {
+      const res = await fetch("/api/admin/templates", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          destination_id: t.cityId, region: `${t.city} והסביבה`,
+          title_he: `${t.city} · ${AUD_HE[t.audience]} · ${t.days} ימים`,
+          audience: t.audience, days: t.days, itinerary: t.itinerary, approved: true,
+          source_urls: t.cityEn === "Salzburg" ? SALZBURG_SOURCES : [],
+        }),
+      });
+      if (res.ok) await loadModules();
+    } finally { setSavingMod(null); }
+  };
+  const delModule = async (id: string) => {
+    if (!confirm("למחוק את המשבצת?")) return;
+    const res = await fetch(`/api/admin/templates?id=${id}`, { method: "DELETE" });
+    if (res.ok) await loadModules();
+  };
 
   useEffect(() => { try { const r = localStorage.getItem(FB_KEY); if (r) setFb(JSON.parse(r)); } catch {} }, []);
   const saveFb = (next: Record<string, Feedback>) => { setFb(next); try { localStorage.setItem(FB_KEY, JSON.stringify(next)); } catch {} };
@@ -128,6 +170,10 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
                   <span className="text-[12.5px] text-[var(--text-3)]">{AUD_HE[t.audience]}</span>
                 </div>
                 <div className="flex items-center gap-2">
+                  <button onClick={() => saveModule(t)} disabled={savingMod === key(t)} title="שמור כמשבצת מאושרת לספרייה"
+                    className="flex items-center gap-1 rounded-full border border-[var(--accent,#c8654a)] px-2.5 py-1 text-[12px] font-medium text-[var(--accent-ink,#8a3d2a)] transition hover:bg-[var(--accent-soft)] disabled:opacity-50">
+                    {savingMod === key(t) ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} משבצת
+                  </button>
                   <button onClick={() => openTrip(t)} title="פתח כדף טיול עם מפה"
                     className="flex items-center gap-1 rounded-full border border-[var(--brand)] px-2.5 py-1 text-[12px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
                     <MapIcon size={12} /> דף טיול
@@ -195,6 +241,32 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
           המוח יבנה טיול למשפחות/זוגות/חברים בכל עיר, ינקד את עצמו, ויציג את הביקורת. סמנו טוב/לשיפור + הערות, ואז הורידו דוח לכיול.
         </p>
       )}
+
+      {/* Module library ("משבצות"): approved regional blocks to compose into trips */}
+      <div className="mt-2 flex flex-col gap-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3.5">
+        <div className="flex items-center gap-2">
+          <Blocks size={16} className="text-[var(--accent-ink,#8a3d2a)]" />
+          <span className="font-bold">ספריית משבצות</span>
+          <span className="text-[12.5px] text-[var(--text-3)]">בלוקים אזוריים מאושרים להרכבה בטיול — {modules.length}</span>
+        </div>
+        {modules.length === 0 ? (
+          <p className="text-[12.5px] text-[var(--text-3)]">עדיין אין משבצות. הריצו בדיקה, ובכל טיול טוב לחצו “משבצת” כדי לשמור אותו כבלוק מאושר.</p>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            {modules.map((m) => (
+              <div key={m.id} className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]">
+                {m.approved && <span className="rounded-full bg-[var(--brand-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--brand-ink)]">מאושר</span>}
+                <span className="font-medium">{m.title_he}</span>
+                <span className="text-[var(--text-3)]">· {m.city_he || m.city || m.region} · {m.days} ימים</span>
+                {m.source_urls.length > 0 && <span className="text-[11px] text-[var(--text-3)]" title={m.source_urls.join("\n")}>📎 {m.source_urls.length} מקורות</span>}
+                <button onClick={() => delModule(m.id)} title="מחק משבצת" className="ms-auto text-[var(--text-3)] transition hover:text-[var(--terra,#c8654a)]">
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

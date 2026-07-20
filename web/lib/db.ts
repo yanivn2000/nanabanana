@@ -474,6 +474,42 @@ export async function updateDestination(id: number, fields: Record<string, unkno
   return true;
 }
 
+// --- Trip modules ("משבצות"): reusable editor-approved regional blocks --------
+export type TripTemplate = {
+  id: string; destination_id: number | null; region: string | null;
+  title_he: string; audience: string | null; days: number;
+  itinerary: Itinerary; source_urls: string[]; notes: string | null;
+  approved: boolean; created_by: string | null; created_at: string;
+  city?: string | null; city_he?: string | null; // joined for display
+};
+
+export async function saveTripTemplate(t: {
+  destination_id: number | null; region?: string | null; title_he: string;
+  audience?: string | null; days: number; itinerary: Itinerary;
+  source_urls?: string[]; notes?: string | null; approved?: boolean; created_by?: string | null;
+}): Promise<string> {
+  const rows = await query<{ id: string }>(
+    `INSERT INTO trip_templates
+       (destination_id, region, title_he, audience, days, itinerary, source_urls, notes, approved, created_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+    [t.destination_id, t.region ?? null, t.title_he, t.audience ?? null, t.days,
+     JSON.stringify(t.itinerary), t.source_urls ?? [], t.notes ?? null, t.approved ?? false, t.created_by ?? null]);
+  return rows[0].id;
+}
+
+// Admin: all modules (with city name) newest-first. approvedOnly for the composer.
+export async function listTripTemplates(approvedOnly = false): Promise<TripTemplate[]> {
+  return query<TripTemplate>(
+    `SELECT t.*, d.city, d.city_he FROM trip_templates t
+       LEFT JOIN destinations d ON d.id = t.destination_id
+     ${approvedOnly ? "WHERE t.approved = true" : ""}
+     ORDER BY t.created_at DESC`);
+}
+
+export async function deleteTripTemplate(id: string): Promise<void> {
+  await query(`DELETE FROM trip_templates WHERE id = $1`, [id]);
+}
+
 // --- Admin: insights ingest (the knowledge layer) ----------------------------
 // Distilled traveller insights are saved per-author as `sources` rows, each
 // insight matched to one of our attractions by the hybrid resolver (./match).

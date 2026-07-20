@@ -113,9 +113,10 @@ export function dayTripToDay(cl: DayTripCluster, base: string, dayNum: number, i
   };
 }
 
-// How many of N days to spend on car day-trips: leave the majority in-city, cap by
-// available clusters. 3d→1, 4-5d→2, 6-7d→3, and never more than half.
+// How many of N days to spend on car day-trips. A base town's whole point is the
+// day-trips, so roughly half the days go out by car — but always keep ≥1 in-city
+// day and never exceed the available clusters. 2d→1, 3d→1, 4d→2, 5d→2, 6d→3, 7d→3.
 export function dayTripBudget(totalDays: number, availableClusters: number): number {
-  const byDays = Math.floor((totalDays - 1) / 2);
-  return Math.max(0, Math.min(byDays, availableClusters, Math.floor(totalDays / 2)));
+  const byDays = Math.floor(totalDays / 2);
+  return Math.max(0, Math.min(byDays, availableClusters, totalDays - 1));
 }
