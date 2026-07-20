@@ -5,7 +5,7 @@
 // See docs/logic/mobility.md. Deterministic — no AI, no external API.
 import type { Attraction } from "./db";
 import type { Day, Stop, StopKind } from "./trip-types";
-import { haversineKm } from "./geo";
+import { haversineKm, durationHe } from "./geo";
 
 // A place is "in-city" (walk/short-transit) vs a car day-trip by distance from the
 // base centre. ~18km covers a metro + its immediate transit reach.
@@ -97,7 +97,7 @@ export function dayTripToDay(cl: DayTripCluster, base: string, dayNum: number, i
     name: a.name_he || a.name_en,
     kind: KIND_FROM_CAT[a.category] ?? "culture",
     time: SLOT_TIMES[Math.min(i, SLOT_TIMES.length - 1)],
-    duration: a.duration_minutes ? `${Math.round(a.duration_minutes / 60)} שעות` : "1.5 שעות",
+    duration: durationHe(a.duration_minutes),
     score: isFamily ? (a.family_score ?? undefined) : undefined,
     note: a.tips_he || a.tagline_he || undefined,
     id: a.id, lat: a.lat, lng: a.lng, image: a.image_url, tagline: a.tagline_he,

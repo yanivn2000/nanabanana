@@ -7,6 +7,7 @@ import { descriptor } from "./labels";
 import { familyFit } from "./taste";
 import { clusterIntoDays, dayWalkMinutes } from "./cluster";
 import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget } from "./daytrips";
+import { durationHe } from "./geo";
 
 const KIND_FROM_CAT: Record<string, StopKind> = {
   nature: "nature", museum: "culture", attraction: "culture",
@@ -58,7 +59,7 @@ export function buildHeuristicItinerary(
         name: a.name_he || a.name_en,
         kind: kindOf(a),
         time: SLOT_TIMES[Math.min(i, SLOT_TIMES.length - 1)],
-        duration: a.duration_minutes ? `${Math.round(a.duration_minutes / 60)} שעות` : "1.5 שעות",
+        duration: durationHe(a.duration_minutes),
         score: isFamily ? (a.family_score ?? undefined) : undefined,
         note: a.tips_he || descriptor(a),
       });

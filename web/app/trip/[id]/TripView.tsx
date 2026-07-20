@@ -7,8 +7,26 @@ import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, Pencil, ChevronUp, ChevronDown,
   ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon, Route, Users, Luggage, ListChecks, Wallet, CalendarDays,
-  Clock, MapPin, Ruler, Footprints, Copy, Lightbulb, Car,
+  Clock, MapPin, Ruler, Footprints, Copy, Lightbulb, Car, Hourglass,
 } from "lucide-react";
+
+// Render a stop's stay time cleanly. New builds already store natural Hebrew
+// (durationHe: "כשעה", "כ-45 דק׳") — pass those through. Older trips stored
+// "N שעות" (which rounded sub-hour stops to "0 שעות"); normalise those here so no
+// existing trip shows a broken duration.
+function stayHe(d?: string): string | null {
+  if (!d) return null;
+  if (/דק|כ|חצי/.test(d)) return d;       // already clean (new format) or "שעה" lunch
+  const m = d.match(/^([\d.]+)\s*שעות?/);
+  if (!m) return d;
+  const n = parseFloat(m[1]);
+  if (n === 0) return "פחות משעה";
+  if (n === 1) return "כשעה";
+  if (n === 1.5) return "כשעה וחצי";
+  if (n === 2) return "כשעתיים";
+  if (n === 2.5) return "כשעתיים וחצי";
+  return `כ-${n} שעות`;
+}
 import { googleMapsUrl, googleDirUrl, formatDistance, estimateLeg, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
 import { stopColor } from "@/lib/labels";
 import { bigImage } from "@/lib/labels";
@@ -705,8 +723,13 @@ export function TripView({ tripId }: { tripId: string }) {
                             )}
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
-                            {/* duration sits opposite the title on the same line, not on its own row */}
-                            {s.duration && <span className="text-[12.5px] text-[var(--text-3)]">{s.duration}</span>}
+                            {/* recommended stay at the place — labelled so it isn't
+                                mistaken for arrival/travel time */}
+                            {s.duration && (
+                              <span className="flex items-center gap-1 text-[12.5px] text-[var(--text-3)]" title="משך שהייה מומלץ במקום">
+                                <Hourglass size={11} className="shrink-0" /> {stayHe(s.duration)}
+                              </span>
+                            )}
                             {/* fixed-width so the star column lines up across every row */}
                             <span className="flex min-w-[34px] items-center justify-end gap-1 text-[13px] font-medium text-[var(--accent-ink)]">
                               {!!s.score && (<><Star size={13} fill="currentColor" /><span className="tabular-nums">{s.score}</span></>)}

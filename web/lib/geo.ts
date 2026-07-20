@@ -57,6 +57,20 @@ export function walkMinutes(km: number): number {
   return Math.max(1, Math.round(km * WALK_MIN_PER_KM));
 }
 
+// Recommended visit length in natural Hebrew — never "0 שעות" for sub-hour stops.
+// The single source of truth for stop durations across the builders.
+export function durationHe(minutes: number | null | undefined): string {
+  const m = Math.max(20, Math.round(minutes || 90));
+  if (m < 38) return "כחצי שעה";
+  if (m < 53) return "כ-45 דק׳";
+  const h = m / 60;
+  if (h < 1.25) return "כשעה";
+  if (h < 1.75) return "כשעה וחצי";
+  if (h < 2.25) return "כשעתיים";
+  if (h < 2.75) return "כשעתיים וחצי";
+  return `כ-${Math.round(h)} שעות`;
+}
+
 export type Leg = {
   km: number;
   walkMin: number;

@@ -4,6 +4,7 @@ import { listDestinations, topAttractions, areasForDestination, type Attraction 
 import { clusterIntoDays, annotateDaysWithAreas } from "@/lib/cluster";
 import { buildCarBaseItinerary } from "@/lib/heuristic";
 import { splitByReach, clusterDayTrips, dayTripBudget } from "@/lib/daytrips";
+import { durationHe } from "@/lib/geo";
 import { critiqueTrip } from "@/lib/brain/critique";
 import { BRAIN_VERSION, PACE_STOPS, type Audience } from "@/lib/brain/policy";
 import type { Itinerary, StopKind } from "@/lib/trip-types";
@@ -30,7 +31,7 @@ function toItinerary(clustered: Attraction[][], dest: { city: string; city_he: s
       stops: day.map((a, k) => ({
         name: a.name_he || a.name_en, kind: KIND[a.category] ?? "culture",
         time: SLOTS[Math.min(k, SLOTS.length - 1)],
-        duration: a.duration_minutes ? `${Math.round(a.duration_minutes / 60)} שעות` : "1.5 שעות",
+        duration: durationHe(a.duration_minutes),
         id: a.id, lat: a.lat, lng: a.lng, image: a.image_url, tagline: a.tagline_he,
         score: a.audience_fit?.[audience], note: a.tips_he || a.tagline_he || undefined,
       })),
