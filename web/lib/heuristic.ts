@@ -7,14 +7,23 @@ import { descriptor } from "./labels";
 import { familyFit } from "./taste";
 import { clusterIntoDays, dayWalkMinutes } from "./cluster";
 import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget } from "./daytrips";
-import { durationHe } from "./geo";
+import { durationHe, haversineKm, walkMinutes } from "./geo";
 
 const KIND_FROM_CAT: Record<string, StopKind> = {
   nature: "nature", museum: "culture", attraction: "culture",
   sport: "nature", food: "food", shopping: "shopping",
   historic: "culture", tourism: "culture", leisure: "nature",
 };
-const SLOT_TIMES = ["09:30", "11:30", "14:30", "16:30", "18:00", "19:30"];
+
+const DAY_START_MIN = 9 * 60 + 30;   // 09:30
+const LUNCH_AFTER_MIN = 12 * 60;     // drop the meal break at the first stop past 12:00
+const LUNCH_MIN = 60;
+const fmtClock = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+// Minutes spent AT a place (visit), clamped like the clusterer's model.
+const visitMinutes = (a: Attraction) => { const d = a.duration_minutes ?? 0; return d ? Math.max(40, Math.min(150, d)) : 75; };
+const travelMinutes = (a: Attraction, b: Attraction) =>
+  Number.isFinite(a.lat) && Number.isFinite(a.lng) && Number.isFinite(b.lat) && Number.isFinite(b.lng)
+    ? walkMinutes(haversineKm(a.lat as number, a.lng as number, b.lat as number, b.lng as number)) : 10;
 
 function kindOf(a: Attraction): StopKind {
   return KIND_FROM_CAT[a.category] ?? "culture";
@@ -44,21 +53,21 @@ export function buildHeuristicItinerary(
 
   const dayList = clustered.map((picks, d) => {
     const stops: Stop[] = [];
+    // Sequential clock: arrival = running time, then add the stay + travel to the
+    // next stop, so times always increase and reflect real durations. The lunch
+    // break is dropped at the first stop boundary past noon — no fixed slots.
+    let clock = DAY_START_MIN;
+    let lunchDone = false;
     picks.forEach((a, i) => {
-      // Insert a lunch slot mid-day.
-      if (i === 1) {
-        stops.push({
-          name: "הפסקת צהריים",
-          kind: "food",
-          time: "12:45",
-          duration: "שעה",
-          note: "מסעדה מקומית באזור",
-        });
+      if (!lunchDone && i > 0 && clock >= LUNCH_AFTER_MIN) {
+        stops.push({ name: "הפסקת צהריים", kind: "food", time: fmtClock(clock), duration: "כשעה", note: "מסעדה מקומית באזור" });
+        clock += LUNCH_MIN;
+        lunchDone = true;
       }
       stops.push({
         name: a.name_he || a.name_en,
         kind: kindOf(a),
-        time: SLOT_TIMES[Math.min(i, SLOT_TIMES.length - 1)],
+        time: fmtClock(clock),
         duration: durationHe(a.duration_minutes),
         score: isFamily ? (a.family_score ?? undefined) : undefined,
         note: a.tips_he || descriptor(a),
@@ -66,6 +75,8 @@ export function buildHeuristicItinerary(
         // depending on a later attachDetails pass (e.g. saved modules).
         id: a.id, lat: a.lat, lng: a.lng, image: a.image_url, tagline: a.tagline_he,
       });
+      clock += visitMinutes(a);
+      if (i < picks.length - 1) clock += travelMinutes(a, picks[i + 1]);
     });
 
     const kinds = new Set(picks.map((a) => kindOf(a)));
