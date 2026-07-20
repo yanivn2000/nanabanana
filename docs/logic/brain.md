@@ -56,5 +56,14 @@ tuned to satisfy it, and the golden set guards against forgetting.
   0 needWork. `variety` scores low (46–69) because it penalises runs of the raw OSM
   `category`, which is coarse ("attraction" covers most landmarks) — variety should
   use a finer signal (audience_fit.type / taste tags), not raw category. `balance`
-  is often low (41) — the clusterer makes uneven day sizes; consider a balancing
-  pass. First calibration candidates.
+  is often low (41) — measured by stop-count, which over-penalises a tight 6-stop
+  day vs a spread 4-stop day of equal duration. First calibration candidates.
+- **v1.1.0** (2026-07-20, self-calibration by Claude Code — no editor input yet):
+  fixed both v1.0.0 findings. (1) `variety` now runs on `audience_fit.type` (the
+  experience type) instead of OSM `category`; (2) `balance` now measures per-day
+  TIME (visit+walk minutes) std, not stop count (`balanceTimeStdMax=110`). Re-ran
+  the same matrix: avg **79 → 89**, variety dim ~46–69 → **98**, balance ~41 → **91**,
+  while walkability/mustSee/audienceFit held (91/95/85) — no regression. Demonstrates
+  the loop: identify → fix policy/critic → re-run → measure → version-bump. NOTE:
+  these were agent-identified measurement bugs; the FIRST real editor-driven
+  calibration (👍/👎 + notes → policy tuning) is still pending.

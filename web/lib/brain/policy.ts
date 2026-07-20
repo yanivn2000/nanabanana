@@ -8,7 +8,7 @@
 //
 // The Brain never calls a paid AI. Its intelligence lives here + in critique.ts.
 
-export const BRAIN_VERSION = "1.0.0";
+export const BRAIN_VERSION = "1.1.0";
 
 export type Audience = "families" | "couples" | "friends";
 
@@ -45,8 +45,8 @@ export const QUALITY_BAR = 70;
 
 // Thresholds the critic uses to raise specific issues.
 export const THRESHOLDS = {
-  minMustSeePerTrip: 3,     // a real trip should hit at least this many must-sees
-  maxSameCategoryRun: 3,    // consecutive same-category stops in a day = monotony
-  minAudienceFit: 45,       // per-stop audience_fit below this = poor fit
-  balanceStdMax: 1.6,       // std-dev of stops/day above this = imbalance
+  minMustSeePerTrip: 3,        // a real trip should hit at least this many must-sees
+  maxSameTypeRun: 3,          // consecutive same experience-TYPE stops in a day = monotony (v1.1: by audience_fit.type, not raw OSM category)
+  minAudienceFit: 45,          // per-stop audience_fit below this = poor fit
+  balanceTimeStdMax: 110,      // v1.1: std-dev of per-day TIME (visit+walk, minutes) above this = imbalance; count-based was over-penalising a tight 6-stop day vs a spread 4-stop day of equal duration
 };

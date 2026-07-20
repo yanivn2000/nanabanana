@@ -20,6 +20,11 @@ export type Critique = {
 
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
 const fit = (a: Attraction, aud: Audience) => a.audience_fit?.[aud] ?? 0;
+// Experience type — a semantic signal (universal/family/romantic/foodie/cultural/
+// outdoors…) far finer than the coarse OSM `category` for judging variety.
+const expType = (a: Attraction) => a.audience_fit?.type || a.category;
+// Minutes a stop takes (visit), matching the clusterer's model.
+const visitMin = (a: Attraction) => { const d = a.duration_minutes ?? 0; return d ? Math.max(40, Math.min(150, d)) : 75; };
 
 export function critiqueTrip(
   days: Attraction[][], audience: Audience, ctx: { cityMustCount: number }
@@ -65,18 +70,20 @@ export function critiqueTrip(
     }
   }
 
-  // 4) variety — no long run of the same category within a day.
+  // 4) variety — no long run of the same EXPERIENCE TYPE within a day (v1.1: by
+  //    audience_fit.type, since raw OSM category is too coarse — "attraction"
+  //    covers most landmarks and unfairly tanked variety).
   {
     let penalty = 0;
     days.forEach((d, i) => {
       let run = 1;
       for (let k = 1; k < d.length; k++) {
-        if (d[k].category === d[k - 1].category) { run++; if (run >= THRESHOLDS.maxSameCategoryRun) { penalty += 15; issues.push({ dim: "variety", severity: "warn", day: i + 1, msg: `יום ${i + 1}: רצף של ${run} מאותה קטגוריה (${d[k].category})` }); } }
+        if (expType(d[k]) === expType(d[k - 1])) { run++; if (run >= THRESHOLDS.maxSameTypeRun) { penalty += 12; issues.push({ dim: "variety", severity: "warn", day: i + 1, msg: `יום ${i + 1}: רצף של ${run} מאותו סוג חוויה (${expType(d[k])})` }); } }
         else run = 1;
       }
     });
-    const distinctCats = new Set(all.map((a) => a.category)).size;
-    dims.variety = clamp(60 + distinctCats * 8 - penalty);
+    const distinctTypes = new Set(all.map(expType)).size;
+    dims.variety = clamp(55 + distinctTypes * 12 - penalty);
   }
 
   // 5) pace — stops/day near the audience target.
@@ -87,14 +94,16 @@ export function critiqueTrip(
     dims.pace = clamp(100 - avgOff * 22);
   }
 
-  // 6) balance — days evenly filled.
+  // 6) balance — days evenly filled by TIME, not stop count (v1.1: a tight 6-stop
+  //    day and a spread 4-stop day can take the same hours — count-balance
+  //    over-penalised the former).
   {
-    const perDay = days.map((d) => d.length);
-    const mean = perDay.reduce((s, n) => s + n, 0) / Math.max(1, perDay.length);
-    const std = Math.sqrt(perDay.reduce((s, n) => s + (n - mean) ** 2, 0) / Math.max(1, perDay.length));
-    dims.balance = clamp(100 - (std / THRESHOLDS.balanceStdMax) * 100);
-    if (std > THRESHOLDS.balanceStdMax) issues.push({ dim: "balance", severity: "warn", msg: `ימים לא מאוזנים (${perDay.join("/")} עצירות)` });
-    if (perDay.some((n) => n === 0)) issues.push({ dim: "balance", severity: "critical", msg: "יש יום ריק" });
+    const times = days.map((d) => d.reduce((s, a) => s + visitMin(a), 0) + dayWalkMinutes(d));
+    const mean = times.reduce((s, n) => s + n, 0) / Math.max(1, times.length);
+    const std = Math.sqrt(times.reduce((s, n) => s + (n - mean) ** 2, 0) / Math.max(1, times.length));
+    dims.balance = clamp(100 - (std / THRESHOLDS.balanceTimeStdMax) * 100);
+    if (std > THRESHOLDS.balanceTimeStdMax) issues.push({ dim: "balance", severity: "warn", msg: `ימים לא מאוזנים בזמן (${days.map((d) => d.length).join("/")} עצירות)` });
+    if (days.some((d) => d.length === 0)) issues.push({ dim: "balance", severity: "critical", msg: "יש יום ריק" });
   }
 
   // 7) coherence — each day is one tight area (proxy: low intra-day walk already
