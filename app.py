@@ -530,7 +530,8 @@ with tab_ingest:
     with nc2:
         new_city_he = st.text_input("שם בעברית (לא חובה)", placeholder="למשל: ליסבון")
     with nc3:
-        new_radius = st.slider("רדיוס (ק\"מ)", 5, 30, 12, key="newcity_radius")
+        new_radius = st.slider("רדיוס (ק\"מ)", 5, 120, 25, key="newcity_radius",
+                               help="מטרו הליכתית ~25 · עיר-בסיס לטיול כוכב ברכב 60-120")
     if st.button("אתר והוסף עיר", type="primary", disabled=not new_city.strip()):
         with st.spinner(f"מאתר את {new_city}..."):
             try:
@@ -567,7 +568,7 @@ with tab_ingest:
     with col1:
         city = st.selectbox("עיר", list(SEED_CITIES.keys()))
     with col2:
-        radius = st.slider("רדיוס (ק\"מ)", 5, 30, 12)
+        radius = st.slider("רדיוס (ק\"מ)", 5, 120, 25)
     with col3:
         st.write("")
         st.write("")
