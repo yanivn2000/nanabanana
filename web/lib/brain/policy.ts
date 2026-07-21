@@ -8,7 +8,13 @@
 //
 // The Brain never calls a paid AI. Its intelligence lives here + in critique.ts.
 
-export const BRAIN_VERSION = "1.3.0";
+// Version log (bump on every substantive calibration/engine change):
+//   1.1 — variety by experience-type; 1.2 — family pace + active anchor;
+//   1.3 — audience axis = with-kids / without-kids;
+//   1.4 — engine generation: trait-based dwell (visit_minutes), fill-all-days
+//         equal-TIME day slices, texture-aware pool ranking, cross-day dedup,
+//         data-driven fun-anchor (active-anchor moved out of conformance).
+export const BRAIN_VERSION = "1.4.0";
 
 // v1.3 (editor): the real axis is WITH KIDS vs WITHOUT, not families/couples/friends
 // — couple-vs-friends is a soft taste sub-signal, not a hard audience. "families" =
