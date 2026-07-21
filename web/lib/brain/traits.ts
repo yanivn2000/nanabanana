@@ -22,9 +22,9 @@ const SUMMER_RX = /water_park|swimming|\bpool\b|lido|strandbad|פארק מים|�
 export const isDayEnder = (a: Attraction) => DAY_ENDER_RX.test(blob(a));
 export const isActiveAnchor = (a: Attraction) => ACTIVE_RX.test(blob(a));
 
-// A "soft" kid pleaser — a big green space or a headline attraction. Used ONLY as a
-// fallback when a city has no real active attractions at all: some cities just aren't
-// young-kids-activity cities, and then a park / top must-see suffices (editor policy).
+// A "soft" kid pleaser — a big green space or a headline must-see attraction (a castle,
+// the Tower of London, a fortress). Counts as an engaging day-anchor alongside the
+// active/experiential places, so a day built around one isn't flagged as "flat".
 export const isSoftFun = (a: Attraction) =>
   a.category === "nature" || a.subcategory === "park" || a.subcategory === "garden" ||
   (a.must_see === 1 && a.category === "attraction");

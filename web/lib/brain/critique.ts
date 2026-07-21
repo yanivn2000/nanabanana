@@ -29,7 +29,7 @@ const expType = (a: Attraction) => a.audience_fit?.type || a.category;
 const visitMin = (a: Attraction) => { const d = a.duration_minutes ?? 0; return d ? Math.max(40, Math.min(150, d)) : 75; };
 
 export function critiqueTrip(
-  days: Attraction[][], audience: Audience, ctx: { cityMustCount: number; rules?: BrainRules; cityHasActive?: boolean }
+  days: Attraction[][], audience: Audience, ctx: { cityMustCount: number; rules?: BrainRules }
 ): Critique {
   const prefs = AUDIENCE_PREFS[audience];
   const all = days.flat();
@@ -84,12 +84,14 @@ export function critiqueTrip(
     // no active anchor flagged. Default (no rules) = families, per the v1.2 note.
     const needsActive = ctx.rules ? ctx.rules.activeAnchorAudiences.includes(audience) : audience === "families";
     if (needsActive) {
-      // City-adaptive: if the city has NO real active attraction (cityHasActive===false),
-      // a big park / top must-see suffices — don't penalise for what the city can't offer.
-      const softOk = ctx.cityHasActive === false;
+      // Data-driven anchor (not a keyword list): a day is fine if it has an active/
+      // experiential place, a park/headline attraction (isSoftFun), OR a stop the
+      // consensus marks a real highlight for this audience (fit ≥ 70). Only a day with
+      // NONE is docked — so a dinosaur hall / salt mine / Tower of London day passes.
       days.forEach((d, i) => {
-        if (d.length >= THRESHOLDS.minFamilyStopsForAnchor && !d.some(isActiveAnchor) && !(softOk && d.some(isSoftFun))) {
-          issues.push({ dim: "audienceFit", severity: "warn", day: i + 1, msg: `יום ${i + 1}: אין אטרקציה פעילה לילדים${softOk ? " (גם לא פארק/אתר-שיא)" : " (רכבל/מזחלות/קניון/בריכה)"}` });
+        const hasAnchor = d.some((a) => isActiveAnchor(a) || isSoftFun(a) || fit(a, audience) >= 70);
+        if (d.length >= THRESHOLDS.minFamilyStopsForAnchor && !hasAnchor) {
+          issues.push({ dim: "audienceFit", severity: "warn", day: i + 1, msg: `יום ${i + 1}: אין עוגן פעיל/חוויתי — היום עלול להרגיש שטוח` });
           dims.audienceFit = clamp(dims.audienceFit - 8);
         }
       });

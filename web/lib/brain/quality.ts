@@ -14,16 +14,17 @@ const nameOf = (a: Attraction) => a.name_he || a.name_en;
 const isHighlight = (a: Attraction, aud: Audience) => a.must_see === 1 || audienceFitScore(a.audience_fit, aud) >= 70;
 const isObscure = (a: Attraction) => a.must_see !== 1 && !a.image_url &&
   audienceFitScore(a.audience_fit, "families") < 40 && audienceFitScore(a.audience_fit, "adults") < 40;
-// "Passive culture" = sit-and-look indoor culture (museums/churches/memorials). NOT
-// `attraction` — that OSM category covers lively spots too (markets, squares, light
-// shows, neighborhoods like Chinatown/Covent Garden), which are the opposite of dull.
-const PASSIVE = new Set(["museum", "historic", "memorial", "cultural"]);
-const isPassiveCulture = (a: Attraction) => PASSIVE.has(a.category) || PASSIVE.has(String(a.audience_fit?.type));
+// A day "feels alive" if it has at least one engaging ANCHOR. Data-driven on purpose:
+// a keyword list can't know which museum kids love (the dinosaur hall, the hands-on
+// kids' museum) and which is a dull gallery — but must-see / audience_fit can. So an
+// anchor is: an active/experiential place (aquarium, salt mine, cable-car…), a park or
+// headline attraction (isSoftFun), OR a genuine highlight for THIS audience.
+const isEngaging = (a: Attraction, aud: Audience) => isActiveAnchor(a) || isSoftFun(a) || isHighlight(a, aud);
 
 export type QualityFinding = { ok: boolean; msg: string };
 export type Quality = { conformance: QualityFinding[]; fun: string[]; suggestions: string[] };
 
-export function qualityCheck(days: Attraction[][], audience: Audience, rules: BrainRules, ctx: { cityMustCount: number; cityHasActive?: boolean }): Quality {
+export function qualityCheck(days: Attraction[][], audience: Audience, rules: BrainRules, ctx: { cityMustCount: number }): Quality {
   const conformance: QualityFinding[] = [];
   const fun: string[] = [];
   const suggestions = new Set<string>();
@@ -37,19 +38,10 @@ export function qualityCheck(days: Attraction[][], audience: Audience, rules: Br
       ? { ok: false, msg: `חריגה ממקסימום ${cap.max} ${cap.type} ליום: ${bad.join(", ")}` }
       : { ok: true, msg: `≤${cap.max} ${cap.type} ליום` });
   }
-  if (rules.activeAnchorAudiences.includes(audience)) {
-    // City-adaptive (editor policy): prefer a real active anchor. But some cities just
-    // aren't young-kids-activity cities — if the city has NO active attraction at all,
-    // a big park / top must-see attraction suffices, so we don't demand what isn't there.
-    const softOk = ctx.cityHasActive === false;
-    const bad = days.map((d, i) => ({ d, i }))
-      .filter((x) => x.d.length >= 3 && !x.d.some(isActiveAnchor) && !(softOk && x.d.some(isSoftFun)))
-      .map((x) => `יום ${x.i + 1}`);
-    conformance.push(bad.length ? { ok: false, msg: `ימים בלי אנקר פעיל: ${bad.join(", ")}` } : { ok: true, msg: softOk ? "אנקר כיפי (פעיל/פארק/אתר-שיא) בכל יום" : "אנקר פעיל בכל יום" });
-    if (bad.length) suggestions.add(softOk
-      ? "בעיר הזו אין כמעט אטרקציות פעילות מובהקות — בכל זאת יש ימים בלי אף אנקר כיפי (גם לא פארק גדול או אתר-שיא). כדאי לשבץ לפחות פארק/אטרקציה מרכזית בימים שסומנו."
-      : "בעיר יש אטרקציות פעילות — כדאי לפזר אחת לכל יום עם ילדים: אקווריום/גן-חיות/גלגל-ענק/שיט/חווה עירונית/חוויה אינטראקטיבית (ובטבע: רכבל/מזחלות/נקיק/בריכה).");
-  }
+  // NB: "does a family day have an active anchor" is NOT a conformance check — it's a
+  // taste/fun question (change ב׳), so it lives in the FUN lens below, as a soft flag
+  // gated on the day being genuinely flat. Conformance = only settings the trip can
+  // objectively obey/violate.
   const must = flat.filter((a) => a.must_see === 1).length;
   conformance.push(must >= rules.minMustSee
     ? { ok: true, msg: `${must} אתרי-חובה (סף ${rules.minMustSee})` }
@@ -64,11 +56,17 @@ export function qualityCheck(days: Attraction[][], audience: Audience, rules: Br
     fun.push(`גיוון-חוויה נמוך — רק ${types.size} סוגי-חוויה בכל הטיול. עלול להרגיש חד-גוני.`);
     suggestions.add("להחמיר max_type_per_day או להזרים יותר סוגי-חוויה (טבע/אוכל/פעילות) לימים.");
   }
+  const needsAnchor = rules.activeAnchorAudiences.includes(audience);
   days.forEach((d, i) => {
-    if (d.length && !d.some((a) => isHighlight(a, audience)))
-      fun.push(`יום ${i + 1}: אין אטרקציית-שיא (must-see / התאמה גבוהה) — היום מרגיש 'שטוח'.`);
-    if (d.length >= 3 && d.every(isPassiveCulture))
-      fun.push(`יום ${i + 1}: כולו תרבות פסיבית (מוזיאונים/כנסיות) — חסר טבע/פעילות/כיף.`);
+    // Flat-day flag — fires ONLY when a 3+ stop day has NO engaging anchor at all
+    // (no active/experiential place, no park/headline attraction, no audience
+    // highlight). A day built around Notre-Dame or a dinosaur hall never trips it;
+    // a fortress→cathedral→museum→museum slog does. Wording depends on the audience
+    // (families need the "fun" nudge more).
+    if (d.length >= 3 && !d.some((a) => isEngaging(a, audience)))
+      fun.push(needsAnchor
+        ? `יום ${i + 1}: אין עוגן פעיל/חוויתי — כל היום תרבות פסיבית ועצירות משניות, עלול להרגיש שטוח לילדים.`
+        : `יום ${i + 1}: יום שטוח — רק תרבות פסיבית ועצירות משניות, בלי עוגן חזק.`);
     if (d.length >= 2) {
       const last = d[d.length - 1];
       if (!isHighlight(last, audience) && !isActiveAnchor(last))

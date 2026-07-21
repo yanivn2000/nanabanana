@@ -5,7 +5,7 @@ import { clusterIntoDays, annotateDaysWithAreas } from "@/lib/cluster";
 import { buildCarBaseItinerary } from "@/lib/heuristic";
 import { splitByReach, clusterDayTrips, dayTripBudget } from "@/lib/daytrips";
 import { durationHe } from "@/lib/geo";
-import { isActiveAnchor, isInSeason, stopMatchesType } from "@/lib/brain/traits";
+import { isInSeason, stopMatchesType } from "@/lib/brain/traits";
 import { qualityCheck, type Quality } from "@/lib/brain/quality";
 import { critiqueTrip } from "@/lib/brain/critique";
 import { BRAIN_VERSION, audienceFitScore, type Audience } from "@/lib/brain/policy";
@@ -60,9 +60,6 @@ export async function POST(req: NextRequest) {
     if (!dest) continue;
     const attractions = await topAttractions(id, 150);
     const cityMustCount = attractions.filter((a) => a.must_see === 1).length;
-    // Does the city offer any real "active" attraction? Gates the active-anchor rule:
-    // cities with none (pure cultural towns) fall back to park/top-attraction for kids.
-    const cityHasActive = attractions.some(isActiveAnchor);
     const areas = await areasForDestination(id);
     const rules = await brainRulesForDest(id);   // the Brain's techniques for this city
     for (const audience of AUDIENCES) {
@@ -84,7 +81,7 @@ export async function POST(req: NextRequest) {
       const { inCity, far } = carBase ? splitByReach(eligible, center, rules.daytripThresholdKm) : { inCity: eligible, far: [] as Attraction[] };
       const tripDays = carBase ? dayTripBudget(days, clusterDayTrips(far, center, { maxStops: rules.daytripMaxStops, sameMeters: rules.samePlaceMeters }).length, rules.daytripPerDays) : 0;
       const { days: built } = clusterIntoDays(inCity, days - tripDays, { walkPref: 3, dayMinutes: rules.paceStops[audience] * 84 });
-      const crit = critiqueTrip(built, audience, { cityMustCount, rules, cityHasActive });
+      const crit = critiqueTrip(built, audience, { cityMustCount, rules });
       const buildOpts = { month, seasonFilter: rules.seasonFilter, dayEnderLast: rules.dayEnderLast, maxTypePerDay: rules.maxTypePerDay, avoidCats: rules.avoid[audience] ?? [],
         dayStartMin: rules.dayStartMin, lunchAfterMin: rules.lunchAfterMin, lunchMinutes: rules.lunchMinutes, visitDefault: rules.visitDefault,
         daytripThresholdKm: rules.daytripThresholdKm, daytripPerDays: rules.daytripPerDays, daytripMaxStops: rules.daytripMaxStops,
@@ -100,7 +97,7 @@ export async function POST(req: NextRequest) {
         const byId = new Map(attractions.map((a) => [a.id, a]));
         const richDays: Attraction[][] = itinerary.days.map((d) =>
           d.stops.map((s) => (s.id != null ? byId.get(s.id) : undefined)).filter((a): a is Attraction => !!a));
-        quality = qualityCheck(richDays, audience, rules, { cityMustCount, cityHasActive });
+        quality = qualityCheck(richDays, audience, rules, { cityMustCount });
       }
       report.push({
         cityId: id, city: dest.city_he || dest.city, cityEn: dest.city, country: dest.country, audience, days,

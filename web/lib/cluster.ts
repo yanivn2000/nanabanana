@@ -102,6 +102,27 @@ export function dropSamePlace(day: Attraction[], minMeters = 90): Attraction[] {
   return kept;
 }
 
+// Same as dropSamePlace but ACROSS the whole trip — a place (or a sub-feature of one
+// complex: the Tower + its White Tower + Crown Jewels, St Peter's + its dome, the
+// Louvre pyramid landing on two different days) must appear ONCE. Distance-only so it
+// stays safe: genuinely distinct-but-adjacent sights (Tower + Tower Bridge ~350m,
+// Upper + Lower Belvedere ~500m) sit outside the radius and both survive. Keeps the
+// higher-worth entry (the whole "Tower of London" beats "White Tower").
+export function dedupeAcrossDays(days: Attraction[][], minMeters = 120): Attraction[][] {
+  const kept: { a: Attraction; d: number; i: number }[] = [];
+  const out: Attraction[][] = days.map(() => []);
+  days.forEach((day, di) => {
+    for (const a of day) {
+      if (!Number.isFinite(a.lat) || !Number.isFinite(a.lng)) { out[di].push(a); continue; }
+      const hit = kept.find((k) => haversineKm(a.lat as number, a.lng as number, k.a.lat as number, k.a.lng as number) * 1000 < minMeters);
+      if (!hit) { out[di].push(a); kept.push({ a, d: di, i: out[di].length - 1 }); }
+      else if (stopWorth(a) > stopWorth(hit.a)) { out[hit.d][hit.i] = a; hit.a = a; } // upgrade in place, drop this one
+      // else: silently drop the duplicate
+    }
+  });
+  return out;
+}
+
 // 2-opt: reverse segments while it shortens the path (undoes crossings).
 function twoOpt(path: Attraction[]): Attraction[] {
   for (let pass = 0; pass < 5; pass++) {
@@ -161,7 +182,7 @@ export type ClusterResult = { days: Attraction[][]; leftOut: Attraction[] };
 
 export function clusterIntoDays(
   poolIn: Attraction[], days: number,
-  opts: { walkPref?: number; dayMinutes?: number; seedGroups?: number[][]; freeMax?: number; freeDetour?: number } = {}
+  opts: { walkPref?: number; dayMinutes?: number; seedGroups?: number[][]; freeMax?: number; freeDetour?: number; sameMeters?: number } = {}
 ): ClusterResult {
   // usable = has coords, de-duped by name; input order IS the value ranking.
   const seen = new Set<string>();
@@ -241,6 +262,9 @@ export function clusterIntoDays(
   }
 
   const ordered = groups.map((g) => orderPath(g.stops)).filter((d) => d.length > 0);
+  // Final safety net: collapse same-place / one-complex fragments across the whole
+  // trip (name-exact dedup above misses "Louvre pyramid" vs "The Louvre's pyramid").
+  const deduped = dedupeAcrossDays(ordered, opts.sameMeters ?? 120).filter((d) => d.length > 0);
   const leftOut = pool.filter((a) => !placed.has(a.id));
-  return { days: ordered, leftOut };
+  return { days: deduped, leftOut };
 }
