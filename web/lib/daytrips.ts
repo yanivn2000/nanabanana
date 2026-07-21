@@ -7,6 +7,7 @@ import type { Attraction } from "./db";
 import type { Day, Stop, StopKind } from "./trip-types";
 import { haversineKm, durationHe } from "./geo";
 import { dropSamePlace } from "./cluster";
+import { reorderDayEnders } from "./brain/traits";
 
 // A place is "in-city" (walk/short-transit) vs a car day-trip by distance from the
 // base centre. ~18km covers a metro + its immediate transit reach.
@@ -59,9 +60,9 @@ export function clusterDayTrips(
     const members = pool.filter(
       (a) => !used.has(a.id) && haversineKm(seed.lat!, seed.lng!, a.lat!, a.lng!) <= CLUSTER_KM);
     members.forEach((m) => used.add(m.id));
-    // order: anchor first, then nearest-neighbour walk within the far area;
-    // drop "same place" stops (a lake and its own dock/viewpoint) before capping.
-    const ordered = dropSamePlace(orderFromAnchor(members, seed)).slice(0, MAX_STOPS_PER_TRIP);
+    // order: anchor first, then nearest-neighbour walk within the far area; drop
+    // "same place" stops (a lake and its own dock/viewpoint), push day-enders last.
+    const ordered = reorderDayEnders(dropSamePlace(orderFromAnchor(members, seed))).slice(0, MAX_STOPS_PER_TRIP);
     const lat = ordered.reduce((s, a) => s + a.lat!, 0) / ordered.length;
     const lng = ordered.reduce((s, a) => s + a.lng!, 0) / ordered.length;
     const driveKm = Math.round(haversineKm(center.lat, center.lng, lat, lng));

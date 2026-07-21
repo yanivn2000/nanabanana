@@ -195,7 +195,9 @@ export async function POST(req: NextRequest) {
   // vintage couple and a sports/history couple get different attraction sets
   // fed to the builder → genuinely different trips. No taste → family order.
   const isFamily = body.isFamily === true;
-  const perDay = paceToPerDay(body.pace);   // heuristic stops/day, matches the pace promise
+  // heuristic stops/day. v1.2: families want a fuller day (≥5) with an active anchor
+  // + small pop-ins — 3 hour-long culture stops read as a boring family day.
+  const perDay = Math.max(paceToPerDay(body.pace), isFamily ? 5 : 0);
   // Base pool = top 150; then fold in the traveler's exact picks (even ones
   // ranked below 150) so a chosen place is always a real build candidate.
   const base = await topAttractions(dest.id, 150);
@@ -224,8 +226,8 @@ export async function POST(req: NextRequest) {
   // clusters mixed with walkable in-city days; metros build in-city only.
   const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary =>
     d.mobility === "car_base"
-      ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp)
-      : buildHeuristicItinerary(d.city, d.country, ndays, list, fam, pd, wp);
+      ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp, body.month)
+      : buildHeuristicItinerary(d.city, d.country, ndays, list, fam, pd, wp, undefined, body.month);
   const respondGenerate = (itin: Itinerary, engine?: string) => {
     const scheduled = new Set<number>();
     const withDetails = attachDetails(itin, buildList, anchorIds, scheduled);

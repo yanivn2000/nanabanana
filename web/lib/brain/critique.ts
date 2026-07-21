@@ -8,6 +8,7 @@
 import type { Attraction } from "../db";
 import { dayWalkMinutes } from "../cluster";
 import { AUDIENCE_PREFS, DAY_WALK, PACE_STOPS, QUALITY_BAR, THRESHOLDS, WEIGHTS, type Audience } from "./policy";
+import { isActiveAnchor } from "./traits";
 
 export type Issue = { dim: string; severity: "critical" | "warn"; msg: string; day?: number };
 export type Critique = {
@@ -67,6 +68,14 @@ export function critiqueTrip(
     if (prefs.kidFriendly) {
       const kidOk = all.filter((a) => (a.family_score ?? 0) >= 6).length;
       if (kidOk < stops / 2) issues.push({ dim: "audienceFit", severity: "warn", msg: "מעט אטרקציות ידידותיות-ילדים" });
+      // v1.2 (editor note): an Israeli family day needs at least one ACTIVE anchor
+      // (cable-car/toboggan/gorge/pool…) — an all-passive-culture day bores kids.
+      days.forEach((d, i) => {
+        if (d.length >= THRESHOLDS.minFamilyStopsForAnchor && !d.some(isActiveAnchor)) {
+          issues.push({ dim: "audienceFit", severity: "warn", day: i + 1, msg: `יום ${i + 1}: אין אטרקציה פעילה לילדים (רכבל/מזחלות/קניון/בריכה)` });
+          dims.audienceFit = clamp(dims.audienceFit - 8);
+        }
+      });
     }
   }
 

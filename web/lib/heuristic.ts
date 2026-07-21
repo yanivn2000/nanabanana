@@ -8,6 +8,7 @@ import { familyFit } from "./taste";
 import { clusterIntoDays, dayWalkMinutes, dropSamePlace } from "./cluster";
 import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget } from "./daytrips";
 import { durationHe, haversineKm, walkMinutes } from "./geo";
+import { isInSeason, reorderDayEnders } from "./brain/traits";
 
 const KIND_FROM_CAT: Record<string, StopKind> = {
   nature: "nature", museum: "culture", attraction: "culture",
@@ -37,13 +38,18 @@ export function buildHeuristicItinerary(
   isFamily = false,
   perDay = 5,
   walkPref = 3,
-  seedGroups?: number[][]
+  seedGroups?: number[][],
+  month?: number
 ): Itinerary {
-  // The input is already taste-ranked; for kids, re-sort by family_score first so
-  // the clusterer treats the family-relevant places as the higher-value ones.
+  // Season is a real build input (v1.2): drop out-of-season places (winter-only
+  // ice/ski in summer, water parks in winter) BEFORE clustering.
+  const inSeason = attractions.filter((a) => isInSeason(a, month));
+  // The input is already taste-ranked; for kids, re-sort by family_score. (An active
+  // anchor per family day is enforced by the critic flag + the higher family pace,
+  // NOT by a ranking boost — a boost distorted must-see coverage. v1.2.)
   const pool = isFamily
-    ? [...attractions].sort((a, b) => familyFit(b) - familyFit(a))
-    : attractions;
+    ? [...inSeason].sort((a, b) => familyFit(b) - familyFit(a))
+    : inSeason;
 
   // Proximity clustering: instead of slicing the ranked list into days (which
   // scatters each day across the city), group geographically so every day is a
@@ -52,7 +58,9 @@ export function buildHeuristicItinerary(
   const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes: perDay * 84, seedGroups });
 
   const dayList = clustered.map((picksRaw, d) => {
-    const picks = dropSamePlace(picksRaw); // no "fortress + its own hill" twice
+    // no "fortress + its own hill" twice; then push day-enders (water/adventure)
+    // to the end of the day so nothing is scheduled after them (v1.2 editor note).
+    const picks = reorderDayEnders(dropSamePlace(picksRaw));
     const stops: Stop[] = [];
     // Sequential clock: arrival = running time, then add the stay + travel to the
     // next stop, so times always increase and reflect real durations. The lunch
@@ -114,17 +122,20 @@ export function buildCarBaseItinerary(
   center: { lat: number; lng: number },
   isFamily = false,
   perDay = 5,
-  walkPref = 3
+  walkPref = 3,
+  month?: number
 ): Itinerary {
-  const { inCity, far } = splitByReach(attractions, center);
+  // Season filter first (v1.2): a winter-only far cluster shouldn't seed a summer day-trip.
+  const seasonal = attractions.filter((a) => isInSeason(a, month));
+  const { inCity, far } = splitByReach(seasonal, center);
   const clusters = clusterDayTrips(far, center);
   const tripDays = dayTripBudget(days, clusters.length);
   const cityDays = days - tripDays;
 
   // No worthy far clusters (or too few days) → ordinary in-city build.
-  if (tripDays < 1) return buildHeuristicItinerary(city, country, days, inCity, isFamily, perDay, walkPref);
+  if (tripDays < 1) return buildHeuristicItinerary(city, country, days, inCity, isFamily, perDay, walkPref, undefined, month);
 
-  const cityItin = buildHeuristicItinerary(city, country, cityDays, inCity, isFamily, perDay, walkPref);
+  const cityItin = buildHeuristicItinerary(city, country, cityDays, inCity, isFamily, perDay, walkPref, undefined, month);
   const tripDayObjs = clusters.slice(0, tripDays).map((cl, i) =>
     dayTripToDay(cl, city, cityDays + i + 1, isFamily));
 

@@ -67,3 +67,26 @@ tuned to satisfy it, and the golden set guards against forgetting.
   the loop: identify → fix policy/critic → re-run → measure → version-bump. NOTE:
   these were agent-identified measurement bugs; the FIRST real editor-driven
   calibration (👍/👎 + notes → policy tuning) is still pending.
+- **v1.2.0** (2026-07-20, FIRST editor-driven calibration — digested 3 `brain_notes`
+  written by the editor from Salzburg trip pages). New calibration channel: editor
+  writes build-policy notes on any trip page → I digest them into policy/traits. The
+  three notes + what changed:
+  1. *"3 hour-long culture stops = a boring family day; Israeli kids need one ACTIVE
+     thing (cable-car/toboggan/gorge/pool)"* → `PACE_STOPS.families` 4→5; new
+     `lib/brain/traits.ts#isActiveAnchor`; critic now flags a family day (≥3 stops)
+     with no active anchor and docks audienceFit −8. (Builder enforces this via the
+     flag + higher pace, NOT a ranking boost — a boost distorted must-see coverage.)
+  2. *"water/adventure parks are day-ENDERS — schedule them last"* →
+     `traits.reorderDayEnders` pushes water/toboggan/amusement stops to the end of a
+     day, in both the in-city and car-day-trip builders.
+  3. *"the ice arena is winter-only; season is a required build input"* →
+     `traits.isInSeason` filters winter-only (ice/ski) vs summer-only (water) places
+     by the trip's month; wired through `route.ts` (body.month) and brain-eval
+     (default month 7). Verified: the Königssee ice arena no longer appears in a
+     July build.
+  NEW findings this round (next candidates, NOT yet done): (a) car_base "in-city"
+  days can be thin — "in-city" spans ≤18km but the walk-clusterer's time budget fills
+  after 2 far-apart stops; (b) the active anchor is FLAGGED but not force-injected
+  into the day; (c) a family day pulled in the Obersalzberg/Hitler documentation
+  museum — needs an audience-appropriateness avoid for heavy-history sites on family
+  trips.

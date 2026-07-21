@@ -5,6 +5,7 @@ import { clusterIntoDays, annotateDaysWithAreas } from "@/lib/cluster";
 import { buildCarBaseItinerary } from "@/lib/heuristic";
 import { splitByReach, clusterDayTrips, dayTripBudget } from "@/lib/daytrips";
 import { durationHe } from "@/lib/geo";
+import { isInSeason } from "@/lib/brain/traits";
 import { critiqueTrip } from "@/lib/brain/critique";
 import { BRAIN_VERSION, PACE_STOPS, type Audience } from "@/lib/brain/policy";
 import type { Itinerary, StopKind } from "@/lib/trip-types";
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
   if (!(await editorEmail())) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const b = await req.json().catch(() => ({}));
   const days: number = b.days ?? 3;
+  const month: number = b.month ?? 7;   // season for the eval (default: summer / July)
   const dests = await listDestinations();
   const cityIds: number[] = Array.isArray(b.cities) && b.cities.length
     ? b.cities : dests.slice(0, 6).map((d) => d.id);
@@ -69,12 +71,14 @@ export async function POST(req: NextRequest) {
       // driven, so walkability doesn't apply), but the trip page gets the full
       // itinerary incl. car day-trips so the editor can judge it on the map.
       const carBase = dest.mobility === "car_base";
-      const { inCity, far } = carBase ? splitByReach(pool, center) : { inCity: pool, far: [] as Attraction[] };
+      // season-filter the pool so the critique matches the itinerary (v1.2).
+      const seasonPool = pool.filter((a) => isInSeason(a, month));
+      const { inCity, far } = carBase ? splitByReach(seasonPool, center) : { inCity: seasonPool, far: [] as Attraction[] };
       const tripDays = carBase ? dayTripBudget(days, clusterDayTrips(far, center).length) : 0;
       const { days: built } = clusterIntoDays(inCity, days - tripDays, { walkPref: 3, dayMinutes: PACE_STOPS[audience] * 84 });
       const crit = critiqueTrip(built, audience, { cityMustCount });
       const itinerary = carBase
-        ? buildCarBaseItinerary(dest.city, dest.country, days, pool, center, audience === "families", PACE_STOPS[audience])
+        ? buildCarBaseItinerary(dest.city, dest.country, days, pool, center, audience === "families", PACE_STOPS[audience], 3, month)
         : toItinerary(built, dest, audience, days);
       annotateDaysWithAreas(itinerary.days, areas, center);
       report.push({
