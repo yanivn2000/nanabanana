@@ -11,7 +11,11 @@ import type { Attraction } from "../db";
 const blob = (a: Attraction) => `${a.name_he ?? ""} ${a.name_en ?? ""} ${a.subcategory ?? ""} ${a.category ?? ""}`.toLowerCase();
 
 const DAY_ENDER_RX = /water_park|theme_park|amusement|alpine_coaster|summer_toboggan|toboggan|luge|swimming|pool|lido|aquapark|בריכ|מזחל|לונה.?פארק|פארק מים|וו?אטר.?פארק|ריזנראד|גלגל ענק/i;
-const ACTIVE_RX = /cable_car|gondola|funicular|רכבל|alpine_coaster|toboggan|מזחל|water_park|פארק מים|theme_park|לונה.?פארק|zoo|גן ?חיות|aquarium|אקווריום|gorge|קניון|נקיק|cave|מער(ה|ות|ת)|beach|חוף|בריכ|pool|adventure|הרפתק|קארט|gokart|רפטינג|zipline|אומגה/i;
+// "Active/fun" anchor — the one thing that isn't a sit-and-look stop. Covers BOTH
+// nature/adventure (cable-car, toboggan, gorge…) AND metro/city kid-fun (aquarium,
+// zoo, observation wheel, city farm, boat trip, funfair, interactive experience) —
+// a city like London delivers "fun" differently from Salzburg.
+const ACTIVE_RX = /cable_car|gondola|funicular|רכבל|alpine_coaster|toboggan|מזחל|water_park|פארק מים|theme_park|לונה.?פארק|zoo|גן ?חיות|aquarium|אקווריום|sea.?life|gorge|קניון|נקיק|cave|מער(ה|ות|ת)|beach|חוף|בריכ|pool|adventure|הרפתק|קארט|gokart|רפטינג|zipline|אומגה|observation.?wheel|ferris|london.?eye|עין הענק|גלגל.?ענק|\bfarm\b|city.?farm|משק |חוות|\bboat\b|cruise|שיט |שייט|הפלגה|dungeon|מבוך|tussauds|שעווה|planetarium|פלנטריום|playground|מגרש.?משחקים|funfair|יריד/i;
 const WINTER_RX = /ice_rink|ice.?arena|bobsled|luge.?track|\bski\b|sled|זירת הקרח|החלקה על הקרח|סקי|מזחלות שלג|christmas.?market|שוק חג המולד|גלישה על שלג/i;
 const SUMMER_RX = /water_park|swimming|\bpool\b|lido|strandbad|פארק מים|בריכ|חוף רחצה|שמורת רחצה/i;
 

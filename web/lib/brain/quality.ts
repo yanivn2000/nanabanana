@@ -14,7 +14,10 @@ const nameOf = (a: Attraction) => a.name_he || a.name_en;
 const isHighlight = (a: Attraction, aud: Audience) => a.must_see === 1 || audienceFitScore(a.audience_fit, aud) >= 70;
 const isObscure = (a: Attraction) => a.must_see !== 1 && !a.image_url &&
   audienceFitScore(a.audience_fit, "families") < 40 && audienceFitScore(a.audience_fit, "adults") < 40;
-const PASSIVE = new Set(["museum", "historic", "cultural", "culture", "memorial", "attraction"]);
+// "Passive culture" = sit-and-look indoor culture (museums/churches/memorials). NOT
+// `attraction` — that OSM category covers lively spots too (markets, squares, light
+// shows, neighborhoods like Chinatown/Covent Garden), which are the opposite of dull.
+const PASSIVE = new Set(["museum", "historic", "memorial", "cultural"]);
 const isPassiveCulture = (a: Attraction) => PASSIVE.has(a.category) || PASSIVE.has(String(a.audience_fit?.type));
 
 export type QualityFinding = { ok: boolean; msg: string };
@@ -37,7 +40,7 @@ export function qualityCheck(days: Attraction[][], audience: Audience, rules: Br
   if (rules.activeAnchorAudiences.includes(audience)) {
     const bad = days.map((d, i) => ({ d, i })).filter((x) => x.d.length >= 3 && !x.d.some(isActiveAnchor)).map((x) => `יום ${x.i + 1}`);
     conformance.push(bad.length ? { ok: false, msg: `ימים בלי אנקר פעיל: ${bad.join(", ")}` } : { ok: true, msg: "אנקר פעיל בכל יום" });
-    if (bad.length) suggestions.add("להוסיף/לחזק אנקר פעיל (רכבל/מזחלות/קניון/בריכה) בימים שסומנו — או להעשיר את מאגר האנקרים הפעילים בעיר.");
+    if (bad.length) suggestions.add("להוסיף אנקר כיפי/פעיל שמתאים לעיר בימים שסומנו — בעיר: אקווריום/גן-חיות/גלגל-ענק/שיט/חווה עירונית/חוויה אינטראקטיבית; בטבע: רכבל/מזחלות/נקיק/בריכה. אם באמת אין בעיר — כדאי להעשיר את המאגר או להקל את הדרישה לעיר הזו.");
   }
   const must = flat.filter((a) => a.must_see === 1).length;
   conformance.push(must >= rules.minMustSee
