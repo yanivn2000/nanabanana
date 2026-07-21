@@ -21,7 +21,7 @@ export const TYPE_HE: Record<string, string> = {
   bar: "ברים", romantic: "רומנטי", social: "חברתי", outdoors: "טבע/חוץ",
 };
 const th = (t: unknown) => TYPE_HE[String(t)] ?? String(t);
-const AUD_HE: Record<string, string> = { families: "משפחות", couples: "זוגות", friends: "חברים" };
+const AUD_HE: Record<string, string> = { families: "עם ילדים", adults: "בלי ילדים" };
 const ah = (a: unknown) => (a ? AUD_HE[String(a)] ?? String(a) : "כל הקהלים");
 
 export type ParamField = { key: string; type: "audience" | "exptype" | "number" | "text"; label: string };
@@ -87,7 +87,7 @@ export type BrainRules = {
   avoid: Record<Audience, string[]>;
 };
 
-const AUDS: Audience[] = ["families", "couples", "friends"];
+const AUDS: Audience[] = ["families", "adults"];
 
 // Merge policy defaults with the enabled principles that apply to this destination.
 // Empty table → behaves exactly like the hard-coded policy (safe fallback).
@@ -100,7 +100,7 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
     activeAnchorAudiences: [],
     dayEnderLast: false,
     seasonFilter: false,
-    avoid: { families: [...AUDIENCE_PREFS.families.avoid], couples: [...AUDIENCE_PREFS.couples.avoid], friends: [...AUDIENCE_PREFS.friends.avoid] },
+    avoid: { families: [...AUDIENCE_PREFS.families.avoid], adults: [...AUDIENCE_PREFS.adults.avoid] },
   };
   const active = principles.filter((p) => p.enabled && (p.scope === "global" || (p.scope === "city" && p.destination_id === destId)));
   // global first, then city (city overrides/adds on top).

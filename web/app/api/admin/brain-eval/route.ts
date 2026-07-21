@@ -7,13 +7,13 @@ import { splitByReach, clusterDayTrips, dayTripBudget } from "@/lib/daytrips";
 import { durationHe } from "@/lib/geo";
 import { isInSeason, stopMatchesType } from "@/lib/brain/traits";
 import { critiqueTrip } from "@/lib/brain/critique";
-import { BRAIN_VERSION, PACE_STOPS, type Audience } from "@/lib/brain/policy";
+import { BRAIN_VERSION, audienceFitScore, type Audience } from "@/lib/brain/policy";
 import type { Itinerary, StopKind } from "@/lib/trip-types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const AUDIENCES: Audience[] = ["families", "couples", "friends"];
+const AUDIENCES: Audience[] = ["families", "adults"];
 const SLOTS = ["09:30", "11:30", "14:30", "16:30", "18:00", "19:30"];
 const KIND: Record<string, StopKind> = {
   nature: "nature", leisure: "nature", sport: "nature", museum: "culture", historic: "culture",
@@ -34,7 +34,7 @@ function toItinerary(clustered: Attraction[][], dest: { city: string; city_he: s
         time: SLOTS[Math.min(k, SLOTS.length - 1)],
         duration: durationHe(a.duration_minutes),
         id: a.id, lat: a.lat, lng: a.lng, image: a.image_url, tagline: a.tagline_he,
-        score: a.audience_fit?.[audience], note: a.tips_he || a.tagline_he || undefined,
+        score: audienceFitScore(a.audience_fit, audience), note: a.tips_he || a.tagline_he || undefined,
       })),
     })),
   };
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
       // clusterer treats input order as value.
       const pool = [...attractions].sort((x: Attraction, y: Attraction) =>
         (y.must_see ?? 0) - (x.must_see ?? 0) ||
-        ((y.audience_fit?.[audience] ?? 0) - (x.audience_fit?.[audience] ?? 0)));
+        (audienceFitScore(y.audience_fit, audience) - audienceFitScore(x.audience_fit, audience)));
       const center = { lat: dest.lat, lng: dest.lng };
       // car_base cities: critique only the WALKABLE in-city days (far day-trips are
       // driven, so walkability doesn't apply), but the trip page gets the full

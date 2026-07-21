@@ -8,15 +8,27 @@
 //
 // The Brain never calls a paid AI. Its intelligence lives here + in critique.ts.
 
-export const BRAIN_VERSION = "1.2.0";
+export const BRAIN_VERSION = "1.3.0";
 
-export type Audience = "families" | "couples" | "friends";
+// v1.3 (editor): the real axis is WITH KIDS vs WITHOUT, not families/couples/friends
+// — couple-vs-friends is a soft taste sub-signal, not a hard audience. "families" =
+// with kids; "adults" = without kids (suits a couple OR a group of friends).
+export type Audience = "families" | "adults";
+
+// The raw AI judgment lives in audience_fit {families,couples,friends}; map it to the
+// two traveler types. "adults" = good for a couple OR for friends → the max.
+export function audienceFitScore(
+  af: { families?: number; couples?: number; friends?: number } | null | undefined, aud: Audience
+): number {
+  if (!af) return 0;
+  return aud === "families" ? (af.families ?? 0) : Math.max(af.couples ?? 0, af.friends ?? 0);
+}
 
 // How many meaningful stops/day feel right per audience (Israeli pace: not too
 // packed, room for food + spontaneity). v1.2: families bumped 4→5 — an editor note
 // found 3 hour-long stops "a boring day for a family with kids"; families want a
 // fuller day WITH at least one active anchor + small pop-in gems (see traits.ts).
-export const PACE_STOPS: Record<Audience, number> = { families: 5, couples: 5, friends: 5 };
+export const PACE_STOPS: Record<Audience, number> = { families: 5, adults: 5 };
 
 // Walking between a day's stops (minutes) — comfort band before we flag it.
 export const DAY_WALK = { ideal: 45, flag: 95 };
@@ -35,10 +47,12 @@ export const WEIGHTS: Record<string, number> = {
 // Israeli travel culture per audience — category leanings that make a trip "feel
 // right" to this segment. Categories match the OSM-derived attraction.category
 // and the audience_fit.type vocabulary. Editor calibrates these.
+// v1.3: with-kids is driven mainly by a NEGATIVE filter — a young child just follows
+// the parents, so the signal is "not suitable for kids" (heavy history, bars,
+// nightlife) more than "designed for kids". Adults merge the old couples+friends.
 export const AUDIENCE_PREFS: Record<Audience, { boost: string[]; avoid: string[]; kidFriendly: boolean }> = {
-  families: { boost: ["nature", "attraction", "museum", "leisure"], avoid: ["nightlife", "bar"], kidFriendly: true },
-  couples:  { boost: ["romantic", "food", "culture", "historic", "viewpoint"], avoid: [], kidFriendly: false },
-  friends:  { boost: ["nightlife", "food", "market", "shopping", "viewpoint"], avoid: [], kidFriendly: false },
+  families: { boost: ["nature", "attraction", "museum", "leisure"], avoid: ["nightlife", "bar", "heavy_history"], kidFriendly: true },
+  adults:   { boost: ["romantic", "food", "culture", "historic", "viewpoint", "nightlife", "market", "shopping"], avoid: [], kidFriendly: false },
 };
 
 // A trip needs work if its overall score is below this, or if any CRITICAL issue

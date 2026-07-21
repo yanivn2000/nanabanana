@@ -5,7 +5,7 @@ import { Loader2, Trash2, Plus, ChefHat } from "lucide-react";
 import type { AdminDestination } from "@/lib/db";
 import { RULE_KINDS, TYPE_HE, principleLabel, type Principle } from "@/lib/brain/rules";
 
-const AUD = [{ v: "", he: "כל הקהלים" }, { v: "families", he: "משפחות" }, { v: "couples", he: "זוגות" }, { v: "friends", he: "חברים" }];
+const AUD = [{ v: "", he: "כל הקהלים" }, { v: "families", he: "עם ילדים" }, { v: "adults", he: "בלי ילדים" }];
 const TYPE_OPTS = Object.keys(TYPE_HE);
 
 // One editable param field (dropdown / number / text) for a rule.

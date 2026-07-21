@@ -83,6 +83,17 @@ back via `source_note_id` (badge "מהערה"). Verified: toggling `season_filte
 makes the winter Königssee ice arena reappear in a July Salzburg build.
 
 ## Calibration findings (append here each round)
+- **v1.3.0** (2026-07-20, editor call): the real audience axis is WITH KIDS vs
+  WITHOUT, not families/couples/friends. Dropped `friends`; merged couples+friends
+  into `adults` (couple-vs-friends is a soft taste sub-signal, not a hard audience).
+  `Audience = "families" | "adults"`. The raw `audience_fit` JSON keeps its 3 fine
+  sub-scores (the AI's judgment) — the Brain maps them via `audienceFitScore()`
+  (families→families, adults→max(couples,friends)); no data migration. Kids model is
+  now primarily a NEGATIVE filter (a young child follows the parents, so "not
+  suitable for kids" — heavy_history/nightlife/bar — matters more than "designed for
+  kids"), plus the soft one-active-anchor/day. Age is already stored per kid
+  (`profile.kids[].age`) → ready for step 2 (young-follows-parents vs teens-have-wants).
+  Consumer already keyed on `isFamily = profile.kids.length>0`, so no profile change.
 - v1.0.0 (2026-07-20, first self-eval, cities London/Rome/Barcelona): avg 79/100,
   0 needWork. `variety` scores low (46–69) because it penalises runs of the raw OSM
   `category`, which is coarse ("attraction" covers most landmarks) — variety should

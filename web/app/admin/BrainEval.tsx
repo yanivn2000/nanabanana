@@ -14,7 +14,7 @@ type Module = {
 
 type Trip = {
   cityId: number; city: string; cityEn: string; country: string;
-  audience: "families" | "couples" | "friends"; days: number;
+  audience: "families" | "adults"; days: number;
   score: number; needsWork: boolean; stops: number;
   dims: Record<string, number>;
   issues: { dim: string; severity: "critical" | "warn"; msg: string; day?: number }[];
@@ -23,7 +23,7 @@ type Trip = {
 };
 type Report = { summary: { version: string; trips: number; avgScore: number; needWork: number }; report: Trip[] };
 
-const AUD_HE: Record<string, string> = { families: "👨‍👩‍👧 משפחות", couples: "💑 זוגות", friends: "🎉 חברים" };
+const AUD_HE: Record<string, string> = { families: "👨‍👩‍👧 עם ילדים", adults: "🧑‍🤝‍🧑 בלי ילדים" };
 const DIM_HE: Record<string, string> = {
   walkability: "הליכתיות", mustSee: "כיסוי חובה", audienceFit: "התאמת קהל", variety: "גיוון",
   pace: "קצב", balance: "איזון", coherence: "קוהרנטיות",

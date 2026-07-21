@@ -7,7 +7,7 @@
 // audience_fit), which is the real day structure.
 import type { Attraction } from "../db";
 import { dayWalkMinutes } from "../cluster";
-import { AUDIENCE_PREFS, DAY_WALK, PACE_STOPS, QUALITY_BAR, THRESHOLDS, WEIGHTS, type Audience } from "./policy";
+import { AUDIENCE_PREFS, DAY_WALK, PACE_STOPS, QUALITY_BAR, THRESHOLDS, WEIGHTS, audienceFitScore, type Audience } from "./policy";
 import { isActiveAnchor, stopMatchesType } from "./traits";
 import type { BrainRules } from "./rules";
 
@@ -21,7 +21,7 @@ export type Critique = {
 };
 
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
-const fit = (a: Attraction, aud: Audience) => a.audience_fit?.[aud] ?? 0;
+const fit = (a: Attraction, aud: Audience) => audienceFitScore(a.audience_fit, aud);
 // Experience type — a semantic signal (universal/family/romantic/foodie/cultural/
 // outdoors…) far finer than the coarse OSM `category` for judging variety.
 const expType = (a: Attraction) => a.audience_fit?.type || a.category;
@@ -64,7 +64,7 @@ export function critiqueTrip(
     dims.audienceFit = clamp(avg);
     const weak = all.filter((a) => fit(a, audience) < THRESHOLDS.minAudienceFit).length;
     if (weak > stops / 2)
-      issues.push({ dim: "audienceFit", severity: "warn", msg: `רוב העצירות בהתאמה נמוכה ל${audience === "families" ? "משפחות" : audience === "couples" ? "זוגות" : "חברים"}` });
+      issues.push({ dim: "audienceFit", severity: "warn", msg: `רוב העצירות בהתאמה נמוכה ל${audience === "families" ? "משפחות עם ילדים" : "מטיילים בלי ילדים"}` });
     // family-specific: kid-friendliness
     if (prefs.kidFriendly) {
       const kidOk = all.filter((a) => (a.family_score ?? 0) >= 6).length;
