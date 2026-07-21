@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { editorEmail } from "@/lib/admin";
-import { listDestinations, topAttractions, areasForDestination, type Attraction } from "@/lib/db";
+import { listDestinations, topAttractions, areasForDestination, brainRulesForDest, type Attraction } from "@/lib/db";
 import { clusterIntoDays, annotateDaysWithAreas } from "@/lib/cluster";
 import { buildCarBaseItinerary } from "@/lib/heuristic";
 import { splitByReach, clusterDayTrips, dayTripBudget } from "@/lib/daytrips";
 import { durationHe } from "@/lib/geo";
-import { isInSeason } from "@/lib/brain/traits";
+import { isInSeason, stopMatchesType } from "@/lib/brain/traits";
 import { critiqueTrip } from "@/lib/brain/critique";
 import { BRAIN_VERSION, PACE_STOPS, type Audience } from "@/lib/brain/policy";
 import type { Itinerary, StopKind } from "@/lib/trip-types";
@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
     const attractions = await topAttractions(id, 150);
     const cityMustCount = attractions.filter((a) => a.must_see === 1).length;
     const areas = await areasForDestination(id);
+    const rules = await brainRulesForDest(id);   // the Brain's techniques for this city
     for (const audience of AUDIENCES) {
       // audience-ranked pool: must-sees first, then by this audience's fit. The
       // clusterer treats input order as value.
@@ -71,14 +72,18 @@ export async function POST(req: NextRequest) {
       // driven, so walkability doesn't apply), but the trip page gets the full
       // itinerary incl. car day-trips so the editor can judge it on the map.
       const carBase = dest.mobility === "car_base";
-      // season-filter the pool so the critique matches the itinerary (v1.2).
-      const seasonPool = pool.filter((a) => isInSeason(a, month));
-      const { inCity, far } = carBase ? splitByReach(seasonPool, center) : { inCity: seasonPool, far: [] as Attraction[] };
+      // apply the techniques to the pool so the critique matches the itinerary:
+      // season filter + this audience's avoids (from the principles).
+      const eligible = pool
+        .filter((a) => rules.seasonFilter === false || isInSeason(a, month))
+        .filter((a) => !(rules.avoid[audience] ?? []).some((t) => stopMatchesType(a, t)));
+      const { inCity, far } = carBase ? splitByReach(eligible, center) : { inCity: eligible, far: [] as Attraction[] };
       const tripDays = carBase ? dayTripBudget(days, clusterDayTrips(far, center).length) : 0;
-      const { days: built } = clusterIntoDays(inCity, days - tripDays, { walkPref: 3, dayMinutes: PACE_STOPS[audience] * 84 });
-      const crit = critiqueTrip(built, audience, { cityMustCount });
+      const { days: built } = clusterIntoDays(inCity, days - tripDays, { walkPref: 3, dayMinutes: rules.paceStops[audience] * 84 });
+      const crit = critiqueTrip(built, audience, { cityMustCount, rules });
+      const buildOpts = { month, seasonFilter: rules.seasonFilter, dayEnderLast: rules.dayEnderLast, maxTypePerDay: rules.maxTypePerDay, avoidCats: rules.avoid[audience] ?? [] };
       const itinerary = carBase
-        ? buildCarBaseItinerary(dest.city, dest.country, days, pool, center, audience === "families", PACE_STOPS[audience], 3, month)
+        ? buildCarBaseItinerary(dest.city, dest.country, days, pool, center, audience === "families", rules.paceStops[audience], 3, buildOpts)
         : toItinerary(built, dest, audience, days);
       annotateDaysWithAreas(itinerary.days, areas, center);
       report.push({

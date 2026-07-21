@@ -522,6 +522,45 @@ export async function countQueuedBrainNotes(): Promise<number> {
   return r[0]?.n ?? 0;
 }
 
+// --- The Brain's TECHNIQUES ("how to cook") — typed, editor-editable rules -----
+import type { Principle, BrainRules } from "./brain/rules";
+import { resolveBrainRules } from "./brain/rules";
+
+export async function listPrinciples(): Promise<Principle[]> {
+  return query<Principle>(
+    `SELECT p.id, p.kind, p.params, p.scope, p.destination_id, p.audience, p.enabled,
+            p.source_note_id, d.city_he AS city
+       FROM brain_principles p LEFT JOIN destinations d ON d.id = p.destination_id
+      ORDER BY p.scope, p.id`);
+}
+export async function savePrinciple(p: {
+  kind: string; params: Record<string, unknown>; scope?: string;
+  destination_id?: number | null; audience?: string | null; created_by?: string | null;
+}): Promise<number> {
+  const rows = await query<{ id: number }>(
+    `INSERT INTO brain_principles (kind, params, scope, destination_id, audience, created_by)
+     VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+    [p.kind, JSON.stringify(p.params ?? {}), p.scope ?? "global", p.destination_id ?? null, p.audience ?? null, p.created_by ?? null]);
+  return rows[0].id;
+}
+export async function updatePrinciple(id: number, fields: { params?: Record<string, unknown>; enabled?: boolean; audience?: string | null; scope?: string; destination_id?: number | null }): Promise<void> {
+  const sets: string[] = [], vals: unknown[] = [];
+  if (fields.params !== undefined) { sets.push(`params = $${vals.length + 2}`); vals.push(JSON.stringify(fields.params)); }
+  if (fields.enabled !== undefined) { sets.push(`enabled = $${vals.length + 2}`); vals.push(fields.enabled); }
+  if (fields.audience !== undefined) { sets.push(`audience = $${vals.length + 2}`); vals.push(fields.audience); }
+  if (fields.scope !== undefined) { sets.push(`scope = $${vals.length + 2}`); vals.push(fields.scope); }
+  if (fields.destination_id !== undefined) { sets.push(`destination_id = $${vals.length + 2}`); vals.push(fields.destination_id); }
+  if (!sets.length) return;
+  await query(`UPDATE brain_principles SET ${sets.join(", ")}, updated_at = now() WHERE id = $1`, [id, ...vals]);
+}
+export async function deletePrinciple(id: number): Promise<void> {
+  await query(`DELETE FROM brain_principles WHERE id = $1`, [id]);
+}
+// The Brain loads this once per build and reads the resolved config (never the raw rows).
+export async function brainRulesForDest(destId?: number | null): Promise<BrainRules> {
+  return resolveBrainRules(await listPrinciples(), destId);
+}
+
 // Admin: all modules (with city name) newest-first. approvedOnly for the composer.
 export async function listTripTemplates(approvedOnly = false): Promise<TripTemplate[]> {
   return query<TripTemplate>(

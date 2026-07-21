@@ -8,7 +8,28 @@ import { familyFit } from "./taste";
 import { clusterIntoDays, dayWalkMinutes, dropSamePlace } from "./cluster";
 import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget } from "./daytrips";
 import { durationHe, haversineKm, walkMinutes } from "./geo";
-import { isInSeason, reorderDayEnders } from "./brain/traits";
+import { isInSeason, reorderDayEnders, stopMatchesType } from "./brain/traits";
+
+// Resolved technique flags the builder honours (from brain_principles via
+// resolveBrainRules; all optional → defaults preserve prior behaviour).
+export type BuildOpts = {
+  month?: number;
+  seasonFilter?: boolean;
+  dayEnderLast?: boolean;
+  maxTypePerDay?: { type: string; max: number }[];
+  avoidCats?: string[];
+};
+const isAvoided = (a: Attraction, avoid?: string[]) => !!avoid?.some((t) => stopMatchesType(a, t));
+// Drop stops beyond the per-day cap of a type (keeps the earlier = higher-value ones).
+function capTypePerDay(day: Attraction[], caps?: { type: string; max: number }[]): Attraction[] {
+  if (!caps?.length) return day;
+  const counts: Record<string, number> = {};
+  return day.filter((a) => {
+    let drop = false;
+    for (const cap of caps) if (stopMatchesType(a, cap.type)) { counts[cap.type] = (counts[cap.type] ?? 0) + 1; if (counts[cap.type] > cap.max) drop = true; }
+    return !drop;
+  });
+}
 
 const KIND_FROM_CAT: Record<string, StopKind> = {
   nature: "nature", museum: "culture", attraction: "culture",
@@ -39,17 +60,19 @@ export function buildHeuristicItinerary(
   perDay = 5,
   walkPref = 3,
   seedGroups?: number[][],
-  month?: number
+  opts?: BuildOpts
 ): Itinerary {
-  // Season is a real build input (v1.2): drop out-of-season places (winter-only
-  // ice/ski in summer, water parks in winter) BEFORE clustering.
-  const inSeason = attractions.filter((a) => isInSeason(a, month));
+  // Techniques from the principles table (opts): season filter + audience avoids
+  // happen on the pool BEFORE clustering.
+  const filtered = attractions
+    .filter((a) => opts?.seasonFilter === false || isInSeason(a, opts?.month))
+    .filter((a) => !isAvoided(a, opts?.avoidCats));
   // The input is already taste-ranked; for kids, re-sort by family_score. (An active
   // anchor per family day is enforced by the critic flag + the higher family pace,
   // NOT by a ranking boost — a boost distorted must-see coverage. v1.2.)
   const pool = isFamily
-    ? [...inSeason].sort((a, b) => familyFit(b) - familyFit(a))
-    : inSeason;
+    ? [...filtered].sort((a, b) => familyFit(b) - familyFit(a))
+    : filtered;
 
   // Proximity clustering: instead of slicing the ranked list into days (which
   // scatters each day across the city), group geographically so every day is a
@@ -58,9 +81,10 @@ export function buildHeuristicItinerary(
   const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes: perDay * 84, seedGroups });
 
   const dayList = clustered.map((picksRaw, d) => {
-    // no "fortress + its own hill" twice; then push day-enders (water/adventure)
-    // to the end of the day so nothing is scheduled after them (v1.2 editor note).
-    const picks = reorderDayEnders(dropSamePlace(picksRaw));
+    // per-day techniques: drop same-place dups, cap types (e.g. ≤2 museums/day),
+    // then push day-enders (water/adventure) to the end (all from the principles).
+    let picks = capTypePerDay(dropSamePlace(picksRaw), opts?.maxTypePerDay);
+    if (opts?.dayEnderLast !== false) picks = reorderDayEnders(picks);
     const stops: Stop[] = [];
     // Sequential clock: arrival = running time, then add the stay + travel to the
     // next stop, so times always increase and reflect real durations. The lunch
@@ -123,19 +147,21 @@ export function buildCarBaseItinerary(
   isFamily = false,
   perDay = 5,
   walkPref = 3,
-  month?: number
+  opts?: BuildOpts
 ): Itinerary {
-  // Season filter first (v1.2): a winter-only far cluster shouldn't seed a summer day-trip.
-  const seasonal = attractions.filter((a) => isInSeason(a, month));
-  const { inCity, far } = splitByReach(seasonal, center);
+  // Technique filters (season + avoids) before splitting into city vs day-trips.
+  const eligible = attractions
+    .filter((a) => opts?.seasonFilter === false || isInSeason(a, opts?.month))
+    .filter((a) => !isAvoided(a, opts?.avoidCats));
+  const { inCity, far } = splitByReach(eligible, center);
   const clusters = clusterDayTrips(far, center);
   const tripDays = dayTripBudget(days, clusters.length);
   const cityDays = days - tripDays;
 
   // No worthy far clusters (or too few days) → ordinary in-city build.
-  if (tripDays < 1) return buildHeuristicItinerary(city, country, days, inCity, isFamily, perDay, walkPref, undefined, month);
+  if (tripDays < 1) return buildHeuristicItinerary(city, country, days, inCity, isFamily, perDay, walkPref, undefined, opts);
 
-  const cityItin = buildHeuristicItinerary(city, country, cityDays, inCity, isFamily, perDay, walkPref, undefined, month);
+  const cityItin = buildHeuristicItinerary(city, country, cityDays, inCity, isFamily, perDay, walkPref, undefined, opts);
   const tripDayObjs = clusters.slice(0, tripDays).map((cl, i) =>
     dayTripToDay(cl, city, cityDays + i + 1, isFamily));
 

@@ -51,6 +51,37 @@ same-category run) · `pace` (stops/day per audience) · `balance` (even days) �
 Over time this converges: the critic learns the editor's taste, the builder is
 tuned to satisfy it, and the golden set guards against forgetting.
 
+## Two books: Techniques (how-to-cook) + Recipes (cook book)
+The editor's model (2026-07-20): the Brain is a **cook**. Two separate, editor-
+transparent things feed it:
+- 🍳 **Techniques** = the general "how to cook" rules that apply to EVERY trip
+  ("don't over-salt" → "≤2 museums/day", day-enders last, season filter). Stored in
+  `brain_principles` (supabase/phase16.sql), edited in the admin **👨‍🍳 טכניקות** tab.
+- 📕 **Recipes** = the per-region dishes (the משבצות) — anchors + local rules +
+  variants. (Cook-book table = next build; today's `trip_templates` is the frozen
+  precursor.) See [[project_trip_modules]].
+
+### Principles = TYPED rules (the two-sided contract)
+Each principle is a `kind` from a fixed vocabulary (`lib/brain/rules.ts#RULE_KINDS`)
++ `params` (jsonb). This is the whole trick: the **editor** edits params with
+dropdowns and reads `principleLabel()` (a Hebrew sentence); the **Brain** reads
+`resolveBrainRules()` (typed values) and never parses free text. Kinds today:
+`pace_stops`, `max_type_per_day`, `active_anchor_required`, `day_ender_last`,
+`season_filter`, `avoid_category` (supports keyword pseudo-types via
+`traits.stopMatchesType`, e.g. `heavy_history`, `active`), and `custom` (advisory —
+transparent but not auto-applied). Adding a technique = add a kind here + honour it
+in the builder/critic.
+
+**How the Brain obeys:** `route.ts` + `brain-eval` call `brainRulesForDest(destId)`
+→ `resolveBrainRules(principles)` merges enabled global+city principles over the
+policy defaults → a `BrainRules` object passed to `buildHeuristic/CarBaseItinerary`
+(season/avoid pool filters, day-ender + max-type day ordering, pace) and
+`critiqueTrip` (active-anchor + max-type flags). On/off techniques DEFAULT OFF and
+are switched on by an enabled principle, so toggling one off in the editor really
+turns the behaviour off. Digested editor notes are seeded as principle rows linked
+back via `source_note_id` (badge "מהערה"). Verified: toggling `season_filter` off
+makes the winter Königssee ice arena reappear in a July Salzburg build.
+
 ## Calibration findings (append here each round)
 - v1.0.0 (2026-07-20, first self-eval, cities London/Rome/Barcelona): avg 79/100,
   0 needWork. `variety` scores low (46–69) because it penalises runs of the raw OSM

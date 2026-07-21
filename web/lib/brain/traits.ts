@@ -18,6 +18,20 @@ const SUMMER_RX = /water_park|swimming|\bpool\b|lido|strandbad|פארק מים|�
 export const isDayEnder = (a: Attraction) => DAY_ENDER_RX.test(blob(a));
 export const isActiveAnchor = (a: Attraction) => ACTIVE_RX.test(blob(a));
 
+// Dark/heavy history (Nazism, Holocaust) — not a clean OSM category (usually tagged
+// "museum"/"historic"), so it needs a keyword trait. Lets a rule avoid it on family
+// trips without dropping good museums.
+const HEAVY_HISTORY_RX = /היטלר|נאצי|\bnazi\b|holocaust|שואה|גסטפו|dokumentation.?obersalzberg|אוברזלצברג|מחנה ריכוז|concentration camp|kz\b|memorial/i;
+export const isHeavyHistory = (a: Attraction) => HEAVY_HISTORY_RX.test(blob(a));
+
+// Single matcher used by rule kinds (avoid_category, max_type_per_day). Handles the
+// keyword pseudo-types ('heavy_history', 'active') and plain category / experience-type.
+export function stopMatchesType(a: Attraction, t: string): boolean {
+  if (t === "heavy_history") return isHeavyHistory(a);
+  if (t === "active") return isActiveAnchor(a);
+  return a.category === t || a.audience_fit?.type === t;
+}
+
 export type Season = "winter" | "summer" | "shoulder";
 export function seasonOf(month?: number | null): Season | null {
   if (!month) return null;

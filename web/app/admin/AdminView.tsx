@@ -8,6 +8,7 @@ import { AttractionsTable } from "./AttractionsTable";
 import { AreasTable } from "./AreasTable";
 import { GraphTable } from "./GraphTable";
 import { BrainEval } from "./BrainEval";
+import { PrinciplesTable } from "./PrinciplesTable";
 import { Moderation } from "./Moderation";
 import type { AdminDestination, Feedback } from "@/lib/db";
 
@@ -17,6 +18,7 @@ const TABS = [
   { key: "areas", label: "🗺️ שכונות" },
   { key: "graph", label: "🌉 גרף מרחקים" },
   { key: "brain", label: "🧠 המוח" },
+  { key: "principles", label: "👨‍🍳 טכניקות" },
   { key: "insights", label: "📥 תובנות" },
   { key: "moderation", label: "🚩 מודרציה" },
   { key: "feedback", label: "💬 פידבק" },
@@ -222,6 +224,12 @@ export function AdminView({ destinations, feedback, email }: {
             המוח — מנוע-טיולים דטרמיניסטי (ללא AI). בונה טיול למשפחות/זוגות/חברים בכל עיר, מנקד את עצמו, ומציג ביקורת. לכיול, שמירה כמשבצת והערות למוח — פִתחו כל טיול כ״דף טיול״.
           </p>
           <BrainEval destinations={destinations} />
+        </div>
+      )}
+
+      {tab === "principles" && (
+        <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
+          <PrinciplesTable destinations={destinations} />
         </div>
       )}
 

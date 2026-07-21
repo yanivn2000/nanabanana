@@ -8,7 +8,8 @@
 import type { Attraction } from "../db";
 import { dayWalkMinutes } from "../cluster";
 import { AUDIENCE_PREFS, DAY_WALK, PACE_STOPS, QUALITY_BAR, THRESHOLDS, WEIGHTS, type Audience } from "./policy";
-import { isActiveAnchor } from "./traits";
+import { isActiveAnchor, stopMatchesType } from "./traits";
+import type { BrainRules } from "./rules";
 
 export type Issue = { dim: string; severity: "critical" | "warn"; msg: string; day?: number };
 export type Critique = {
@@ -28,7 +29,7 @@ const expType = (a: Attraction) => a.audience_fit?.type || a.category;
 const visitMin = (a: Attraction) => { const d = a.duration_minutes ?? 0; return d ? Math.max(40, Math.min(150, d)) : 75; };
 
 export function critiqueTrip(
-  days: Attraction[][], audience: Audience, ctx: { cityMustCount: number }
+  days: Attraction[][], audience: Audience, ctx: { cityMustCount: number; rules?: BrainRules }
 ): Critique {
   const prefs = AUDIENCE_PREFS[audience];
   const all = days.flat();
@@ -68,13 +69,23 @@ export function critiqueTrip(
     if (prefs.kidFriendly) {
       const kidOk = all.filter((a) => (a.family_score ?? 0) >= 6).length;
       if (kidOk < stops / 2) issues.push({ dim: "audienceFit", severity: "warn", msg: "מעט אטרקציות ידידותיות-ילדים" });
-      // v1.2 (editor note): an Israeli family day needs at least one ACTIVE anchor
-      // (cable-car/toboggan/gorge/pool…) — an all-passive-culture day bores kids.
+    }
+    // active-anchor technique (principles): audiences that require it get a day with
+    // no active anchor flagged. Default (no rules) = families, per the v1.2 note.
+    const needsActive = ctx.rules ? ctx.rules.activeAnchorAudiences.includes(audience) : audience === "families";
+    if (needsActive) {
       days.forEach((d, i) => {
         if (d.length >= THRESHOLDS.minFamilyStopsForAnchor && !d.some(isActiveAnchor)) {
           issues.push({ dim: "audienceFit", severity: "warn", day: i + 1, msg: `יום ${i + 1}: אין אטרקציה פעילה לילדים (רכבל/מזחלות/קניון/בריכה)` });
           dims.audienceFit = clamp(dims.audienceFit - 8);
         }
+      });
+    }
+    // max-type-per-day technique (e.g. ≤2 museums/day) — flag any day over the cap.
+    for (const cap of ctx.rules?.maxTypePerDay ?? []) {
+      days.forEach((d, i) => {
+        const n = d.filter((a) => stopMatchesType(a, cap.type)).length;
+        if (n > cap.max) issues.push({ dim: "variety", severity: "warn", day: i + 1, msg: `יום ${i + 1}: ${n} ${cap.type} — מעל המקסימום (${cap.max})` });
       });
     }
   }

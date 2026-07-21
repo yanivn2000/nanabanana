@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges, areasForDestination } from "@/lib/db";
+import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges, areasForDestination, brainRulesForDest } from "@/lib/db";
 import { annotateDaysWithAreas } from "@/lib/cluster";
 import type { Attraction, Destination } from "@/lib/db";
 import {
@@ -195,9 +195,10 @@ export async function POST(req: NextRequest) {
   // vintage couple and a sports/history couple get different attraction sets
   // fed to the builder → genuinely different trips. No taste → family order.
   const isFamily = body.isFamily === true;
-  // heuristic stops/day. v1.2: families want a fuller day (≥5) with an active anchor
-  // + small pop-ins — 3 hour-long culture stops read as a boring family day.
-  const perDay = Math.max(paceToPerDay(body.pace), isFamily ? 5 : 0);
+  // The Brain's techniques (brain_principles) for this city — the builder obeys these.
+  const rules = await brainRulesForDest(dest.id);
+  // heuristic stops/day. Families get at least their pace-rule floor (fuller day).
+  const perDay = isFamily ? Math.max(paceToPerDay(body.pace), rules.paceStops.families) : paceToPerDay(body.pace);
   // Base pool = top 150; then fold in the traveler's exact picks (even ones
   // ranked below 150) so a chosen place is always a real build candidate.
   const base = await topAttractions(dest.id, 150);
@@ -224,10 +225,14 @@ export async function POST(req: NextRequest) {
   const areas = await areasForDestination(dest.id);
   // car_base cities (Salzburg, Brașov, islands…) get CAR day-trips to far worthy
   // clusters mixed with walkable in-city days; metros build in-city only.
+  const buildOpts = {
+    month: body.month, seasonFilter: rules.seasonFilter, dayEnderLast: rules.dayEnderLast,
+    maxTypePerDay: rules.maxTypePerDay, avoidCats: isFamily ? rules.avoid.families : [],
+  };
   const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary =>
     d.mobility === "car_base"
-      ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp, body.month)
-      : buildHeuristicItinerary(d.city, d.country, ndays, list, fam, pd, wp, undefined, body.month);
+      ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp, buildOpts)
+      : buildHeuristicItinerary(d.city, d.country, ndays, list, fam, pd, wp, undefined, buildOpts);
   const respondGenerate = (itin: Itinerary, engine?: string) => {
     const scheduled = new Set<number>();
     const withDetails = attachDetails(itin, buildList, anchorIds, scheduled);
