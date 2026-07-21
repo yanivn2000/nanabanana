@@ -17,6 +17,8 @@ function ParamField({ field, value, onChange }: { field: { key: string; type: st
     return <select className={cls} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)}>{TYPE_OPTS.map((t) => <option key={t} value={t}>{TYPE_HE[t]}</option>)}</select>;
   if (field.type === "number")
     return <input type="number" className={`${cls} w-14 text-center`} value={Number(value ?? 0)} onChange={(e) => onChange(Number(e.target.value))} />;
+  if (field.type === "time")
+    return <input type="time" className={`${cls} w-24 text-center`} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} />;
   return <input type="text" className={`${cls} w-64`} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} />;
 }
 
@@ -56,23 +58,27 @@ export function PrinciplesTable({ destinations }: { destinations: AdminDestinati
   const city = items.filter((p) => p.scope === "city");
 
   const Row = (p: Principle) => (
-    <div key={p.id} className="flex flex-wrap items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] px-2.5 py-2 text-[13px]"
-      style={{ background: p.enabled ? "var(--surface)" : "var(--surface-2)", opacity: p.enabled ? 1 : 0.6 }}>
-      <button onClick={() => patch(p.id, { enabled: !p.enabled })} title={p.enabled ? "כבה" : "הפעל"}
-        className="relative h-4 w-7 shrink-0 rounded-full transition" style={{ background: p.enabled ? "var(--brand)" : "var(--border)" }}>
-        <span className="absolute top-0.5 size-3 rounded-full bg-white transition-all" style={{ insetInlineStart: p.enabled ? "14px" : "2px" }} />
-      </button>
-      <span className="min-w-0 flex-1 font-medium text-[var(--text)]">{principleLabel(p.kind, p.params)}</span>
-      {/* inline param editors */}
-      <span className="flex items-center gap-1.5">
-        {(RULE_KINDS[p.kind]?.params ?? []).map((f) => (
-          <ParamField key={f.key} field={f} value={p.params[f.key]}
-            onChange={(v) => patch(p.id, { params: { ...p.params, [f.key]: v } })} />
-        ))}
-      </span>
-      {p.source_note_id && <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 text-[10.5px] text-[var(--brand-ink)]" title="נולד מהערת-עורך למוח">מהערה</span>}
-      {p.city && <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-[10.5px] text-[var(--text-3)]">{p.city}</span>}
-      <button onClick={() => del(p.id)} className="shrink-0 text-[var(--text-3)] hover:text-[var(--terra,#c8654a)]"><Trash2 size={13} /></button>
+    <div key={p.id} className="flex flex-col gap-1 rounded-[var(--radius-sm)] border border-[var(--border)] px-2.5 py-2 text-[13px]"
+      style={{ background: p.enabled ? "var(--surface)" : "var(--surface-2)", opacity: p.enabled ? 1 : 0.55 }}>
+      <div className="flex flex-wrap items-center gap-2">
+        <button onClick={() => patch(p.id, { enabled: !p.enabled })} title={p.enabled ? "כבה" : "הפעל"}
+          className="relative h-4 w-7 shrink-0 rounded-full transition" style={{ background: p.enabled ? "var(--brand)" : "var(--border)" }}>
+          <span className="absolute top-0.5 size-3 rounded-full bg-white transition-all" style={{ insetInlineStart: p.enabled ? "14px" : "2px" }} />
+        </button>
+        <span className="min-w-0 flex-1 font-medium text-[var(--text)]">{principleLabel(p.kind, p.params)}</span>
+        {/* inline param editors */}
+        <span className="flex items-center gap-1.5">
+          {(RULE_KINDS[p.kind]?.params ?? []).map((f) => (
+            <ParamField key={f.key} field={f} value={p.params[f.key]}
+              onChange={(v) => patch(p.id, { params: { ...p.params, [f.key]: v } })} />
+          ))}
+        </span>
+        {p.source_note_id && <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 text-[10.5px] text-[var(--brand-ink)]" title="נולד מהערת-עורך למוח">מהערה</span>}
+        {p.city && <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-[10.5px] text-[var(--text-3)]">{p.city}</span>}
+        <button onClick={() => del(p.id)} className="shrink-0 text-[var(--text-3)] hover:text-[var(--terra,#c8654a)]"><Trash2 size={13} /></button>
+      </div>
+      {/* full plain-Hebrew explanation of what the value does */}
+      {RULE_KINDS[p.kind]?.help && <p className="pr-9 text-[11.5px] leading-snug text-[var(--text-3)]">{RULE_KINDS[p.kind].help}</p>}
     </div>
   );
 
@@ -92,6 +98,9 @@ export function PrinciplesTable({ destinations }: { destinations: AdminDestinati
           </div>
 
           {/* add a new principle */}
+          {draftKind && RULE_KINDS[draftKind]?.help && (
+            <p className="rounded-[var(--radius-sm)] bg-[var(--brand-soft)] px-2.5 py-1.5 text-[12px] leading-snug text-[var(--brand-ink)]">{RULE_KINDS[draftKind].help}</p>
+          )}
           <div className="flex flex-wrap items-center gap-2 rounded-[var(--radius-sm)] border border-dashed border-[var(--border)] p-2.5">
             <span className="text-[12.5px] font-medium text-[var(--text-2)]">הוסף טכניקה:</span>
             <select value={draftKind} onChange={(e) => { setDraftKind(e.target.value); setDraftParams({}); }}

@@ -18,6 +18,11 @@ export type BuildOpts = {
   dayEnderLast?: boolean;
   maxTypePerDay?: { type: string; max: number }[];
   avoidCats?: string[];
+  // Tier-1 schedule feel (minutes) — from the day_window / lunch / visit_default principles.
+  dayStartMin?: number;
+  lunchAfterMin?: number;
+  lunchMinutes?: number;
+  visitDefault?: number;
 };
 const isAvoided = (a: Attraction, avoid?: string[]) => !!avoid?.some((t) => stopMatchesType(a, t));
 // Drop stops beyond the per-day cap of a type (keeps the earlier = higher-value ones).
@@ -41,8 +46,9 @@ const DAY_START_MIN = 9 * 60 + 30;   // 09:30
 const LUNCH_AFTER_MIN = 12 * 60;     // drop the meal break at the first stop past 12:00
 const LUNCH_MIN = 60;
 const fmtClock = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
-// Minutes spent AT a place (visit), clamped like the clusterer's model.
-const visitMinutes = (a: Attraction) => { const d = a.duration_minutes ?? 0; return d ? Math.max(40, Math.min(150, d)) : 75; };
+// Minutes spent AT a place (visit): the DB value clamped, or the default (a
+// technique — visit_default) when unknown.
+const visitMinutes = (a: Attraction, def = 75) => { const d = a.duration_minutes ?? 0; return d ? Math.max(40, Math.min(150, d)) : def; };
 const travelMinutes = (a: Attraction, b: Attraction) =>
   Number.isFinite(a.lat) && Number.isFinite(a.lng) && Number.isFinite(b.lat) && Number.isFinite(b.lng)
     ? walkMinutes(haversineKm(a.lat as number, a.lng as number, b.lat as number, b.lng as number)) : 10;
@@ -89,12 +95,15 @@ export function buildHeuristicItinerary(
     // Sequential clock: arrival = running time, then add the stay + travel to the
     // next stop, so times always increase and reflect real durations. The lunch
     // break is dropped at the first stop boundary past noon — no fixed slots.
-    let clock = DAY_START_MIN;
+    const startMin = opts?.dayStartMin ?? DAY_START_MIN;
+    const lunchAfter = opts?.lunchAfterMin ?? LUNCH_AFTER_MIN;
+    const lunchLen = opts?.lunchMinutes ?? LUNCH_MIN;
+    let clock = startMin;
     let lunchDone = false;
     picks.forEach((a, i) => {
-      if (!lunchDone && i > 0 && clock >= LUNCH_AFTER_MIN) {
-        stops.push({ name: "הפסקת צהריים", kind: "food", time: fmtClock(clock), duration: "כשעה", note: "מסעדה מקומית באזור" });
-        clock += LUNCH_MIN;
+      if (!lunchDone && i > 0 && clock >= lunchAfter) {
+        stops.push({ name: "הפסקת צהריים", kind: "food", time: fmtClock(clock), duration: durationHe(lunchLen), note: "מסעדה מקומית באזור" });
+        clock += lunchLen;
         lunchDone = true;
       }
       stops.push({
@@ -108,7 +117,7 @@ export function buildHeuristicItinerary(
         // depending on a later attachDetails pass (e.g. saved modules).
         id: a.id, lat: a.lat, lng: a.lng, image: a.image_url, tagline: a.tagline_he,
       });
-      clock += visitMinutes(a);
+      clock += visitMinutes(a, opts?.visitDefault ?? 75);
       if (i < picks.length - 1) clock += travelMinutes(a, picks[i + 1]);
     });
 

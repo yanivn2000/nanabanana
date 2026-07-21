@@ -24,54 +24,89 @@ const th = (t: unknown) => TYPE_HE[String(t)] ?? String(t);
 const AUD_HE: Record<string, string> = { families: "עם ילדים", adults: "בלי ילדים" };
 const ah = (a: unknown) => (a ? AUD_HE[String(a)] ?? String(a) : "כל הקהלים");
 
-export type ParamField = { key: string; type: "audience" | "exptype" | "number" | "text"; label: string };
+export type ParamField = { key: string; type: "audience" | "exptype" | "number" | "text" | "time"; label: string };
 
-// The catalog. `he` renders the readable sentence; `params` drives the editor form;
-// `applies` is a hint to editors/devs of where the Brain honours it.
-export const RULE_KINDS: Record<string, { title: string; he: (p: Record<string, unknown>) => string; params: ParamField[]; applies: string }> = {
+// The catalog. `he` renders the readable sentence; `help` is a full plain-Hebrew
+// explanation of what the value DOES (shown under each row so no value is cryptic);
+// `params` drives the editor form; `applies` is a dev hint.
+export const RULE_KINDS: Record<string, { title: string; help: string; he: (p: Record<string, unknown>) => string; params: ParamField[]; applies: string }> = {
   pace_stops: {
     title: "קצב (עצירות ליום)",
+    help: "כמה עצירות משמעותיות לתכנן ליום עבור הקהל הזה — לא כולל אוכל והפסקות. יותר = יום עמוס יותר; פחות = יום רגוע עם אוויר לספונטניות.",
     he: (p) => `קצב ${ah(p.audience)}: כ-${p.stops} עצירות ביום`,
     params: [{ key: "audience", type: "audience", label: "קהל" }, { key: "stops", type: "number", label: "עצירות" }],
     applies: "builder — per-day budget",
   },
   max_type_per_day: {
     title: "מקסימום מסוג ביום",
+    help: "מגביל כמה עצירות מאותו סוג ייכנסו ליום אחד, כדי שהיום לא יהיה חד-גוני. למשל 'מקסימום 2 מוזיאונים' — מונע יום של מבצר+כנסייה+מוזיאון שמרגיש משעמם.",
     he: (p) => `מקסימום ${p.max} ${th(p.type)} ביום`,
     params: [{ key: "type", type: "exptype", label: "סוג" }, { key: "max", type: "number", label: "מקסימום" }],
     applies: "critic flag + builder ordering",
   },
   active_anchor_required: {
     title: "אנקר פעיל חובה",
+    help: "מוודא שכל יום עבור הקהל הזה כולל לפחות אטרקציה פעילה אחת (רכבל, מזחלות, קניון, בריכה, פארק) — ולא רק אתרים 'פסיביים' כמו מוזיאונים וכנסיות. אם אין — המוח מסמן את היום כחלש.",
     he: (p) => `כל יום ל${ah(p.audience)} חייב אטרקציה פעילה אחת (רכבל/מזחלות/קניון/בריכה)`,
     params: [{ key: "audience", type: "audience", label: "קהל" }],
     applies: "critic flag",
   },
   day_ender_last: {
     title: "מסיים-יום בסוף",
+    help: "אטרקציות מתישות (פארק-מים, פארק-שעשועים, הרפתקה) יסודרו תמיד בסוף היום — כי אחריהן כולם עייפים ולא רוצים עוד עצירה. משנה רק את הסדר בתוך היום, לא את התוכן.",
     he: () => "אטרקציות מים/הרפתקה/פארק — לסוף היום (אחריהן כולם עייפים)",
     params: [],
     applies: "builder ordering",
   },
   season_filter: {
     title: "סינון עונתי",
+    help: "מסנן אתרים שלא מתאימים לעונת הטיול (לפי חודש הנסיעה): זירת-קרח/סקי לא יופיעו בטיול-קיץ, ופארקי-מים/בריכות לא בטיול-חורף.",
     he: () => "התאם לעונה — סנן אתרי חורף (קרח/סקי) בקיץ ואתרי קיץ (מים) בחורף",
     params: [],
     applies: "pool filter by trip month",
   },
   avoid_category: {
     title: "הימנעות מסוג",
+    help: "מוציא לגמרי סוג אתרים מהטיול של הקהל הזה. למשל: היסטוריה-כבדה (מוזיאוני שואה/נאצים) בטיולי משפחה, או חיי-לילה בטיול עם ילדים.",
     he: (p) => `${ah(p.audience)}: הימנע מ${th(p.category)}`,
     params: [{ key: "audience", type: "audience", label: "קהל" }, { key: "category", type: "exptype", label: "סוג" }],
     applies: "pool filter for that audience",
   },
+  day_window: {
+    title: "שעת התחלת יום",
+    help: "השעה שבה מתחיל היום — כלומר מתי מגיעים לעצירה הראשונה. זהו בסיס כל לוח-הזמנים: כל שעות ההגעה נספרות מכאן קדימה לפי משך-השהייה וזמני-המעבר.",
+    he: (p) => `היום מתחיל בשעה ${p.start || "09:30"}`,
+    params: [{ key: "start", type: "time", label: "שעה" }],
+    applies: "scheduler — day start clock",
+  },
+  lunch: {
+    title: "הפסקת צהריים",
+    help: "מתי לשלב הפסקת אוכל וכמה זמן. ההפסקה נכנסת בעצירה הראשונה שאחרי השעה שנקבעה (למשל 12:00), ותופסת את מספר הדקות שנקבע — כך שאר היום נדחף בהתאם.",
+    he: (p) => `הפסקת צהריים בעצירה הראשונה אחרי ${p.after || "12:00"}, למשך ${p.minutes || 60} דק׳`,
+    params: [{ key: "after", type: "time", label: "לא לפני" }, { key: "minutes", type: "number", label: "משך (דק׳)" }],
+    applies: "scheduler — lunch insertion",
+  },
+  visit_default: {
+    title: "משך ביקור ברירת-מחדל",
+    help: "כמה דקות להקצות לעצירה כשאין במסד נתון מדויק על משך הביקור. ערך גבוה = פחות עצירות נכנסות ליום (כל אחת 'תופסת' יותר זמן); ערך נמוך = יום צפוף יותר.",
+    he: (p) => `משך ביקור ברירת-מחדל: ${p.minutes || 75} דק׳ לעצירה`,
+    params: [{ key: "minutes", type: "number", label: "דקות" }],
+    applies: "scheduler — default visit minutes",
+  },
   custom: {
     title: "הערה חופשית (מייעצת)",
+    help: "טקסט חופשי שאינו נאכף אוטומטית ע״י המוח — הנחיה שאני (Claude Code) מעכל ידנית לקוד/למתכון. שקוף ומתועד, אבל לא כלל שרץ מעצמו.",
     he: (p) => String(p.text ?? "הערה"),
     params: [{ key: "text", type: "text", label: "טקסט" }],
     applies: "advisory — not auto-applied; digested manually",
   },
 };
+
+// "HH:MM" → minutes past midnight (for the scheduler); tolerant of bad input.
+export function timeToMin(s: unknown, fallback: number): number {
+  const m = String(s ?? "").match(/^(\d{1,2}):(\d{2})$/);
+  return m ? Math.min(1439, Math.max(0, +m[1] * 60 + +m[2])) : fallback;
+}
 
 export function principleLabel(kind: string, params: Record<string, unknown>): string {
   return RULE_KINDS[kind]?.he(params) ?? kind;
@@ -85,6 +120,11 @@ export type BrainRules = {
   dayEnderLast: boolean;
   seasonFilter: boolean;
   avoid: Record<Audience, string[]>;
+  // Tier-1 schedule feel (all in minutes; from day_window / lunch / visit_default).
+  dayStartMin: number;
+  lunchAfterMin: number;
+  lunchMinutes: number;
+  visitDefault: number;
 };
 
 const AUDS: Audience[] = ["families", "adults"];
@@ -101,6 +141,7 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
     dayEnderLast: false,
     seasonFilter: false,
     avoid: { families: [...AUDIENCE_PREFS.families.avoid], adults: [...AUDIENCE_PREFS.adults.avoid] },
+    dayStartMin: 9 * 60 + 30, lunchAfterMin: 12 * 60, lunchMinutes: 60, visitDefault: 75,
   };
   const active = principles.filter((p) => p.enabled && (p.scope === "global" || (p.scope === "city" && p.destination_id === destId)));
   // global first, then city (city overrides/adds on top).
@@ -126,6 +167,12 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
         for (const a of auds) if (q.category && !rules.avoid[a].includes(String(q.category))) rules.avoid[a].push(String(q.category));
         break;
       }
+      case "day_window": rules.dayStartMin = timeToMin(q.start, rules.dayStartMin); break;
+      case "lunch":
+        rules.lunchAfterMin = timeToMin(q.after, rules.lunchAfterMin);
+        if (q.minutes != null) rules.lunchMinutes = Number(q.minutes);
+        break;
+      case "visit_default": if (q.minutes != null) rules.visitDefault = Number(q.minutes); break;
     }
   }
   return rules;

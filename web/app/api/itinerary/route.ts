@@ -227,7 +227,8 @@ export async function POST(req: NextRequest) {
   // clusters mixed with walkable in-city days; metros build in-city only.
   const buildOpts = {
     month: body.month, seasonFilter: rules.seasonFilter, dayEnderLast: rules.dayEnderLast,
-    maxTypePerDay: rules.maxTypePerDay, avoidCats: isFamily ? rules.avoid.families : [],
+    maxTypePerDay: rules.maxTypePerDay, avoidCats: isFamily ? rules.avoid.families : rules.avoid.adults,
+    dayStartMin: rules.dayStartMin, lunchAfterMin: rules.lunchAfterMin, lunchMinutes: rules.lunchMinutes, visitDefault: rules.visitDefault,
   };
   const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary =>
     d.mobility === "car_base"
