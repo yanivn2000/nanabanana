@@ -24,6 +24,24 @@ export function audienceFitScore(
   return aud === "families" ? (af.families ?? 0) : Math.max(af.couples ?? 0, af.friends ?? 0);
 }
 
+// Candidate value for ranking the pool. must-see is a strong boost but NOT an
+// absolute gate — a genuinely loved market / food street / neighbourhood can outrank
+// a minor must-see, which is how a day earns TEXTURE (not five landmarks in a row).
+// Texture categories get a small lift toward that.
+export function poolValue(
+  a: { must_see?: number | null; audience_fit?: { families?: number; couples?: number; friends?: number } | null; category?: string | null; subcategory?: string | null },
+  aud: Audience
+): number {
+  const fit = audienceFitScore(a.audience_fit, aud);
+  const must = a.must_see === 1 ? 80 : 0;
+  const cat = a.category ?? "", sub = a.subcategory ?? "";
+  // Only FOOD / MARKET / NEIGHBOURHOOD get a lift — the "texture" the trip lacked.
+  // Parks are NOT boosted (a city has plenty and many are already must-see, so a
+  // boost floods whole days with scattered parks).
+  const texture = cat === "food" || cat === "shopping" || /market|שוק|neighbou?rhood|quarter|שכונה|רובע/i.test(sub) ? 25 : 0;
+  return must + fit + texture;
+}
+
 // How many meaningful stops/day feel right per audience (Israeli pace: not too
 // packed, room for food + spontaneity). v1.2: families bumped 4→5 — an editor note
 // found 3 hour-long stops "a boring day for a family with kids"; families want a

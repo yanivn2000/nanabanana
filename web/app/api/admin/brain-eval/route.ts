@@ -5,7 +5,7 @@ import { annotateDaysWithAreas } from "@/lib/cluster";
 import { buildCarBaseItinerary, buildHeuristicItinerary } from "@/lib/heuristic";
 import { qualityCheck, type Quality } from "@/lib/brain/quality";
 import { critiqueTrip } from "@/lib/brain/critique";
-import { BRAIN_VERSION, audienceFitScore, type Audience } from "@/lib/brain/policy";
+import { BRAIN_VERSION, poolValue, type Audience } from "@/lib/brain/policy";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -38,11 +38,9 @@ export async function POST(req: NextRequest) {
       const pace = rules.paceStops[audience];
       const center = { lat: dest.lat, lng: dest.lng };
       const carBase = dest.mobility === "car_base";
-      // audience-ranked pool: must-sees first, then by this audience's fit. The
-      // clusterer treats input order as value.
-      const pool = [...attractions].sort((x: Attraction, y: Attraction) =>
-        (y.must_see ?? 0) - (x.must_see ?? 0) ||
-        (audienceFitScore(y.audience_fit, audience) - audienceFitScore(x.audience_fit, audience)));
+      // audience-ranked pool by blended value (must-see boost + fit + texture), so
+      // days get markets/food/neighbourhoods, not five landmarks in a row.
+      const pool = [...attractions].sort((x: Attraction, y: Attraction) => poolValue(y, audience) - poolValue(x, audience));
       const buildOpts = { month, seasonFilter: rules.seasonFilter, dayEnderLast: rules.dayEnderLast, maxTypePerDay: rules.maxTypePerDay, avoidCats: rules.avoid[audience] ?? [],
         dayStartMin: rules.dayStartMin, lunchAfterMin: rules.lunchAfterMin, lunchMinutes: rules.lunchMinutes, dwell: rules.dwell,
         daytripThresholdKm: rules.daytripThresholdKm, daytripPerDays: rules.daytripPerDays, daytripMaxStops: rules.daytripMaxStops,

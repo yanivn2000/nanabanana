@@ -90,7 +90,7 @@ export function buildHeuristicItinerary(
   // walkable neighbourhood. seedGroups (chosen-neighbourhood tour) force one day
   // per area. The per-day budget is derived from the pace.
   const dwell = opts?.dwell ?? DWELL_DEFAULT;
-  const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes: perDay * 84, seedGroups,
+  const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes: perDay * 84, perDay, seedGroups,
     freeMax: opts?.freeGemMaxPerDay, freeDetour: opts?.freeGemDetourMin, dwell });
 
   const dayList = clustered.map((picksRaw, d) => {

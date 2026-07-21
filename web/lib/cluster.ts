@@ -56,7 +56,6 @@ export function annotateDaysWithAreas(
   }
 }
 
-const CANDIDATES_PER_DAY = 8;   // top-value places that seed the tour structure
 const FREE_DETOUR = 4;          // minutes off-path a "free gem" may sit (B)
 const FREE_MAX_PER_DAY = 3;     // don't drown a day in minor gems
 
@@ -180,7 +179,7 @@ export type ClusterResult = { days: Attraction[][]; leftOut: Attraction[] };
 
 export function clusterIntoDays(
   poolIn: Attraction[], days: number,
-  opts: { walkPref?: number; dayMinutes?: number; seedGroups?: number[][]; freeMax?: number; freeDetour?: number; sameMeters?: number; dwell?: DwellCfg } = {}
+  opts: { walkPref?: number; dayMinutes?: number; perDay?: number; seedGroups?: number[][]; freeMax?: number; freeDetour?: number; sameMeters?: number; dwell?: DwellCfg } = {}
 ): ClusterResult {
   const dwell = opts.dwell ?? DWELL_DEFAULT;
   // usable = has coords, de-duped by name; input order IS the value ranking.
@@ -214,9 +213,12 @@ export function clusterIntoDays(
       if (stops.length) groups.push({ stops, time });
     }
   } else {
-    // Tour candidates: the top-value places. Start the tour from the most-central
-    // one so it radiates outward and the budget drops the periphery.
-    const candidates = pool.slice(0, Math.min(pool.length, days * CANDIDATES_PER_DAY));
+    // Fill EXACTLY `days` days, balanced. Take ~pace top-value candidates per day,
+    // build one walking tour, then cut it into `days` contiguous slices of ~pace stops
+    // — so every requested day is used and no day is left a scattered stub (the old
+    // time-budget cut packed short-dwell stops into fewer dense days + a thin tail).
+    const perDay = Math.max(3, opts.perDay ?? Math.round(budget / 78));
+    const candidates = pool.slice(0, Math.min(pool.length, days * perDay));
     let start = candidates[0], bestSum = Infinity;
     for (const p of candidates) {
       let s = 0; for (const q of candidates) s += walkBetween(p, q);
@@ -224,20 +226,20 @@ export function clusterIntoDays(
     }
     const tour = twoOpt(nnPath(candidates, start));
 
-    // Cut the tour into contiguous day-slices by the per-day time budget. A new day
-    // starts fresh (its first stop has no travel cost — you begin the morning
-    // there), so inter-cluster jumps aren't charged as walking.
+    const perSlice = Math.max(1, Math.ceil(tour.length / days));
     let cur: Attraction[] = [], time = 0;
     for (const x of tour) {
       const leg = cur.length ? walkBetween(cur[cur.length - 1], x) : 0;
-      if (cur.length && time + visitMin(x, dwell) + leg > budget) {
+      // close the day at its share of stops (or if it would run absurdly long), as
+      // long as we still owe more days — the last day absorbs any remainder.
+      const overTime = cur.length > 0 && time + visitMin(x, dwell) + leg > budget * 1.35;
+      if (cur.length && (cur.length >= perSlice || overTime) && groups.length < days - 1) {
         groups.push({ stops: cur, time });
         cur = []; time = 0;
-        if (groups.length >= days) break;   // out of days — the rest is peripheral
       }
       cur.push(x); placed.add(x.id); time += visitMin(x, dwell) + (cur.length > 1 ? leg : 0);
     }
-    if (cur.length && groups.length < days) groups.push({ stops: cur, time });
+    if (cur.length) groups.push({ stops: cur, time });
   }
 
   // B — free gems: pull nearby places (incl. the long tail) onto each day's route
