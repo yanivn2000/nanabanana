@@ -4,7 +4,7 @@
 // sentence); the Brain reads `resolveBrainRules()` (typed values) and never parses
 // free text. Adding a new technique = add a kind here + honour it in the builder/
 // critic. See docs/logic/brain.md, brain_principles table (supabase/phase16.sql).
-import { AUDIENCE_PREFS, PACE_STOPS, type Audience } from "./policy";
+import { AUDIENCE_PREFS, PACE_STOPS, WEIGHTS, QUALITY_BAR, THRESHOLDS, DAY_WALK, type Audience } from "./policy";
 
 export type Principle = {
   id: number; kind: string; params: Record<string, unknown>;
@@ -24,7 +24,14 @@ const th = (t: unknown) => TYPE_HE[String(t)] ?? String(t);
 const AUD_HE: Record<string, string> = { families: "עם ילדים", adults: "בלי ילדים" };
 const ah = (a: unknown) => (a ? AUD_HE[String(a)] ?? String(a) : "כל הקהלים");
 
-export type ParamField = { key: string; type: "audience" | "exptype" | "number" | "text" | "time"; label: string };
+// Critic quality dimensions (for the dimension_weight rule).
+export const DIM_HE: Record<string, string> = {
+  walkability: "הליכתיות", mustSee: "כיסוי חובה", audienceFit: "התאמת קהל", variety: "גיוון",
+  pace: "קצב", balance: "איזון", coherence: "קוהרנטיות",
+};
+const dh = (d: unknown) => DIM_HE[String(d)] ?? String(d);
+
+export type ParamField = { key: string; type: "audience" | "exptype" | "number" | "text" | "time" | "dimension"; label: string };
 
 // The catalog. `he` renders the readable sentence; `help` is a full plain-Hebrew
 // explanation of what the value DOES (shown under each row so no value is cryptic);
@@ -128,6 +135,48 @@ export const RULE_KINDS: Record<string, { title: string; help: string; he: (p: R
     params: [{ key: "meters", type: "number", label: "מטרים" }],
     applies: "cluster dropSamePlace",
   },
+  quality_bar: {
+    title: "סף איכות",
+    help: "מתחת לאיזה ציון (0-100) טיול מסומן 'דורש שיפור' בבדיקה-העצמית. משפיע רק על הסימון/התראה בבדיקה, לא על התוכן שנבנה.",
+    he: (p) => `טיול מתחת לציון ${p.score || 70} מסומן 'דורש שיפור'`,
+    params: [{ key: "score", type: "number", label: "ציון" }],
+    applies: "critic needsWork",
+  },
+  dimension_weight: {
+    title: "משקל מימד בציון",
+    help: "כמה כל מימד-איכות שוקל בציון הכולל של הטיול (הליכתיות, כיסוי-חובה, התאמת-קהל, גיוון, קצב, איזון, קוהרנטיות). משקל גבוה = המימד חשוב יותר בהגדרת 'טיול טוב'.",
+    he: (p) => `משקל ${dh(p.dimension)} בציון: ${p.weight ?? "?"}`,
+    params: [{ key: "dimension", type: "dimension", label: "מימד" }, { key: "weight", type: "number", label: "משקל" }],
+    applies: "critic score weights",
+  },
+  min_must_see: {
+    title: "מינימום אתרי-חובה",
+    help: "כמה אתרי-חובה (must-see) טיול חייב לכלול לכל הפחות. מתחת לזה — המוח מסמן בעיה קריטית בבדיקה.",
+    he: (p) => `טיול חייב לפחות ${p.count || 3} אתרי-חובה`,
+    params: [{ key: "count", type: "number", label: "מספר" }],
+    applies: "critic mustSee",
+  },
+  min_audience_fit: {
+    title: "סף התאמת-קהל",
+    help: "מתחת לאיזה ציון-התאמה (0-100) עצירה נחשבת 'בהתאמה חלשה' לקהל. אם רוב העצירות ביום מתחת לסף — המוח מסמן שהיום לא ממש מתאים לקהל.",
+    he: (p) => `עצירה מתחת ל-${p.score || 45} התאמה = חלשה לקהל`,
+    params: [{ key: "score", type: "number", label: "ציון" }],
+    applies: "critic audienceFit",
+  },
+  max_same_type_run: {
+    title: "מקס׳ רצף מאותו סוג",
+    help: "כמה עצירות מאותו סוג-חוויה מותרות ברצף באותו יום לפני שזה מרגיש מונוטוני. שונה מ'מקסימום מסוג ביום' — כאן מדובר ברצף עוקב, לא בסך-הכל ליום.",
+    he: (p) => `מקסימום ${p.max || 3} עצירות מאותו סוג-חוויה ברצף`,
+    params: [{ key: "max", type: "number", label: "מקסימום" }],
+    applies: "critic variety",
+  },
+  day_walk_band: {
+    title: "רצועת-הליכה נוחה ליום",
+    help: "כמה דקות הליכה ביום נחשבות נוחות (אידאלי), ומעל כמה זה כבר 'יותר מדי' (דגל). משפיע על ציון ההליכתיות ועל האזהרה 'יום ארוך מדי ברגל'.",
+    he: (p) => `הליכה ליום: ~${p.ideal || 45} דק׳ אידאלי · מעל ${p.flag || 95} דק׳ = יותר מדי`,
+    params: [{ key: "ideal", type: "number", label: "אידאלי" }, { key: "flag", type: "number", label: "דגל" }],
+    applies: "critic walkability",
+  },
   custom: {
     title: "הערה חופשית (מייעצת)",
     help: "טקסט חופשי שאינו נאכף אוטומטית ע״י המוח — הנחיה שאני (Claude Code) מעכל ידנית לקוד/למתכון. שקוף ומתועד, אבל לא כלל שרץ מעצמו.",
@@ -146,6 +195,27 @@ export function timeToMin(s: unknown, fallback: number): number {
 export function principleLabel(kind: string, params: Record<string, unknown>): string {
   return RULE_KINDS[kind]?.he(params) ?? kind;
 }
+
+// The 3 tiers (+ audience/filter base + free notes) — the clear layer split shown in
+// the admin. Each kind belongs to exactly one group.
+export const GROUP_ORDER = ["קהל וסינון", "תחושת-יום", "מבנה-הטיול", "כיול-הביקורת", "הערות"] as const;
+export const KIND_GROUP: Record<string, (typeof GROUP_ORDER)[number]> = {
+  pace_stops: "קהל וסינון", max_type_per_day: "קהל וסינון", active_anchor_required: "קהל וסינון",
+  day_ender_last: "קהל וסינון", season_filter: "קהל וסינון", avoid_category: "קהל וסינון",
+  day_window: "תחושת-יום", lunch: "תחושת-יום", visit_default: "תחושת-יום",
+  daytrip_threshold: "מבנה-הטיול", daytrip_budget: "מבנה-הטיול", daytrip_max_stops: "מבנה-הטיול",
+  free_gems: "מבנה-הטיול", same_place_km: "מבנה-הטיול",
+  quality_bar: "כיול-הביקורת", dimension_weight: "כיול-הביקורת", min_must_see: "כיול-הביקורת",
+  min_audience_fit: "כיול-הביקורת", max_same_type_run: "כיול-הביקורת", day_walk_band: "כיול-הביקורת",
+  custom: "הערות",
+};
+export const GROUP_HELP: Record<string, string> = {
+  "קהל וסינון": "למי הטיול ומה נכנס אליו — קצב, אנקרים, סינון עונתי/סוגים.",
+  "תחושת-יום": "איך מרגיש היום — שעות, הפסקות, משך-שהייה.",
+  "מבנה-הטיול": "מבנה גדול — ימי טיול-רכב, פינות-חמד, מניעת כפילות.",
+  "כיול-הביקורת": "איך המוח מנקד 'טיול טוב' בבדיקה-העצמית (מתקדם).",
+  "הערות": "הנחיות חופשיות שאני מעכל ידנית — לא נאכפות אוטומטית.",
+};
 
 // The engine-facing resolved config. The builder/critic read THIS, not the DB rows.
 export type BrainRules = {
@@ -167,6 +237,14 @@ export type BrainRules = {
   samePlaceMeters: number;
   freeGemMaxPerDay: number;
   freeGemDetourMin: number;
+  // Tier-3 critic calibration (from quality_bar / dimension_weight / min_* / day_walk_band).
+  weights: Record<string, number>;
+  qualityBar: number;
+  minMustSee: number;
+  minAudienceFit: number;
+  maxSameTypeRun: number;
+  dayWalkIdeal: number;
+  dayWalkFlag: number;
 };
 
 const AUDS: Audience[] = ["families", "adults"];
@@ -185,6 +263,9 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
     avoid: { families: [...AUDIENCE_PREFS.families.avoid], adults: [...AUDIENCE_PREFS.adults.avoid] },
     dayStartMin: 9 * 60 + 30, lunchAfterMin: 12 * 60, lunchMinutes: 60, visitDefault: 75,
     daytripThresholdKm: 18, daytripPerDays: 2, daytripMaxStops: 5, samePlaceMeters: 90, freeGemMaxPerDay: 3, freeGemDetourMin: 4,
+    weights: { ...WEIGHTS }, qualityBar: QUALITY_BAR, minMustSee: THRESHOLDS.minMustSeePerTrip,
+    minAudienceFit: THRESHOLDS.minAudienceFit, maxSameTypeRun: THRESHOLDS.maxSameTypeRun,
+    dayWalkIdeal: DAY_WALK.ideal, dayWalkFlag: DAY_WALK.flag,
   };
   const active = principles.filter((p) => p.enabled && (p.scope === "global" || (p.scope === "city" && p.destination_id === destId)));
   // global first, then city (city overrides/adds on top).
@@ -224,6 +305,15 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
         if (q.detourMin != null) rules.freeGemDetourMin = Number(q.detourMin);
         break;
       case "same_place_km": if (q.meters != null) rules.samePlaceMeters = Number(q.meters); break;
+      case "quality_bar": if (q.score != null) rules.qualityBar = Number(q.score); break;
+      case "dimension_weight": if (q.dimension && q.weight != null) rules.weights[String(q.dimension)] = Number(q.weight); break;
+      case "min_must_see": if (q.count != null) rules.minMustSee = Number(q.count); break;
+      case "min_audience_fit": if (q.score != null) rules.minAudienceFit = Number(q.score); break;
+      case "max_same_type_run": if (q.max != null) rules.maxSameTypeRun = Number(q.max); break;
+      case "day_walk_band":
+        if (q.ideal != null) rules.dayWalkIdeal = Number(q.ideal);
+        if (q.flag != null) rules.dayWalkFlag = Number(q.flag);
+        break;
     }
   }
   return rules;

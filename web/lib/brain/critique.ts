@@ -36,6 +36,16 @@ export function critiqueTrip(
   const stops = all.length;
   const issues: Issue[] = [];
   const dims: Record<string, number> = {};
+  // Tier-3 critic calibration — from the principles (ctx.rules), else policy defaults.
+  const R = ctx.rules;
+  const dayWalkIdeal = R?.dayWalkIdeal ?? DAY_WALK.ideal;
+  const dayWalkFlag = R?.dayWalkFlag ?? DAY_WALK.flag;
+  const minMustSee = R?.minMustSee ?? THRESHOLDS.minMustSeePerTrip;
+  const minAudFit = R?.minAudienceFit ?? THRESHOLDS.minAudienceFit;
+  const maxSameRun = R?.maxSameTypeRun ?? THRESHOLDS.maxSameTypeRun;
+  const paceTarget = R?.paceStops[audience] ?? PACE_STOPS[audience];
+  const weights = R?.weights ?? WEIGHTS;
+  const qualityBar = R?.qualityBar ?? QUALITY_BAR;
 
   // 1) walkability — each day within the comfort band.
   {
@@ -43,8 +53,8 @@ export function critiqueTrip(
     days.forEach((d, i) => {
       const w = dayWalkMinutes(d);
       // 100 at ideal, linearly down to 0 at 2×flag.
-      sum += clamp(100 - Math.max(0, w - DAY_WALK.ideal) / (2 * DAY_WALK.flag - DAY_WALK.ideal) * 100);
-      if (w > DAY_WALK.flag) issues.push({ dim: "walkability", severity: "warn", day: i + 1, msg: `יום ${i + 1}: ${Math.round(w)} דק׳ הליכה — יותר מדי` });
+      sum += clamp(100 - Math.max(0, w - dayWalkIdeal) / (2 * dayWalkFlag - dayWalkIdeal) * 100);
+      if (w > dayWalkFlag) issues.push({ dim: "walkability", severity: "warn", day: i + 1, msg: `יום ${i + 1}: ${Math.round(w)} דק׳ הליכה — יותר מדי` });
     });
     dims.walkability = days.length ? Math.round(sum / days.length) : 0;
   }
@@ -52,9 +62,9 @@ export function critiqueTrip(
   // 2) must-see coverage — hits enough of the city's real must-sees.
   {
     const mustInTrip = all.filter((a) => a.must_see === 1).length;
-    const target = Math.max(THRESHOLDS.minMustSeePerTrip, Math.min(ctx.cityMustCount, stops));
+    const target = Math.max(minMustSee, Math.min(ctx.cityMustCount, stops));
     dims.mustSee = clamp((mustInTrip / Math.max(1, target)) * 100);
-    if (mustInTrip < THRESHOLDS.minMustSeePerTrip)
+    if (mustInTrip < minMustSee)
       issues.push({ dim: "mustSee", severity: "critical", msg: `רק ${mustInTrip} אתרי חובה בטיול — מעט מדי` });
   }
 
@@ -62,7 +72,7 @@ export function critiqueTrip(
   {
     const avg = all.length ? all.reduce((s, a) => s + fit(a, audience), 0) / all.length : 0;
     dims.audienceFit = clamp(avg);
-    const weak = all.filter((a) => fit(a, audience) < THRESHOLDS.minAudienceFit).length;
+    const weak = all.filter((a) => fit(a, audience) < minAudFit).length;
     if (weak > stops / 2)
       issues.push({ dim: "audienceFit", severity: "warn", msg: `רוב העצירות בהתאמה נמוכה ל${audience === "families" ? "משפחות עם ילדים" : "מטיילים בלי ילדים"}` });
     // family-specific: kid-friendliness
@@ -98,7 +108,7 @@ export function critiqueTrip(
     days.forEach((d, i) => {
       let run = 1;
       for (let k = 1; k < d.length; k++) {
-        if (expType(d[k]) === expType(d[k - 1])) { run++; if (run >= THRESHOLDS.maxSameTypeRun) { penalty += 12; issues.push({ dim: "variety", severity: "warn", day: i + 1, msg: `יום ${i + 1}: רצף של ${run} מאותו סוג חוויה (${expType(d[k])})` }); } }
+        if (expType(d[k]) === expType(d[k - 1])) { run++; if (run >= maxSameRun) { penalty += 12; issues.push({ dim: "variety", severity: "warn", day: i + 1, msg: `יום ${i + 1}: רצף של ${run} מאותו סוג חוויה (${expType(d[k])})` }); } }
         else run = 1;
       }
     });
@@ -108,7 +118,7 @@ export function critiqueTrip(
 
   // 5) pace — stops/day near the audience target.
   {
-    const target = PACE_STOPS[audience];
+    const target = paceTarget;
     const perDay = days.map((d) => d.length);
     const avgOff = perDay.length ? perDay.reduce((s, n) => s + Math.abs(n - target), 0) / perDay.length : target;
     dims.pace = clamp(100 - avgOff * 22);
@@ -134,7 +144,7 @@ export function critiqueTrip(
     dims.coherence = days.length ? Math.round(sum / days.length) : 0;
   }
 
-  const score = clamp(Object.entries(WEIGHTS).reduce((s, [k, w]) => s + (dims[k] ?? 0) * w, 0));
-  const needsWork = score < QUALITY_BAR || issues.some((i) => i.severity === "critical");
+  const score = clamp(Object.entries(weights).reduce((s, [k, w]) => s + (dims[k] ?? 0) * w, 0));
+  const needsWork = score < qualityBar || issues.some((i) => i.severity === "critical");
   return { score, dims, issues, needsWork, stops };
 }

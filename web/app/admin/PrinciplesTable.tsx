@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { Loader2, Trash2, Plus, ChefHat } from "lucide-react";
 import type { AdminDestination } from "@/lib/db";
-import { RULE_KINDS, TYPE_HE, principleLabel, type Principle } from "@/lib/brain/rules";
+import { RULE_KINDS, TYPE_HE, DIM_HE, KIND_GROUP, GROUP_ORDER, GROUP_HELP, principleLabel, type Principle } from "@/lib/brain/rules";
 
 const AUD = [{ v: "", he: "כל הקהלים" }, { v: "families", he: "עם ילדים" }, { v: "adults", he: "בלי ילדים" }];
 const TYPE_OPTS = Object.keys(TYPE_HE);
+const DIM_OPTS = Object.keys(DIM_HE);
 
 // One editable param field (dropdown / number / text) for a rule.
 function ParamField({ field, value, onChange }: { field: { key: string; type: string; label: string }; value: unknown; onChange: (v: unknown) => void }) {
@@ -15,6 +16,8 @@ function ParamField({ field, value, onChange }: { field: { key: string; type: st
     return <select className={cls} value={String(value ?? "")} onChange={(e) => onChange(e.target.value || null)}>{AUD.map((a) => <option key={a.v} value={a.v}>{a.he}</option>)}</select>;
   if (field.type === "exptype")
     return <select className={cls} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)}>{TYPE_OPTS.map((t) => <option key={t} value={t}>{TYPE_HE[t]}</option>)}</select>;
+  if (field.type === "dimension")
+    return <select className={cls} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)}>{DIM_OPTS.map((d) => <option key={d} value={d}>{DIM_HE[d]}</option>)}</select>;
   if (field.type === "number")
     return <input type="number" className={`${cls} w-14 text-center`} value={Number(value ?? 0)} onChange={(e) => onChange(Number(e.target.value))} />;
   if (field.type === "time")
@@ -54,8 +57,6 @@ export function PrinciplesTable({ destinations }: { destinations: AdminDestinati
     await load();
   };
 
-  const global = items.filter((p) => p.scope === "global");
-  const city = items.filter((p) => p.scope === "city");
 
   const Row = (p: Principle) => (
     <div key={p.id} className="flex flex-col gap-1 rounded-[var(--radius-sm)] border border-[var(--border)] px-2.5 py-2 text-[13px]"
@@ -91,11 +92,19 @@ export function PrinciplesTable({ destinations }: { destinations: AdminDestinati
 
       {loading ? <Loader2 className="animate-spin text-[var(--text-3)]" /> : (
         <>
-          <div className="flex flex-col gap-2">
-            <span className="text-[12.5px] font-bold text-[var(--text-3)]">🌍 כלליים (כל הטיולים)</span>
-            {global.map(Row)}
-            {city.length > 0 && <><span className="mt-2 text-[12.5px] font-bold text-[var(--text-3)]">🏙️ ספציפיים לעיר</span>{city.map(Row)}</>}
-          </div>
+          {GROUP_ORDER.map((group) => {
+            const rows = items.filter((p) => (KIND_GROUP[p.kind] ?? "הערות") === group);
+            if (!rows.length) return null;
+            return (
+              <div key={group} className="flex flex-col gap-1.5">
+                <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-[var(--border)] pb-1">
+                  <span className="text-[13.5px] font-bold text-[var(--brand-ink)]">{group}</span>
+                  <span className="text-[11.5px] text-[var(--text-3)]">{GROUP_HELP[group]}</span>
+                </div>
+                {rows.map(Row)}
+              </div>
+            );
+          })}
 
           {/* add a new principle */}
           {draftKind && RULE_KINDS[draftKind]?.help && (
