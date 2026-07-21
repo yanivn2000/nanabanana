@@ -180,7 +180,7 @@ export function buildCarBaseItinerary(
 
   const cityItin = buildHeuristicItinerary(city, country, cityDays, inCity, isFamily, perDay, walkPref, undefined, opts);
   const tripDayObjs = clusters.slice(0, tripDays).map((cl, i) =>
-    dayTripToDay(cl, city, cityDays + i + 1, isFamily));
+    dayTripToDay(cl, city, cityDays + i + 1, isFamily, { dayStartMin: opts?.dayStartMin, visitDefault: opts?.visitDefault }));
 
   // A car_base trip is a rental-car trip throughout: mark every day so between-stop
   // legs read as driving, not public transit.
