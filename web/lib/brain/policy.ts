@@ -16,7 +16,9 @@
 //         data-driven fun-anchor (active-anchor moved out of conformance).
 //   1.4.1 — dwell: added "activity" tier (theme/adventure/experience parks ~3h)
 //           so a high-ropes park / model-world isn't a 45-min stop.
-export const BRAIN_VERSION = "1.4.1";
+//   1.4.2 — dwell: hangar/exhibition halls (Hangar-7) → deep (~2h), not standard;
+//           reach penalty for far metro outliers (Kew) in eval + consumer.
+export const BRAIN_VERSION = "1.4.2";
 
 // v1.3 (editor): the real axis is WITH KIDS vs WITHOUT, not families/couples/friends
 // — couple-vs-friends is a soft taste sub-signal, not a hard audience. "families" =

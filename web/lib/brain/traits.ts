@@ -41,7 +41,7 @@ const MARKET_RX = /\bmarket\b|שוק|bazaar|בזא?ר|מרקט/i;
 // "activity" = a half-day adventure/experience you don't rush: theme/water/rope/
 // adventure parks, karting, climbing, big model-worlds, immersive experiences.
 const ACTIVITY_RX = /theme_park|amusement|לונה.?פארק|funfair|water_?park|פארק מים|aquapark|high.?rope|ropes? course|park חבלים|פארק חבלים|adventure|הרפתק|zip.?line|אומגה|קארט|go.?kart|gokart|climb(ing)?|טיפוס|escape.?room|חדר בריחה|trampoline|טרמפולין|traumwerk|טראומוורק|little.?big|ליטל ביג|miniatur|experience|חוויי?ה|alpine.?coaster|toboggan|מזחל|\bluge\b|\bbob(sled)?\b/i;
-const DEEP_RX = /\bmuseum\b|מוזיאון|gallery|galleries|גלריה|castle|טירה|מצודה|palace|ארמון|fortress|מבצר|\bzoo\b|גן ?חיות|aquarium|אקווריום|dungeon|planetarium|פלנטריום/i;
+const DEEP_RX = /\bmuseum\b|מוזיאון|gallery|galleries|גלריה|castle|טירה|מצודה|palace|ארמון|fortress|מבצר|\bzoo\b|גן ?חיות|aquarium|אקווריום|dungeon|planetarium|פלנטריום|\bhangar\b|האנגר|exhibition|תערוכה/i;
 const PASSBY_RX = /bridge|גשר|viewpoint|view from|תצפית|observation|lookout|מצפור|monument|אנדרט|memorial|statue|פסל|\bsquare\b|כיכר|piazza|plaza|\bgate\b|שער |fountain|מזרק|\bhill\b|גבעה|\bstreet\b|רחוב|promenade|טיילת|\bpier\b|מזח|meridian|מרידיאן|קו האורך|column|עמוד|obelisk|אובליסק/i;
 
 export type DwellBucket = "passby" | "standard" | "deep" | "activity" | "market";
