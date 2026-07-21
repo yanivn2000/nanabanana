@@ -50,6 +50,15 @@ export function poolValue(
   return must + fit + texture;
 }
 
+// Reachability penalty for METRO cities: a stop far from the centre drags a whole
+// walkable day across the city (Kew at 12km bolted onto a central-parks day).
+// Penalise distance beyond a comfortable transit reach so far outliers survive only
+// when truly top-value — and, since candidate slots scale with days, mostly on longer
+// trips. car_base cities are exempt (their far places become car day-trips).
+export function reachPenalty(distKm: number, metro: boolean): number {
+  return metro && distKm > 8 ? (distKm - 8) * 6 : 0;
+}
+
 // How many meaningful stops/day feel right per audience (Israeli pace: not too
 // packed, room for food + spontaneity). v1.2: families bumped 4→5 — an editor note
 // found 3 hour-long stops "a boring day for a family with kids"; families want a

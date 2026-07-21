@@ -15,6 +15,7 @@ import * as Sentry from "@sentry/nextjs";
 import { paceToPerDay } from "@/lib/trip-types";
 import { rankByTaste, tasteEmphasis } from "@/lib/taste";
 import { haversineKm, estimateLeg } from "@/lib/geo";
+import { reachPenalty } from "@/lib/brain/policy";
 import type { Itinerary as ItineraryT } from "@/lib/trip-types";
 
 // Record the walking bridges between consecutive located stops of a built trip,
@@ -208,7 +209,15 @@ export async function POST(req: NextRequest) {
   const pool = [...base, ...picks.filter((p) => !seen.has(p.id))];
   // Wider pool (was 50) so the clusterer has a long tail of minor places to pull
   // in as "free gems" on the walking path (cluster.ts pass B).
-  const attractions = rankByTaste(pool, body.taste, 90, isFamily);
+  const rankedByTaste = rankByTaste(pool, body.taste, 90, isFamily);
+  // Reach demotion (metro only): push far outliers (a 12km-away park) down the ranking
+  // by ~penalty/8 positions, so walkable days don't sprawl. Mirrors the eval. car_base
+  // is exempt — its far places become car day-trips. (See brain/policy#reachPenalty.)
+  const attractions = dest.mobility === "car_base" ? rankedByTaste
+    : rankedByTaste
+        .map((a, i) => ({ a, k: i + (a.lat != null && a.lng != null ? reachPenalty(haversineKm(dest.lat, dest.lng, a.lat, a.lng), true) / 8 : 0) }))
+        .sort((x, y) => x.k - y.k)
+        .map((z) => z.a);
   // Explore build (F1): split into anchors + "אם יש זמן" fillers. Only used by
   // the single-city generate path below (details/revise/multi ignore it).
   const sel = body.selection ? partitionBySelection(pool, body.taste, body.selection, isFamily) : null;
