@@ -7,7 +7,7 @@
 import type { Attraction } from "../db";
 import { audienceFitScore, type Audience } from "./policy";
 import type { BrainRules } from "./rules";
-import { isActiveAnchor, stopMatchesType } from "./traits";
+import { isActiveAnchor, isSoftFun, stopMatchesType } from "./traits";
 
 const expType = (a: Attraction) => a.audience_fit?.type || a.category;
 const nameOf = (a: Attraction) => a.name_he || a.name_en;
@@ -23,7 +23,7 @@ const isPassiveCulture = (a: Attraction) => PASSIVE.has(a.category) || PASSIVE.h
 export type QualityFinding = { ok: boolean; msg: string };
 export type Quality = { conformance: QualityFinding[]; fun: string[]; suggestions: string[] };
 
-export function qualityCheck(days: Attraction[][], audience: Audience, rules: BrainRules, ctx: { cityMustCount: number }): Quality {
+export function qualityCheck(days: Attraction[][], audience: Audience, rules: BrainRules, ctx: { cityMustCount: number; cityHasActive?: boolean }): Quality {
   const conformance: QualityFinding[] = [];
   const fun: string[] = [];
   const suggestions = new Set<string>();
@@ -38,9 +38,17 @@ export function qualityCheck(days: Attraction[][], audience: Audience, rules: Br
       : { ok: true, msg: `≤${cap.max} ${cap.type} ליום` });
   }
   if (rules.activeAnchorAudiences.includes(audience)) {
-    const bad = days.map((d, i) => ({ d, i })).filter((x) => x.d.length >= 3 && !x.d.some(isActiveAnchor)).map((x) => `יום ${x.i + 1}`);
-    conformance.push(bad.length ? { ok: false, msg: `ימים בלי אנקר פעיל: ${bad.join(", ")}` } : { ok: true, msg: "אנקר פעיל בכל יום" });
-    if (bad.length) suggestions.add("להוסיף אנקר כיפי/פעיל שמתאים לעיר בימים שסומנו — בעיר: אקווריום/גן-חיות/גלגל-ענק/שיט/חווה עירונית/חוויה אינטראקטיבית; בטבע: רכבל/מזחלות/נקיק/בריכה. אם באמת אין בעיר — כדאי להעשיר את המאגר או להקל את הדרישה לעיר הזו.");
+    // City-adaptive (editor policy): prefer a real active anchor. But some cities just
+    // aren't young-kids-activity cities — if the city has NO active attraction at all,
+    // a big park / top must-see attraction suffices, so we don't demand what isn't there.
+    const softOk = ctx.cityHasActive === false;
+    const bad = days.map((d, i) => ({ d, i }))
+      .filter((x) => x.d.length >= 3 && !x.d.some(isActiveAnchor) && !(softOk && x.d.some(isSoftFun)))
+      .map((x) => `יום ${x.i + 1}`);
+    conformance.push(bad.length ? { ok: false, msg: `ימים בלי אנקר פעיל: ${bad.join(", ")}` } : { ok: true, msg: softOk ? "אנקר כיפי (פעיל/פארק/אתר-שיא) בכל יום" : "אנקר פעיל בכל יום" });
+    if (bad.length) suggestions.add(softOk
+      ? "בעיר הזו אין כמעט אטרקציות פעילות מובהקות — בכל זאת יש ימים בלי אף אנקר כיפי (גם לא פארק גדול או אתר-שיא). כדאי לשבץ לפחות פארק/אטרקציה מרכזית בימים שסומנו."
+      : "בעיר יש אטרקציות פעילות — כדאי לפזר אחת לכל יום עם ילדים: אקווריום/גן-חיות/גלגל-ענק/שיט/חווה עירונית/חוויה אינטראקטיבית (ובטבע: רכבל/מזחלות/נקיק/בריכה).");
   }
   const must = flat.filter((a) => a.must_see === 1).length;
   conformance.push(must >= rules.minMustSee

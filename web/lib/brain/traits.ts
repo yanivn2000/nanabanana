@@ -22,6 +22,13 @@ const SUMMER_RX = /water_park|swimming|\bpool\b|lido|strandbad|פארק מים|�
 export const isDayEnder = (a: Attraction) => DAY_ENDER_RX.test(blob(a));
 export const isActiveAnchor = (a: Attraction) => ACTIVE_RX.test(blob(a));
 
+// A "soft" kid pleaser — a big green space or a headline attraction. Used ONLY as a
+// fallback when a city has no real active attractions at all: some cities just aren't
+// young-kids-activity cities, and then a park / top must-see suffices (editor policy).
+export const isSoftFun = (a: Attraction) =>
+  a.category === "nature" || a.subcategory === "park" || a.subcategory === "garden" ||
+  (a.must_see === 1 && a.category === "attraction");
+
 // Dark/heavy history (Nazism, Holocaust) — not a clean OSM category (usually tagged
 // "museum"/"historic"), so it needs a keyword trait. Lets a rule avoid it on family
 // trips without dropping good museums.
