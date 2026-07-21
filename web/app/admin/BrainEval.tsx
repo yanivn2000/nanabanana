@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Loader2, ThumbsUp, ThumbsDown, Map as MapIcon, Trash2, Blocks } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Loader2, Map as MapIcon, Trash2, Blocks } from "lucide-react";
 import type { AdminDestination } from "@/lib/db";
 import type { Itinerary } from "@/lib/trip-types";
 import { useTrips } from "@/lib/store";
@@ -22,7 +22,6 @@ type Trip = {
   daysNames: { name: string; must: boolean; cat: string }[][];
 };
 type Report = { summary: { version: string; trips: number; avgScore: number; needWork: number }; report: Trip[] };
-type Feedback = { verdict?: "good" | "bad"; notes?: string };
 
 const AUD_HE: Record<string, string> = { families: "👨‍👩‍👧 משפחות", couples: "💑 זוגות", friends: "🎉 חברים" };
 const DIM_HE: Record<string, string> = {
@@ -30,7 +29,6 @@ const DIM_HE: Record<string, string> = {
   pace: "קצב", balance: "איזון", coherence: "קוהרנטיות",
 };
 const scoreColor = (n: number) => n >= 80 ? "var(--brand)" : n >= 65 ? "#c88a3a" : "var(--terra, #c8654a)";
-const FB_KEY = "nanabanana.brain.feedback.v1";
 
 export function BrainEval({ destinations }: { destinations: AdminDestination[] }) {
   const { create } = useTrips();
@@ -39,7 +37,6 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
   const [cityId, setCityId] = useState(0); // 0 = default (first 6)
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<Report | null>(null);
-  const [fb, setFb] = useState<Record<string, Feedback>>({});
   const [modules, setModules] = useState<Module[]>([]);
 
   const loadModules = async () => {
@@ -64,11 +61,7 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
     window.open(`/trip/${trip.id}`, "_blank");
   };
 
-  useEffect(() => { try { const r = localStorage.getItem(FB_KEY); if (r) setFb(JSON.parse(r)); } catch {} }, []);
-  const saveFb = (next: Record<string, Feedback>) => { setFb(next); try { localStorage.setItem(FB_KEY, JSON.stringify(next)); } catch {} };
   const key = (t: Trip) => `${t.cityId}:${t.audience}`;
-  const setVerdict = (t: Trip, v: "good" | "bad") => saveFb({ ...fb, [key(t)]: { ...fb[key(t)], verdict: fb[key(t)]?.verdict === v ? undefined : v } });
-  const setNotes = (t: Trip, notes: string) => saveFb({ ...fb, [key(t)]: { ...fb[key(t)], notes } });
 
   async function run() {
     setLoading(true);
@@ -91,8 +84,6 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
     });
     window.open(`/trip/${trip.id}`, "_blank");
   };
-
-  const reviewed = useMemo(() => Object.values(fb).filter((f) => f.verdict).length, [fb]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -122,16 +113,13 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
           <span>· {data.summary.trips} טיולים</span>
           <span>· ניקוד ממוצע <b style={{ color: scoreColor(data.summary.avgScore) }}>{data.summary.avgScore}</b></span>
           <span>· {data.summary.needWork} דורשים שיפור</span>
-          <span className="ms-auto text-[var(--text-3)]">סימנת {reviewed}/{data.report.length}</span>
         </div>
       )}
 
       <div className="grid gap-3 lg:grid-cols-2">
         {data?.report.map((t) => {
-          const f = fb[key(t)] ?? {};
           return (
-            <div key={key(t)} className="flex flex-col gap-2.5 rounded-[var(--radius-card)] border p-3.5"
-              style={{ borderColor: f.verdict === "good" ? "var(--brand)" : f.verdict === "bad" ? "var(--terra,#c8654a)" : "var(--border)", background: "var(--surface)" }}>
+            <div key={key(t)} className="flex flex-col gap-2.5 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-3.5">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="font-bold">{t.city}</span>
@@ -179,22 +167,6 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
                 </ul>
               )}
 
-              {/* editor verdict + notes */}
-              <div className="mt-1 flex items-center gap-2 border-t border-[var(--border)] pt-2">
-                <button onClick={() => setVerdict(t, "good")} title="טיול טוב"
-                  className="flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-medium transition"
-                  style={f.verdict === "good" ? { background: "var(--brand)", color: "#fff", borderColor: "var(--brand)" } : { borderColor: "var(--border)", color: "var(--text-2)" }}>
-                  <ThumbsUp size={12} /> טוב
-                </button>
-                <button onClick={() => setVerdict(t, "bad")} title="דורש שיפור"
-                  className="flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-medium transition"
-                  style={f.verdict === "bad" ? { background: "var(--terra,#c8654a)", color: "#fff", borderColor: "var(--terra,#c8654a)" } : { borderColor: "var(--border)", color: "var(--text-2)" }}>
-                  <ThumbsDown size={12} /> לשיפור
-                </button>
-              </div>
-              <textarea value={f.notes ?? ""} onChange={(e) => setNotes(t, e.target.value)} rows={2}
-                placeholder="הערות לעורך: מה טוב, מה לתקן, ולמה…"
-                className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[var(--brand)]" />
             </div>
           );
         })}
@@ -202,7 +174,7 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
 
       {!data && !loading && (
         <p className="rounded-[var(--radius-sm)] border border-dashed border-[var(--border)] p-6 text-center text-[13.5px] text-[var(--text-3)]">
-          המוח יבנה טיול למשפחות/זוגות/חברים בכל עיר, ינקד את עצמו, ויציג את הביקורת. סמנו טוב/לשיפור + הערות, ואז הורידו דוח לכיול.
+          המוח יבנה טיול למשפחות/זוגות/חברים בכל עיר, ינקד את עצמו, ויציג את הביקורת. לכיול, שמירה כמשבצת והערות למוח — פתחו כ״דף טיול״.
         </p>
       )}
 

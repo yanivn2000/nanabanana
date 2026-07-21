@@ -219,7 +219,7 @@ export function AdminView({ destinations, feedback, email }: {
       {tab === "brain" && (
         <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
           <p className="mb-3 text-[13px] text-[var(--text-3)]">
-            המוח — מנוע-טיולים דטרמיניסטי (ללא AI). בונה טיול למשפחות/זוגות/חברים בכל עיר, מנקד את עצמו, ומציג ביקורת. סמנו טוב/לשיפור + הערות, הורידו דוח והעלו אותו ל-Claude Code לכיול הלוגיקה.
+            המוח — מנוע-טיולים דטרמיניסטי (ללא AI). בונה טיול למשפחות/זוגות/חברים בכל עיר, מנקד את עצמו, ומציג ביקורת. לכיול, שמירה כמשבצת והערות למוח — פִתחו כל טיול כ״דף טיול״.
           </p>
           <BrainEval destinations={destinations} />
         </div>
