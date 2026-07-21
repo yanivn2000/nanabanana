@@ -36,6 +36,8 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
   const [allCities, setAllCities] = useState(false);
   const [cityId, setCityId] = useState(0); // 0 = default (first 6)
   const [loading, setLoading] = useState(false);
+  const [qChecking, setQChecking] = useState(false);
+  const [qReport, setQReport] = useState<string | null>(null);
   const [data, setData] = useState<Report | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
 
@@ -63,15 +65,17 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
 
   const key = (t: Trip) => `${t.cityId}:${t.audience}`;
 
-  async function run() {
-    setLoading(true);
+  async function run(quality = false) {
+    quality ? setQChecking(true) : setLoading(true);
+    if (quality) setQReport(null);
     try {
       const res = await fetch("/api/admin/brain-eval", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ days, cities: allCities ? destinations.map((d) => d.id) : cityId ? [cityId] : undefined }),
+        body: JSON.stringify({ days, cities: allCities ? destinations.map((d) => d.id) : cityId ? [cityId] : undefined, quality }),
       });
-      setData(res.ok ? await res.json() : null);
-    } finally { setLoading(false); }
+      if (res.ok) { const j = await res.json(); setData(j); if (quality && j.qualityReport) setQReport(j.qualityReport); }
+      else if (!quality) setData(null);
+    } finally { quality ? setQChecking(false) : setLoading(false); }
   }
 
   // Open the Brain's exact trip as a real trip page (map + walking legs + areas) —
@@ -100,12 +104,30 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
           </select></label>
         <label className="flex items-center gap-1.5 text-[13px] text-[var(--text-2)]">
           <input type="checkbox" checked={allCities} onChange={(e) => setAllCities(e.target.checked)} /> כל הערים (איטי)</label>
-        <button onClick={run} disabled={loading}
+        <button onClick={() => run(false)} disabled={loading || qChecking}
           className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-1.5 text-[13.5px] font-medium text-white disabled:opacity-60">
           {loading ? <Loader2 size={14} className="animate-spin" /> : "🧠"} הרץ בדיקה עצמית
         </button>
-        <span className="ms-auto text-[12.5px] text-[var(--text-3)]">כיול, שמירה כמשבצת והערות למוח — מתוך <b>דף הטיול</b> (כפתור ״דף טיול״).</span>
+        <button onClick={() => run(true)} disabled={loading || qChecking}
+          title="המוח בונה טיולים ובודק אותם מול הטכניקות + מבחן-הנאה, ומפיק דוח לצ'אט"
+          className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--accent,#c8654a)] px-4 py-1.5 text-[13.5px] font-medium text-[var(--accent-ink,#8a3d2a)] disabled:opacity-60">
+          {qChecking ? <Loader2 size={14} className="animate-spin" /> : "🔍"} בדיקת איכות
+        </button>
+        <span className="ms-auto text-[12.5px] text-[var(--text-3)]">כיול, שמירה כמשבצת והערות למוח — מתוך <b>דף הטיול</b>.</span>
       </div>
+
+      {qReport && (
+        <div className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-[var(--accent,#c8654a)] bg-[var(--accent-soft)] p-3">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-[13.5px] font-bold text-[var(--accent-ink,#8a3d2a)]">🔍 דוח בדיקת איכות</span>
+            <button onClick={() => navigator.clipboard?.writeText(qReport)}
+              className="rounded-full bg-[var(--accent,#c8654a)] px-3 py-1 text-[12.5px] font-medium text-white">העתק לצ'אט</button>
+          </div>
+          <textarea readOnly value={qReport} rows={16} dir="rtl"
+            className="w-full resize-y rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2.5 font-mono text-[12px] leading-relaxed outline-none" />
+          <p className="text-[11.5px] text-[var(--text-3)]">הבדיקה דטרמיניסטית (התאמה + היוריסטיקות-הנאה). הדביקו בצ'אט ל-Claude Code לשיפוט-הנאה אמיתי ולביצוע.</p>
+        </div>
+      )}
 
       {data && (
         <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-3 text-[13.5px]">

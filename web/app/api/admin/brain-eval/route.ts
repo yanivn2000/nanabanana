@@ -6,6 +6,7 @@ import { buildCarBaseItinerary } from "@/lib/heuristic";
 import { splitByReach, clusterDayTrips, dayTripBudget } from "@/lib/daytrips";
 import { durationHe } from "@/lib/geo";
 import { isInSeason, stopMatchesType } from "@/lib/brain/traits";
+import { qualityCheck, type Quality } from "@/lib/brain/quality";
 import { critiqueTrip } from "@/lib/brain/critique";
 import { BRAIN_VERSION, audienceFitScore, type Audience } from "@/lib/brain/policy";
 import type { Itinerary, StopKind } from "@/lib/trip-types";
@@ -89,10 +90,19 @@ export async function POST(req: NextRequest) {
         ? buildCarBaseItinerary(dest.city, dest.country, days, pool, center, audience === "families", rules.paceStops[audience], 3, buildOpts)
         : toItinerary(built, dest, audience, days);
       annotateDaysWithAreas(itinerary.days, areas, center);
+      // Quality check (deterministic): reconstruct rich days for the WHOLE trip
+      // (in-city + car day-trips) from the attraction ids, then run both lenses.
+      let quality: Quality | undefined;
+      if (b.quality) {
+        const byId = new Map(attractions.map((a) => [a.id, a]));
+        const richDays: Attraction[][] = itinerary.days.map((d) =>
+          d.stops.map((s) => (s.id != null ? byId.get(s.id) : undefined)).filter((a): a is Attraction => !!a));
+        quality = qualityCheck(richDays, audience, rules, { cityMustCount });
+      }
       report.push({
         cityId: id, city: dest.city_he || dest.city, cityEn: dest.city, country: dest.country, audience, days,
         score: crit.score, needsWork: crit.needsWork, stops: crit.stops,
-        dims: crit.dims, issues: crit.issues, itinerary,
+        dims: crit.dims, issues: crit.issues, itinerary, quality,
         daysNames: built.map((d) => d.map((a) => ({ name: a.name_he || a.name_en, must: a.must_see === 1, cat: a.category }))),
       });
     }
@@ -104,5 +114,34 @@ export async function POST(req: NextRequest) {
     avgScore: scores.length ? Math.round(scores.reduce((s, n) => s + n, 0) / scores.length) : 0,
     needWork: report.filter((r) => (r as { needsWork: boolean }).needsWork).length,
   };
-  return NextResponse.json({ summary, report });
+  // Free-text quality report — the editor pastes this into chat for deep judgment + fixes.
+  let qualityReport: string | undefined;
+  if (b.quality) {
+    const AUD: Record<string, string> = { families: "עם ילדים", adults: "בלי ילדים" };
+    const L: string[] = [`בדיקת איכות · מוח ${BRAIN_VERSION}`, "═".repeat(34)];
+    for (const r of report as ReportRow[]) {
+      if (!r.quality) continue;
+      L.push("", `▸ ${r.city} · ${AUD[r.audience] ?? r.audience} · ניקוד ${r.score}`);
+      r.itinerary.days.forEach((d) => {
+        const s = d.stops.filter((x) => x.kind !== "food").map((x) => x.name).join(" · ");
+        L.push(`  ${d.label}${d.dayTrip ? " 🚗" : ""}: ${s}`);
+      });
+      L.push("  התאמה להגדרות (טכניקות):");
+      r.quality.conformance.forEach((c) => L.push(`    ${c.ok ? "✓" : "✗"} ${c.msg}`));
+      L.push("  מבחן ההנאה:");
+      if (r.quality.fun.length) r.quality.fun.forEach((f) => L.push(`    ⚠️ ${f}`));
+      else L.push("    ✓ לא נמצאו דגלי-שעמום (שיפוט ההנאה האמיתי — בצ'אט).");
+      if (r.quality.suggestions.length) { L.push("  תובנות לשיפור:"); r.quality.suggestions.forEach((s) => L.push(`    • ${s}`)); }
+    }
+    L.push("", "─".repeat(34),
+      "הדבק דוח זה בצ'אט ל-Claude Code: (1) לשפוט האם הטיולים באמת מהנים (מעבר לבדיקה הדטרמיניסטית), (2) לגזור שיפורי-טכניקות/מנוע ולבצע.");
+    qualityReport = L.join("\n");
+  }
+  return NextResponse.json({ summary, report, ...(qualityReport ? { qualityReport } : {}) });
 }
+
+type ReportRow = {
+  city: string; audience: string; score: number;
+  itinerary: { days: { label: string; dayTrip?: unknown; stops: { name: string; kind: string }[] }[] };
+  quality?: Quality;
+};
