@@ -229,6 +229,8 @@ export async function POST(req: NextRequest) {
     month: body.month, seasonFilter: rules.seasonFilter, dayEnderLast: rules.dayEnderLast,
     maxTypePerDay: rules.maxTypePerDay, avoidCats: isFamily ? rules.avoid.families : rules.avoid.adults,
     dayStartMin: rules.dayStartMin, lunchAfterMin: rules.lunchAfterMin, lunchMinutes: rules.lunchMinutes, visitDefault: rules.visitDefault,
+    daytripThresholdKm: rules.daytripThresholdKm, daytripPerDays: rules.daytripPerDays, daytripMaxStops: rules.daytripMaxStops,
+    samePlaceMeters: rules.samePlaceMeters, freeGemMaxPerDay: rules.freeGemMaxPerDay, freeGemDetourMin: rules.freeGemDetourMin,
   };
   const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary =>
     d.mobility === "car_base"

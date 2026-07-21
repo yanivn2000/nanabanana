@@ -23,6 +23,13 @@ export type BuildOpts = {
   lunchAfterMin?: number;
   lunchMinutes?: number;
   visitDefault?: number;
+  // Tier-2 structure — from daytrip_* / free_gems / same_place_km principles.
+  daytripThresholdKm?: number;
+  daytripPerDays?: number;
+  daytripMaxStops?: number;
+  samePlaceMeters?: number;
+  freeGemMaxPerDay?: number;
+  freeGemDetourMin?: number;
 };
 const isAvoided = (a: Attraction, avoid?: string[]) => !!avoid?.some((t) => stopMatchesType(a, t));
 // Drop stops beyond the per-day cap of a type (keeps the earlier = higher-value ones).
@@ -84,12 +91,13 @@ export function buildHeuristicItinerary(
   // scatters each day across the city), group geographically so every day is a
   // walkable neighbourhood. seedGroups (chosen-neighbourhood tour) force one day
   // per area. The per-day budget is derived from the pace.
-  const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes: perDay * 84, seedGroups });
+  const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes: perDay * 84, seedGroups,
+    freeMax: opts?.freeGemMaxPerDay, freeDetour: opts?.freeGemDetourMin });
 
   const dayList = clustered.map((picksRaw, d) => {
     // per-day techniques: drop same-place dups, cap types (e.g. ≤2 museums/day),
     // then push day-enders (water/adventure) to the end (all from the principles).
-    let picks = capTypePerDay(dropSamePlace(picksRaw), opts?.maxTypePerDay);
+    let picks = capTypePerDay(dropSamePlace(picksRaw, opts?.samePlaceMeters), opts?.maxTypePerDay);
     if (opts?.dayEnderLast !== false) picks = reorderDayEnders(picks);
     const stops: Stop[] = [];
     // Sequential clock: arrival = running time, then add the stay + travel to the
@@ -162,9 +170,9 @@ export function buildCarBaseItinerary(
   const eligible = attractions
     .filter((a) => opts?.seasonFilter === false || isInSeason(a, opts?.month))
     .filter((a) => !isAvoided(a, opts?.avoidCats));
-  const { inCity, far } = splitByReach(eligible, center);
-  const clusters = clusterDayTrips(far, center);
-  const tripDays = dayTripBudget(days, clusters.length);
+  const { inCity, far } = splitByReach(eligible, center, opts?.daytripThresholdKm);
+  const clusters = clusterDayTrips(far, center, { maxStops: opts?.daytripMaxStops, sameMeters: opts?.samePlaceMeters });
+  const tripDays = dayTripBudget(days, clusters.length, opts?.daytripPerDays);
   const cityDays = days - tripDays;
 
   // No worthy far clusters (or too few days) → ordinary in-city build.

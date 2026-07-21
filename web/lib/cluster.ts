@@ -161,7 +161,7 @@ export type ClusterResult = { days: Attraction[][]; leftOut: Attraction[] };
 
 export function clusterIntoDays(
   poolIn: Attraction[], days: number,
-  opts: { walkPref?: number; dayMinutes?: number; seedGroups?: number[][] } = {}
+  opts: { walkPref?: number; dayMinutes?: number; seedGroups?: number[][]; freeMax?: number; freeDetour?: number } = {}
 ): ClusterResult {
   // usable = has coords, de-duped by name; input order IS the value ranking.
   const seen = new Set<string>();
@@ -221,14 +221,17 @@ export function clusterIntoDays(
   }
 
   // B — free gems: pull nearby places (incl. the long tail) onto each day's route
-  // while they sit within a short detour and the day still has budget.
+  // while they sit within a short detour and the day still has budget. The caps are
+  // techniques (free_gems principle); fall back to the built-in defaults.
+  const freeMax = opts.freeMax ?? FREE_MAX_PER_DAY;
+  const freeDetour = opts.freeDetour ?? FREE_DETOUR;
   for (const g of groups) {
     let added = 0;
     for (const x of pool) {
-      if (added >= FREE_MAX_PER_DAY) break;
+      if (added >= freeMax) break;
       if (placed.has(x.id)) continue;
       const dist = nearestMin(x, g.stops);
-      if (dist <= FREE_DETOUR && !isDuplicate(x, g.stops) && g.time + visitMin(x) + dist <= budget) {
+      if (dist <= freeDetour && !isDuplicate(x, g.stops) && g.time + visitMin(x) + dist <= budget) {
         placed.add(x.id);
         g.stops.push(x);
         g.time += visitMin(x) + dist;

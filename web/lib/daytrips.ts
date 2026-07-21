@@ -49,8 +49,10 @@ const driveMin = (km: number) => Math.round(km / DRIVE_KMH * 60) + 8; // +8 park
 // unused place, gather everything within CLUSTER_KM, order the stops as a short
 // path from the anchor. Returns clusters ranked by total worth.
 export function clusterDayTrips(
-  far: Attraction[], center: { lat: number; lng: number }
+  far: Attraction[], center: { lat: number; lng: number },
+  opts: { maxStops?: number; sameMeters?: number } = {}
 ): DayTripCluster[] {
+  const maxStops = opts.maxStops ?? MAX_STOPS_PER_TRIP;
   const pool = far.filter(hasCoords).sort((a, b) => worth(b) - worth(a));
   const used = new Set<number>();
   const clusters: DayTripCluster[] = [];
@@ -62,7 +64,7 @@ export function clusterDayTrips(
     members.forEach((m) => used.add(m.id));
     // order: anchor first, then nearest-neighbour walk within the far area; drop
     // "same place" stops (a lake and its own dock/viewpoint), push day-enders last.
-    const ordered = reorderDayEnders(dropSamePlace(orderFromAnchor(members, seed))).slice(0, MAX_STOPS_PER_TRIP);
+    const ordered = reorderDayEnders(dropSamePlace(orderFromAnchor(members, seed), opts.sameMeters)).slice(0, maxStops);
     const lat = ordered.reduce((s, a) => s + a.lat!, 0) / ordered.length;
     const lng = ordered.reduce((s, a) => s + a.lng!, 0) / ordered.length;
     const driveKm = Math.round(haversineKm(center.lat, center.lng, lat, lng));
@@ -119,7 +121,7 @@ export function dayTripToDay(cl: DayTripCluster, base: string, dayNum: number, i
 // How many of N days to spend on car day-trips. A base town's whole point is the
 // day-trips, so roughly half the days go out by car — but always keep ≥1 in-city
 // day and never exceed the available clusters. 2d→1, 3d→1, 4d→2, 5d→2, 6d→3, 7d→3.
-export function dayTripBudget(totalDays: number, availableClusters: number): number {
-  const byDays = Math.floor(totalDays / 2);
+export function dayTripBudget(totalDays: number, availableClusters: number, perDays = 2): number {
+  const byDays = Math.floor(totalDays / Math.max(1, perDays));
   return Math.max(0, Math.min(byDays, availableClusters, totalDays - 1));
 }

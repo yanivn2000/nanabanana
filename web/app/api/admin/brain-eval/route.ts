@@ -77,12 +77,14 @@ export async function POST(req: NextRequest) {
       const eligible = pool
         .filter((a) => rules.seasonFilter === false || isInSeason(a, month))
         .filter((a) => !(rules.avoid[audience] ?? []).some((t) => stopMatchesType(a, t)));
-      const { inCity, far } = carBase ? splitByReach(eligible, center) : { inCity: eligible, far: [] as Attraction[] };
-      const tripDays = carBase ? dayTripBudget(days, clusterDayTrips(far, center).length) : 0;
+      const { inCity, far } = carBase ? splitByReach(eligible, center, rules.daytripThresholdKm) : { inCity: eligible, far: [] as Attraction[] };
+      const tripDays = carBase ? dayTripBudget(days, clusterDayTrips(far, center, { maxStops: rules.daytripMaxStops, sameMeters: rules.samePlaceMeters }).length, rules.daytripPerDays) : 0;
       const { days: built } = clusterIntoDays(inCity, days - tripDays, { walkPref: 3, dayMinutes: rules.paceStops[audience] * 84 });
       const crit = critiqueTrip(built, audience, { cityMustCount, rules });
       const buildOpts = { month, seasonFilter: rules.seasonFilter, dayEnderLast: rules.dayEnderLast, maxTypePerDay: rules.maxTypePerDay, avoidCats: rules.avoid[audience] ?? [],
-        dayStartMin: rules.dayStartMin, lunchAfterMin: rules.lunchAfterMin, lunchMinutes: rules.lunchMinutes, visitDefault: rules.visitDefault };
+        dayStartMin: rules.dayStartMin, lunchAfterMin: rules.lunchAfterMin, lunchMinutes: rules.lunchMinutes, visitDefault: rules.visitDefault,
+        daytripThresholdKm: rules.daytripThresholdKm, daytripPerDays: rules.daytripPerDays, daytripMaxStops: rules.daytripMaxStops,
+        samePlaceMeters: rules.samePlaceMeters, freeGemMaxPerDay: rules.freeGemMaxPerDay, freeGemDetourMin: rules.freeGemDetourMin };
       const itinerary = carBase
         ? buildCarBaseItinerary(dest.city, dest.country, days, pool, center, audience === "families", rules.paceStops[audience], 3, buildOpts)
         : toItinerary(built, dest, audience, days);

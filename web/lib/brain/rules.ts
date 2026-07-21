@@ -93,6 +93,41 @@ export const RULE_KINDS: Record<string, { title: string; help: string; he: (p: R
     params: [{ key: "minutes", type: "number", label: "דקות" }],
     applies: "scheduler — default visit minutes",
   },
+  daytrip_threshold: {
+    title: "סף יום-טיול (ק״מ)",
+    help: "מעל כמה ק״מ מהעיר מקום נחשב ל'יום-טיול ברכב' במקום עצירה בתוך העיר. מתחת לסף — נכנס ליום-הליכה בעיר; מעליו — לאשכול טיול-רכב נפרד. רלוונטי רק לערי-בסיס (car_base).",
+    he: (p) => `מעל ${p.km || 18} ק״מ מהעיר = יום טיול-רכב (מתחת = בתוך העיר)`,
+    params: [{ key: "km", type: "number", label: "ק״מ" }],
+    applies: "daytrips splitByReach",
+  },
+  daytrip_budget: {
+    title: "תדירות ימי-רכב",
+    help: "כמה ימי טיול-רכב לשלב מתוך אורך הטיול — יום-רכב אחד לכל N ימים. ערך 2 = בערך חצי מהימים בחוץ ברכב; ערך 3 = שליש. תמיד נשאר לפחות יום-עיר אחד.",
+    he: (p) => `יום טיול-רכב אחד לכל ${p.perDays || 2} ימי-טיול`,
+    params: [{ key: "perDays", type: "number", label: "לכל N ימים" }],
+    applies: "daytrips dayTripBudget",
+  },
+  daytrip_max_stops: {
+    title: "מקסימום עצירות ביום-רכב",
+    help: "כמה עצירות לכל היותר ביום טיול-רכב אחד. יום בחוץ בנוי מאנקר מרכזי (נקיק/אגם/מערה) + כמה עצירות סמוכות באותו אזור — זו התקרה.",
+    he: (p) => `מקסימום ${p.max || 5} עצירות ביום טיול-רכב`,
+    params: [{ key: "max", type: "number", label: "מקסימום" }],
+    applies: "daytrips clusterDayTrips",
+  },
+  free_gems: {
+    title: "פינות-חמד",
+    help: "כמה 'פינות-חמד' קטנות להוסיף לכל יום — מקומות סמוכים שנמצאים כבר על הדרך. מוסיף עד X מקומות ליום, כל עוד הם בעיקוף של עד Y דקות מהמסלול הקיים. יותר = יום מלא ומגוון יותר בלי נסיעות מיותרות.",
+    he: (p) => `הוסף עד ${p.maxPerDay || 3} פינות-חמד ליום (עד ${p.detourMin || 4} דק׳ עיקוף)`,
+    params: [{ key: "maxPerDay", type: "number", label: "מקס׳ ליום" }, { key: "detourMin", type: "number", label: "עיקוף (דק׳)" }],
+    applies: "cluster free-gem pass",
+  },
+  same_place_km: {
+    title: "מרחק \"אותו מקום\"",
+    help: "המרחק (במטרים) שמתחתיו שתי עצירות נחשבות לאותו מקום ולא יופיעו פעמיים באותו יום — למשל מבצר והגבעה שהוא יושב עליה, או אגם והמזח שלו. מונע כפילות; המוח שומר את בעל-הערך מבין השניים.",
+    he: (p) => `שתי עצירות במרחק פחות מ-${p.meters || 90} מ׳ = אותו מקום`,
+    params: [{ key: "meters", type: "number", label: "מטרים" }],
+    applies: "cluster dropSamePlace",
+  },
   custom: {
     title: "הערה חופשית (מייעצת)",
     help: "טקסט חופשי שאינו נאכף אוטומטית ע״י המוח — הנחיה שאני (Claude Code) מעכל ידנית לקוד/למתכון. שקוף ומתועד, אבל לא כלל שרץ מעצמו.",
@@ -125,6 +160,13 @@ export type BrainRules = {
   lunchAfterMin: number;
   lunchMinutes: number;
   visitDefault: number;
+  // Tier-2 structure (from daytrip_* / free_gems / same_place_km).
+  daytripThresholdKm: number;
+  daytripPerDays: number;
+  daytripMaxStops: number;
+  samePlaceMeters: number;
+  freeGemMaxPerDay: number;
+  freeGemDetourMin: number;
 };
 
 const AUDS: Audience[] = ["families", "adults"];
@@ -142,6 +184,7 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
     seasonFilter: false,
     avoid: { families: [...AUDIENCE_PREFS.families.avoid], adults: [...AUDIENCE_PREFS.adults.avoid] },
     dayStartMin: 9 * 60 + 30, lunchAfterMin: 12 * 60, lunchMinutes: 60, visitDefault: 75,
+    daytripThresholdKm: 18, daytripPerDays: 2, daytripMaxStops: 5, samePlaceMeters: 90, freeGemMaxPerDay: 3, freeGemDetourMin: 4,
   };
   const active = principles.filter((p) => p.enabled && (p.scope === "global" || (p.scope === "city" && p.destination_id === destId)));
   // global first, then city (city overrides/adds on top).
@@ -173,6 +216,14 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
         if (q.minutes != null) rules.lunchMinutes = Number(q.minutes);
         break;
       case "visit_default": if (q.minutes != null) rules.visitDefault = Number(q.minutes); break;
+      case "daytrip_threshold": if (q.km != null) rules.daytripThresholdKm = Number(q.km); break;
+      case "daytrip_budget": if (q.perDays != null) rules.daytripPerDays = Number(q.perDays); break;
+      case "daytrip_max_stops": if (q.max != null) rules.daytripMaxStops = Number(q.max); break;
+      case "free_gems":
+        if (q.maxPerDay != null) rules.freeGemMaxPerDay = Number(q.maxPerDay);
+        if (q.detourMin != null) rules.freeGemDetourMin = Number(q.detourMin);
+        break;
+      case "same_place_km": if (q.meters != null) rules.samePlaceMeters = Number(q.meters); break;
     }
   }
   return rules;
