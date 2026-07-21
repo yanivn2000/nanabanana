@@ -236,14 +236,19 @@ export function clusterIntoDays(
     }
     const tour = twoOpt(nnPath(candidates, start));
 
-    const perSlice = Math.max(1, Math.ceil(tour.length / days));
+    // Cut the tour into `days` chunks of roughly EQUAL TIME. Because the tour is one
+    // continuous walking path, equal-time contiguous slices are BOTH balanced (each day
+    // ~same hours) AND geographically tight (each day a stretch of the route) — unlike
+    // an equal-stop-COUNT cut, which sprawled one day across the whole city.
+    let totalT = 0;
+    for (let i = 0; i < tour.length; i++) totalT += visitMin(tour[i], dwell) + (i > 0 ? walkBetween(tour[i - 1], tour[i]) : 0);
+    const perDayBudget = totalT / days;
     let cur: Attraction[] = [], time = 0;
     for (const x of tour) {
       const leg = cur.length ? walkBetween(cur[cur.length - 1], x) : 0;
-      // close the day at its share of stops (or if it would run absurdly long), as
-      // long as we still owe more days — the last day absorbs any remainder.
-      const overTime = cur.length > 0 && time + visitMin(x, dwell) + leg > budget * 1.35;
-      if (cur.length && (cur.length >= perSlice || overTime) && groups.length < days - 1) {
+      // close the day once it holds ~its time-share (count half the next stop so we cut
+      // at the nearer boundary), while days remain — the last day takes the rest.
+      if (cur.length && groups.length < days - 1 && time + leg + visitMin(x, dwell) / 2 >= perDayBudget) {
         groups.push({ stops: cur, time });
         cur = []; time = 0;
       }
