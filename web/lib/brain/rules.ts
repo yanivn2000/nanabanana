@@ -97,11 +97,12 @@ export const RULE_KINDS: Record<string, { title: string; help: string; he: (p: R
   visit_minutes: {
     title: "משך ביקור לפי אופי המקום",
     help: "כמה זמן שוהים בכל עצירה — לפי סוג המקום, לא לפי נתון OSM הלא-אמין. 'עוברים ומסתכלים' (גשר, תצפית, כיכר, אנדרטה) לוקח דקות ספורות; מקום 'רגיל' (כנסייה, גן) כחצי שעה; 'עומק' (מוזיאון, ארמון, גן-חיות) שעה-שעתיים; 'שוק' הוא עוגן של חצי יום. ערכים אלה קובעים כמה עצירות נכנסות ליום ואיך נראים הזמנים.",
-    he: (p) => `שהייה: עוברים ${p.passby || 20} · רגיל ${p.standard || 50} · עומק ${p.deep || 110} · שוק ${p.market || 150} (דק׳)`,
+    he: (p) => `שהייה: עוברים ${p.passby || 20} · רגיל ${p.standard || 50} · עומק ${p.deep || 110} · פעילות ${p.activity || 180} · שוק ${p.market || 150} (דק׳)`,
     params: [
       { key: "passby", type: "number", label: "עוברים ומסתכלים" },
       { key: "standard", type: "number", label: "רגיל" },
       { key: "deep", type: "number", label: "עומק (מוזיאון/ארמון)" },
+      { key: "activity", type: "number", label: "פעילות (פארק שעשועים/הרפתקאות)" },
       { key: "market", type: "number", label: "שוק" },
     ],
     applies: "scheduler + clusterer — dwell minutes per stop type",
@@ -303,7 +304,7 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
         if (q.minutes != null) rules.lunchMinutes = Number(q.minutes);
         break;
       case "visit_minutes":
-        for (const k of ["passby", "standard", "deep", "market"] as const)
+        for (const k of ["passby", "standard", "deep", "activity", "market"] as const)
           if (q[k] != null) rules.dwell[k] = Number(q[k]);
         break;
       case "daytrip_threshold": if (q.km != null) rules.daytripThresholdKm = Number(q.km); break;
