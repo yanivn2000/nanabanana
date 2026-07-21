@@ -5,6 +5,7 @@
 // free text. Adding a new technique = add a kind here + honour it in the builder/
 // critic. See docs/logic/brain.md, brain_principles table (supabase/phase16.sql).
 import { AUDIENCE_PREFS, PACE_STOPS, WEIGHTS, QUALITY_BAR, THRESHOLDS, DAY_WALK, type Audience } from "./policy";
+import { DWELL_DEFAULT, type DwellCfg } from "./traits";
 
 export type Principle = {
   id: number; kind: string; params: Record<string, unknown>;
@@ -93,12 +94,17 @@ export const RULE_KINDS: Record<string, { title: string; help: string; he: (p: R
     params: [{ key: "after", type: "time", label: "לא לפני" }, { key: "minutes", type: "number", label: "משך (דק׳)" }],
     applies: "scheduler — lunch insertion",
   },
-  visit_default: {
-    title: "משך ביקור ברירת-מחדל",
-    help: "כמה דקות להקצות לעצירה כשאין במסד נתון מדויק על משך הביקור. ערך גבוה = פחות עצירות נכנסות ליום (כל אחת 'תופסת' יותר זמן); ערך נמוך = יום צפוף יותר.",
-    he: (p) => `משך ביקור ברירת-מחדל: ${p.minutes || 75} דק׳ לעצירה`,
-    params: [{ key: "minutes", type: "number", label: "דקות" }],
-    applies: "scheduler — default visit minutes",
+  visit_minutes: {
+    title: "משך ביקור לפי אופי המקום",
+    help: "כמה זמן שוהים בכל עצירה — לפי סוג המקום, לא לפי נתון OSM הלא-אמין. 'עוברים ומסתכלים' (גשר, תצפית, כיכר, אנדרטה) לוקח דקות ספורות; מקום 'רגיל' (כנסייה, גן) כחצי שעה; 'עומק' (מוזיאון, ארמון, גן-חיות) שעה-שעתיים; 'שוק' הוא עוגן של חצי יום. ערכים אלה קובעים כמה עצירות נכנסות ליום ואיך נראים הזמנים.",
+    he: (p) => `שהייה: עוברים ${p.passby || 20} · רגיל ${p.standard || 50} · עומק ${p.deep || 110} · שוק ${p.market || 150} (דק׳)`,
+    params: [
+      { key: "passby", type: "number", label: "עוברים ומסתכלים" },
+      { key: "standard", type: "number", label: "רגיל" },
+      { key: "deep", type: "number", label: "עומק (מוזיאון/ארמון)" },
+      { key: "market", type: "number", label: "שוק" },
+    ],
+    applies: "scheduler + clusterer — dwell minutes per stop type",
   },
   daytrip_threshold: {
     title: "סף יום-טיול (ק״מ)",
@@ -202,7 +208,7 @@ export const GROUP_ORDER = ["קהל וסינון", "תחושת-יום", "מבנ�
 export const KIND_GROUP: Record<string, (typeof GROUP_ORDER)[number]> = {
   pace_stops: "קהל וסינון", max_type_per_day: "קהל וסינון", active_anchor_required: "קהל וסינון",
   day_ender_last: "קהל וסינון", season_filter: "קהל וסינון", avoid_category: "קהל וסינון",
-  day_window: "תחושת-יום", lunch: "תחושת-יום", visit_default: "תחושת-יום",
+  day_window: "תחושת-יום", lunch: "תחושת-יום", visit_minutes: "תחושת-יום",
   daytrip_threshold: "מבנה-הטיול", daytrip_budget: "מבנה-הטיול", daytrip_max_stops: "מבנה-הטיול",
   free_gems: "מבנה-הטיול", same_place_km: "מבנה-הטיול",
   quality_bar: "כיול-הביקורת", dimension_weight: "כיול-הביקורת", min_must_see: "כיול-הביקורת",
@@ -229,7 +235,7 @@ export type BrainRules = {
   dayStartMin: number;
   lunchAfterMin: number;
   lunchMinutes: number;
-  visitDefault: number;
+  dwell: DwellCfg;   // visit_minutes technique — dwell per stop bucket
   // Tier-2 structure (from daytrip_* / free_gems / same_place_km).
   daytripThresholdKm: number;
   daytripPerDays: number;
@@ -261,7 +267,7 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
     dayEnderLast: false,
     seasonFilter: false,
     avoid: { families: [...AUDIENCE_PREFS.families.avoid], adults: [...AUDIENCE_PREFS.adults.avoid] },
-    dayStartMin: 9 * 60 + 30, lunchAfterMin: 12 * 60, lunchMinutes: 60, visitDefault: 75,
+    dayStartMin: 9 * 60 + 30, lunchAfterMin: 12 * 60, lunchMinutes: 60, dwell: { ...DWELL_DEFAULT },
     daytripThresholdKm: 18, daytripPerDays: 2, daytripMaxStops: 5, samePlaceMeters: 90, freeGemMaxPerDay: 3, freeGemDetourMin: 4,
     weights: { ...WEIGHTS }, qualityBar: QUALITY_BAR, minMustSee: THRESHOLDS.minMustSeePerTrip,
     minAudienceFit: THRESHOLDS.minAudienceFit, maxSameTypeRun: THRESHOLDS.maxSameTypeRun,
@@ -296,7 +302,10 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
         rules.lunchAfterMin = timeToMin(q.after, rules.lunchAfterMin);
         if (q.minutes != null) rules.lunchMinutes = Number(q.minutes);
         break;
-      case "visit_default": if (q.minutes != null) rules.visitDefault = Number(q.minutes); break;
+      case "visit_minutes":
+        for (const k of ["passby", "standard", "deep", "market"] as const)
+          if (q[k] != null) rules.dwell[k] = Number(q[k]);
+        break;
       case "daytrip_threshold": if (q.km != null) rules.daytripThresholdKm = Number(q.km); break;
       case "daytrip_budget": if (q.perDays != null) rules.daytripPerDays = Number(q.perDays); break;
       case "daytrip_max_stops": if (q.max != null) rules.daytripMaxStops = Number(q.max); break;

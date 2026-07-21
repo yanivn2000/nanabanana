@@ -29,6 +29,31 @@ export const isSoftFun = (a: Attraction) =>
   a.category === "nature" || a.subcategory === "park" || a.subcategory === "garden" ||
   (a.must_see === 1 && a.category === "attraction");
 
+// Dwell time — how long you actually SPEND at a place. OSM duration_minutes is
+// unreliable (a bridge tagged 60m), so we classify by what the place IS:
+//   passby   — you walk over/past and look (bridge, viewpoint, monument, square,
+//              gate, statue, hill, street, meridian line) → minutes, not an hour.
+//   standard — a real but not all-day stop (church, garden, general sight).
+//   deep     — a ticketed interior you tour (museum, gallery, castle/palace, zoo).
+//   market   — a market/shopping street you graze for an afternoon.
+// The MINUTES per bucket are a technique (visit_minutes); the buckets are engine.
+const MARKET_RX = /\bmarket\b|שוק|bazaar|בזא?ר|מרקט/i;
+const DEEP_RX = /\bmuseum\b|מוזיאון|gallery|galleries|גלריה|castle|טירה|מצודה|palace|ארמון|fortress|מבצר|\bzoo\b|גן ?חיות|aquarium|אקווריום|dungeon|planetarium|פלנטריום/i;
+const PASSBY_RX = /bridge|גשר|viewpoint|view from|תצפית|observation|lookout|מצפור|monument|אנדרט|memorial|statue|פסל|\bsquare\b|כיכר|piazza|plaza|\bgate\b|שער |fountain|מזרק|\bhill\b|גבעה|\bstreet\b|רחוב|promenade|טיילת|\bpier\b|מזח|meridian|מרידיאן|קו האורך|column|עמוד|obelisk|אובליסק/i;
+
+export type DwellBucket = "passby" | "standard" | "deep" | "market";
+export type DwellCfg = Record<DwellBucket, number>;
+export const DWELL_DEFAULT: DwellCfg = { passby: 20, standard: 50, deep: 110, market: 150 };
+
+export function dwellBucket(a: Attraction): DwellBucket {
+  const t = blob(a);
+  if (a.category === "shopping" || MARKET_RX.test(t)) return "market";
+  if (a.category === "museum" || a.subcategory === "castle" || DEEP_RX.test(t)) return "deep";
+  if ((a.category === "historic" && /memorial|monument|ruins/.test(a.subcategory ?? "")) || PASSBY_RX.test(t)) return "passby";
+  return "standard";
+}
+export const dwellMinutes = (a: Attraction, cfg: DwellCfg = DWELL_DEFAULT): number => cfg[dwellBucket(a)];
+
 // Dark/heavy history (Nazism, Holocaust) — not a clean OSM category (usually tagged
 // "museum"/"historic"), so it needs a keyword trait. Lets a rule avoid it on family
 // trips without dropping good museums.

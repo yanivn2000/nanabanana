@@ -18,6 +18,7 @@
 import type { Attraction } from "./db";
 import type { Day } from "./trip-types";
 import { haversineKm, walkMinutes } from "./geo";
+import { DWELL_DEFAULT, dwellMinutes, type DwellCfg } from "./brain/traits";
 
 // A neighbourhood, trimmed to what day-labelling needs.
 export type AreaLite = {
@@ -55,16 +56,13 @@ export function annotateDaysWithAreas(
   }
 }
 
-const VISIT_DEFAULT = 75, VISIT_MIN = 40, VISIT_MAX = 150;
 const CANDIDATES_PER_DAY = 8;   // top-value places that seed the tour structure
 const FREE_DETOUR = 4;          // minutes off-path a "free gem" may sit (B)
 const FREE_MAX_PER_DAY = 3;     // don't drown a day in minor gems
 
-// How long the traveler spends AT a place (minutes), clamped to something sane.
-function visitMin(a: Attraction): number {
-  const d = a.duration_minutes ?? 0;
-  return d ? Math.max(VISIT_MIN, Math.min(VISIT_MAX, d)) : VISIT_DEFAULT;
-}
+// How long the traveler spends AT a place (minutes) — by what the place IS
+// (dwellMinutes), not OSM's unreliable duration. Config is a technique.
+const visitMin = (a: Attraction, dwell: DwellCfg = DWELL_DEFAULT): number => dwellMinutes(a, dwell);
 
 function walkBetween(a: Attraction, b: Attraction): number {
   return walkMinutes(haversineKm(a.lat as number, a.lng as number, b.lat as number, b.lng as number));
@@ -182,8 +180,9 @@ export type ClusterResult = { days: Attraction[][]; leftOut: Attraction[] };
 
 export function clusterIntoDays(
   poolIn: Attraction[], days: number,
-  opts: { walkPref?: number; dayMinutes?: number; seedGroups?: number[][]; freeMax?: number; freeDetour?: number; sameMeters?: number } = {}
+  opts: { walkPref?: number; dayMinutes?: number; seedGroups?: number[][]; freeMax?: number; freeDetour?: number; sameMeters?: number; dwell?: DwellCfg } = {}
 ): ClusterResult {
+  const dwell = opts.dwell ?? DWELL_DEFAULT;
   // usable = has coords, de-duped by name; input order IS the value ranking.
   const seen = new Set<string>();
   const pool = poolIn.filter((a) => a.lat != null && a.lng != null).filter((a) => {
@@ -210,7 +209,7 @@ export function clusterIntoDays(
         const x = byId.get(id);
         if (!x || placed.has(x.id)) continue;
         const dist = stops.length ? nearestMin(x, stops) : 0;
-        if (time + visitMin(x) + dist <= budget) { stops.push(x); time += visitMin(x) + dist; placed.add(x.id); }
+        if (time + visitMin(x, dwell) + dist <= budget) { stops.push(x); time += visitMin(x, dwell) + dist; placed.add(x.id); }
       }
       if (stops.length) groups.push({ stops, time });
     }
@@ -231,12 +230,12 @@ export function clusterIntoDays(
     let cur: Attraction[] = [], time = 0;
     for (const x of tour) {
       const leg = cur.length ? walkBetween(cur[cur.length - 1], x) : 0;
-      if (cur.length && time + visitMin(x) + leg > budget) {
+      if (cur.length && time + visitMin(x, dwell) + leg > budget) {
         groups.push({ stops: cur, time });
         cur = []; time = 0;
         if (groups.length >= days) break;   // out of days — the rest is peripheral
       }
-      cur.push(x); placed.add(x.id); time += visitMin(x) + (cur.length > 1 ? leg : 0);
+      cur.push(x); placed.add(x.id); time += visitMin(x, dwell) + (cur.length > 1 ? leg : 0);
     }
     if (cur.length && groups.length < days) groups.push({ stops: cur, time });
   }
@@ -252,10 +251,10 @@ export function clusterIntoDays(
       if (added >= freeMax) break;
       if (placed.has(x.id)) continue;
       const dist = nearestMin(x, g.stops);
-      if (dist <= freeDetour && !isDuplicate(x, g.stops) && g.time + visitMin(x) + dist <= budget) {
+      if (dist <= freeDetour && !isDuplicate(x, g.stops) && g.time + visitMin(x, dwell) + dist <= budget) {
         placed.add(x.id);
         g.stops.push(x);
-        g.time += visitMin(x) + dist;
+        g.time += visitMin(x, dwell) + dist;
         added++;
       }
     }

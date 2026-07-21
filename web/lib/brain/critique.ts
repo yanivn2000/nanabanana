@@ -8,7 +8,7 @@
 import type { Attraction } from "../db";
 import { dayWalkMinutes } from "../cluster";
 import { AUDIENCE_PREFS, DAY_WALK, PACE_STOPS, QUALITY_BAR, THRESHOLDS, WEIGHTS, audienceFitScore, type Audience } from "./policy";
-import { isActiveAnchor, isSoftFun, stopMatchesType } from "./traits";
+import { DWELL_DEFAULT, dwellMinutes, isActiveAnchor, isSoftFun, stopMatchesType } from "./traits";
 import type { BrainRules } from "./rules";
 
 export type Issue = { dim: string; severity: "critical" | "warn"; msg: string; day?: number };
@@ -25,8 +25,7 @@ const fit = (a: Attraction, aud: Audience) => audienceFitScore(a.audience_fit, a
 // Experience type — a semantic signal (universal/family/romantic/foodie/cultural/
 // outdoors…) far finer than the coarse OSM `category` for judging variety.
 const expType = (a: Attraction) => a.audience_fit?.type || a.category;
-// Minutes a stop takes (visit), matching the clusterer's model.
-const visitMin = (a: Attraction) => { const d = a.duration_minutes ?? 0; return d ? Math.max(40, Math.min(150, d)) : 75; };
+// Minutes a stop takes (visit), matching the clusterer's dwell model.
 
 export function critiqueTrip(
   days: Attraction[][], audience: Audience, ctx: { cityMustCount: number; rules?: BrainRules }
@@ -133,7 +132,8 @@ export function critiqueTrip(
   //    day and a spread 4-stop day can take the same hours — count-balance
   //    over-penalised the former).
   {
-    const times = days.map((d) => d.reduce((s, a) => s + visitMin(a), 0) + dayWalkMinutes(d));
+    const dwell = R?.dwell ?? DWELL_DEFAULT;
+    const times = days.map((d) => d.reduce((s, a) => s + dwellMinutes(a, dwell), 0) + dayWalkMinutes(d));
     const mean = times.reduce((s, n) => s + n, 0) / Math.max(1, times.length);
     const std = Math.sqrt(times.reduce((s, n) => s + (n - mean) ** 2, 0) / Math.max(1, times.length));
     dims.balance = clamp(100 - (std / THRESHOLDS.balanceTimeStdMax) * 100);

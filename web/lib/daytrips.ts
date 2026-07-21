@@ -7,10 +7,9 @@ import type { Attraction } from "./db";
 import type { Day, Stop, StopKind } from "./trip-types";
 import { haversineKm, durationHe, walkMinutes } from "./geo";
 import { dropSamePlace } from "./cluster";
-import { reorderDayEnders } from "./brain/traits";
+import { DWELL_DEFAULT, dwellMinutes, reorderDayEnders, type DwellCfg } from "./brain/traits";
 
 const fmtClock = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
-const visitMin = (a: Attraction, def: number) => { const d = a.duration_minutes ?? 0; return d ? Math.max(40, Math.min(150, d)) : def; };
 
 // A place is "in-city" (walk/short-transit) vs a car day-trip by distance from the
 // base centre. ~18km covers a metro + its immediate transit reach.
@@ -101,14 +100,14 @@ const KIND_FROM_CAT: Record<string, StopKind> = {
 // techniques via `sched`), offset by the drive out — no fixed slots.
 export function dayTripToDay(
   cl: DayTripCluster, base: string, dayNum: number, isFamily: boolean,
-  sched: { dayStartMin?: number; visitDefault?: number } = {}
+  sched: { dayStartMin?: number; dwell?: DwellCfg } = {}
 ): Day {
   const anchorName = cl.anchor.name_he || cl.anchor.name_en;
-  const visitDef = sched.visitDefault ?? 75;
+  const dwell = sched.dwell ?? DWELL_DEFAULT;
   let clock = (sched.dayStartMin ?? 9 * 60 + 30) + cl.driveMin;   // drive out first
   const stops: Stop[] = cl.stops.map((a, i) => {
     const time = fmtClock(clock);
-    clock += visitMin(a, visitDef);
+    clock += dwellMinutes(a, dwell);
     const next = cl.stops[i + 1];
     if (next && [a.lat, a.lng, next.lat, next.lng].every((v) => Number.isFinite(v)))
       clock += walkMinutes(haversineKm(a.lat as number, a.lng as number, next.lat as number, next.lng as number));
@@ -116,7 +115,7 @@ export function dayTripToDay(
       name: a.name_he || a.name_en,
       kind: KIND_FROM_CAT[a.category] ?? "culture",
       time,
-      duration: durationHe(a.duration_minutes),
+      duration: durationHe(dwellMinutes(a, dwell)),
       score: isFamily ? (a.family_score ?? undefined) : undefined,
       note: a.tips_he || a.tagline_he || undefined,
       id: a.id, lat: a.lat, lng: a.lng, image: a.image_url, tagline: a.tagline_he,

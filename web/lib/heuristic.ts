@@ -8,7 +8,7 @@ import { familyFit } from "./taste";
 import { clusterIntoDays, dayWalkMinutes, dropSamePlace } from "./cluster";
 import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget } from "./daytrips";
 import { durationHe, haversineKm, walkMinutes } from "./geo";
-import { isInSeason, reorderDayEnders, stopMatchesType } from "./brain/traits";
+import { DWELL_DEFAULT, dwellMinutes, isInSeason, reorderDayEnders, stopMatchesType, type DwellCfg } from "./brain/traits";
 
 // Resolved technique flags the builder honours (from brain_principles via
 // resolveBrainRules; all optional → defaults preserve prior behaviour).
@@ -22,7 +22,6 @@ export type BuildOpts = {
   dayStartMin?: number;
   lunchAfterMin?: number;
   lunchMinutes?: number;
-  visitDefault?: number;
   // Tier-2 structure — from daytrip_* / free_gems / same_place_km principles.
   daytripThresholdKm?: number;
   daytripPerDays?: number;
@@ -30,6 +29,8 @@ export type BuildOpts = {
   samePlaceMeters?: number;
   freeGemMaxPerDay?: number;
   freeGemDetourMin?: number;
+  // Dwell minutes per bucket (visit_minutes technique) — how long each stop takes.
+  dwell?: DwellCfg;
 };
 const isAvoided = (a: Attraction, avoid?: string[]) => !!avoid?.some((t) => stopMatchesType(a, t));
 // Drop stops beyond the per-day cap of a type (keeps the earlier = higher-value ones).
@@ -53,9 +54,6 @@ const DAY_START_MIN = 9 * 60 + 30;   // 09:30
 const LUNCH_AFTER_MIN = 12 * 60;     // drop the meal break at the first stop past 12:00
 const LUNCH_MIN = 60;
 const fmtClock = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
-// Minutes spent AT a place (visit): the DB value clamped, or the default (a
-// technique — visit_default) when unknown.
-const visitMinutes = (a: Attraction, def = 75) => { const d = a.duration_minutes ?? 0; return d ? Math.max(40, Math.min(150, d)) : def; };
 const travelMinutes = (a: Attraction, b: Attraction) =>
   Number.isFinite(a.lat) && Number.isFinite(a.lng) && Number.isFinite(b.lat) && Number.isFinite(b.lng)
     ? walkMinutes(haversineKm(a.lat as number, a.lng as number, b.lat as number, b.lng as number)) : 10;
@@ -91,8 +89,9 @@ export function buildHeuristicItinerary(
   // scatters each day across the city), group geographically so every day is a
   // walkable neighbourhood. seedGroups (chosen-neighbourhood tour) force one day
   // per area. The per-day budget is derived from the pace.
+  const dwell = opts?.dwell ?? DWELL_DEFAULT;
   const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes: perDay * 84, seedGroups,
-    freeMax: opts?.freeGemMaxPerDay, freeDetour: opts?.freeGemDetourMin });
+    freeMax: opts?.freeGemMaxPerDay, freeDetour: opts?.freeGemDetourMin, dwell });
 
   const dayList = clustered.map((picksRaw, d) => {
     // per-day techniques: drop same-place dups, cap types (e.g. ≤2 museums/day),
@@ -118,14 +117,14 @@ export function buildHeuristicItinerary(
         name: a.name_he || a.name_en,
         kind: kindOf(a),
         time: fmtClock(clock),
-        duration: durationHe(a.duration_minutes),
+        duration: durationHe(dwellMinutes(a, dwell)),
         score: isFamily ? (a.family_score ?? undefined) : undefined,
         note: a.tips_he || descriptor(a),
         // carry coords/id so between-stop travel legs + map pins work without
         // depending on a later attachDetails pass (e.g. saved modules).
         id: a.id, lat: a.lat, lng: a.lng, image: a.image_url, tagline: a.tagline_he,
       });
-      clock += visitMinutes(a, opts?.visitDefault ?? 75);
+      clock += dwellMinutes(a, dwell);
       if (i < picks.length - 1) clock += travelMinutes(a, picks[i + 1]);
     });
 
@@ -180,7 +179,7 @@ export function buildCarBaseItinerary(
 
   const cityItin = buildHeuristicItinerary(city, country, cityDays, inCity, isFamily, perDay, walkPref, undefined, opts);
   const tripDayObjs = clusters.slice(0, tripDays).map((cl, i) =>
-    dayTripToDay(cl, city, cityDays + i + 1, isFamily, { dayStartMin: opts?.dayStartMin, visitDefault: opts?.visitDefault }));
+    dayTripToDay(cl, city, cityDays + i + 1, isFamily, { dayStartMin: opts?.dayStartMin, dwell: opts?.dwell ?? DWELL_DEFAULT }));
 
   // A car_base trip is a rental-car trip throughout: mark every day so between-stop
   // legs read as driving, not public transit.
