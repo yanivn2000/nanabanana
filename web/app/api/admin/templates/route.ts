@@ -18,13 +18,13 @@ export async function POST(req: NextRequest) {
   if (!b || !b.title_he || !b.itinerary || typeof b.days !== "number") {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });
   }
-  const id = await saveTripTemplate({
+  const { id, ref } = await saveTripTemplate({
     destination_id: b.destination_id ?? null, region: b.region ?? null,
     title_he: b.title_he, audience: b.audience ?? null, days: b.days,
     itinerary: b.itinerary, source_urls: b.source_urls ?? [], notes: b.notes ?? null,
     approved: b.approved ?? true, created_by: email,
   });
-  return NextResponse.json({ ok: true, id });
+  return NextResponse.json({ ok: true, id, ref });
 }
 
 export async function DELETE(req: NextRequest) {

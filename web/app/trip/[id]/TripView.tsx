@@ -43,6 +43,7 @@ import { PackingList } from "@/components/PackingList";
 import { TravelChecklist } from "@/components/TravelChecklist";
 import { BudgetPanel } from "@/components/BudgetPanel";
 import { Hotels } from "@/app/trips/Hotels";
+import { EditorTools } from "./EditorTools";
 import { MapClient } from "@/components/MapClient";
 import { AskBar } from "./AskBar";
 
@@ -442,6 +443,7 @@ export function TripView({ tripId }: { tripId: string }) {
             <ShareTrip trip={trip} profile={tripProfile}
               onShared={(shared) => update(tripId, { shared })} />
           )}
+          {trip && <EditorTools trip={trip} itinerary={itinerary} />}
         </div>
       </div>
 

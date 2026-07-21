@@ -1,19 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Download, ThumbsUp, ThumbsDown, Map as MapIcon, Save, Trash2, Blocks } from "lucide-react";
+import { Loader2, ThumbsUp, ThumbsDown, Map as MapIcon, Trash2, Blocks } from "lucide-react";
 import type { AdminDestination } from "@/lib/db";
 import type { Itinerary } from "@/lib/trip-types";
 import { useTrips } from "@/lib/store";
 
-// Israeli travel sources that ground the Salzburg region module (masa.co.il).
-const SALZBURG_SOURCES = [
-  "https://www.masa.co.il/article/טיול-בזלצבורג-והסביבה-כמה-ירוק-ככה-מתו/",
-  "https://www.masa.co.il/article/זלצבורג-עשרת-הגדולים/",
-  "https://www.masa.co.il/article/חבל-טירול-וזלצבורג-עם-ילדים/",
-];
 type Module = {
-  id: string; region: string | null; title_he: string; audience: string | null;
+  id: string; ref: number; region: string | null; title_he: string; audience: string | null;
   days: number; city: string | null; city_he: string | null; country: string | null;
   destination_id: number | null; itinerary: Itinerary; approved: boolean; source_urls: string[];
 };
@@ -47,7 +41,6 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
   const [data, setData] = useState<Report | null>(null);
   const [fb, setFb] = useState<Record<string, Feedback>>({});
   const [modules, setModules] = useState<Module[]>([]);
-  const [savingMod, setSavingMod] = useState<string | null>(null);
 
   const loadModules = async () => {
     const res = await fetch("/api/admin/templates");
@@ -55,23 +48,6 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
   };
   useEffect(() => { void loadModules(); }, []);
 
-  // Save this built trip as a reusable, approved regional module ("משבצת") that can
-  // later be composed into a multi-city trip. Grounded in the masa sources per city.
-  const saveModule = async (t: Trip) => {
-    setSavingMod(key(t));
-    try {
-      const res = await fetch("/api/admin/templates", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          destination_id: t.cityId, region: `${t.city} והסביבה`,
-          title_he: `${t.city} · ${AUD_HE[t.audience]} · ${t.days} ימים`,
-          audience: t.audience, days: t.days, itinerary: t.itinerary, approved: true,
-          source_urls: t.cityEn === "Salzburg" ? SALZBURG_SOURCES : [],
-        }),
-      });
-      if (res.ok) await loadModules();
-    } finally { setSavingMod(null); }
-  };
   const delModule = async (id: string) => {
     if (!confirm("למחוק את המשבצת?")) return;
     const res = await fetch(`/api/admin/templates?id=${id}`, { method: "DELETE" });
@@ -105,21 +81,6 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
     } finally { setLoading(false); }
   }
 
-  const download = () => {
-    if (!data) return;
-    const out = {
-      brain_version: data.summary.version, days,
-      note: "Brain self-eval + editor feedback — hand this to Claude Code to calibrate lib/brain/policy.ts.",
-      summary: data.summary,
-      // drop the heavy itinerary from the calibration report — keep names + critique.
-      trips: data.report.map(({ itinerary, ...t }) => ({ ...t, editor: fb[`${t.cityId}:${t.audience}`] ?? {} })),
-    };
-    const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = `brain-report-v${data.summary.version}.json`; a.click();
-    URL.revokeObjectURL(a.href);
-  };
-
   // Open the Brain's exact trip as a real trip page (map + walking legs + areas) —
   // the only way to judge closeness/flow if you don't know the city by heart.
   const openTrip = (t: Trip) => {
@@ -152,11 +113,7 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
           className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-1.5 text-[13.5px] font-medium text-white disabled:opacity-60">
           {loading ? <Loader2 size={14} className="animate-spin" /> : "🧠"} הרץ בדיקה עצמית
         </button>
-        {data && (
-          <button onClick={download} className="ms-auto flex items-center gap-1.5 rounded-full border border-[var(--brand)] px-4 py-1.5 text-[13.5px] font-medium text-[var(--brand-ink)]">
-            <Download size={14} /> הורד דוח לכיול
-          </button>
-        )}
+        <span className="ms-auto text-[12.5px] text-[var(--text-3)]">כיול, שמירה כמשבצת והערות למוח — מתוך <b>דף הטיול</b> (כפתור ״דף טיול״).</span>
       </div>
 
       {data && (
@@ -181,11 +138,7 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
                   <span className="text-[12.5px] text-[var(--text-3)]">{AUD_HE[t.audience]}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => saveModule(t)} disabled={savingMod === key(t)} title="שמור כמשבצת מאושרת לספרייה"
-                    className="flex items-center gap-1 rounded-full border border-[var(--accent,#c8654a)] px-2.5 py-1 text-[12px] font-medium text-[var(--accent-ink,#8a3d2a)] transition hover:bg-[var(--accent-soft)] disabled:opacity-50">
-                    {savingMod === key(t) ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} משבצת
-                  </button>
-                  <button onClick={() => openTrip(t)} title="פתח כדף טיול עם מפה"
+                  <button onClick={() => openTrip(t)} title="פתח כדף טיול — שם מכיילים, שומרים כמשבצת ומעירים למוח"
                     className="flex items-center gap-1 rounded-full border border-[var(--brand)] px-2.5 py-1 text-[12px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
                     <MapIcon size={12} /> דף טיול
                   </button>
@@ -261,11 +214,12 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
           <span className="text-[12.5px] text-[var(--text-3)]">בלוקים אזוריים מאושרים להרכבה בטיול — {modules.length}</span>
         </div>
         {modules.length === 0 ? (
-          <p className="text-[12.5px] text-[var(--text-3)]">עדיין אין משבצות. הריצו בדיקה, ובכל טיול טוב לחצו “משבצת” כדי לשמור אותו כבלוק מאושר.</p>
+          <p className="text-[12.5px] text-[var(--text-3)]">עדיין אין משבצות. פִּתחו טיול כ״דף טיול״, כיילו, ולחצו ״שמור כמשבצת״ בדף הטיול.</p>
         ) : (
           <div className="flex flex-col gap-1.5">
             {modules.map((m) => (
               <div key={m.id} className="flex items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]">
+                <span className="shrink-0 rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[11.5px] font-bold text-[var(--text-2)]" title="מספר משבצת לשיתוף">#{m.ref}</span>
                 <button onClick={() => openModule(m)} title="פתח כמסלול טיול (תצוגת לקוח, עם מפה)"
                   className="flex min-w-0 flex-1 items-center gap-2 text-right transition hover:text-[var(--brand-ink)]">
                   {m.approved && <span className="rounded-full bg-[var(--brand-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--brand-ink)]">מאושר</span>}

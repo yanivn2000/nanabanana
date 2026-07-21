@@ -476,7 +476,7 @@ export async function updateDestination(id: number, fields: Record<string, unkno
 
 // --- Trip modules ("משבצות"): reusable editor-approved regional blocks --------
 export type TripTemplate = {
-  id: string; destination_id: number | null; region: string | null;
+  id: string; ref: number; destination_id: number | null; region: string | null;
   title_he: string; audience: string | null; days: number;
   itinerary: Itinerary; source_urls: string[]; notes: string | null;
   approved: boolean; created_by: string | null; created_at: string;
@@ -487,14 +487,39 @@ export async function saveTripTemplate(t: {
   destination_id: number | null; region?: string | null; title_he: string;
   audience?: string | null; days: number; itinerary: Itinerary;
   source_urls?: string[]; notes?: string | null; approved?: boolean; created_by?: string | null;
-}): Promise<string> {
-  const rows = await query<{ id: string }>(
+}): Promise<{ id: string; ref: number }> {
+  const rows = await query<{ id: string; ref: number }>(
     `INSERT INTO trip_templates
        (destination_id, region, title_he, audience, days, itinerary, source_urls, notes, approved, created_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id, ref`,
     [t.destination_id, t.region ?? null, t.title_he, t.audience ?? null, t.days,
      JSON.stringify(t.itinerary), t.source_urls ?? [], t.notes ?? null, t.approved ?? false, t.created_by ?? null]);
+  return rows[0];
+}
+
+// --- Editor "notes to the Brain" — the build-policy digestion queue -----------
+export type BrainNote = {
+  id: number; destination_id: number | null; trip_ref: string | null;
+  scope: string; note: string; status: string; created_by: string | null;
+  created_at: string; digested_at: string | null; city?: string | null;
+};
+export async function saveBrainNote(n: {
+  destination_id: number | null; trip_ref?: string | null; scope?: string; note: string; created_by?: string | null;
+}): Promise<number> {
+  const rows = await query<{ id: number }>(
+    `INSERT INTO brain_notes (destination_id, trip_ref, scope, note, created_by)
+     VALUES ($1,$2,$3,$4,$5) RETURNING id`,
+    [n.destination_id, n.trip_ref ?? null, n.scope ?? "city", n.note, n.created_by ?? null]);
   return rows[0].id;
+}
+export async function listBrainNotes(status?: string): Promise<BrainNote[]> {
+  return query<BrainNote>(
+    `SELECT b.*, d.city FROM brain_notes b LEFT JOIN destinations d ON d.id = b.destination_id
+     ${status ? "WHERE b.status = $1" : ""} ORDER BY b.created_at DESC`, status ? [status] : []);
+}
+export async function countQueuedBrainNotes(): Promise<number> {
+  const r = await query<{ n: number }>(`SELECT count(*)::int AS n FROM brain_notes WHERE status='queued'`);
+  return r[0]?.n ?? 0;
 }
 
 // Admin: all modules (with city name) newest-first. approvedOnly for the composer.
