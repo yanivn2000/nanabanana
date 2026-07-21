@@ -105,14 +105,24 @@ export function dropSamePlace(day: Attraction[], minMeters = 90): Attraction[] {
 // stays safe: genuinely distinct-but-adjacent sights (Tower + Tower Bridge ~350m,
 // Upper + Lower Belvedere ~500m) sit outside the radius and both survive. Keeps the
 // higher-worth entry (the whole "Tower of London" beats "White Tower").
+// Token-sorted name key so word-order variants of one place ("St James Park" /
+// "Park St James") collapse to the same key.
+const normName = (a: Attraction) => (a.name_he || a.name_en || "")
+  .toLowerCase().replace(/^ה/, "").split(/\s+/).filter(Boolean).sort().join(" ");
 export function dedupeAcrossDays(days: Attraction[][], minMeters = 120): Attraction[][] {
-  const kept: { a: Attraction; d: number; i: number }[] = [];
+  const kept: { a: Attraction; d: number; i: number; n: string }[] = [];
   const out: Attraction[][] = days.map(() => []);
   days.forEach((day, di) => {
     for (const a of day) {
       if (!Number.isFinite(a.lat) || !Number.isFinite(a.lng)) { out[di].push(a); continue; }
-      const hit = kept.find((k) => haversineKm(a.lat as number, a.lng as number, k.a.lat as number, k.a.lng as number) * 1000 < minMeters);
-      if (!hit) { out[di].push(a); kept.push({ a, d: di, i: out[di].length - 1 }); }
+      const nm = normName(a);
+      const hit = kept.find((k) => {
+        const m = haversineKm(a.lat as number, a.lng as number, k.a.lat as number, k.a.lng as number) * 1000;
+        // same spot, OR the SAME named place mapped at two far nodes (a big park's
+        // ends) that would otherwise show up on two different days.
+        return m < minMeters || (nm.length >= 3 && nm === k.n && m < 1500);
+      });
+      if (!hit) { out[di].push(a); kept.push({ a, d: di, i: out[di].length - 1, n: nm }); }
       else if (stopWorth(a) > stopWorth(hit.a)) { out[hit.d][hit.i] = a; hit.a = a; } // upgrade in place, drop this one
       // else: silently drop the duplicate
     }
