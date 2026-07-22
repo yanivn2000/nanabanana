@@ -1000,8 +1000,9 @@ export function TripView({ tripId }: { tripId: string }) {
                 </div>
                 {arrangeBar}
 
-                {/* legend — a collapsible floating card tying numbers to names */}
-                {stopPoints.length > 0 && (
+                {/* legend — a collapsible floating card tying numbers to names. Hidden
+                    while editing on the map (pending marks) so it can't cover markers. */}
+                {stopPoints.length > 0 && pendingCount === 0 && (
                   <div className="absolute bottom-3 left-3 z-[1000] w-[210px] overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)] shadow-[var(--shadow)]"
                        style={{ background: "var(--surface)" }}>
                     <button onClick={() => setLegendOpen((o) => !o)}
