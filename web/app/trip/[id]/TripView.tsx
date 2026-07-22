@@ -83,6 +83,12 @@ function StopIcon({ kind }: { kind: Stop["kind"] }) {
   );
 }
 
+// AI is off for the commercial launch (server kill-switch). Mirror that on the
+// client so the "שדרגו עם AI" button only appears when AI can actually run —
+// otherwise it just re-runs the same deterministic build. Flip both
+// NEXT_PUBLIC_AI_ENABLED (client) and AI_ENABLED (server) to re-enable.
+const AI_ENABLED = process.env.NEXT_PUBLIC_AI_ENABLED === "true";
+
 export function TripView({ tripId }: { tripId: string }) {
   const { trips, update, loaded } = useTrips();
   const [globalProfile] = useProfile();
@@ -522,7 +528,10 @@ export function TripView({ tripId }: { tripId: string }) {
             {busy === "generate" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
             {busy === "generate" ? "בונה…" : itinerary ? "בנה מחדש" : "בנה לו\"ז"}
           </button>
-          {itinerary && trip?.engine !== "ai" && (
+          {/* AI upgrade — hidden unless AI is explicitly enabled. With the kill-switch
+              off (default) it would just re-run the same deterministic build, so
+              showing it is misleading. Flip NEXT_PUBLIC_AI_ENABLED=true to re-enable. */}
+          {AI_ENABLED && itinerary && trip?.engine !== "ai" && (
             <button onClick={() => generate(true)} disabled={!!busy} title="תכנון חכם יותר עם AI — סידור, נרטיב ותובנות מטיילים"
               className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--accent)] bg-[var(--accent-soft)] px-3.5 py-1.5 text-[13.5px] font-medium text-[var(--accent-ink)] disabled:opacity-50">
               <Sparkles size={14} /> שדרגו עם AI
