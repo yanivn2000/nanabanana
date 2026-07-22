@@ -277,6 +277,24 @@ export function clusterIntoDays(
     }
   }
 
+  // C — fill thin days: a day left with too few stops (a lone far outlier like
+  // Richmond Park) pulls its nearest UN-placed neighbours — even a longer hop the
+  // free-gem detour can't reach — so it becomes a real day (Richmond + Kew) instead
+  // of a 1-stop stub while worthy picks sit unplaced.
+  const MIN_STOPS = 3;
+  const nearestKm = (a: Attraction, stops: Attraction[]) =>
+    Math.min(...stops.map((s) => haversineKm(a.lat as number, a.lng as number, s.lat as number, s.lng as number)));
+  for (const g of groups) {
+    // pull nearest-to-ANY-stop un-placed picks (so a lone far stop grabs its own
+    // neighbours — Kew ~4km from Richmond — not something near the day's midpoint).
+    while (g.stops.length < MIN_STOPS) {
+      const cand = pool.filter((a) => !placed.has(a.id) && Number.isFinite(a.lat) && Number.isFinite(a.lng))
+        .map((a) => ({ a, d: nearestKm(a, g.stops) })).filter((x) => x.d <= 7).sort((x, y) => x.d - y.d)[0];
+      if (!cand) break;                       // genuinely isolated — leave it
+      g.stops.push(cand.a); placed.add(cand.a.id);
+    }
+  }
+
   const ordered = groups.map((g) => orderPath(g.stops)).filter((d) => d.length > 0);
   // Final safety net: collapse same-place / one-complex fragments across the whole
   // trip (name-exact dedup above misses "Louvre pyramid" vs "The Louvre's pyramid").
