@@ -281,7 +281,9 @@ export function clusterIntoDays(
   // Richmond Park) pulls its nearest UN-placed neighbours — even a longer hop the
   // free-gem detour can't reach — so it becomes a real day (Richmond + Kew) instead
   // of a 1-stop stub while worthy picks sit unplaced.
-  const MIN_STOPS = 3;
+  // (Skip when the traveller chose explicit neighbourhoods — a chosen-area day must
+  // stay within its area, not borrow a far stop from another neighbourhood.)
+  const MIN_STOPS = opts.seedGroups?.length ? 0 : 3;
   const nearestKm = (a: Attraction, stops: Attraction[]) =>
     Math.min(...stops.map((s) => haversineKm(a.lat as number, a.lng as number, s.lat as number, s.lng as number)));
   for (const g of groups) {

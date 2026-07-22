@@ -342,6 +342,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ itinerary: attachDetails(r.itinerary, attractions), engine: "heuristic", ...(r.note ? { note: r.note } : {}) });
   }
 
+  // Chosen-neighbourhood tour — DETERMINISTIC and must take priority: the traveller
+  // picked areas, so build one guaranteed day per area (seedGroups). Placed BEFORE the
+  // AI-vs-heuristic branching so it isn't swallowed by the no-AI generic fallback.
+  if (body.mode !== "revise" && body.areaGroups?.length) {
+    return respondGenerate(
+      buildHeuristicItinerary(dest.city, dest.country, body.areaGroups.length, buildList,
+        isFamily, perDay, body.walkPref ?? 3, body.areaGroups), "neighbourhoods");
+  }
+
   // Generate works without a key via the heuristic builder; AI upgrades it.
   // buildList puts anchors first so the heuristic schedules them first too.
   if (body.mode !== "revise" && !aiConfigured()) {
@@ -362,15 +371,6 @@ export async function POST(req: NextRequest) {
       const code = /credit balance/i.test(msg) ? "no_credit" : undefined;
       return NextResponse.json({ error: msg, code }, { status: 500 });
     }
-  }
-
-  // Chosen-neighbourhood tour: the traveller picked areas to tour, so build one
-  // guaranteed day per area (deterministic — the neighbourhoods define the days,
-  // no dense area can swallow another). Skips the AI on purpose.
-  if (body.areaGroups?.length) {
-    return respondGenerate(
-      buildHeuristicItinerary(dest.city, dest.country, body.areaGroups.length, buildList,
-        isFamily, perDay, body.walkPref ?? 3, body.areaGroups), "neighbourhoods");
   }
 
   // DEFAULT: free, instant heuristic build (clustered days + distances + areas).
