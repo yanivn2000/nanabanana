@@ -96,3 +96,28 @@ export function reorderDayEnders(day: Attraction[]): Attraction[] {
   const enders = day.filter((a) => isDayEnder(a));
   return [...rest, ...enders];
 }
+
+// Time-of-day fit from the place's own advice (best_time_he / tips). A place tagged
+// ONLY morning (sunrise view, "הגיעו מוקדם", morning market) wants the start of the
+// day; ONLY evening/night (bars, sunset point, night market) wants the end. Anything
+// good at BOTH or neither is FLEXIBLE ("any") — a square that's shops by day and bars
+// by night imposes no order, geography decides.
+// Only GENUINELY time-exclusive signals — a generic "arrive early to beat the queues"
+// tip (on nearly every popular sight) is NOT morning-exclusivity, so it's excluded.
+const MORNING_RX = /זריחה|עלות השחר|טרם עלות השחר|שוק בוקר|מוקדם בבוקר|sunrise|\bdawn\b|early morning|morning market/i;
+// Bare "ערב" is avoided (it also matches מערב=west); require an evening word form.
+const EVENING_RX = /שקיעה|בערב|לערב|בשעות הערב|שעות הערב|בין הערביים|בלילה|חיי לילה|מועדון|ברים|פאב|נייטלייף|שוק לילה|sunset|\bevening\b|\bnight\b|nightlife|night market/i;
+export type TimeBucket = "morning" | "any" | "evening";
+export function bestTimeBucket(a: Attraction): TimeBucket {
+  const t = `${a.best_time_he ?? ""} ${a.tips_he ?? ""}`.toLowerCase();
+  const m = MORNING_RX.test(t), e = EVENING_RX.test(t);
+  if (m && !e) return "morning";
+  if (e && !m) return "evening";
+  return "any";  // both, or (usually) neither → flexible, geography decides
+}
+const timeRank = (a: Attraction) => { const b = bestTimeBucket(a); return b === "morning" ? 0 : b === "evening" ? 2 : 1; };
+// Stable reorder within a day: morning-only stops to the front, evening-only to the
+// back, geography order preserved for everything in between (and within each bucket).
+export function reorderByTimeOfDay(day: Attraction[]): Attraction[] {
+  return day.map((a, i) => ({ a, i })).sort((x, y) => timeRank(x.a) - timeRank(y.a) || x.i - y.i).map((z) => z.a);
+}

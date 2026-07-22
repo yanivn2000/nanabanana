@@ -8,7 +8,7 @@ import { familyFit } from "./taste";
 import { clusterIntoDays, dayWalkMinutes, dropSamePlace } from "./cluster";
 import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget } from "./daytrips";
 import { durationHe, haversineKm, walkMinutes } from "./geo";
-import { DWELL_DEFAULT, dwellMinutes, isInSeason, reorderDayEnders, stopMatchesType, type DwellCfg } from "./brain/traits";
+import { DWELL_DEFAULT, dwellMinutes, isInSeason, reorderByTimeOfDay, reorderDayEnders, stopMatchesType, type DwellCfg } from "./brain/traits";
 
 // Resolved technique flags the builder honours (from brain_principles via
 // resolveBrainRules; all optional → defaults preserve prior behaviour).
@@ -98,6 +98,9 @@ export function buildHeuristicItinerary(
     // then push day-enders (water/adventure) to the end (all from the principles).
     let picks = capTypePerDay(dropSamePlace(picksRaw, opts?.samePlaceMeters), opts?.maxTypePerDay);
     if (opts?.dayEnderLast !== false) picks = reorderDayEnders(picks);
+    // Respect each place's own timing advice: morning-only stops first, evening/night
+    // ones last, geography in between (stable, so it only moves the time-exclusive few).
+    picks = reorderByTimeOfDay(picks);
     const stops: Stop[] = [];
     // Sequential clock: arrival = running time, then add the stay + travel to the
     // next stop, so times always increase and reflect real durations. The lunch
