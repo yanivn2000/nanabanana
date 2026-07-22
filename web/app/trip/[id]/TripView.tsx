@@ -813,10 +813,10 @@ export function TripView({ tripId }: { tripId: string }) {
                          onMouseEnter={() => ci != null && setActive(ci)}
                          onMouseLeave={() => setActive(null)}
                          onClick={() => hasDetails && setExpanded(isOpen ? null : key)}>
-                      {/* leading controls — both appear on row hover: grip to drag-reorder
-                          at the top, and a quick delete pushed to the bottom so the two
-                          targets are well separated (delete is destructive). */}
-                      <div className="flex flex-col items-center justify-between self-stretch py-2.5 opacity-0 transition-opacity group-hover/row:opacity-100">
+                      {/* leading controls — both appear on row hover, side by side with a
+                          gap between them: grip to drag-reorder, and a quick delete (the
+                          gap keeps the destructive action from being an easy misclick). */}
+                      <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover/row:opacity-100">
                         <span
                           draggable
                           onDragStart={(e) => { setDragSi(si); e.dataTransfer.effectAllowed = "move"; }}
