@@ -244,6 +244,7 @@ export async function POST(req: NextRequest) {
     month: body.month, seasonFilter: rules.seasonFilter, dayEnderLast: rules.dayEnderLast,
     maxTypePerDay: rules.maxTypePerDay, avoidCats: isFamily ? rules.avoid.families : rules.avoid.adults,
     dayStartMin: rules.dayStartMin, lunchAfterMin: rules.lunchAfterMin, lunchMinutes: rules.lunchMinutes, dwell: rules.dwell,
+    center: { lat: dest.lat, lng: dest.lng },
     daytripThresholdKm: rules.daytripThresholdKm, daytripPerDays: rules.daytripPerDays, daytripMaxStops: rules.daytripMaxStops,
     samePlaceMeters: rules.samePlaceMeters, freeGemMaxPerDay: rules.freeGemMaxPerDay, freeGemDetourMin: rules.freeGemDetourMin,
   };
@@ -348,7 +349,7 @@ export async function POST(req: NextRequest) {
   if (body.mode !== "revise" && body.areaGroups?.length) {
     return respondGenerate(
       buildHeuristicItinerary(dest.city, dest.country, body.areaGroups.length, buildList,
-        isFamily, perDay, body.walkPref ?? 3, body.areaGroups), "neighbourhoods");
+        isFamily, perDay, body.walkPref ?? 3, body.areaGroups, buildOpts), "neighbourhoods");
   }
 
   // Generate works without a key via the heuristic builder; AI upgrades it.

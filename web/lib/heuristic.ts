@@ -31,6 +31,9 @@ export type BuildOpts = {
   freeGemDetourMin?: number;
   // Dwell minutes per bucket (visit_minutes technique) — how long each stop takes.
   dwell?: DwellCfg;
+  // City centre — lets a chosen far neighbourhood that's only a half-day get its
+  // afternoon filled with central stops ("morning far, metro back to centre").
+  center?: { lat: number; lng: number };
 };
 const isAvoided = (a: Attraction, avoid?: string[]) => !!avoid?.some((t) => stopMatchesType(a, t));
 // Drop stops beyond the per-day cap of a type (keeps the earlier = higher-value ones).
@@ -54,9 +57,15 @@ const DAY_START_MIN = 9 * 60 + 30;   // 09:30
 const LUNCH_AFTER_MIN = 12 * 60;     // drop the meal break at the first stop past 12:00
 const LUNCH_MIN = 60;
 const fmtClock = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
-const travelMinutes = (a: Attraction, b: Attraction) =>
-  Number.isFinite(a.lat) && Number.isFinite(a.lng) && Number.isFinite(b.lat) && Number.isFinite(b.lng)
-    ? walkMinutes(haversineKm(a.lat as number, a.lng as number, b.lat as number, b.lng as number)) : 10;
+// Time between stops: walk for short hops, but public transit for long ones (you
+// don't WALK 12km back from Richmond — you take the tube ~45min, not ~3h).
+const travelMinutes = (a: Attraction, b: Attraction) => {
+  if (!(Number.isFinite(a.lat) && Number.isFinite(a.lng) && Number.isFinite(b.lat) && Number.isFinite(b.lng))) return 10;
+  const km = haversineKm(a.lat as number, a.lng as number, b.lat as number, b.lng as number);
+  const walk = walkMinutes(km);
+  const transit = km <= 1 ? walk : 12 + (km / 22) * 60;   // access + wait + ~22km/h ride
+  return Math.round(Math.min(walk, transit));
+};
 
 function kindOf(a: Attraction): StopKind {
   return KIND_FROM_CAT[a.category] ?? "culture";
@@ -91,7 +100,7 @@ export function buildHeuristicItinerary(
   // per area. The per-day budget is derived from the pace.
   const dwell = opts?.dwell ?? DWELL_DEFAULT;
   const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes: perDay * 84, perDay, seedGroups,
-    freeMax: opts?.freeGemMaxPerDay, freeDetour: opts?.freeGemDetourMin, dwell });
+    freeMax: opts?.freeGemMaxPerDay, freeDetour: opts?.freeGemDetourMin, dwell, center: opts?.center });
 
   const dayList = clustered.map((picksRaw, d) => {
     // per-day techniques: drop same-place dups, cap types (e.g. ≤2 museums/day),

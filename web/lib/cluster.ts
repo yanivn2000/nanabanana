@@ -189,7 +189,7 @@ export type ClusterResult = { days: Attraction[][]; leftOut: Attraction[] };
 
 export function clusterIntoDays(
   poolIn: Attraction[], days: number,
-  opts: { walkPref?: number; dayMinutes?: number; perDay?: number; seedGroups?: number[][]; freeMax?: number; freeDetour?: number; sameMeters?: number; dwell?: DwellCfg } = {}
+  opts: { walkPref?: number; dayMinutes?: number; perDay?: number; seedGroups?: number[][]; freeMax?: number; freeDetour?: number; sameMeters?: number; dwell?: DwellCfg; center?: { lat: number; lng: number } } = {}
 ): ClusterResult {
   const dwell = opts.dwell ?? DWELL_DEFAULT;
   // usable = has coords, de-duped by name; input order IS the value ranking.
@@ -294,6 +294,31 @@ export function clusterIntoDays(
         .map((a) => ({ a, d: nearestKm(a, g.stops) })).filter((x) => x.d <= 7).sort((x, y) => x.d - y.d)[0];
       if (!cand) break;                       // genuinely isolated — leave it
       g.stops.push(cand.a); placed.add(cand.a.id);
+    }
+  }
+
+  // D — far neighbourhood → half-day + centre afternoon: a CHOSEN far area
+  // (Greenwich) that only fills part of a day tops up its afternoon with worthy
+  // stops near the CENTRE, so the day reads "morning far → metro back → central
+  // afternoon" instead of a thin far-only day. Only for chosen-neighbourhood builds.
+  if (opts.seedGroups?.length && opts.center) {
+    const { lat: cLat, lng: cLng } = opts.center;
+    const perDay = Math.max(4, opts.perDay ?? Math.round(budget / 78));
+    for (const g of groups) {
+      if (!g.stops.length) continue;
+      const gLat = g.stops.reduce((s, a) => s + (a.lat as number), 0) / g.stops.length;
+      const gLng = g.stops.reduce((s, a) => s + (a.lng as number), 0) / g.stops.length;
+      const content = g.stops.reduce((s, a) => s + visitMin(a, dwell), 0);
+      // far from centre AND under ~60% of the day's time budget → half-day, fill it.
+      if (haversineKm(cLat, cLng, gLat, gLng) <= 6 || content >= budget * 0.6 || g.stops.length >= perDay) continue;
+      const central = pool.filter((a) => !placed.has(a.id) && Number.isFinite(a.lat) && Number.isFinite(a.lng))
+        .map((a) => ({ a, dc: haversineKm(cLat, cLng, a.lat as number, a.lng as number) }))
+        .filter((x) => x.dc <= 5).sort((x, y) => stopWorth(y.a) - stopWorth(x.a) || x.dc - y.dc);
+      let t = content;
+      for (const { a } of central) {
+        if (g.stops.length >= perDay || t >= budget) break;
+        g.stops.push(a); placed.add(a.id); t += visitMin(a, dwell);
+      }
     }
   }
 
