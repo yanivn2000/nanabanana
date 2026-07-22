@@ -813,21 +813,22 @@ export function TripView({ tripId }: { tripId: string }) {
                          onMouseEnter={() => ci != null && setActive(ci)}
                          onMouseLeave={() => setActive(null)}
                          onClick={() => hasDetails && setExpanded(isOpen ? null : key)}>
-                      {/* leading controls — both appear on row hover: grip to drag-reorder,
-                          and a quick delete. */}
-                      <div className="flex flex-col items-center justify-center gap-0.5 opacity-0 transition-opacity group-hover/row:opacity-100">
+                      {/* leading controls — both appear on row hover: grip to drag-reorder
+                          at the top, and a quick delete pushed to the bottom so the two
+                          targets are well separated (delete is destructive). */}
+                      <div className="flex flex-col items-center justify-between self-stretch py-2.5 opacity-0 transition-opacity group-hover/row:opacity-100">
                         <span
                           draggable
                           onDragStart={(e) => { setDragSi(si); e.dataTransfer.effectAllowed = "move"; }}
                           onDragEnd={() => { setDragSi(null); setDragOverSi(null); }}
                           onClick={(e) => e.stopPropagation()}
-                          className="cursor-grab text-[var(--text-3)] active:cursor-grabbing" title="גררו כדי לשנות סדר">
+                          className="grid size-6 cursor-grab place-items-center text-[var(--text-3)] active:cursor-grabbing" title="גררו כדי לשנות סדר">
                           <GripVertical size={16} />
                         </span>
                         <button
                           onClick={(e) => { e.stopPropagation(); deleteStop(curIdx, si); }}
                           title="מחק עצירה" aria-label="מחק עצירה"
-                          className="text-[var(--text-3)] transition-colors hover:text-[var(--danger,#dc2626)]">
+                          className="grid size-6 place-items-center rounded-md text-[var(--text-3)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--danger,#dc2626)]">
                           <Trash2 size={15} />
                         </button>
                       </div>
