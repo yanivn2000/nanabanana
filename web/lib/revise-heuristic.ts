@@ -36,6 +36,43 @@ function retime(day: Day, dwellOf: (s: Stop) => number): void {
   day.stops = out;
 }
 
+// Nearest-neighbour order for an arbitrary set of stops (keeps coord-less ones last).
+function orderNN(stops: Stop[]): Stop[] {
+  const pts = stops.filter((s) => s.lat != null && s.lng != null);
+  const noc = stops.filter((s) => s.lat == null || s.lng == null);
+  if (pts.length <= 2) return [...pts, ...noc];
+  const out = [pts[0]]; const rest = pts.slice(1);
+  while (rest.length) {
+    const cur = out[out.length - 1];
+    let bi = 0, bd = Infinity;
+    rest.forEach((s, i) => { const d = haversineKm(cur.lat as number, cur.lng as number, s.lat as number, s.lng as number); if (d < bd) { bd = d; bi = i; } });
+    out.push(rest.splice(bi, 1)[0]);
+  }
+  return [...out, ...noc];
+}
+
+// STRUCTURED per-day rebuild — the map "סדר את היום" action. Takes explicit add/remove
+// attraction ids for ONE day, applies them, re-orders (nearest-neighbour) and re-times.
+// No text parsing, no AI — purely deterministic.
+export function arrangeDay(current: Itinerary, dayIndex: number, addIds: number[], removeIds: number[], pool: Attraction[]): ReviseResult {
+  const day = current.days[dayIndex];
+  if (!day) return { itinerary: current, changed: false };
+  const byId = new Map(pool.filter((a) => a.id != null).map((a) => [a.id, a]));
+  const remove = new Set(removeIds);
+  let stops = day.stops.filter((s) => s.kind !== "food" && !(s.id != null && remove.has(s.id)));
+  const present = new Set(stops.map((s) => s.id).filter((x): x is number => x != null));
+  for (const id of addIds) {
+    if (present.has(id)) continue;
+    const a = byId.get(id);
+    if (a && a.lat != null && a.lng != null) { stops.push(attrToStop(a)); present.add(id); }
+  }
+  stops = orderNN(stops);
+  const dwellOf = (s: Stop) => { const a = s.id != null ? byId.get(s.id) : undefined; return a ? dwellMinutes(a, DWELL_DEFAULT) : 50; };
+  const days = current.days.map((d, i) => (i === dayIndex ? { ...d, stops: [...stops] } : d));
+  retime(days[dayIndex], dwellOf);
+  return { itinerary: { ...current, days }, changed: true };
+}
+
 export function reviseHeuristic(current: Itinerary, instruction: string, pool: Attraction[]): ReviseResult {
   const byId = new Map(pool.filter((a) => a.id != null).map((a) => [a.id, a]));
   const worth = (s: Stop) => { const a = s.id != null ? byId.get(s.id) : undefined; return a ? attrWorth(a) : (s.score ?? 0); };

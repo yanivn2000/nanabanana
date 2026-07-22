@@ -9,7 +9,7 @@ import {
   reviseItinerary,
 } from "@/lib/ai";
 import { buildHeuristicItinerary, buildMultiHeuristicItinerary, buildCarBaseItinerary } from "@/lib/heuristic";
-import { reviseHeuristic } from "@/lib/revise-heuristic";
+import { reviseHeuristic, arrangeDay } from "@/lib/revise-heuristic";
 import { checkRateLimit } from "@/lib/db";
 import { rateLimit } from "@/lib/ratelimit";
 import * as Sentry from "@sentry/nextjs";
@@ -134,7 +134,7 @@ function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set
 
 export async function POST(req: NextRequest) {
   let body: {
-    mode: "generate" | "revise" | "details";
+    mode: "generate" | "revise" | "details" | "arrange";
     city?: string;
     days?: number;
     month?: number;
@@ -143,6 +143,10 @@ export async function POST(req: NextRequest) {
     current?: Itinerary;
     instruction?: string;
     dateContext?: string;
+    // map "סדר את היום" — structured per-day rebuild (always deterministic, no AI).
+    dayIndex?: number;
+    addIds?: number[];
+    removeIds?: number[];
     taste?: Record<string, number>;
     segments?: { city: string; days: number; hotels?: TripHotel[] }[];
     // Explore build (F1): the traveler's per-trip picks. Drives an anchors-first,
@@ -308,6 +312,16 @@ export async function POST(req: NextRequest) {
       console.warn(`[itinerary] multi AI failed, heuristic: ${(e as Error).message}`);
       return NextResponse.json({ itinerary: heuristic(), engine: "heuristic" });
     }
+  }
+
+  // Map "סדר את היום" — structured, always deterministic (never AI). Rebuilds one
+  // day with the add/remove ids the user marked on the map.
+  if (body.mode === "arrange") {
+    if (!body.current || body.dayIndex == null) {
+      return NextResponse.json({ error: "missing current/dayIndex" }, { status: 400 });
+    }
+    const r = arrangeDay(body.current, body.dayIndex, body.addIds ?? [], body.removeIds ?? [], attractions);
+    return NextResponse.json({ itinerary: attachDetails(r.itinerary, attractions), engine: "heuristic" });
   }
 
   // Revise: DEFAULT is the deterministic engine (no Claude). The AI edit runs only
