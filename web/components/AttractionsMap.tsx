@@ -140,7 +140,7 @@ function numberedIcon(n: number, color: string, active = false, dim = false) {
   });
 }
 
-function AttractionPopup({ a }: { a: Attraction }) {
+function AttractionPopup({ a, action }: { a: Attraction; action?: { label: string; onClick: () => void; active?: boolean; danger?: boolean } }) {
   return (
     <Popup>
       <div style={{ direction: "rtl", fontFamily: "sans-serif", width: 230 }}>
@@ -161,6 +161,14 @@ function AttractionPopup({ a }: { a: Attraction }) {
             <br />
             <a href={a.website} target="_blank" rel="noreferrer" style={{ fontSize: 12 }}>אתר רשמי</a>
           </>
+        )}
+        {action && (
+          <button onClick={action.onClick}
+            style={{ marginTop: 8, width: "100%", padding: "7px 10px", borderRadius: 8, border: "none", cursor: "pointer",
+              fontSize: 12.5, fontWeight: 600, color: "#fff",
+              background: action.active ? "#6b7280" : action.danger ? "#c0392b" : "#0e6b5e" }}>
+            {action.label}
+          </button>
         )}
       </div>
     </Popup>
@@ -221,6 +229,11 @@ export default function AttractionsMap({
   picks = [],
   fitNonce = 0,
   hoveredId = null,
+  extras = [],
+  pendingAddIds,
+  pendingRemoveLocated,
+  onToggleExtra,
+  onToggleRemove,
 }: {
   attractions: Attraction[];
   center: [number, number];
@@ -238,6 +251,11 @@ export default function AttractionsMap({
   picks?: Attraction[];           // the traveler's כן/אולי marks — highlighted + framed on demand
   fitNonce?: number;              // increment to frame the map to `picks`
   hoveredId?: number | null;      // card hovered in the list — grow its marker
+  extras?: Attraction[];          // left-out picks shown as GREY markers (map day-editing)
+  pendingAddIds?: Set<number>;    // extra ids marked to add this day → turn green
+  pendingRemoveLocated?: Set<number>; // located indices marked to remove → turn red
+  onToggleExtra?: (id: number) => void;   // click a grey marker
+  onToggleRemove?: (i: number) => void;   // remove a placed stop (by located index)
 }) {
   const markers = useRef<Map<number, LeafletCircleMarker>>(new Map());
   const orderedPts = ordered
@@ -298,15 +316,35 @@ export default function AttractionsMap({
         );
       })}
 
+      {/* left-out picks as GREY markers (day-editing): click → mark to add (turns
+          green). They let the traveller see un-placed picks near the planned route. */}
+      {ordered && extras.filter((a) => Number.isFinite(a.lat) && Number.isFinite(a.lng)).map((a) => {
+        const marked = pendingAddIds?.has(a.id);
+        return (
+          <CircleMarker key={"x" + a.id} center={[a.lat as number, a.lng as number]}
+            radius={marked ? 8 : 6}
+            pathOptions={{ color: "#fff", weight: 2, fillColor: marked ? "#0e6b5e" : "#9aa0a6", fillOpacity: 0.9 }}>
+            <AttractionPopup a={a} action={onToggleExtra ? {
+              label: marked ? "✓ יתווסף ליום · בטל" : "➕ הוסף ליום זה",
+              onClick: () => onToggleExtra(a.id), active: marked } : undefined} />
+          </CircleMarker>
+        );
+      })}
+
       {ordered
-        ? orderedPts.map((a, i) => (
+        ? orderedPts.map((a, i) => {
+              const rm = pendingRemoveLocated?.has(i);
+              return (
               <Marker key={a.id} position={[a.lat as number, a.lng as number]}
-                icon={numberedIcon(i + 1, stopHue(a, i),
+                icon={numberedIcon(i + 1, rm ? "#c0392b" : stopHue(a, i),
                   activeIdx === i, activeIdx != null && activeIdx !== i)}
                 eventHandlers={onStopClick ? { click: () => onStopClick(i) } : undefined}>
-                <AttractionPopup a={a} />
+                <AttractionPopup a={a} action={onToggleRemove ? {
+                  label: rm ? "✓ יוסר מהיום · בטל" : "🗑 הסר מהיום",
+                  onClick: () => onToggleRemove(i), active: rm, danger: true } : undefined} />
               </Marker>
-            ))
+            );
+            })
         : attractions.map((a) => (
             <CircleMarker
               key={a.id}

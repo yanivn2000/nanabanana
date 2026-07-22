@@ -259,7 +259,7 @@ export async function POST(req: NextRequest) {
     if (dest.mobility === "car_base") withDetails.days.forEach((d) => { d.carBase = true; });
     const leftOut = body.selection
       ? picks.filter((a) => yesSet.has(a.id) && !scheduled.has(a.id))
-          .map((a) => ({ id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category }))
+          .map((a) => ({ id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category, lat: a.lat, lng: a.lng, tagline_he: a.tagline_he }))
       : [];
     return NextResponse.json({ itinerary: withDetails, ...(engine ? { engine } : {}), leftOut });
   };

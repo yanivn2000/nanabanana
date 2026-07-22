@@ -89,6 +89,10 @@ export function TripView({ tripId }: { tripId: string }) {
   const { hotels } = useHotels();
   const [busy, setBusy] = useState<null | "generate" | "revise">(null);
   const [error, setError] = useState<string | null>(null);
+  // Map day-editing: DB ids of left-out picks marked to ADD, and stops marked to
+  // REMOVE, for the day on screen. Committed together via "סדר את היום".
+  const [pendAdd, setPendAdd] = useState<Set<number>>(new Set());
+  const [pendRemove, setPendRemove] = useState<Set<number>>(new Set());
   const [editing, setEditing] = useState(false);
   const [editTravelers, setEditTravelers] = useState(false);
   const [tool, setTool] = useState<ToolKey | null>(null);
@@ -158,6 +162,12 @@ export function TripView({ tripId }: { tripId: string }) {
   const locatedToStop: number[] = [];
   colorIdxByStop.forEach((ci, si) => { if (ci != null) locatedToStop[ci] = si; });
   const stopColors = mapStops.map((_, i) => stopColor(i));
+  // Day-editing: DB ids marked-remove → their located marker indices (turn red).
+  const pendingRemoveLocated = new Set<number>();
+  locatedToStop.forEach((si, li) => { const sid = day?.stops[si]?.id; if (sid != null && pendRemove.has(sid)) pendingRemoveLocated.add(li); });
+  const pendingCount = pendAdd.size + pendRemove.size;
+  // Reset map marks when switching to another day (marks are per-day).
+  useEffect(() => { setPendAdd(new Set()); setPendRemove(new Set()); }, [curIdx]);
 
   // How to get between consecutive located stops: walk vs public transport,
   // decided by the traveler's walk tolerance (walkPref). An honest estimate (not
@@ -284,6 +294,51 @@ export function TripView({ tripId }: { tripId: string }) {
     revise(`הוסף את "${p.name_he || p.name_en}" ליום שמתאים לו במיוחד מבחינת מיקום וקצב, ושמור על שאר הימים.`);
     update(tripId, { leftOut: (trip?.leftOut ?? []).filter((x) => x.id !== p.id) });
   };
+
+  // ---- Map day-editing: mark adds/removes, then "סדר את היום" rebuilds the day via
+  // the deterministic engine (mode:arrange — never AI). ----
+  const toggleExtra = (id: number) =>
+    setPendAdd((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleRemoveLocated = (li: number) => {
+    const sid = day?.stops[locatedToStop[li]]?.id;
+    if (sid == null) return;
+    setPendRemove((p) => { const n = new Set(p); n.has(sid) ? n.delete(sid) : n.add(sid); return n; });
+  };
+  const clearPending = () => { setPendAdd(new Set()); setPendRemove(new Set()); };
+  async function arrangeDayNow() {
+    if (!itinerary || !pendingCount || busy) return;
+    setBusy("revise"); setError(null);
+    try {
+      const res = await fetch("/api/itinerary", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ mode: "arrange", city, current: itinerary, dayIndex: curIdx, addIds: [...pendAdd], removeIds: [...pendRemove] }) });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.itinerary) { setError(data?.error || "אירעה שגיאה"); return; }
+      // leftOut: drop the ones we added; add back the stops we removed (so they can be re-added).
+      const removedAsLeftOut = (day?.stops ?? []).filter((s) => s.id != null && pendRemove.has(s.id)).map((s) => ({
+        id: s.id as number, name_he: s.name, name_en: s.name, lat: s.lat ?? null, lng: s.lng ?? null,
+        image_url: s.image ?? null, category: KIND_TO_CAT[s.kind] ?? "attraction", tagline_he: s.tagline ?? null,
+      })) as unknown as NonNullable<typeof trip>["leftOut"];
+      const newLeftOut = [...(trip?.leftOut ?? []).filter((l) => !pendAdd.has(l.id)), ...(removedAsLeftOut ?? [])];
+      update(tripId, { itinerary: data.itinerary, engine: "heuristic", leftOut: newLeftOut });
+      clearPending();
+    } catch { setError("שגיאת רשת"); } finally { setBusy(null); }
+  }
+  const arrangeBar = pendingCount > 0 ? (
+    <div className="mt-2 flex items-center justify-between gap-2 rounded-[12px] border border-[var(--brand)] bg-[var(--surface)] p-2.5 text-[13px] shadow-[var(--shadow)]">
+      <span className="font-medium">
+        {pendAdd.size > 0 ? `${pendAdd.size} להוספה` : ""}
+        {pendAdd.size > 0 && pendRemove.size > 0 ? " · " : ""}
+        {pendRemove.size > 0 ? `${pendRemove.size} להסרה` : ""}
+      </span>
+      <div className="flex gap-2">
+        <button onClick={clearPending} className="rounded-full px-3 py-1.5 text-[12.5px] text-[var(--text-2)] hover:bg-[var(--surface-2)]">בטל</button>
+        <button onClick={arrangeDayNow} disabled={!!busy}
+          className="rounded-full bg-[var(--brand)] px-4 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50">
+          {busy ? "מסדר…" : "סדר את היום"}
+        </button>
+      </div>
+    </div>
+  ) : null;
 
   // Arrived from the city page with ?build=1 → start building immediately, once.
   const autoBuild = useSearchParams().get("build") === "1";
@@ -667,8 +722,11 @@ export function TripView({ tripId }: { tripId: string }) {
             <div className="mt-3 h-[420px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)] lg:hidden">
               <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
                 hotels={hotelPoints} focus={focus} colors={stopColors} activeIdx={active}
+                extras={(trip?.leftOut ?? []) as unknown as Attraction[]} pendingAddIds={pendAdd} pendingRemoveLocated={pendingRemoveLocated}
+                onToggleExtra={toggleExtra} onToggleRemove={toggleRemoveLocated}
                 onStopClick={(li) => { const si = locatedToStop[li]; if (si == null) return;
                   setExpanded(`${curIdx}-${si}`); setActive(li); setMobileTab("plan"); }} />
+              {arrangeBar}
             </div>
           )}
 
@@ -908,10 +966,13 @@ export function TripView({ tripId }: { tripId: string }) {
                 <div className="h-[calc(100dvh-265px)] max-h-[700px] min-h-[440px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
                   <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
                     hotels={hotelPoints} focus={focus} colors={stopColors} activeIdx={active}
+                extras={(trip?.leftOut ?? []) as unknown as Attraction[]} pendingAddIds={pendAdd} pendingRemoveLocated={pendingRemoveLocated}
+                onToggleExtra={toggleExtra} onToggleRemove={toggleRemoveLocated}
                     onStopClick={(li) => { const si = locatedToStop[li]; if (si == null) return;
                       setExpanded(`${curIdx}-${si}`); setActive(li);
                       requestAnimationFrame(() => stopRefs.current[si]?.scrollIntoView({ behavior: "smooth", block: "center" })); }} />
                 </div>
+                {arrangeBar}
 
                 {/* legend — a collapsible floating card tying numbers to names */}
                 {stopPoints.length > 0 && (

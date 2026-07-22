@@ -30,6 +30,11 @@ export function MapClient(props: {
   picks?: Attraction[];
   fitNonce?: number;
   hoveredId?: number | null;
+  extras?: Attraction[];
+  pendingAddIds?: Set<number>;
+  pendingRemoveLocated?: Set<number>;
+  onToggleExtra?: (id: number) => void;
+  onToggleRemove?: (i: number) => void;
 }) {
   return <AttractionsMap {...props} />;
 }
