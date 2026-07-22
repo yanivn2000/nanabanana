@@ -321,6 +321,7 @@ export type AdminAttractionRow = {
   must_see: number | null; editor_rank: string | null; editor_kids: string | null;
   audience_fit: AudienceFit | null; admin_bonus: AudienceBonus | null;
   notable: boolean; family_score: number | null; traveler_count: number;
+  best_time_he: string | null; tips_he: string | null;   // for the "when to arrive" chip
 };
 
 // Every shown attraction for a city with its scoring signals — the admin sees
@@ -330,6 +331,7 @@ export async function adminAttractionsForCity(destinationId: number): Promise<Ad
     `SELECT a.id, a.name_he, a.name_en, a.category,
             ${EFF_MUST} AS must_see, ep.rank AS editor_rank, ep.kids AS editor_kids,
             a.audience_fit, a.admin_bonus, ${NOTABLE} AS notable, a.family_score,
+            a.best_time_he, a.tips_he,
             COALESCE((SELECT COUNT(DISTINCT source_id) FROM insights i
                        WHERE i.attraction_id = a.id AND i.destination_id = $1 AND i.status='approved'), 0)::int AS traveler_count
        FROM attractions a ${EDITOR_JOIN}

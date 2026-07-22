@@ -3,6 +3,25 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Loader2, ChevronDown } from "lucide-react";
 import type { AdminDestination, AdminAttractionRow } from "@/lib/db";
+import { bestTimeBucket } from "@/lib/brain/traits";
+
+// "When to arrive" chip — what the day-ordering engine derives from best_time_he/tips.
+const TIME_CHIP: Record<string, { label: string; bg: string; fg: string }> = {
+  morning: { label: "🌅 בוקר", bg: "#fef3c7", fg: "#92400e" },
+  evening: { label: "🌆 ערב", bg: "#e0e7ff", fg: "#3730a3" },
+  any: { label: "🕒 גמיש", bg: "var(--surface)", fg: "var(--text-3)" },
+};
+function TimeOfDay({ r }: { r: AdminAttractionRow }) {
+  const b = bestTimeBucket(r);
+  if (b === "any" && !r.best_time_he) return null;   // nothing to show
+  const c = TIME_CHIP[b];
+  return (
+    <span className="mt-0.5 flex items-center gap-1 text-[11px]" title="מתי להגיע (מזין את סדר היום)">
+      <span className="rounded px-1 py-0.5 text-[10px] font-medium" style={{ background: c.bg, color: c.fg }}>{c.label}</span>
+      {r.best_time_he && <span className="text-[var(--text-3)]">{r.best_time_he}</span>}
+    </span>
+  );
+}
 
 const AUD = [
   { key: "families" as const, he: "👨‍👩‍👧 משפחות" },
@@ -157,6 +176,7 @@ export function AttractionsTable({ destinations }: { destinations: AdminDestinat
                         <span className="block text-[11px] text-[var(--text-3)]">
                           {r.category}{r.audience_fit?.type ? ` · ${TYPE_HE[r.audience_fit.type] ?? r.audience_fit.type}` : ""}{r.notable ? " · 📚" : ""}
                         </span>
+                        <TimeOfDay r={r} />
                       </span>
                     </button>
                   </td>
