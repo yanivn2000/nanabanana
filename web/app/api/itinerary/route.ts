@@ -147,6 +147,7 @@ export async function POST(req: NextRequest) {
     dayIndex?: number;
     addIds?: number[];
     removeIds?: number[];
+    leftOut?: { id: number }[];   // details mode: re-attach coords to these
     taste?: Record<string, number>;
     segments?: { city: string; days: number; hotels?: TripHotel[] }[];
     // Explore build (F1): the traveler's per-trip picks. Drives an anchors-first,
@@ -268,7 +269,14 @@ export async function POST(req: NextRequest) {
   // credit and upgrades trips created before details existed.
   if (body.mode === "details") {
     if (!body.current) return NextResponse.json({ error: "missing current" }, { status: 400 });
-    return NextResponse.json({ itinerary: attachDetails(body.current, pool) });
+    // Re-attach coords/tagline to left-out picks (older trips stored them without),
+    // so the map can show them as grey markers.
+    let leftOut: object[] | undefined;
+    if (body.leftOut?.length) {
+      const rows = await attractionsByIds(body.leftOut.map((l) => l.id));
+      leftOut = rows.map((a) => ({ id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category, lat: a.lat, lng: a.lng, tagline_he: a.tagline_he }));
+    }
+    return NextResponse.json({ itinerary: attachDetails(body.current, pool), ...(leftOut ? { leftOut } : {}) });
   }
 
   // Multi-city trip: one continuous itinerary across ordered segments, each

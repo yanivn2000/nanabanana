@@ -27,7 +27,7 @@ function stayHe(d?: string): string | null {
   if (n === 2.5) return "כשעתיים וחצי";
   return `כ-${n} שעות`;
 }
-import { googleMapsUrl, googleDirUrl, formatDistance, estimateLeg, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
+import { googleMapsUrl, googleDirUrl, formatDistance, estimateLeg, haversineKm, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
 import { stopColor } from "@/lib/labels";
 import { bigImage } from "@/lib/labels";
 import { KIND_META } from "@/lib/sample";
@@ -378,6 +378,32 @@ export function TripView({ tripId }: { tripId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId, !!itinerary, city]);
 
+  // Back-fill coords on left-out picks saved before the map-editing change, so they
+  // can show as grey markers. Fires once per mount when any pick lacks lat/lng.
+  const leftOutCoordsRef = useRef(false);
+  useEffect(() => { leftOutCoordsRef.current = false; }, [tripId]);
+  useEffect(() => {
+    const lo = trip?.leftOut;
+    if (!lo?.length || !city || leftOutCoordsRef.current) return;
+    if (lo.every((l) => l.lat != null && l.lng != null)) return;   // already have coords
+    leftOutCoordsRef.current = true;
+    let cancelled = false;
+    fetch("/api/itinerary", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ mode: "details", city, current: itinerary ?? { title: "", subtitle: "", days: [] }, leftOut: lo.map((l) => ({ id: l.id })) }) })
+      .then((r) => r.json()).catch(() => null)
+      .then((d) => { if (!cancelled && d?.leftOut) update(tripId, { leftOut: d.leftOut }); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripId, city, trip?.leftOut?.length]);
+
+  // Left-out markers to show on the map: only picks within a walkable/short-transit
+  // reach of the CURRENT day's stops — a far pick (Kew) isn't a sensible add to a
+  // central day, so it shouldn't clutter the map for that day.
+  const NEAR_KM = 3;
+  const nearbyExtras = ((trip?.leftOut ?? []) as unknown as Attraction[]).filter((l) =>
+    Number.isFinite(l.lat) && Number.isFinite(l.lng) &&
+    mapStops.some((s) => haversineKm(s.lat as number, s.lng as number, l.lat as number, l.lng as number) <= NEAR_KM));
+
   // --- manual editing: apply a transform to a clone, relabel days, save ---
   function mutate(fn: (it: Itinerary) => void) {
     if (!itinerary) return;
@@ -722,7 +748,7 @@ export function TripView({ tripId }: { tripId: string }) {
             <div className="mt-3 h-[420px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)] lg:hidden">
               <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
                 hotels={hotelPoints} focus={focus} colors={stopColors} activeIdx={active}
-                extras={(trip?.leftOut ?? []) as unknown as Attraction[]} pendingAddIds={pendAdd} pendingRemoveLocated={pendingRemoveLocated}
+                extras={nearbyExtras} pendingAddIds={pendAdd} pendingRemoveLocated={pendingRemoveLocated}
                 onToggleExtra={toggleExtra} onToggleRemove={toggleRemoveLocated}
                 onStopClick={(li) => { const si = locatedToStop[li]; if (si == null) return;
                   setExpanded(`${curIdx}-${si}`); setActive(li); setMobileTab("plan"); }} />
@@ -966,7 +992,7 @@ export function TripView({ tripId }: { tripId: string }) {
                 <div className="h-[calc(100dvh-265px)] max-h-[700px] min-h-[440px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
                   <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
                     hotels={hotelPoints} focus={focus} colors={stopColors} activeIdx={active}
-                extras={(trip?.leftOut ?? []) as unknown as Attraction[]} pendingAddIds={pendAdd} pendingRemoveLocated={pendingRemoveLocated}
+                extras={nearbyExtras} pendingAddIds={pendAdd} pendingRemoveLocated={pendingRemoveLocated}
                 onToggleExtra={toggleExtra} onToggleRemove={toggleRemoveLocated}
                     onStopClick={(li) => { const si = locatedToStop[li]; if (si == null) return;
                       setExpanded(`${curIdx}-${si}`); setActive(li);
