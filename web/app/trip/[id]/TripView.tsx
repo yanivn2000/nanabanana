@@ -7,7 +7,7 @@ import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, Pencil, ChevronUp, ChevronDown,
   ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon, Route, Users, Luggage, ListChecks, Wallet, CalendarDays,
-  Clock, MapPin, Ruler, Footprints, Copy, Lightbulb, Car, Hourglass,
+  Clock, MapPin, Ruler, Footprints, Copy, Lightbulb, Car, Hourglass, GripVertical,
 } from "lucide-react";
 
 // Render a stop's stay time cleanly. New builds already store natural Hebrew
@@ -93,6 +93,9 @@ export function TripView({ tripId }: { tripId: string }) {
   // REMOVE, for the day on screen. Committed together via "סדר את היום".
   const [pendAdd, setPendAdd] = useState<Set<number>>(new Set());
   const [pendRemove, setPendRemove] = useState<Set<number>>(new Set());
+  // Drag-to-reorder stops within a day: the row being dragged, and the row it's over.
+  const [dragSi, setDragSi] = useState<number | null>(null);
+  const [dragOverSi, setDragOverSi] = useState<number | null>(null);
   const [editing, setEditing] = useState(false);
   const [editTravelers, setEditTravelers] = useState(false);
   const [tool, setTool] = useState<ToolKey | null>(null);
@@ -424,6 +427,14 @@ export function TripView({ tripId }: { tripId: string }) {
   };
   const moveStop = (di: number, si: number, dir: -1 | 1) =>
     mutate((it) => swap(it.days[di].stops, si, si + dir));
+  // Drag-and-drop: move a stop from index `from` to index `to` within the day.
+  const reorderStop = (di: number, from: number, to: number) =>
+    mutate((it) => {
+      const stops = it.days[di].stops;
+      if (from === to || to < 0 || to >= stops.length) return;
+      const [m] = stops.splice(from, 1);
+      stops.splice(to, 0, m);
+    });
   const moveStopToDay = (di: number, si: number, dir: -1 | 1) =>
     mutate((it) => {
       const tgt = di + dir;
@@ -782,12 +793,24 @@ export function TripView({ tripId }: { tripId: string }) {
                 const isActive = ci != null && active === ci;
                 const leg = legAfter[si];
                 return (
-                  <div key={si} ref={(el) => { stopRefs.current[si] = el; }}>
-                    <div className={`-mx-2 flex gap-3 rounded-[12px] px-2 transition-colors ${hasDetails ? "cursor-pointer" : ""}`}
+                  <div key={si} ref={(el) => { stopRefs.current[si] = el; }}
+                       draggable
+                       onDragStart={(e) => { setDragSi(si); e.dataTransfer.effectAllowed = "move"; }}
+                       onDragEnd={() => { setDragSi(null); setDragOverSi(null); }}
+                       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (dragOverSi !== si) setDragOverSi(si); }}
+                       onDrop={(e) => { e.preventDefault(); if (dragSi != null && dragSi !== si) reorderStop(curIdx, dragSi, si); setDragSi(null); setDragOverSi(null); }}
+                       className={dragSi === si ? "opacity-40" : ""}
+                       style={dragOverSi === si && dragSi != null && dragSi !== si
+                         ? { boxShadow: `inset 0 ${dragSi > si ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
+                    <div className={`group/row -mx-2 flex gap-3 rounded-[12px] px-2 transition-colors ${hasDetails ? "cursor-pointer" : ""}`}
                          style={{ background: isActive ? `color-mix(in srgb, ${col} 12%, transparent)` : "transparent" }}
                          onMouseEnter={() => ci != null && setActive(ci)}
                          onMouseLeave={() => setActive(null)}
                          onClick={() => hasDetails && setExpanded(isOpen ? null : key)}>
+                      {/* drag handle — grab to reorder within the day */}
+                      <span className="flex cursor-grab items-center text-[var(--text-3)] opacity-0 transition-opacity group-hover/row:opacity-100 active:cursor-grabbing" title="גררו כדי לשנות סדר" aria-hidden>
+                        <GripVertical size={16} />
+                      </span>
                       {/* photo (falls back to the kind icon) */}
                       <div className="py-2.5 pr-1">
                         {s.image ? (
