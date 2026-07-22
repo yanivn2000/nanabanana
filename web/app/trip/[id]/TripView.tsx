@@ -250,6 +250,8 @@ export function TripView({ tripId }: { tripId: string }) {
       // upgrade (no engine field on AI success → "ai").
       update(tripId, { itinerary: data.itinerary, engine: data.engine ?? "ai",
         ...(data.leftOut !== undefined ? { leftOut: data.leftOut } : {}) });
+      // deterministic revise couldn't act on a free-text request → surface the hint.
+      if (data.note) setError(data.note);
     } catch {
       setError("שגיאת רשת");
     } finally {

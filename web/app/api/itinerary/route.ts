@@ -9,6 +9,7 @@ import {
   reviseItinerary,
 } from "@/lib/ai";
 import { buildHeuristicItinerary, buildMultiHeuristicItinerary, buildCarBaseItinerary } from "@/lib/heuristic";
+import { reviseHeuristic } from "@/lib/revise-heuristic";
 import { checkRateLimit } from "@/lib/db";
 import { rateLimit } from "@/lib/ratelimit";
 import * as Sentry from "@sentry/nextjs";
@@ -309,9 +310,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Revise needs the model. Without a key, ask the user to add one.
+  // Revise: DEFAULT is the deterministic engine (no Claude). The AI edit runs only
+  // when AI is explicitly enabled (aiConfigured). Guarantees zero paid calls in prod.
   if (body.mode === "revise" && !aiConfigured()) {
-    return NextResponse.json({ error: "AI not configured", code: "no_key" }, { status: 503 });
+    if (!body.current || !body.instruction) {
+      return NextResponse.json({ error: "missing current/instruction" }, { status: 400 });
+    }
+    const r = reviseHeuristic(body.current, body.instruction, attractions);
+    return NextResponse.json({ itinerary: attachDetails(r.itinerary, attractions), engine: "heuristic", ...(r.note ? { note: r.note } : {}) });
   }
 
   // Generate works without a key via the heuristic builder; AI upgrades it.

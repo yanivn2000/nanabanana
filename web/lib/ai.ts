@@ -37,8 +37,12 @@ function verifiedBlock(insights: Insight[] | undefined, attractions: Attraction[
 ${lines.join("\n")}\n`;
 }
 
+// AI is a HARD OPT-IN. It's available only when a key exists AND AI_ENABLED=true is
+// set explicitly. Default (no flag) = OFF, so a commercial deployment never spends a
+// paid Claude call: generate falls back to the deterministic engine and revise is
+// handled by reviseHeuristic. Flip AI_ENABLED=true only to re-enable the AI upgrade.
 export function aiConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return Boolean(process.env.ANTHROPIC_API_KEY) && process.env.AI_ENABLED === "true";
 }
 
 function client() {
