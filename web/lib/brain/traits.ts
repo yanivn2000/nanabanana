@@ -108,7 +108,8 @@ const MORNING_RX = /זריחה|עלות השחר|טרם עלות השחר|שוק
 // Bare "ערב" is avoided (it also matches מערב=west); require an evening word form.
 const EVENING_RX = /שקיעה|בערב|לערב|בשעות הערב|שעות הערב|בין הערביים|בלילה|חיי לילה|מועדון|ברים|פאב|נייטלייף|שוק לילה|sunset|\bevening\b|\bnight\b|nightlife|night market/i;
 export type TimeBucket = "morning" | "any" | "evening";
-export function bestTimeBucket(a: { best_time_he?: string | null; tips_he?: string | null }): TimeBucket {
+export function bestTimeBucket(a: { best_time_he?: string | null; tips_he?: string | null; time_of_day?: string | null }): TimeBucket {
+  if (a.time_of_day === "morning" || a.time_of_day === "evening" || a.time_of_day === "any") return a.time_of_day;  // editor override
   const t = `${a.best_time_he ?? ""} ${a.tips_he ?? ""}`.toLowerCase();
   const m = MORNING_RX.test(t), e = EVENING_RX.test(t);
   if (m && !e) return "morning";

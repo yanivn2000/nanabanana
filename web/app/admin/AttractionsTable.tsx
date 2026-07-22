@@ -11,14 +11,23 @@ const TIME_CHIP: Record<string, { label: string; bg: string; fg: string }> = {
   evening: { label: "🌆 ערב", bg: "#e0e7ff", fg: "#3730a3" },
   any: { label: "🕒 גמיש", bg: "var(--surface)", fg: "var(--text-3)" },
 };
-function TimeOfDay({ r }: { r: AdminAttractionRow }) {
+// Editor cycle for the override: אוטומטי (null) → בוקר → ערב → גמיש → אוטומטי.
+const TIME_CYCLE: (("morning" | "evening" | "any") | null)[] = [null, "morning", "evening", "any"];
+const nextTime = (cur: string | null) => TIME_CYCLE[(TIME_CYCLE.indexOf((cur ?? null) as never) + 1) % TIME_CYCLE.length];
+function TimeOfDay({ r, onCycle, saving }: { r: AdminAttractionRow; onCycle: () => void; saving: boolean }) {
   const b = bestTimeBucket(r);
-  if (b === "any" && !r.best_time_he) return null;   // nothing to show
+  const override = r.time_of_day === "morning" || r.time_of_day === "evening" || r.time_of_day === "any";
   const c = TIME_CHIP[b];
   return (
-    <span className="mt-0.5 flex items-center gap-1 text-[11px]" title="מתי להגיע (מזין את סדר היום)">
-      <span className="rounded px-1 py-0.5 text-[10px] font-medium" style={{ background: c.bg, color: c.fg }}>{c.label}</span>
-      {r.best_time_he && <span className="text-[var(--text-3)]">{r.best_time_he}</span>}
+    <span role="button" tabIndex={0}
+      onClick={(e) => { e.stopPropagation(); if (!saving) onCycle(); }}
+      onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); if (!saving) onCycle(); } }}
+      title="מתי להגיע — לחצו לשנות (אוטומטי → בוקר → ערב → גמיש). מזין את סדר היום."
+      className="mt-0.5 inline-flex cursor-pointer items-center gap-1 text-[11px]">
+      <span className="rounded px-1 py-0.5 text-[10px] font-medium"
+        style={{ background: c.bg, color: c.fg, border: `1px solid ${override ? c.fg : "transparent"}` }}>{saving ? "…" : c.label}</span>
+      <span className="text-[10px] text-[var(--text-3)]">{override ? "✎ עורך" : "אוטו"}</span>
+      {r.best_time_he && <span className="truncate text-[var(--text-3)]" style={{ maxWidth: 180 }}>{r.best_time_he}</span>}
     </span>
   );
 }
@@ -59,6 +68,19 @@ export function AttractionsTable({ destinations }: { destinations: AdminDestinat
       if (res.ok) setRows((s) => s.map((x) => x.id === r.id
         ? { ...x, must_see: turningOff ? 0 : 1, editor_rank: turningOff ? "maybe" : "must" } : x));
     } finally { setMustSaving(null); }
+  }
+
+  // Cycle the "when to arrive" override and persist it (optimistic).
+  const [timeSaving, setTimeSaving] = useState<number | null>(null);
+  async function cycleTime(r: AdminAttractionRow) {
+    if (timeSaving) return;
+    const value = nextTime(r.time_of_day);
+    setTimeSaving(r.id);
+    setRows((s) => s.map((x) => (x.id === r.id ? { ...x, time_of_day: value } : x)));
+    try {
+      await fetch("/api/admin/attractions", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "time_of_day", attraction_id: r.id, value }) });
+    } finally { setTimeSaving(null); }
   }
 
   async function load() {
@@ -176,7 +198,7 @@ export function AttractionsTable({ destinations }: { destinations: AdminDestinat
                         <span className="block text-[11px] text-[var(--text-3)]">
                           {r.category}{r.audience_fit?.type ? ` · ${TYPE_HE[r.audience_fit.type] ?? r.audience_fit.type}` : ""}{r.notable ? " · 📚" : ""}
                         </span>
-                        <TimeOfDay r={r} />
+                        <TimeOfDay r={r} onCycle={() => cycleTime(r)} saving={timeSaving === r.id} />
                       </span>
                     </button>
                   </td>

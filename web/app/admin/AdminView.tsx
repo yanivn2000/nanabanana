@@ -161,15 +161,18 @@ function CityRow({ d }: { d: AdminDestination }) {
   );
 }
 
-export function AdminView({ destinations, feedback, email }: {
-  destinations: AdminDestination[]; feedback: Feedback[]; email: string;
+export function AdminView({ destinations, feedback, email, version }: {
+  destinations: AdminDestination[]; feedback: Feedback[]; email: string; version?: string;
 }) {
   const [tab, setTab] = useState<TabKey>("cities");
   return (
     <main className="mx-auto max-w-6xl px-5 py-6 lg:px-8">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="serif text-[26px] font-bold">ניהול Yalle</h1>
-        <span className="text-[12.5px] text-[var(--text-3)]">{email}</span>
+        <span className="flex items-center gap-2 text-[12.5px] text-[var(--text-3)]">
+          {version && <span className="rounded bg-[var(--surface-2)] px-2 py-0.5 font-mono text-[11px]" title="הגרסה שרצה כרגע (commit)">גרסה {version}</span>}
+          {email}
+        </span>
       </div>
 
       {/* tabs */}

@@ -79,6 +79,7 @@ export type Attraction = {
   tagline_he: string | null;
   best_season: string | null;
   best_time_he: string | null;
+  time_of_day: string | null;   // editor override for day-ordering: morning|evening|any|null(auto)
   dress_he: string | null;
   cost_level: number | null;
   must_see: number | null;      // EFFECTIVE: editor rank='must' (curated) else OSM
@@ -99,7 +100,7 @@ export type AudienceBonus = { families?: number; couples?: number; friends?: num
 
 const ATTR_COLS = `id, name_he, name_en, lat, lng, category, subcategory,
   indoor_outdoor, family_score, tips_he, website, duration_minutes,
-  image_url, tagline_he, best_season, best_time_he, dress_he, cost_level, must_see,
+  image_url, tagline_he, best_season, best_time_he, time_of_day, dress_he, cost_level, must_see,
   description_he, taste_tags, audience_fit, admin_bonus`;
 
 export type Destination = {
@@ -322,6 +323,7 @@ export type AdminAttractionRow = {
   audience_fit: AudienceFit | null; admin_bonus: AudienceBonus | null;
   notable: boolean; family_score: number | null; traveler_count: number;
   best_time_he: string | null; tips_he: string | null;   // for the "when to arrive" chip
+  time_of_day: string | null;                            // editor override (morning|evening|any|null)
 };
 
 // Every shown attraction for a city with its scoring signals — the admin sees
@@ -331,7 +333,7 @@ export async function adminAttractionsForCity(destinationId: number): Promise<Ad
     `SELECT a.id, a.name_he, a.name_en, a.category,
             ${EFF_MUST} AS must_see, ep.rank AS editor_rank, ep.kids AS editor_kids,
             a.audience_fit, a.admin_bonus, ${NOTABLE} AS notable, a.family_score,
-            a.best_time_he, a.tips_he,
+            a.best_time_he, a.tips_he, a.time_of_day,
             COALESCE((SELECT COUNT(DISTINCT source_id) FROM insights i
                        WHERE i.attraction_id = a.id AND i.destination_id = $1 AND i.status='approved'), 0)::int AS traveler_count
        FROM attractions a ${EDITOR_JOIN}
@@ -345,6 +347,11 @@ export async function adminAttractionsForCity(destinationId: number): Promise<Ad
                         COALESCE((a.audience_fit->>'friends')::int, 0)) DESC,
                COALESCE(a.family_score, 0) DESC, a.name_en`,
     [destinationId]);
+}
+
+// Editor override for "when to arrive". null clears it (back to auto-derive).
+export async function setAttractionTimeOfDay(attractionId: number, value: "morning" | "evening" | "any" | null): Promise<void> {
+  await query(`UPDATE attractions SET time_of_day = $2 WHERE id = $1`, [attractionId, value]);
 }
 
 export async function setAdminBonus(attractionId: number, bonus: AudienceBonus): Promise<void> {

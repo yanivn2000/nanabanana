@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { editorEmail } from "@/lib/admin";
 import { adminDestinations, listFeedback } from "@/lib/db";
+import { BRAIN_VERSION } from "@/lib/brain/policy";
 import { AdminView } from "./AdminView";
+
+// The live build's git commit (Vercel injects it) + the Brain version, shown in
+// admin so the editor knows exactly which version is running on the site.
+const LIVE_VERSION = `${(process.env.VERCEL_GIT_COMMIT_SHA ?? "local").slice(0, 7)} · מוח ${BRAIN_VERSION}`;
 
 export const dynamic = "force-dynamic";
 
@@ -23,5 +28,5 @@ export default async function AdminPage() {
     );
   }
   const [destinations, feedback] = await Promise.all([adminDestinations(), listFeedback()]);
-  return <AdminView destinations={destinations} feedback={feedback} email={email} />;
+  return <AdminView destinations={destinations} feedback={feedback} email={email} version={LIVE_VERSION} />;
 }

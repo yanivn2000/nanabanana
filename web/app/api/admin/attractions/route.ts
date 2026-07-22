@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { editorEmail } from "@/lib/admin";
-import { adminAttractionsForCity, setAdminBonus } from "@/lib/db";
+import { adminAttractionsForCity, setAdminBonus, setAttractionTimeOfDay } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +20,13 @@ export async function POST(req: NextRequest) {
     await setAdminBonus(b.attraction_id, {
       families: b.families, couples: b.couples, friends: b.friends,
     });
+    return NextResponse.json({ ok: true });
+  }
+  if (b.action === "time_of_day") {
+    if (typeof b.attraction_id !== "number") return NextResponse.json({ error: "bad_request" }, { status: 400 });
+    const v = b.value;
+    if (v !== null && v !== "morning" && v !== "evening" && v !== "any") return NextResponse.json({ error: "bad_value" }, { status: 400 });
+    await setAttractionTimeOfDay(b.attraction_id, v);
     return NextResponse.json({ ok: true });
   }
   return NextResponse.json({ error: "bad_action" }, { status: 400 });
