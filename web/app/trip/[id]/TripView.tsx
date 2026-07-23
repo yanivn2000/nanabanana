@@ -7,7 +7,7 @@ import {
   ChevronRight, ChevronLeft, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, ChevronDown,
   Trash2, ExternalLink, Navigation, Map as MapIcon, Route, Users, Luggage, ListChecks, Wallet, CalendarDays,
-  Clock, MapPin, Ruler, Footprints, Copy, Lightbulb, Car, Hourglass, GripVertical, Plus, Minus,
+  Clock, MapPin, Ruler, Footprints, Copy, Car, Hourglass, GripVertical, Plus, Minus,
 } from "lucide-react";
 
 // Render a stop's stay time cleanly. New builds already store natural Hebrew
@@ -106,13 +106,6 @@ function retimeStops(stops: Stop[]): Stop[] {
   return out;
 }
 
-// One-tap AI reshapes for the selected day (shown next to the "why").
-const DAY_RESHAPES = [
-  { t: "תעשה את היום רגוע ופחות עמוס יותר", l: "קצב רגוע יותר" },
-  { t: "צמצם את ההליכה בין המקומות", l: "פחות הליכה" },
-  { t: "הוסף עצירת אוכל טובה במיקום שמתאים למסלול", l: "הוסף אוכל" },
-];
-
 const ICONS = {
   mountain: Mountain, utensils: Utensils, landmark: Landmark,
   coffee: Coffee, "shopping-bag": ShoppingBag,
@@ -169,7 +162,6 @@ export function TripView({ tripId }: { tripId: string }) {
   const [dayIdx, setDayIdx] = useState(0);                 // one day on screen — pager
   const [mobileTab, setMobileTab] = useState<"plan" | "map">("plan");
   const [datesOpen, setDatesOpen] = useState(false);         // dates aren't permanent — a popover
-  const [whyOpen, setWhyOpen] = useState(false);             // AI "why" is on-demand, not a big card
   const [focus, setFocus] = useState<{ lat: number; lng: number; n: number } | null>(null);
   // The stop the user is pointing at — hovered in the list or clicked on the map.
   // Indexed in "located stop" space (matches the numbered map markers).
@@ -354,9 +346,6 @@ export function TripView({ tripId }: { tripId: string }) {
         })) }
       : {}),
   }, "generate");
-  const revise = (instruction: string) =>
-    call({ mode: "revise", current: itinerary, instruction, dateContext: dateContext || undefined }, "revise");
-
   // ---- Map day-editing: mark adds/removes, then "סדר את היום" rebuilds the day via
   // the deterministic engine (mode:arrange — never AI). ----
   const toggleExtra = (id: number) =>
@@ -956,34 +945,9 @@ export function TripView({ tripId }: { tripId: string }) {
             {dayStart && dayEnd && <span className="flex items-center gap-1" dir="ltr"><Clock size={12} className="text-[var(--text-3)]" /> {dayStart}–{dayEnd}</span>}
             {day.base && <span className="flex items-center gap-1"><Navigation size={12} className="text-[var(--text-3)]" /> {day.base}</span>}
           </div>
-          {day.why && (
-            <button onClick={() => setWhyOpen((o) => !o)}
-              className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[12.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)] lg:mr-auto">
-              <Lightbulb size={13} className="text-[var(--accent)]" /> למה בנינו את היום?
-              <ChevronDown size={13} className={`transition-transform ${whyOpen ? "rotate-180" : ""}`} />
-            </button>
-          )}
         </div>
       )}
       </div>{/* /lg:relative header wrapper (rows + destination image) */}
-
-      {/* on-demand "why" — a slim expandable strip, not a permanent block */}
-      {itinerary && day?.why && whyOpen && (
-        <div className="px-5 pt-2 lg:px-8">
-          <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] p-3">
-            <p className="text-[13px] leading-snug text-[var(--text-2)]">{day.why}</p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {DAY_RESHAPES.map((q) => (
-                <button key={q.l} disabled={!!busy}
-                  onClick={() => revise(`שנה אך ורק את ${dayLabels[curIdx]} (היום ה-${curIdx + 1} בטיול), אל תיגע בשאר הימים. ${q.t}`)}
-                  className="flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-[12px] text-[var(--text-2)] transition hover:border-[var(--brand)] disabled:opacity-50">
-                  <Sparkles size={11} className="text-[var(--brand)]" /> {q.l}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="lg:flex lg:items-start lg:gap-4 lg:px-8 lg:pt-2.5">
         {/* main column (right on desktop): the day timeline */}
