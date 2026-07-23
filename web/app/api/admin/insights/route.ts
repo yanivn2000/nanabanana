@@ -35,8 +35,9 @@ export async function POST(req: NextRequest) {
 
   if (b.action === "distill") {
     // distill calls Claude — throttle even though it's editor-gated (a stuck
-    // loop or compromised session shouldn't run up the bill).
-    const limited = await rateLimit(req, "insights-distill", 20, 3600);
+    // loop or compromised session shouldn't run up the bill). Higher cap so a long
+    // document processed in many chunks (a big traveller thread) fits in one sitting.
+    const limited = await rateLimit(req, "insights-distill", 80, 3600);
     if (limited) return limited;
     const text = typeof b.text === "string" ? b.text.trim() : "";
     if (text.length < 30) return NextResponse.json({ error: "text_too_short" }, { status: 400 });

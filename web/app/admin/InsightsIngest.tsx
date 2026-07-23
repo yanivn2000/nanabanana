@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Upload, Sparkles, Check, X, Trash2 } from "lucide-react";
 import type { AdminDestination, AdminInsight, RematchChange } from "@/lib/db";
+import { fileToText, chunkText } from "@/lib/read-doc";
 
 type Item = { place: string; kind: string; text_he: string; sentiment: string; author?: string; author_profile?: string; keep: boolean };
 
@@ -27,6 +28,7 @@ export function InsightsIngest({ destinations }: { destinations: AdminDestinatio
   const [fileName, setFileName] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [state, setState] = useState<"idle" | "distilling" | "review" | "saving" | "saved" | "error">("idle");
+  const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
   const [items, setItems] = useState<Item[]>([]);
   const [summary, setSummary] = useState<{ sources: number; saved: number; matched: number } | null>(null);
@@ -86,33 +88,45 @@ export function InsightsIngest({ destinations }: { destinations: AdminDestinatio
   }
 
   async function readFile(f: File) {
-    const name = f.name.toLowerCase();
-    if (name.endsWith(".pdf")) {
-      setError("PDF עדיין לא נתמך כאן — המירו לטקסט (או הדביקו), או השתמשו בכלי הישן (8513).");
-      return;
-    }
-    const t = await f.text();
-    setText((cur) => (cur.trim() ? cur + "\n\n" + t : t));
-    setFileName(f.name);
     setError("");
+    try {
+      const t = await fileToText(f);                    // .docx → real text; .txt/.md as-is
+      if (!t.trim()) { setError("לא נמצא טקסט בקובץ."); return; }
+      setText((cur) => (cur.trim() ? cur + "\n\n" + t : t));
+      setFileName(f.name);
+      if (t.length > 40000) setThread(true);            // a big doc is almost always a multi-traveller thread
+    } catch (e) {
+      setError((e as Error).message);
+    }
   }
 
   async function distill() {
-    setState("distilling"); setError("");
+    setState("distilling"); setError(""); setProgress("");
     const dest = destinations.find((d) => d.id === destId);
+    // A long document (a thread of many travellers) is split into bounded chunks so
+    // no single Claude call overflows max_tokens; results are merged. thread mode is
+    // forced across chunks so authors stay separated.
+    const chunks = chunkText(text);
+    const asThread = thread || chunks.length > 1;
+    const all: Item[] = [];
     try {
-      const res = await fetch("/api/admin/insights", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "distill", destination_id: destId,
-          dest_name: `${dest?.city ?? ""} (${dest?.city_he ?? ""})`, text, thread }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || res.statusText);
-      if (!data.items?.length) { setError("Claude לא מצא תובנות שימושיות בטקסט הזה."); setState("idle"); return; }
-      setItems(data.items.map((it: Omit<Item, "keep">) => ({ ...it, keep: true })));
+      for (let i = 0; i < chunks.length; i++) {
+        if (chunks.length > 1) setProgress(`מנתח חלק ${i + 1} מתוך ${chunks.length}…`);
+        const res = await fetch("/api/admin/insights", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "distill", destination_id: destId,
+            dest_name: `${dest?.city ?? ""} (${dest?.city_he ?? ""})`, text: chunks[i], thread: asThread }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || res.statusText);
+        for (const it of (data.items ?? [])) all.push({ ...(it as Omit<Item, "keep">), keep: true });
+      }
+      setProgress("");
+      if (!all.length) { setError("Claude לא מצא תובנות שימושיות בטקסט הזה."); setState("idle"); return; }
+      setItems(all);
       setState("review");
     } catch (e) {
-      setError((e as Error).message); setState("error");
+      setProgress(""); setError((e as Error).message); setState("error");
     }
   }
 
@@ -259,12 +273,12 @@ export function InsightsIngest({ destinations }: { destinations: AdminDestinatio
         className="rounded-[var(--radius-card)] border-2 border-dashed p-1 transition"
         style={{ borderColor: dragOver ? "var(--brand)" : "var(--border)", background: dragOver ? "var(--brand-soft)" : "transparent" }}>
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={10}
-          placeholder="הדביקו כאן את תוכן הפוסט — או גררו לכאן קובץ טקסט (txt / md)…"
+          placeholder="הדביקו כאן את תוכן הפוסט — או גררו לכאן קובץ (docx / txt / md)…"
           className="w-full rounded-[var(--radius-sm)] bg-[var(--surface)] p-3 text-[14px] leading-relaxed outline-none" />
         <div className="flex items-center justify-between px-2 pb-1.5">
           <button onClick={() => fileInput.current?.click()}
             className="flex items-center gap-1.5 text-[13px] text-[var(--brand-ink)]">
-            <Upload size={14} /> בחירת קובץ (txt / md)
+            <Upload size={14} /> בחירת קובץ (docx / txt / md)
           </button>
           {fileName && (
             <span className="flex items-center gap-1 text-[12.5px] text-[var(--text-3)]">
@@ -274,16 +288,23 @@ export function InsightsIngest({ destinations }: { destinations: AdminDestinatio
           )}
           <span className="text-[12px] text-[var(--text-3)]">{text.length.toLocaleString("he-IL")} תווים</span>
         </div>
-        <input ref={fileInput} type="file" accept=".txt,.md,.text,text/plain,text/markdown" className="hidden"
+        <input ref={fileInput} type="file"
+          accept=".docx,.txt,.md,.text,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) void readFile(f); e.target.value = ""; }} />
       </div>
 
       {error && <p className="text-[13px] text-[#c0453f]">{error}</p>}
 
+      {text.length > 40000 && state !== "distilling" && (
+        <p className="self-end text-[12.5px] text-[var(--text-3)]">
+          מסמך ארוך — יעובד ב-{chunkText(text).length} חלקים ({chunkText(text).length} קריאות ל-Claude).
+        </p>
+      )}
       <button onClick={distill} disabled={text.trim().length < 30 || state === "distilling"}
         className="flex items-center justify-center gap-2 self-end rounded-full bg-[var(--brand)] px-7 py-3 text-[15px] font-medium text-white disabled:opacity-50">
         {state === "distilling" ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-        {state === "distilling" ? "Claude מנתח…" : "נתחו עם Claude"}
+        {state === "distilling" ? (progress || "Claude מנתח…") : "נתחו עם Claude"}
       </button>
 
       {/* re-match: repair insight→attraction pins for the selected city */}
