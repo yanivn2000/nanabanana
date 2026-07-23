@@ -1304,10 +1304,9 @@ export function TripView({ tripId }: { tripId: string }) {
               (so there's always somewhere to drop a stop you want to remove). */}
           {((trip?.leftOut?.length ?? 0) > 0 || drag?.kind === "stop") && (
             <div data-drop-bank
-              className="mt-3 rounded-[var(--radius-card)] border bg-[var(--amber-soft)] p-4 transition-colors"
-              style={{ borderColor: overBank ? "var(--brand)" : "var(--amber)",
-                       boxShadow: overBank ? "inset 0 0 0 2px var(--brand)" : "none" }}>
-              <p className="text-[14px] font-semibold text-[var(--amber)]">לא נכנסו ליומן · {trip?.leftOut?.length ?? 0}</p>
+              className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 transition-colors"
+              style={overBank ? { borderColor: "var(--brand)", boxShadow: "inset 0 0 0 2px var(--brand)" } : undefined}>
+              <p className="serif text-[15px] font-bold text-[var(--text)]">לא נכנסו ליומן · {trip?.leftOut?.length ?? 0}</p>
               <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--text-2)]">
                 {drag?.kind === "stop"
                   ? "שחררו כאן כדי להוציא את העצירה מהיומן."
@@ -1321,7 +1320,7 @@ export function TripView({ tripId }: { tripId: string }) {
                   const bHasDetails = !!(p.image_url || p.website || p.best_time_he || p.dress_he ||
                     p.cost_level != null || p.tips_he || (p.tagline_he && p.tagline_he !== p.tips_he));
                   return (
-                  <div key={p.id} className={`shrink-0 overflow-hidden rounded-[10px] bg-[var(--surface)] shadow-[var(--shadow)] ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
+                  <div key={p.id} className={`shrink-0 overflow-hidden rounded-[10px] border border-[var(--border)] bg-[var(--surface-2)] ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
                     {/* tap to read (expand), drag to move — a small move threshold in
                         startPointerDrag tells them apart */}
                     <div
