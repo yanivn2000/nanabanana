@@ -320,6 +320,9 @@ export function TripView({ tripId }: { tripId: string }) {
       // revise. `engine` records whether this is the free heuristic or the AI
       // upgrade (no engine field on AI success → "ai").
       update(tripId, { itinerary: data.itinerary, engine: data.engine ?? "ai",
+        // keep the "X ימים" label in sync with what was actually built (a
+        // neighbourhood build sets its own day count = areas + extra days).
+        ...(data.itinerary?.days?.length ? { days: data.itinerary.days.length } : {}),
         ...(data.leftOut !== undefined ? { leftOut: data.leftOut } : {}) });
       // deterministic revise couldn't act on a free-text request → surface the hint.
       if (data.note) setError(data.note);

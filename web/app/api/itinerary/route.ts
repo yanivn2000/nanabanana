@@ -83,7 +83,7 @@ function normName(s: string): string {
 function partitionBySelection(
   pool: Attraction[],
   taste: Record<string, number> | undefined,
-  selection: { yes: number[]; maybe: number[]; no: number[] },
+  selection: { yes: number[]; no: number[] },
   isFamily: boolean
 ): { anchors: Attraction[]; fillers: Attraction[]; anchorIds: Set<number> } {
   const yes = new Set(selection.yes);
@@ -93,7 +93,12 @@ function partitionBySelection(
   if (anchorPool.length === 0) anchorPool = avail.filter((a) => a.must_see === 1);
   const anchors = rankByTaste(anchorPool, taste, 30, isFamily);
   const anchorIds = new Set(anchors.map((a) => a.id));
-  const fillers = rankByTaste(avail.filter((a) => !anchorIds.has(a.id)), taste, 40, isFamily);
+  // Fillers complete the days, but ONLY with must-sees (never an unmarked minor
+  // place): an unmarked attraction enters only if it's a must-see or sits in a
+  // chosen neighbourhood (handled by the area path). So a build never surprises
+  // the traveller with a place they didn't pick and that isn't a headline sight.
+  const fillers = rankByTaste(
+    avail.filter((a) => a.must_see === 1 && !anchorIds.has(a.id)), taste, 40, isFamily);
   return { anchors, fillers, anchorIds };
 }
 
@@ -155,7 +160,7 @@ export async function POST(req: NextRequest) {
     segments?: { city: string; days: number; hotels?: TripHotel[] }[];
     // Explore build (F1): the traveler's per-trip picks. Drives an anchors-first,
     // "אם יש זמן" fillers plan on the single-city generate path.
-    selection?: { yes: number[]; maybe: number[]; no: number[] };
+    selection?: { yes: number[]; no: number[] };
     // Only when there are kids: apply the family-friendliness lens (family_score
     // ranking). Adults-only trips (couple/friends) rank by taste + must-see only.
     isFamily?: boolean;
@@ -212,7 +217,7 @@ export async function POST(req: NextRequest) {
   // Base pool = top 150; then fold in the traveler's exact picks (even ones
   // ranked below 150) so a chosen place is always a real build candidate.
   const base = await topAttractions(dest.id, 150);
-  const pickIds = body.selection ? [...body.selection.yes, ...body.selection.maybe] : [];
+  const pickIds = body.selection ? [...body.selection.yes] : [];
   const picks = pickIds.length ? await attractionsByIds(pickIds) : [];
   const seen = new Set(base.map((a) => a.id));
   const pool = [...base, ...picks.filter((p) => !seen.has(p.id))];
@@ -264,16 +269,22 @@ export async function POST(req: NextRequest) {
     d.mobility === "car_base"
       ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp, buildOpts)
       : buildHeuristicItinerary(d.city, d.country, ndays, list, fam, pd, wp, undefined, buildOpts);
-  const respondGenerate = (itin: Itinerary, engine?: string) => {
+  const detailOf = (a: Attraction) => ({ id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category, lat: a.lat, lng: a.lng, tagline_he: a.tagline_he, tips_he: a.tips_he, best_time_he: a.best_time_he, dress_he: a.dress_he, cost_level: a.cost_level, website: a.website });
+  // `opts.list` overrides the match list (neighbourhood builds pass the full area
+  // pool so every area member resolves); `opts.surfaceIds`/`detailRows` say which
+  // un-scheduled places land in "לא נכנסו ליומן" (default: the traveller's "כן").
+  const respondGenerate = (itin: Itinerary, engine?: string,
+    opts?: { list?: Attraction[]; surfaceIds?: Set<number>; detailRows?: Attraction[] }) => {
     const scheduled = new Set<number>();
-    const withDetails = attachDetails(itin, buildList, anchorIds, scheduled);
+    const withDetails = attachDetails(itin, opts?.list ?? buildList, anchorIds, scheduled);
     recordTripEdges(dest, withDetails);
     annotateDaysWithAreas(withDetails.days, areas, { lat: dest.lat, lng: dest.lng });
     // car_base city → the whole trip is a rental-car trip; legs read as driving.
     if (dest.mobility === "car_base") withDetails.days.forEach((d) => { d.carBase = true; });
-    const leftOut = body.selection
-      ? picks.filter((a) => yesSet.has(a.id) && !scheduled.has(a.id))
-          .map((a) => ({ id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category, lat: a.lat, lng: a.lng, tagline_he: a.tagline_he, tips_he: a.tips_he, best_time_he: a.best_time_he, dress_he: a.dress_he, cost_level: a.cost_level, website: a.website }))
+    const surfaceIds = opts?.surfaceIds ?? yesSet;
+    const detailRows = opts?.detailRows ?? picks;
+    const leftOut = (body.selection || opts?.surfaceIds)
+      ? detailRows.filter((a) => surfaceIds.has(a.id) && !scheduled.has(a.id)).map(detailOf)
       : [];
     return NextResponse.json({ itinerary: withDetails, ...(engine ? { engine } : {}), leftOut });
   };
@@ -381,9 +392,43 @@ export async function POST(req: NextRequest) {
   // picked areas, so build one guaranteed day per area (seedGroups). Placed BEFORE the
   // AI-vs-heuristic branching so it isn't swallowed by the no-AI generic fallback.
   if (body.mode !== "revise" && body.areaGroups?.length) {
-    return respondGenerate(
-      buildHeuristicItinerary(dest.city, dest.country, body.areaGroups.length, buildList,
-        isFamily, perDay, body.walkPref ?? 3, body.areaGroups, buildOpts), "neighbourhoods");
+    const noSet = new Set(body.selection?.no ?? []);
+    // Every attraction in the chosen areas is part of the trip. Pull ALL member
+    // rows (even ones ranked past the pool cap) so none are silently lost, and
+    // build an uncapped pool the seedGroups resolve against.
+    const memberIds = [...new Set(body.areaGroups.flat())].filter((id) => !noSet.has(id));
+    const memberRows = await attractionsByIds(memberIds);
+    const areaSeen = new Set<number>();
+    const areaList: Attraction[] = [];
+    for (const a of [...memberRows, ...picks, ...pool]) {
+      if (noSet.has(a.id) || areaSeen.has(a.id)) continue;
+      areaSeen.add(a.id); areaList.push(a);
+    }
+    // Order each area's members so the day fills by the traveller's intent:
+    // "כן" first, then must-sees, then the rest (the day budget trims the tail).
+    const mustSet = new Set(memberRows.filter((a) => a.must_see === 1).map((a) => a.id));
+    const rankId = (id: number) => (yesSet.has(id) ? 2 : mustSet.has(id) ? 1 : 0);
+    const orderedGroups = body.areaGroups.map((g) =>
+      g.filter((id) => !noSet.has(id)).map((id, i) => ({ id, i }))
+        .sort((x, y) => rankId(y.id) - rankId(x.id) || x.i - y.i).map((z) => z.id));
+    const nAreas = orderedGroups.length;
+    const itin = buildHeuristicItinerary(dest.city, dest.country, nAreas, areaList,
+      isFamily, perDay, body.walkPref ?? 3, orderedGroups, buildOpts);
+    // Requested more days than areas → central day(s) for the "כן" picks OUTSIDE
+    // the chosen areas (plus area must-sees), so an explicit pick never just vanishes.
+    const requested = body.days ?? nAreas;
+    const memberSet = new Set(memberIds);
+    if (requested > nAreas) {
+      const central = areaList.filter((a) => !memberSet.has(a.id) && (yesSet.has(a.id) || a.must_see === 1));
+      if (central.length)
+        itin.days.push(...buildHeuristicItinerary(dest.city, dest.country, requested - nAreas,
+          central, isFamily, perDay, body.walkPref ?? 3, undefined, buildOpts).days);
+    }
+    itin.days.forEach((d, i) => { d.label = `יום ${i + 1}`; });
+    // Bank = every chosen-area member + every "כן" that didn't make a day.
+    const surfaceIds = new Set<number>([...memberIds, ...yesSet]);
+    return respondGenerate(itin, "neighbourhoods",
+      { list: areaList, surfaceIds, detailRows: [...memberRows, ...picks] });
   }
 
   // Generate works without a key via the heuristic builder; AI upgrades it.

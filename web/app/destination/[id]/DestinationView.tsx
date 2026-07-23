@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, Fragment } from "react";
 import Link from "next/link";
-import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin, HelpCircle, X, Loader2 } from "lucide-react";
+import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin, X, Loader2 } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
 import { CityPoster } from "@/components/CityPoster";
 import { descriptor, catColor, bigImage, mergeCat, countryFlag } from "@/lib/labels";
@@ -80,10 +80,9 @@ const SORT_HE: Record<SortKey, string> = {
   match: "הכי מתאים לי", mustsee: "מומלצים תחילה", name: "לפי א׳–ב׳",
 };
 
-// yes / maybe / no marks on a card — the traveler's picks for the trip.
+// yes / no marks on a card — the traveler's picks for the trip.
 const TONE: Record<Choice, { on: string; ink: string; off: string }> = {
   yes: { on: "var(--brand)", ink: "#fff", off: "var(--brand-ink)" },
-  maybe: { on: "var(--amber-fill)", ink: "#3d2c0a", off: "var(--amber)" },
   no: { on: "#c0453f", ink: "#fff", off: "#c0453f" },
 };
 // A 3-state interest pill (the same values as the profile page): tap cycles
@@ -350,7 +349,6 @@ export function DestinationView({
   const PAGE = 200;
   const [visibleCount, setVisibleCount] = useState(PAGE);
   const yesCount = Object.values(choices).filter((c) => c === "yes").length;
-  const maybeCount = Object.values(choices).filter((c) => c === "maybe").length;
   // The trip needs enough anchors to be worth building. Gate the CTA on a soft
   // minimum of "כן" marks (fewer in a tiny city) so the flow reads clearly:
   // pick topics → mark attractions → build. Clicking early nudges + explains.
@@ -383,7 +381,7 @@ export function DestinationView({
       attractions.filter((a) => {
         // "הצג רק נבחרים" overrides the other filters: show exactly the places
         // the traveler marked (כן/אולי), so a lone pick is always findable.
-        if (selectedOnly) return choices[a.id] === "yes" || choices[a.id] === "maybe";
+        if (selectedOnly) return choices[a.id] === "yes";
         // solo focus: show ALL of the focused topic (matching its tile count),
         // still respecting search / map / popover flags below. It deliberately
         // bypasses the must-see toggle — otherwise soloing "אוכל 1" could show 0
@@ -452,7 +450,7 @@ export function DestinationView({
   // Paginate: show PAGE at a time; reset to page 1 on any change.
   useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, selectedOnly, soloInterest, profile.interests, profile.dislikes]);
   // Never leave the traveler stranded in an empty "selected only" view.
-  useEffect(() => { if (selectedOnly && yesCount + maybeCount === 0) setSelectedOnly(false); }, [selectedOnly, yesCount, maybeCount]);
+  useEffect(() => { if (selectedOnly && yesCount === 0) setSelectedOnly(false); }, [selectedOnly, yesCount]);
   const visible = sortedItems.slice(0, visibleCount);
   const firstDimId = visible.find((a) => dimmedIds.has(a.id))?.id;
   // Short-path override: when an audience is chosen, the map + grid show the
@@ -471,7 +469,7 @@ export function DestinationView({
   // The traveler's picks with coordinates — highlighted on the map, and framed
   // when they tap "מקד את הנבחרים" (bumps a nonce the map watches).
   const pickedAttractions = useMemo(
-    () => attractions.filter((a) => (choices[a.id] === "yes" || choices[a.id] === "maybe") && a.lat != null && a.lng != null),
+    () => attractions.filter((a) => choices[a.id] === "yes" && a.lat != null && a.lng != null),
     [attractions, choices]
   );
   const [fitNonce, setFitNonce] = useState(0);
@@ -542,14 +540,15 @@ export function DestinationView({
     return { interestTiles: tiles, flagCount };
   }, [attractions, query, mapOnly, bounds, flags, insights]);
 
-  // Build a trip from the city marks (yes = anchors, maybe = "if time", no =
-  // excluded). Empty selection is fine — the builder falls back to the
-  // profile-matched must-sees. Days + distance come from the modal. We hand off
-  // to the trip page with ?build=1 so it starts building immediately.
+  // Build a trip from the city marks (yes = anchors, no = excluded; unmarked
+  // places enter only if they are must-sees or sit in a chosen neighbourhood).
+  // Empty selection is fine — the builder falls back to the profile-matched
+  // must-sees. Days + distance come from the modal. We hand off to the trip page
+  // with ?build=1 so it starts building immediately.
   function buildTrip() {
-    const yes: number[] = [], maybe: number[] = [], no: number[] = [];
+    const yes: number[] = [], no: number[] = [];
     for (const [id, c] of Object.entries(choices)) {
-      (c === "yes" ? yes : c === "maybe" ? maybe : no).push(Number(id));
+      (c === "yes" ? yes : no).push(Number(id));
     }
     // Mode 3 ("build for <audience>"): anchor on the short path, ignoring stale
     // marks. Otherwise build from the user's marks (explore mode).
@@ -568,7 +567,7 @@ export function DestinationView({
       days: buildDays,
       month: new Date().getMonth() + 1,   // a default season; exact dates are set on the trip page
       profile: { ...profile, pace: buildPace, taste, dailyDriveHours: RADIUS_HOURS[buildRadius] },
-      ...(yesFinal.length || maybe.length || no.length ? { selection: { yes: yesFinal, maybe, no } } : {}),
+      ...(yesFinal.length || no.length ? { selection: { yes: yesFinal, no } } : {}),
       ...(chosenAreaGroups.length ? { areaGroups: chosenAreaGroups } : {}),
     });
     router.push(`/trip/${trip.id}?build=1`);
@@ -738,11 +737,11 @@ export function DestinationView({
 
       {/* always-visible selection control — so marks (incl. ones saved from a past
           visit) are never a mystery: see the count, show only them, or clear all */}
-      {(yesCount + maybeCount) > 0 && (
+      {yesCount > 0 && (
         <div className="mx-auto max-w-[1600px] px-5 pt-3 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--brand)] bg-[var(--brand-soft)] px-3.5 py-2">
             <span className="text-[13.5px] font-medium text-[var(--brand-ink)]">
-              ✓ {yesCount} אטרקציות שסימנתם{maybeCount ? ` · ${maybeCount} אולי` : ""}
+              ✓ {yesCount} אטרקציות שסימנתם
             </span>
             <div className="flex items-center gap-2">
               <button onClick={toggleSelectedOnly}
@@ -1098,11 +1097,10 @@ export function DestinationView({
                                   { v: "no", t: "ממש לא", bg: "#c0453f", ink: "#fff" }]} />
                     </div>
                   )}
-                  {/* yes / maybe / no marks — the traveler's picks for this city.
-                      RTL order: כן first (right), then אולי, then לא. */}
-                  <div className="grid grid-cols-3 gap-1.5 border-t border-[var(--border)] p-2">
+                  {/* yes / no marks — the traveler's picks for this city.
+                      RTL order: כן first (right), then לא. */}
+                  <div className="grid grid-cols-2 gap-1.5 border-t border-[var(--border)] p-2">
                     <ChoiceBtn tone="yes" active={choice === "yes"} onClick={() => setChoice(a.id, "yes")} icon={<Check size={13} />} label="כן" />
-                    <ChoiceBtn tone="maybe" active={choice === "maybe"} onClick={() => setChoice(a.id, "maybe")} icon={<HelpCircle size={13} />} label="אולי" />
                     <ChoiceBtn tone="no" active={choice === "no"} onClick={() => setChoice(a.id, "no")} icon={<X size={13} />} label="לא" />
                   </div>
                 </div>
@@ -1145,7 +1143,7 @@ export function DestinationView({
               </div>
               <p className="min-w-0 truncate text-[13.5px] text-[var(--text-2)]">
                 {canBuild ? (
-                  <><span className="font-semibold text-[var(--text)]">{yesCount} אטרקציות</span> נבחרו — מוכנים לבנות!{maybeCount ? <span className="text-[var(--text-3)]"> · {maybeCount} אולי</span> : null}</>
+                  <><span className="font-semibold text-[var(--text)]">{yesCount} אטרקציות</span> נבחרו — מוכנים לבנות!</>
                 ) : yesCount === 0 ? (
                   <>סמנו אטרקציות שאהבתם <span className="font-medium text-[var(--brand-ink)]">(כן 👍)</span> — לפחות {minPicks} — ונרכיב לכם טיול</>
                 ) : (
@@ -1154,7 +1152,7 @@ export function DestinationView({
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              {yesCount + maybeCount > 0 && (
+              {yesCount > 0 && (
                 <>
                   <button onClick={toggleSelectedOnly}
                     className="hidden items-center gap-1.5 rounded-full border px-4 py-2.5 text-[13.5px] font-medium transition sm:flex"
@@ -1208,8 +1206,8 @@ export function DestinationView({
             ) : (
               <p className="mb-4 text-[13.5px] leading-relaxed text-[var(--text-2)]">
                 {yesCount
-                  ? `${yesCount} מקומות שסימנתם "כן" יהיו העוגנים${maybeCount ? `, ו-${maybeCount} "אולי" ישתלבו אם יש זמן` : ""}.`
-                  : "לא סימנתם מקומות — נבחר את החובה-לביקור שמתאימים לכם. תמיד אפשר לסמן כן/אולי/לא כדי לכוון."}
+                  ? `${yesCount} מקומות שסימנתם "כן" יהיו העוגנים, ונשלים עם החובה-לביקור באזור.`
+                  : "לא סימנתם מקומות — נבחר את החובה-לביקור שמתאימים לכם. תמיד אפשר לסמן כן/לא כדי לכוון."}
               </p>
             )}
             <div className="mb-4">

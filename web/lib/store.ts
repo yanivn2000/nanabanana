@@ -182,8 +182,8 @@ export type Trip = {
     custom: { id: string; label: string }[];
   };
   budget?: { dailyTarget?: number }; // per-trip daily budget target, € (#15)
-  selection?: {            // from the Explore flow: yes = anchors, maybe = "if time"
-    yes: number[]; maybe: number[]; no: number[];
+  selection?: {            // from the Explore flow: yes = anchors, no = excluded.
+    yes: number[]; no: number[];
   };
   // Chosen-neighbourhood tour: one member-id array per area the traveller picked to
   // tour → the builder makes one guaranteed day per area.
@@ -315,8 +315,9 @@ export function useTrips(): {
 
 // Per-city yes/maybe/no marks, kept per destination and persisted — the
 // traveler's evolving "city profile". Any trip to that city inherits them, and
-// the map feeds the itinerary builder (yes = anchors, maybe = "if time").
-export type Choice = "yes" | "maybe" | "no";
+// the map feeds the itinerary builder (yes = anchors; no = excluded; unmarked =
+// included only if it's a must-see or sits in a chosen neighbourhood).
+export type Choice = "yes" | "no";
 const CITYSEL_KEY = "nanabanana.citysel.v1";
 
 export function useCitySelection(destinationId: number | null | undefined): {
@@ -331,7 +332,15 @@ export function useCitySelection(destinationId: number | null | undefined): {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(CITYSEL_KEY);
-      if (raw) setAll(JSON.parse(raw));
+      if (raw) {
+        // Migrate away the retired "maybe" state: an old "maybe" mark becomes
+        // UNMARKED (not "no") — the builder treats it like any unmarked place.
+        const parsed = JSON.parse(raw) as Record<string, Record<number, string>>;
+        for (const city of Object.keys(parsed))
+          for (const id of Object.keys(parsed[city]))
+            if (parsed[city][Number(id)] === "maybe") delete parsed[city][Number(id)];
+        setAll(parsed as Record<string, Record<number, Choice>>);
+      }
     } catch {}
     setLoaded(true);
   }, []);
