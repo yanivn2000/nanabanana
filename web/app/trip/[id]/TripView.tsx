@@ -1160,7 +1160,7 @@ export function TripView({ tripId }: { tripId: string }) {
                   const bHasDetails = !!(p.image_url || p.website || p.best_time_he || p.dress_he ||
                     p.cost_level != null || p.tips_he || (p.tagline_he && p.tagline_he !== p.tips_he));
                   return (
-                  <div key={p.id} className={`overflow-hidden rounded-[10px] bg-[var(--surface)] shadow-[var(--shadow)] ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
+                  <div key={p.id} className={`shrink-0 overflow-hidden rounded-[10px] bg-[var(--surface)] shadow-[var(--shadow)] ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
                     {/* tap to read (expand), drag to move — a small move threshold in
                         startPointerDrag tells them apart */}
                     <div
