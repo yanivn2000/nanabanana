@@ -8,7 +8,7 @@ import { familyFit } from "./taste";
 import { clusterIntoDays, dayWalkMinutes, dropSamePlace, orderPath } from "./cluster";
 import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget } from "./daytrips";
 import { durationHe, haversineKm, round30, travelMinutes as travelMinutesKm } from "./geo";
-import { DWELL_DEFAULT, dwellMinutes, isInSeason, reorderByTimeOfDay, reorderDayEnders, stopMatchesType, type DwellCfg } from "./brain/traits";
+import { DWELL_DEFAULT, dwellMinutes, isInSeason, orientDay, stopMatchesType, type DwellCfg } from "./brain/traits";
 
 // Resolved technique flags the builder honours (from brain_principles via
 // resolveBrainRules; all optional → defaults preserve prior behaviour).
@@ -144,15 +144,13 @@ export function buildHeuristicItinerary(
   }
 
   const dayList = capped.map((pickFinal, d) => {
-    // Re-optimise the walking order AFTER cap+backfill — backfilled stops were
-    // appended out of place, which otherwise sends the traveller out and back (e.g.
-    // two north-of-the-IJ stops split to opposite ends of the day). Then day-enders
-    // (water/adventure) to the end, then respect each place's timing advice.
-    let picks = orderPath(pickFinal);
-    if (opts?.dayEnderLast !== false) picks = reorderDayEnders(picks);
-    // Respect each place's own timing advice: morning-only stops first, evening/night
-    // ones last, geography in between (stable, so it only moves the time-exclusive few).
-    picks = reorderByTimeOfDay(picks);
+    // Order each day by PROXIMITY (NN + 2-opt) after cap+backfill, then ORIENT the
+    // whole route so morning-leaning stops fall earlier and evening / day-ender ones
+    // later — by flipping the path's direction, never by pulling a single stop out of
+    // sequence. A per-stop time-of-day reshuffle used to tear a cluster apart (a
+    // sunset museum sent across the IJ to the day's end, away from its neighbour). The
+    // orientation keeps every adjacency intact — proximity wins, timing is a nudge.
+    const picks = orientDay(orderPath(pickFinal), opts?.dayEnderLast !== false);
     const stops: Stop[] = [];
     // Sequential clock: arrival = running time, then add the stay + travel to the
     // next stop, so times always increase and reflect real durations. The lunch

@@ -7,7 +7,7 @@ import type { Attraction } from "./db";
 import type { Day, Stop, StopKind } from "./trip-types";
 import { haversineKm, durationHe, walkMinutes } from "./geo";
 import { dropSamePlace } from "./cluster";
-import { DWELL_DEFAULT, dwellMinutes, reorderByTimeOfDay, reorderDayEnders, type DwellCfg } from "./brain/traits";
+import { DWELL_DEFAULT, dwellMinutes, orientDay, type DwellCfg } from "./brain/traits";
 
 const fmtClock = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 
@@ -65,8 +65,9 @@ export function clusterDayTrips(
       (a) => !used.has(a.id) && haversineKm(seed.lat!, seed.lng!, a.lat!, a.lng!) <= CLUSTER_KM);
     members.forEach((m) => used.add(m.id));
     // order: anchor first, then nearest-neighbour walk within the far area; drop
-    // "same place" stops (a lake and its own dock/viewpoint), push day-enders last.
-    const ordered = reorderByTimeOfDay(reorderDayEnders(dropSamePlace(orderFromAnchor(members, seed), opts.sameMeters))).slice(0, maxStops);
+    // "same place" stops (a lake and its own dock/viewpoint), then orient so an
+    // evening / day-ender stop leans late without tearing the proximity path.
+    const ordered = orientDay(dropSamePlace(orderFromAnchor(members, seed), opts.sameMeters)).slice(0, maxStops);
     const lat = ordered.reduce((s, a) => s + a.lat!, 0) / ordered.length;
     const lng = ordered.reduce((s, a) => s + a.lng!, 0) / ordered.length;
     const driveKm = Math.round(haversineKm(center.lat, center.lng, lat, lng));

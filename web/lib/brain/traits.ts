@@ -122,3 +122,25 @@ const timeRank = (a: Attraction) => { const b = bestTimeBucket(a); return b === 
 export function reorderByTimeOfDay(day: Attraction[]): Attraction[] {
   return day.map((a, i) => ({ a, i })).sort((x, y) => timeRank(x.a) - timeRank(y.a) || x.i - y.i).map((z) => z.a);
 }
+
+// Orient a proximity-ordered day so morning-leaning stops fall earlier and
+// evening / day-ender stops later — by choosing the better of the path's TWO
+// directions (forward vs reversed). Reversing preserves EVERY adjacency, so the
+// walking route is never torn (unlike a per-stop reshuffle, which used to send a
+// sunset museum across the river to the day's end, away from its neighbour). A
+// time-exclusive stop stuck mid-route stays put — proximity wins over a soft
+// preference. `includeEnders` folds day-enders into the "late" signal.
+export function orientDay(day: Attraction[], includeEnders = true): Attraction[] {
+  if (day.length < 3) return day;
+  const phase = (a: Attraction) =>
+    (includeEnders && isDayEnder(a)) ? 2 : timeRank(a);
+  const inversions = (seq: Attraction[]) => {
+    let v = 0;
+    for (let i = 0; i < seq.length; i++)
+      for (let j = i + 1; j < seq.length; j++)
+        if (phase(seq[i]) > phase(seq[j])) v++;
+    return v;
+  };
+  const rev = [...day].reverse();
+  return inversions(rev) < inversions(day) ? rev : day;
+}
