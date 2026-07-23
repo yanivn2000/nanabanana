@@ -6,7 +6,7 @@
 import type { Attraction } from "./db";
 import type { Itinerary, Day, Stop, StopKind } from "./trip-types";
 import { dwellMinutes, DWELL_DEFAULT } from "./brain/traits";
-import { haversineKm, travelMinutes, durationHe } from "./geo";
+import { haversineKm, travelMinutes, durationHe, round30 } from "./geo";
 
 const DAY_START = 9 * 60 + 30, LUNCH_AFTER = 12 * 60, LUNCH_MIN = 60;
 const fmt = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
@@ -20,16 +20,18 @@ export type ReviseResult = { itinerary: Itinerary; changed: boolean; note?: stri
 // noon) — mirrors the builder so edited days stay consistent.
 function retime(day: Day, dwellOf: (s: Stop) => number): void {
   const content = day.stops.filter((s) => s.kind !== "food");
-  let clock = DAY_START, lunchDone = false;
+  let clock = round30(DAY_START), lunchDone = false;
   const out: Stop[] = [];
   content.forEach((s, i) => {
     if (!lunchDone && i > 0 && clock >= LUNCH_AFTER) {
-      out.push({ name: "הפסקת צהריים", kind: "food", time: fmt(clock), duration: durationHe(LUNCH_MIN), note: "מסעדה מקומית באזור" });
-      clock += LUNCH_MIN; lunchDone = true;
+      const t = round30(clock);
+      out.push({ name: "הפסקת צהריים", kind: "food", time: fmt(t), duration: durationHe(LUNCH_MIN), note: "מסעדה מקומית באזור" });
+      clock = t + LUNCH_MIN; lunchDone = true;
     }
     const dw = dwellOf(s);
-    out.push({ ...s, time: fmt(clock), duration: durationHe(dw) });
-    clock += dw;
+    const arr = round30(clock);
+    out.push({ ...s, time: fmt(arr), duration: durationHe(dw) });
+    clock = arr + dw;
     const nx = content[i + 1];
     // transit-aware (walk vs tube) — same model the builder uses, so a far hop
     // isn't re-timed as a 3-hour walk after an edit.

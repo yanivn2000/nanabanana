@@ -68,6 +68,10 @@ export function travelMinutes(km: number): number {
   return Math.round(Math.min(walk, transit));
 }
 
+// Snap a clock (minutes since midnight) to the nearest half hour, so itinerary
+// times read as clean :00 / :30 slots rather than 10:46 / 13:07.
+export const round30 = (min: number): number => Math.round(min / 30) * 30;
+
 // Recommended visit length in natural Hebrew — never "0 שעות" for sub-hour stops.
 // The single source of truth for stop durations across the builders.
 export function durationHe(minutes: number | null | undefined): string {

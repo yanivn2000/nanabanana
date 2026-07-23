@@ -27,7 +27,7 @@ function stayHe(d?: string): string | null {
   if (n === 2.5) return "כשעתיים וחצי";
   return `כ-${n} שעות`;
 }
-import { googleMapsUrl, googleDirUrl, formatDistance, estimateLeg, haversineKm, travelMinutes, durationHe, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
+import { googleMapsUrl, googleDirUrl, formatDistance, estimateLeg, haversineKm, travelMinutes, durationHe, round30, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
 import { stopColor } from "@/lib/labels";
 import { bigImage } from "@/lib/labels";
 import { KIND_META } from "@/lib/sample";
@@ -63,6 +63,8 @@ const CAT_TO_KIND: Record<string, Stop["kind"]> = {
 // gets a real time instead of a blank. Client-side + instant (no server round-trip).
 const DAY_START_MIN = 9 * 60 + 30, LUNCH_AFTER_MIN = 12 * 60, LUNCH_MIN = 60;
 const fmtClock = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+// A saved-trip timestamp (ms) → short Hebrew date + time, e.g. "23.7.26, 14:05".
+const fmtStamp = (ms?: number) => (ms ? new Date(ms).toLocaleString("he-IL", { day: "numeric", month: "numeric", year: "2-digit", hour: "2-digit", minute: "2-digit" }) : "");
 // Inverse of geo.durationHe — recover minutes from the Hebrew duration label so an
 // existing stop keeps its own dwell; unknown/blank (a bank pick) defaults to 90.
 const durToMin = (d?: string): number => {
@@ -80,24 +82,23 @@ function retimeStops(stops: Stop[]): Stop[] {
   // If the day already has a meal break, treat it as a REAL, user-placed stop: keep
   // it wherever it sits in the order (so a stop dragged above/below it stays there)
   // and just recompute times. Only a day with NO meal gets one auto-inserted at noon.
+  // Every break (food/rest) keeps its OWN duration (dinner 90, rest 60, edited stays);
+  // arrival times snap to the nearest half hour so the day reads as clean :00/:30 slots.
   const hasFood = stops.some((s) => s.kind === "food");
   const seq = hasFood ? stops : stops.filter((s) => s.kind !== "food");
   const out: Stop[] = [];
-  let clock = DAY_START_MIN, lunchDone = hasFood;
+  let clock = round30(DAY_START_MIN), lunchDone = hasFood;
   seq.forEach((s, i) => {
     if (!lunchDone && i > 0 && clock >= LUNCH_AFTER_MIN) {
-      out.push({ name: "הפסקת צהריים", kind: "food", time: fmtClock(clock), duration: durationHe(LUNCH_MIN), note: "מסעדה מקומית באזור" });
-      clock += LUNCH_MIN; lunchDone = true;
+      const t = round30(clock);
+      out.push({ name: "הפסקת צהריים", kind: "food", time: fmtClock(t), duration: durationHe(LUNCH_MIN), note: "מסעדה מקומית באזור" });
+      clock = t + LUNCH_MIN; lunchDone = true;
     }
-    if (s.kind === "food") {
-      out.push({ ...s, time: fmtClock(clock), duration: durationHe(LUNCH_MIN) });
-      clock += LUNCH_MIN;   // a meal break has no travel legs (no coords)
-      return;
-    }
-    const dw = durToMin(s.duration);
-    out.push({ ...s, time: fmtClock(clock), duration: durationHe(dw) });
-    clock += dw;
-    // travel to the next COORD-bearing stop (skip over a meal break in between)
+    const dw = durToMin(s.duration);   // honours edited / added-break durations
+    const arr = round30(clock);
+    out.push({ ...s, time: fmtClock(arr), duration: durationHe(dw) });
+    clock = arr + dw;
+    // travel to the next COORD-bearing stop (skip over a break with no coords)
     const nx = seq.slice(i + 1).find((x) => x.lat != null && x.lng != null);
     if (nx && s.lat != null && s.lng != null) {
       clock += travelMinutes(haversineKm(s.lat, s.lng, nx.lat as number, nx.lng as number));
@@ -145,7 +146,7 @@ function StopIcon({ kind }: { kind: Stop["kind"] }) {
 const AI_ENABLED = process.env.NEXT_PUBLIC_AI_ENABLED === "true";
 
 export function TripView({ tripId }: { tripId: string }) {
-  const { trips, update, loaded } = useTrips();
+  const { trips, update, remove, loaded } = useTrips();
   const [globalProfile] = useProfile();
   const { hotels } = useHotels();
   const [busy, setBusy] = useState<null | "generate" | "revise">(null);
@@ -498,6 +499,23 @@ export function TripView({ tripId }: { tripId: string }) {
   const deleteStop = (di: number, si: number) =>
     mutate((it) => { it.days[di].stops.splice(si, 1); it.days[di].stops = retimeStops(it.days[di].stops); });
 
+  // Adjust the recommended stay at a stop by ±30 min (the built value is only a
+  // suggestion — some travellers linger, some rush), then re-time the day.
+  const bumpDwell = (di: number, si: number, deltaMin: number) =>
+    mutate((it) => {
+      const s = it.days[di].stops[si];
+      const next = Math.max(30, Math.min(600, round30(durToMin(s.duration) + deltaMin)));
+      s.duration = durationHe(next);
+      it.days[di].stops = retimeStops(it.days[di].stops);
+    });
+  // Add a break to the current day (dinner / hotel rest) — appended at the end, so
+  // it lands in the evening; the traveller can drag it earlier. Re-time after.
+  const addBreak = (kind: Stop["kind"], name: string, minutes: number, note: string) =>
+    mutate((it) => {
+      it.days[curIdx].stops.push({ name, kind, time: "", duration: durationHe(minutes), note });
+      it.days[curIdx].stops = retimeStops(it.days[curIdx].stops);
+    });
+
   // Bank → day: drop a left-out pick into the current day at index `at`, re-time,
   // and remove it from the bank (all in one save).
   const insertBankAt = (di: number, at: number, id: number) => {
@@ -709,8 +727,25 @@ export function TripView({ tripId }: { tripId: string }) {
               onShared={(shared) => update(tripId, { shared })} />
           )}
           {trip && <EditorTools trip={trip} itinerary={itinerary} />}
+          {/* delete this trip (with confirm) → back to the trips list */}
+          <button
+            onClick={() => { if (confirm("למחוק את הטיול הזה? הפעולה אינה ניתנת לביטול.")) { remove(tripId); window.location.href = "/trips"; } }}
+            title="מחק טיול" aria-label="מחק טיול"
+            className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--border)] px-3 py-1.5 text-[13.5px] font-medium text-[var(--text-2)] transition hover:border-[var(--danger,#dc2626)] hover:text-[var(--danger,#dc2626)]">
+            <Trash2 size={14} /> מחק
+          </button>
         </div>
       </div>
+
+      {/* creation + last-saved timestamps — a thin, unobtrusive line */}
+      {trip && (
+        <div className="px-5 pt-1 text-[11.5px] text-[var(--text-3)] lg:pl-8 lg:pr-[204px]">
+          <span>נוצר {fmtStamp(trip.createdAt)}</span>
+          {trip.updatedAt && trip.updatedAt > trip.createdAt + 1000 && (
+            <span> · עודכן לאחרונה {fmtStamp(trip.updatedAt)}</span>
+          )}
+        </div>
+      )}
 
       {/* row 2 — day tabs (thin pills) */}
       {itinerary && allDays.length > 0 && (
@@ -1039,8 +1074,13 @@ export function TripView({ tripId }: { tripId: string }) {
                             </span>
                           )}
                           {s.duration && (
-                            <span className="flex items-center gap-1" title="משך שהייה מומלץ במקום">
-                              <Hourglass size={11} className="shrink-0" /> {stayHe(s.duration)}
+                            <span className="flex items-center gap-1" title="משך שהייה — לחצו +/− לכוונון (חצי שעה)">
+                              <Hourglass size={11} className="shrink-0" />
+                              <button onClick={(e) => { e.stopPropagation(); bumpDwell(curIdx, si, -30); }} aria-label="פחות זמן"
+                                className="grid size-[18px] place-items-center rounded border border-[var(--border)] text-[13px] leading-none text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">−</button>
+                              <span className="min-w-[54px] text-center">{stayHe(s.duration)}</span>
+                              <button onClick={(e) => { e.stopPropagation(); bumpDwell(curIdx, si, 30); }} aria-label="יותר זמן"
+                                className="grid size-[18px] place-items-center rounded border border-[var(--border)] text-[13px] leading-none text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">+</button>
                             </span>
                           )}
                         </div>
@@ -1145,6 +1185,19 @@ export function TripView({ tripId }: { tripId: string }) {
                   שחררו כאן כדי להוסיף בסוף היום
                 </div>
               )}
+              {/* add a break to the day — dinner (default 1½h) or hotel rest (1h).
+                  Added at the end (evening); drag to reposition. */}
+              <div className="mt-1 flex flex-wrap items-center gap-2 border-t border-[var(--border)] pt-2.5 text-[12.5px]">
+                <span className="text-[var(--text-3)]">הוסיפו:</span>
+                <button onClick={() => addBreak("food", "ארוחת ערב", 90, "מסעדה מקומית באזור")}
+                  className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
+                  <Utensils size={12} /> ארוחת ערב
+                </button>
+                <button onClick={() => addBreak("rest", "מנוחה במלון", 60, "חזרה למלון להתרעננות")}
+                  className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
+                  <Coffee size={12} /> מנוחה במלון
+                </button>
+              </div>
             </div>
 
             {/* why this day is shaped this way — mobile only (desktop shows it in

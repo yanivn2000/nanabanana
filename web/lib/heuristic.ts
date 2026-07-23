@@ -7,7 +7,7 @@ import { descriptor } from "./labels";
 import { familyFit } from "./taste";
 import { clusterIntoDays, dayWalkMinutes, dropSamePlace } from "./cluster";
 import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget } from "./daytrips";
-import { durationHe, haversineKm, travelMinutes as travelMinutesKm } from "./geo";
+import { durationHe, haversineKm, round30, travelMinutes as travelMinutesKm } from "./geo";
 import { DWELL_DEFAULT, dwellMinutes, isInSeason, reorderByTimeOfDay, reorderDayEnders, stopMatchesType, type DwellCfg } from "./brain/traits";
 
 // Resolved technique flags the builder honours (from brain_principles via
@@ -113,18 +113,21 @@ export function buildHeuristicItinerary(
     const startMin = opts?.dayStartMin ?? DAY_START_MIN;
     const lunchAfter = opts?.lunchAfterMin ?? LUNCH_AFTER_MIN;
     const lunchLen = opts?.lunchMinutes ?? LUNCH_MIN;
-    let clock = startMin;
+    let clock = round30(startMin);
     let lunchDone = false;
     picks.forEach((a, i) => {
       if (!lunchDone && i > 0 && clock >= lunchAfter) {
-        stops.push({ name: "הפסקת צהריים", kind: "food", time: fmtClock(clock), duration: durationHe(lunchLen), note: "מסעדה מקומית באזור" });
-        clock += lunchLen;
+        const t = round30(clock);
+        stops.push({ name: "הפסקת צהריים", kind: "food", time: fmtClock(t), duration: durationHe(lunchLen), note: "מסעדה מקומית באזור" });
+        clock = t + lunchLen;
         lunchDone = true;
       }
+      // snap each arrival to the nearest half hour → clean :00/:30 slots
+      const arr = round30(clock);
       stops.push({
         name: a.name_he || a.name_en,
         kind: kindOf(a),
-        time: fmtClock(clock),
+        time: fmtClock(arr),
         duration: durationHe(dwellMinutes(a, dwell)),
         score: isFamily ? (a.family_score ?? undefined) : undefined,
         note: a.tips_he || descriptor(a),
@@ -132,7 +135,7 @@ export function buildHeuristicItinerary(
         // depending on a later attachDetails pass (e.g. saved modules).
         id: a.id, lat: a.lat, lng: a.lng, image: a.image_url, tagline: a.tagline_he,
       });
-      clock += dwellMinutes(a, dwell);
+      clock = arr + dwellMinutes(a, dwell);
       if (i < picks.length - 1) clock += travelMinutes(a, picks[i + 1]);
     });
 

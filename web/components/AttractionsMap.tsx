@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Popup, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Popup, ScaleControl, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import type { CircleMarker as LeafletCircleMarker } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -272,6 +272,8 @@ export default function AttractionsMap({
         attribution="&copy; OpenStreetMap"
         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
       />
+      {/* metric scale bar (m / km), no imperial */}
+      <ScaleControl position="bottomleft" imperial={false} metric />
       <Flyer selected={selected} markers={markers} />
       <FitBounds attractions={attractions} hotels={hotels} selected={selected} userPos={userPos} />
       <FlyTo focus={focus} />

@@ -191,6 +191,7 @@ export type Trip = {
   shared?: { slug: string; token: string };
   remixOf?: string;        // slug of the shared trip this one was copied from
   createdAt: number;
+  updatedAt?: number;      // last time the trip was changed (stamped on every update)
 };
 
 export const MONTHS_HE = [
@@ -252,7 +253,7 @@ export function useTrips(): {
       return trip;
     },
     update: (id, patch) =>
-      persist(trips.map((x) => (x.id === id ? { ...x, ...patch } : x))),
+      persist(trips.map((x) => (x.id === id ? { ...x, ...patch, updatedAt: Date.now() } : x))),
     remove: (id) => persist(trips.filter((x) => x.id !== id)),
     loaded,
   };
