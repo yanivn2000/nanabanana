@@ -27,7 +27,7 @@ function stayHe(d?: string): string | null {
   if (n === 2.5) return "כשעתיים וחצי";
   return `כ-${n} שעות`;
 }
-import { googleMapsUrl, googleDirUrl, formatDistance, estimateLeg, haversineKm, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
+import { googleMapsUrl, googleDirUrl, formatDistance, estimateLeg, haversineKm, travelMinutes, durationHe, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
 import { stopColor } from "@/lib/labels";
 import { bigImage } from "@/lib/labels";
 import { KIND_META } from "@/lib/sample";
@@ -50,6 +50,51 @@ import { AskBar } from "./AskBar";
 const KIND_TO_CAT: Record<string, string> = {
   nature: "nature", food: "food", culture: "museum", shopping: "shopping", rest: "leisure",
 };
+// DB category → itinerary stop kind (for rendering a left-out pick as a stop).
+const CAT_TO_KIND: Record<string, Stop["kind"]> = {
+  nature: "nature", leisure: "nature", sport: "nature",
+  museum: "culture", attraction: "culture", historic: "culture", tourism: "culture",
+  food: "food", shopping: "shopping",
+};
+
+// Re-time a day's stops sequentially (09:30 start, dwell per stop, transit/walk
+// between, one lunch after noon) — the SAME model the builder uses, so after a
+// manual drag/insert/remove the clock stays sequential and a freshly-dropped pick
+// gets a real time instead of a blank. Client-side + instant (no server round-trip).
+const DAY_START_MIN = 9 * 60 + 30, LUNCH_AFTER_MIN = 12 * 60, LUNCH_MIN = 60;
+const fmtClock = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+// Inverse of geo.durationHe — recover minutes from the Hebrew duration label so an
+// existing stop keeps its own dwell; unknown/blank (a bank pick) defaults to 90.
+const durToMin = (d?: string): number => {
+  if (!d) return 90;
+  if (d.includes("חצי שעה")) return 30;
+  if (d.includes("45")) return 45;
+  if (d.includes("שעתיים וחצי")) return 150;
+  if (d.includes("שעה וחצי")) return 90;
+  if (d.includes("שעתיים")) return 120;
+  const m = d.match(/כ-(\d+)\s*שעות/); if (m) return Number(m[1]) * 60;
+  if (d.includes("כשעה")) return 60;
+  return 90;
+};
+function retimeStops(stops: Stop[]): Stop[] {
+  const content = stops.filter((s) => s.kind !== "food");
+  const out: Stop[] = [];
+  let clock = DAY_START_MIN, lunchDone = false;
+  content.forEach((s, i) => {
+    if (!lunchDone && i > 0 && clock >= LUNCH_AFTER_MIN) {
+      out.push({ name: "הפסקת צהריים", kind: "food", time: fmtClock(clock), duration: durationHe(LUNCH_MIN), note: "מסעדה מקומית באזור" });
+      clock += LUNCH_MIN; lunchDone = true;
+    }
+    const dw = durToMin(s.duration);
+    out.push({ ...s, time: fmtClock(clock), duration: durationHe(dw) });
+    clock += dw;
+    const nx = content[i + 1];
+    if (nx && s.lat != null && s.lng != null && nx.lat != null && nx.lng != null) {
+      clock += travelMinutes(haversineKm(s.lat, s.lng, nx.lat, nx.lng));
+    }
+  });
+  return out;
+}
 
 // One-tap AI reshapes for the selected day (shown next to the "why").
 const DAY_RESHAPES = [
@@ -99,9 +144,12 @@ export function TripView({ tripId }: { tripId: string }) {
   // REMOVE, for the day on screen. Committed together via "סדר את היום".
   const [pendAdd, setPendAdd] = useState<Set<number>>(new Set());
   const [pendRemove, setPendRemove] = useState<Set<number>>(new Set());
-  // Drag-to-reorder stops within a day: the row being dragged, and the row it's over.
-  const [dragSi, setDragSi] = useState<number | null>(null);
+  // Unified drag: a stop being dragged within the day (kind:"stop") OR a left-out
+  // pick being dragged in from the bank (kind:"bank"). Drop onto a stop row inserts
+  // there / reorders; drop onto the bank sends a stop out to the bank.
+  const [drag, setDrag] = useState<{ kind: "stop"; si: number } | { kind: "bank"; id: number } | null>(null);
   const [dragOverSi, setDragOverSi] = useState<number | null>(null);
+  const [overBank, setOverBank] = useState(false);
   const [editTravelers, setEditTravelers] = useState(false);
   const [tool, setTool] = useState<ToolKey | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -296,13 +344,6 @@ export function TripView({ tripId }: { tripId: string }) {
   const revise = (instruction: string) =>
     call({ mode: "revise", current: itinerary, instruction, dateContext: dateContext || undefined }, "revise");
 
-  // Add a left-out "כן" pick back via the AI, and drop it from the list.
-  const addLeftOut = (p: { id: number; name_he: string | null; name_en: string }) => {
-    if (busy) return;
-    revise(`הוסף את "${p.name_he || p.name_en}" ליום שמתאים לו במיוחד מבחינת מיקום וקצב, ושמור על שאר הימים.`);
-    update(tripId, { leftOut: (trip?.leftOut ?? []).filter((x) => x.id !== p.id) });
-  };
-
   // ---- Map day-editing: mark adds/removes, then "סדר את היום" rebuilds the day via
   // the deterministic engine (mode:arrange — never AI). ----
   const toggleExtra = (id: number) =>
@@ -429,16 +470,57 @@ export function TripView({ tripId }: { tripId: string }) {
     mutate((it) => { [it.days[di], it.days[tgt]] = [it.days[tgt], it.days[di]]; });
     setDayIdx(tgt);
   };
-  // Drag-and-drop: move a stop from index `from` to index `to` within the day.
+  // Drag-and-drop: move a stop from index `from` to index `to` within the day,
+  // then re-time so the clock stays sequential after the manual reorder.
   const reorderStop = (di: number, from: number, to: number) =>
     mutate((it) => {
       const stops = it.days[di].stops;
       if (from === to || to < 0 || to >= stops.length) return;
       const [m] = stops.splice(from, 1);
       stops.splice(to, 0, m);
+      it.days[di].stops = retimeStops(it.days[di].stops);
     });
   const deleteStop = (di: number, si: number) =>
-    mutate((it) => { it.days[di].stops.splice(si, 1); });
+    mutate((it) => { it.days[di].stops.splice(si, 1); it.days[di].stops = retimeStops(it.days[di].stops); });
+
+  // Bank → day: drop a left-out pick into the current day at index `at`, re-time,
+  // and remove it from the bank (all in one save).
+  const insertBankAt = (di: number, at: number, id: number) => {
+    if (!itinerary) return;
+    const p = (trip?.leftOut ?? []).find((l) => l.id === id);
+    if (!p) return;
+    const stop: Stop = {
+      name: p.name_he || p.name_en, kind: CAT_TO_KIND[p.category] ?? "culture", time: "", duration: "",
+      id: p.id, lat: p.lat ?? undefined, lng: p.lng ?? undefined, image: p.image_url ?? undefined, tagline: p.tagline_he ?? undefined,
+    };
+    const it: Itinerary = JSON.parse(JSON.stringify(itinerary));
+    const stops = it.days[di].stops;
+    stops.splice(Math.max(0, Math.min(at, stops.length)), 0, stop);
+    it.days[di].stops = retimeStops(stops);
+    it.days = it.days.filter((d) => d.stops.length > 0);
+    it.days.forEach((d, i) => { d.label = `יום ${i + 1}`; });
+    update(tripId, { itinerary: it, leftOut: (trip?.leftOut ?? []).filter((l) => l.id !== id) });
+  };
+  // Day → bank: drop a stop onto the bank — remove it from the day, re-time, and
+  // add it to the left-out list so it can be dragged back into any day.
+  const moveStopToBank = (di: number, si: number) => {
+    if (!itinerary) return;
+    const s = itinerary.days[di].stops[si];
+    if (!s) return;
+    const it: Itinerary = JSON.parse(JSON.stringify(itinerary));
+    it.days[di].stops.splice(si, 1);
+    it.days[di].stops = retimeStops(it.days[di].stops);
+    it.days = it.days.filter((d) => d.stops.length > 0);
+    it.days.forEach((d, i) => { d.label = `יום ${i + 1}`; });
+    // food/lunch rows have no id — just drop them (re-time re-adds lunch anyway).
+    const patch: Parameters<typeof update>[1] = { itinerary: it };
+    if (s.id != null && !(trip?.leftOut ?? []).some((l) => l.id === s.id)) {
+      const entry = { id: s.id, name_he: s.name, name_en: s.name, lat: s.lat ?? null, lng: s.lng ?? null,
+        image_url: s.image ?? null, category: KIND_TO_CAT[s.kind] ?? "attraction", tagline_he: s.tagline ?? null };
+      patch.leftOut = [entry as NonNullable<NonNullable<typeof trip>["leftOut"]>[number], ...(trip?.leftOut ?? [])];
+    }
+    update(tripId, patch);
+  };
 
   // compact date range for the thin top row (no permanent inputs)
   const fmtD = (iso?: string) => { if (!iso) return null; const p = iso.split("-"); return `${+p[2]}.${+p[1]}`; };
@@ -791,11 +873,16 @@ export function TripView({ tripId }: { tripId: string }) {
                 const leg = legAfter[si];
                 return (
                   <div key={si} ref={(el) => { stopRefs.current[si] = el; }}
-                       onDragOver={(e) => { if (dragSi == null) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (dragOverSi !== si) setDragOverSi(si); }}
-                       onDrop={(e) => { if (dragSi == null) return; e.preventDefault(); if (dragSi !== si) reorderStop(curIdx, dragSi, si); setDragSi(null); setDragOverSi(null); }}
-                       className={dragSi === si ? "opacity-40" : ""}
-                       style={dragOverSi === si && dragSi != null && dragSi !== si
-                         ? { boxShadow: `inset 0 ${dragSi > si ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
+                       onDragOver={(e) => { if (!drag) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (dragOverSi !== si) setDragOverSi(si); }}
+                       onDrop={(e) => {
+                         if (!drag) return; e.preventDefault();
+                         if (drag.kind === "stop") { if (drag.si !== si) reorderStop(curIdx, drag.si, si); }
+                         else insertBankAt(curIdx, si, drag.id);   // bank pick → this position
+                         setDrag(null); setDragOverSi(null); setOverBank(false);
+                       }}
+                       className={drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}
+                       style={dragOverSi === si && drag && !(drag.kind === "stop" && drag.si === si)
+                         ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
                     <div className={`group/row -mx-2 flex gap-3 rounded-[12px] px-2 transition-colors ${hasDetails ? "cursor-pointer" : ""}`}
                          style={{ background: isActive ? `color-mix(in srgb, ${col} 12%, transparent)` : "transparent" }}
                          onMouseEnter={() => ci != null && setActive(ci)}
@@ -803,14 +890,15 @@ export function TripView({ tripId }: { tripId: string }) {
                          onClick={() => hasDetails && setExpanded(isOpen ? null : key)}>
                       {/* leading controls — both appear on row hover, side by side with a
                           gap between them: grip to drag-reorder, and a quick delete (the
-                          gap keeps the destructive action from being an easy misclick). */}
-                      <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover/row:opacity-100">
+                          gap keeps the destructive action from being an easy misclick).
+                          Hidden on the auto lunch row (it's re-timed, not user-managed). */}
+                      <div className={`flex items-center gap-2 opacity-0 transition-opacity group-hover/row:opacity-100 ${s.kind === "food" ? "invisible" : ""}`}>
                         <span
                           draggable
-                          onDragStart={(e) => { setDragSi(si); e.dataTransfer.effectAllowed = "move"; }}
-                          onDragEnd={() => { setDragSi(null); setDragOverSi(null); }}
+                          onDragStart={(e) => { setDrag({ kind: "stop", si }); e.dataTransfer.effectAllowed = "move"; }}
+                          onDragEnd={() => { setDrag(null); setDragOverSi(null); setOverBank(false); }}
                           onClick={(e) => e.stopPropagation()}
-                          className="grid size-6 cursor-grab place-items-center text-[var(--text-3)] active:cursor-grabbing" title="גררו כדי לשנות סדר">
+                          className="grid size-6 cursor-grab place-items-center text-[var(--text-3)] active:cursor-grabbing" title="גררו לשינוי סדר · או אל 'לא נכנסו' כדי להוציא">
                           <GripVertical size={16} />
                         </span>
                         <button
@@ -953,6 +1041,19 @@ export function TripView({ tripId }: { tripId: string }) {
                   </div>
                 );
               })}
+              {/* drop-at-end zone — only while dragging a left-out pick, to place it
+                  as the day's last stop. */}
+              {drag?.kind === "bank" && (
+                <div
+                  onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverSi(-1); }}
+                  onDrop={(e) => { e.preventDefault(); if (drag.kind === "bank") insertBankAt(curIdx, day.stops.length, drag.id); setDrag(null); setDragOverSi(null); }}
+                  className="mx-2 my-1 rounded-[10px] border-2 border-dashed py-3 text-center text-[12.5px] transition-colors"
+                  style={{ borderColor: dragOverSi === -1 ? "var(--brand)" : "var(--border)",
+                           background: dragOverSi === -1 ? "var(--brand-soft)" : "transparent",
+                           color: dragOverSi === -1 ? "var(--brand-ink)" : "var(--text-3)" }}>
+                  שחררו כאן כדי להוסיף בסוף היום
+                </div>
+              )}
             </div>
 
             {/* why this day is shaped this way — mobile only (desktop shows it in
@@ -961,16 +1062,31 @@ export function TripView({ tripId }: { tripId: string }) {
                 all sizes) — no separate block here */}
           </div>
 
-          {/* picks that didn't fit the days — transparent, with one-tap add */}
-          {trip?.leftOut && trip.leftOut.length > 0 && (
-            <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--amber)] bg-[var(--amber-soft)] p-4">
-              <p className="text-[14px] font-semibold text-[var(--amber)]">בחרת אבל לא נכנסו ליומן · {trip.leftOut.length}</p>
+          {/* picks that didn't fit the days — a drag "bank". Drag a card up into any
+              day at the exact spot you want; drag a stop DOWN onto this box to send
+              it back here. Shown when it has picks OR while a stop is being dragged
+              (so there's always somewhere to drop a stop you want to remove). */}
+          {((trip?.leftOut?.length ?? 0) > 0 || drag?.kind === "stop") && (
+            <div
+              onDragOver={(e) => { if (drag?.kind !== "stop") return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (!overBank) setOverBank(true); }}
+              onDragLeave={(e) => { if (e.currentTarget === e.target) setOverBank(false); }}
+              onDrop={(e) => { if (drag?.kind !== "stop") return; e.preventDefault(); moveStopToBank(curIdx, drag.si); setDrag(null); setOverBank(false); setDragOverSi(null); }}
+              className="mt-3 rounded-[var(--radius-card)] border bg-[var(--amber-soft)] p-4 transition-colors"
+              style={{ borderColor: overBank ? "var(--brand)" : "var(--amber)",
+                       boxShadow: overBank ? "inset 0 0 0 2px var(--brand)" : "none" }}>
+              <p className="text-[14px] font-semibold text-[var(--amber)]">לא נכנסו ליומן · {trip?.leftOut?.length ?? 0}</p>
               <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--text-2)]">
-                {dayCount} ימים לא הספיקו לכל מה שסימנת. הוסיפו מה שחשוב — נשלב ביום שהכי מתאים.
+                {drag?.kind === "stop"
+                  ? "שחררו כאן כדי להוציא את העצירה מהיומן."
+                  : "גררו כרטיס למעלה אל היום — למקום המדויק שתרצו. כדי להוציא עצירה, גררו אותה לכאן."}
               </p>
               <div className="mt-3 flex max-h-[320px] flex-col gap-2 overflow-y-auto">
-                {trip.leftOut.map((p) => (
-                  <div key={p.id} className="flex items-center gap-3 rounded-[10px] bg-[var(--surface)] p-2 shadow-[var(--shadow)]">
+                {(trip?.leftOut ?? []).map((p) => (
+                  <div key={p.id} draggable
+                    onDragStart={(e) => { setDrag({ kind: "bank", id: p.id }); e.dataTransfer.effectAllowed = "move"; }}
+                    onDragEnd={() => { setDrag(null); setDragOverSi(null); setOverBank(false); }}
+                    className={`flex cursor-grab items-center gap-3 rounded-[10px] bg-[var(--surface)] p-2 shadow-[var(--shadow)] active:cursor-grabbing ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
+                    <span className="grid size-6 shrink-0 place-items-center text-[var(--text-3)]" title="גררו אל היום"><GripVertical size={16} /></span>
                     {p.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={p.image_url} alt="" loading="lazy" className="size-11 shrink-0 rounded-[8px] object-cover" />
@@ -978,10 +1094,6 @@ export function TripView({ tripId }: { tripId: string }) {
                       <div className="grid size-11 shrink-0 place-items-center rounded-[8px] bg-[var(--surface-2)] text-[var(--text-3)]"><MapPin size={16} /></div>
                     )}
                     <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">{p.name_he || p.name_en}</span>
-                    <button onClick={() => addLeftOut(p)} disabled={!!busy}
-                      className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--brand)] px-3.5 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50">
-                      <Sparkles size={13} /> הוסף
-                    </button>
                   </div>
                 ))}
               </div>
