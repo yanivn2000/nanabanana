@@ -1314,7 +1314,7 @@ export function TripView({ tripId }: { tripId: string }) {
                   ? "שחררו כאן כדי להוציא את העצירה מהיומן."
                   : "גררו כרטיס למעלה אל היום — למקום המדויק שתרצו. כדי להוציא עצירה, גררו אותה לכאן."}
               </p>
-              <div className="mt-3 flex max-h-[320px] flex-col gap-2 overflow-y-auto">
+              <div className="mt-3 flex flex-col gap-2">
                 {(trip?.leftOut ?? []).map((p) => {
                   const bKey = `bank-${p.id}`;
                   const bOpen = expanded === bKey;
