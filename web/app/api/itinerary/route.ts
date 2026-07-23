@@ -134,7 +134,7 @@ function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set
 
 export async function POST(req: NextRequest) {
   let body: {
-    mode: "generate" | "revise" | "details" | "arrange";
+    mode: "generate" | "revise" | "details" | "arrange" | "suggest";
     city?: string;
     days?: number;
     month?: number;
@@ -147,6 +147,9 @@ export async function POST(req: NextRequest) {
     dayIndex?: number;
     addIds?: number[];
     removeIds?: number[];
+    // "suggest" mode — profile-fitting attractions for the city NOT already used,
+    // to top up the "more attractions" bank when it's empty.
+    usedIds?: number[];
     leftOut?: { id: number }[];   // details mode: re-attach coords to these
     taste?: Record<string, number>;
     segments?: { city: string; days: number; hotels?: TripHotel[] }[];
@@ -344,6 +347,19 @@ export async function POST(req: NextRequest) {
     const arrangePool = [...attractions, ...extra];
     const r = arrangeDay(body.current, body.dayIndex, body.addIds ?? [], body.removeIds ?? [], arrangePool);
     return NextResponse.json({ itinerary: attachDetails(r.itinerary, arrangePool), engine: "heuristic" });
+  }
+
+  // "More attractions" bank top-up — profile-fitting candidates for the city that
+  // aren't already in the trip, ranked, with the same detail fields a bank card has.
+  if (body.mode === "suggest") {
+    const used = new Set(body.usedIds ?? []);
+    const cands = buildList.filter((a) => a.id != null && !used.has(a.id) && a.lat != null && a.lng != null).slice(0, 40);
+    const suggestions = cands.map((a) => ({
+      id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category,
+      lat: a.lat, lng: a.lng, tagline_he: a.tagline_he, tips_he: a.tips_he,
+      best_time_he: a.best_time_he, dress_he: a.dress_he, cost_level: a.cost_level, website: a.website,
+    }));
+    return NextResponse.json({ suggestions });
   }
 
   // Revise: DEFAULT is the deterministic engine (no Claude). The AI edit runs only

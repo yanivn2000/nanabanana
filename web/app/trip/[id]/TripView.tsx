@@ -7,7 +7,7 @@ import {
   ChevronRight, ChevronLeft, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, ChevronDown,
   Trash2, ExternalLink, Navigation, Map as MapIcon, Route, Users, Luggage, ListChecks, Wallet, CalendarDays,
-  Clock, MapPin, Ruler, Footprints, Copy, Lightbulb, Car, Hourglass, GripVertical,
+  Clock, MapPin, Ruler, Footprints, Copy, Lightbulb, Car, Hourglass, GripVertical, Plus, Minus,
 } from "lucide-react";
 
 // Render a stop's stay time cleanly. New builds already store natural Hebrew
@@ -45,7 +45,6 @@ import { BudgetPanel } from "@/components/BudgetPanel";
 import { Hotels } from "@/app/trips/Hotels";
 import { EditorTools } from "./EditorTools";
 import { MapClient } from "@/components/MapClient";
-import { AskBar } from "./AskBar";
 
 const KIND_TO_CAT: Record<string, string> = {
   nature: "nature", food: "food", culture: "museum", shopping: "shopping", rest: "leisure",
@@ -566,6 +565,71 @@ export function TripView({ tripId }: { tripId: string }) {
     update(tripId, patch);
   };
 
+  // Insert an attraction (from the "more" suggestion pool — NOT the bank) into a day.
+  const insertAttraction = (di: number, at: number, a: { id: number; name_he: string | null; name_en: string; category: string; lat?: number | null; lng?: number | null; image_url?: string | null; tagline_he?: string | null; tips_he?: string | null }) =>
+    mutate((it) => {
+      const stop: Stop = { name: a.name_he || a.name_en, kind: CAT_TO_KIND[a.category] ?? "culture", time: "", duration: "",
+        id: a.id, lat: a.lat ?? undefined, lng: a.lng ?? undefined, image: a.image_url ?? undefined, tagline: a.tagline_he ?? undefined, note: a.tips_he || a.tagline_he || undefined };
+      const stops = it.days[di].stops;
+      stops.splice(Math.max(0, Math.min(at, stops.length)), 0, stop);
+      it.days[di].stops = retimeStops(stops);
+    });
+  // Best place to slot a new stop: right after its nearest existing coord-stop, so
+  // the walking route stays tight. Falls back to end-of-day.
+  const bestInsertIndex = (stops: Stop[], lat: number, lng: number) => {
+    let bi = stops.length, bd = Infinity;
+    stops.forEach((s, i) => { if (s.lat == null || s.lng == null) return; const d = haversineKm(lat, lng, s.lat, s.lng); if (d < bd) { bd = d; bi = i + 1; } });
+    return bi;
+  };
+  const dayCentroid = () => {
+    const pts = (day?.stops ?? []).filter((s) => s.lat != null && s.lng != null);
+    if (pts.length) return { lat: pts.reduce((a, s) => a + (s.lat as number), 0) / pts.length, lng: pts.reduce((a, s) => a + (s.lng as number), 0) / pts.length };
+    return mapCenter[0] !== 0 || mapCenter[1] !== 0 ? { lat: mapCenter[0], lng: mapCenter[1] } : null;
+  };
+  // "פחות אטרקציות": drop the least-valuable real stop of the day INTO the bank
+  // (least = "אם יש זמן" filler first, then lowest rating). Keeps ≥1 real stop.
+  const fewerAttractions = () => {
+    const real = (day?.stops ?? []).map((s, i) => ({ s, i })).filter((x) => x.s.id != null && x.s.kind !== "food" && x.s.kind !== "rest");
+    if (real.length <= 1) return;
+    const c = dayCentroid();
+    // lower "keep" = more removable: an "אם יש זמן" filler goes first, then a lower
+    // rating, then the geographic OUTLIER (farthest from the day's centre) — so a
+    // central must-see survives and the day-stretching stop is the one that leaves.
+    const keep = (s: Stop) => {
+      const dist = c && s.lat != null && s.lng != null ? haversineKm(c.lat, c.lng, s.lat, s.lng) : 0;
+      return (s.anchor === true ? 2000 : s.anchor === false ? -2000 : 0) + (s.score ?? 0) * 10 - dist;
+    };
+    real.sort((a, b) => keep(a.s) - keep(b.s));
+    moveStopToBank(curIdx, real[0].i);
+  };
+  // "יותר אטרקציות": pull ONE more attraction into the day — the nearest pick from
+  // the bank ("לא נכנסו ליומן"); if the bank is empty, top up from profile-fitting
+  // attractions for the city that aren't already in the trip.
+  const moreAttractions = async () => {
+    if (busy) return;
+    const c = dayCentroid();
+    if (!c) return;
+    const near = <T extends { lat?: number | null; lng?: number | null }>(list: T[]) => {
+      let best: T | null = null, bd = Infinity;
+      for (const x of list) { if (x.lat == null || x.lng == null) continue; const d = haversineKm(c.lat, c.lng, x.lat, x.lng); if (d < bd) { bd = d; best = x; } }
+      return best;
+    };
+    // 1) from the bank
+    const bankPick = near((trip?.leftOut ?? []).filter((l) => l.lat != null && l.lng != null));
+    if (bankPick) { insertBankAt(curIdx, bestInsertIndex(day?.stops ?? [], bankPick.lat as number, bankPick.lng as number), bankPick.id); return; }
+    // 2) top up from the profile-fitting pool (server)
+    setBusy("revise"); setError(null);
+    try {
+      const used = [...new Set([...(itinerary?.days.flatMap((d) => d.stops.map((s) => s.id)) ?? []), ...(trip?.leftOut ?? []).map((l) => l.id)].filter((x): x is number => x != null))];
+      const res = await fetch("/api/itinerary", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ mode: "suggest", city, usedIds: used, taste: deriveTaste(tripProfile), isFamily: tripProfile.kids.length > 0 }) });
+      const data = await res.json().catch(() => null);
+      const cand = near((data?.suggestions ?? []) as { id: number; lat?: number | null; lng?: number | null; category: string; name_he: string | null; name_en: string; image_url?: string | null; tagline_he?: string | null; tips_he?: string | null }[]);
+      if (cand) insertAttraction(curIdx, bestInsertIndex(day?.stops ?? [], cand.lat as number, cand.lng as number), cand);
+      else setError("לא נמצאו אטרקציות נוספות מתאימות באזור");
+    } catch { setError("שגיאת רשת"); } finally { setBusy(null); }
+  };
+
   // Pointer-drag manager (mouse + touch): start on a grip, follow the finger with a
   // floating ghost, hit-test drop targets by their data-attrs, and on release route
   // to reorder / insert-from-bank / move-to-bank. Replaces HTML5 DnD so it works on
@@ -854,6 +918,20 @@ export function TripView({ tripId }: { tripId: string }) {
               </button>
             </span>
           )}
+          {/* update the day's density from the trip's attraction "bank": more pulls
+              one in (from 'לא נכנסו ליומן', else a profile-fitting pick), less sends
+              the weakest one back to the bank. */}
+          <span className="flex items-center gap-1.5">
+            <button onClick={moreAttractions} disabled={!!busy}
+              className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 text-[12.5px] font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)] disabled:opacity-40">
+              {busy === "revise" ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} יותר אטרקציות
+            </button>
+            <button onClick={fewerAttractions}
+              disabled={!!busy || (day.stops.filter((s) => s.id != null && s.kind !== "food" && s.kind !== "rest").length <= 1)}
+              className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 text-[12.5px] font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)] disabled:opacity-40">
+              <Minus size={12} /> פחות אטרקציות
+            </button>
+          </span>
           {day.dayTrip ? (
             <span className="flex items-center gap-1.5 rounded-full bg-[var(--amber-soft)] px-2.5 py-0.5 text-[12px] font-semibold text-[var(--text)]">
               <Car size={13} /> יום טיול ברכב · {day.dayTrip.driveKm} ק״מ · ~{day.dayTrip.driveMin} דק׳ נסיעה
@@ -1302,9 +1380,6 @@ export function TripView({ tripId }: { tripId: string }) {
             </div>
           )}
 
-          {/* revise with AI — in the flow, right under the day */}
-          <AskBar onSend={revise} busy={busy === "revise"}
-            days={dayLabels} todayIndex={todayIndex} tomorrowIndex={tomorrowIndex} />
         </div>
       )}
         </div>
