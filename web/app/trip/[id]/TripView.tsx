@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
-  ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
+  ChevronRight, ChevronLeft, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, ChevronDown,
   Trash2, ExternalLink, Navigation, Map as MapIcon, Route, Users, Luggage, ListChecks, Wallet, CalendarDays,
   Clock, MapPin, Ruler, Footprints, Copy, Lightbulb, Car, Hourglass, GripVertical,
@@ -421,6 +421,14 @@ export function TripView({ tripId }: { tripId: string }) {
     it.days.forEach((d, i) => { d.label = `יום ${i + 1}`; });
     update(tripId, { itinerary: it });
   }
+  // Move the whole day earlier/later in the trip order (swap with its neighbour),
+  // and keep the pager on the day the user is moving.
+  const moveDay = (di: number, dir: -1 | 1) => {
+    const tgt = di + dir;
+    if (tgt < 0 || tgt >= allDays.length) return;
+    mutate((it) => { [it.days[di], it.days[tgt]] = [it.days[tgt], it.days[di]]; });
+    setDayIdx(tgt);
+  };
   // Drag-and-drop: move a stop from index `from` to index `to` within the day.
   const reorderStop = (di: number, from: number, to: number) =>
     mutate((it) => {
@@ -613,6 +621,20 @@ export function TripView({ tripId }: { tripId: string }) {
       {itinerary && day && (
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--border)] px-5 pb-2 lg:pl-8 lg:pr-[204px]">
           <h2 className="serif text-[15px] font-bold leading-tight lg:text-[16px]">{dayLabels[curIdx]}</h2>
+          {/* move the whole day earlier / later in the trip order. RTL: right
+              arrow = earlier day (toward יום 1), left arrow = later. */}
+          {allDays.length > 1 && (
+            <span className="flex items-center gap-0.5" title="הזזת היום בסדר הימים">
+              <button onClick={() => moveDay(curIdx, -1)} disabled={curIdx === 0} aria-label="הקדם את היום"
+                className="grid size-6 place-items-center rounded-md border border-[var(--border)] text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)] disabled:opacity-30">
+                <ChevronRight size={14} />
+              </button>
+              <button onClick={() => moveDay(curIdx, 1)} disabled={curIdx === allDays.length - 1} aria-label="אחר את היום"
+                className="grid size-6 place-items-center rounded-md border border-[var(--border)] text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)] disabled:opacity-30">
+                <ChevronLeft size={14} />
+              </button>
+            </span>
+          )}
           {day.dayTrip ? (
             <span className="flex items-center gap-1.5 rounded-full bg-[var(--amber-soft)] px-2.5 py-0.5 text-[12px] font-semibold text-[var(--text)]">
               <Car size={13} /> יום טיול ברכב · {day.dayTrip.driveKm} ק״מ · ~{day.dayTrip.driveMin} דק׳ נסיעה
