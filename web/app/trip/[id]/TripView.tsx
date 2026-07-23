@@ -946,7 +946,7 @@ export function TripView({ tripId }: { tripId: string }) {
                        className={drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}
                        style={dragOverSi === si && drag && !(drag.kind === "stop" && drag.si === si)
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
-                    <div className={`group/row -mx-2 flex gap-3 rounded-[12px] px-2 transition-colors ${hasDetails ? "cursor-pointer" : ""}`}
+                    <div className={`group/row -mx-2 flex gap-2 rounded-[12px] px-2 transition-colors lg:gap-3 ${hasDetails ? "cursor-pointer" : ""}`}
                          style={{ background: isActive ? `color-mix(in srgb, ${col} 12%, transparent)` : "transparent" }}
                          onMouseEnter={() => ci != null && setActive(ci)}
                          onMouseLeave={() => setActive(null)}
@@ -955,7 +955,7 @@ export function TripView({ tripId }: { tripId: string }) {
                           gap between them: grip to drag-reorder, and a quick delete (the
                           gap keeps the destructive action from being an easy misclick).
                           Hidden on the auto lunch row (it's re-timed, not user-managed). */}
-                      <div className={`flex items-center gap-2 opacity-100 transition-opacity lg:opacity-0 lg:group-hover/row:opacity-100 ${s.kind === "food" ? "invisible" : ""}`}>
+                      <div className={`flex flex-col items-center gap-1.5 self-center opacity-100 transition-opacity lg:flex-row lg:gap-2 lg:opacity-0 lg:group-hover/row:opacity-100 ${s.kind === "food" ? "invisible" : ""}`}>
                         <span
                           onPointerDown={(e) => startPointerDrag(e, { kind: "stop", si }, s.name)}
                           onClick={(e) => e.stopPropagation()}
@@ -982,9 +982,12 @@ export function TripView({ tripId }: { tripId: string }) {
                       </div>
                       {/* name + details */}
                       <div className="min-w-0 flex-1 py-2.5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex min-w-0 items-center gap-1.5">
-                            <p className="line-clamp-2 text-[16px] font-medium leading-tight">{s.name}</p>
+                        {/* top line: the NAME is the hero — it gets the whole block width;
+                            only the expand chevron sits at the far end. Rating + stay time
+                            drop to the meta line below so the name is never squeezed. */}
+                        <div className="flex items-start justify-between gap-1.5">
+                          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                            <p className="line-clamp-2 text-[16.5px] font-semibold leading-snug">{s.name}</p>
                             {fromSelection && s.anchor === true && (
                               <span className="shrink-0 rounded-full bg-[var(--brand-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--brand-ink)]">עוגן</span>
                             )}
@@ -992,27 +995,27 @@ export function TripView({ tripId }: { tripId: string }) {
                               <span className="shrink-0 rounded-full bg-[var(--surface-2)] px-1.5 py-0.5 text-[11px] text-[var(--text-3)]">אם יש זמן</span>
                             )}
                           </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            {/* recommended stay at the place — labelled so it isn't
-                                mistaken for arrival/travel time */}
-                            {s.duration && (
-                              <span className="flex items-center gap-1 text-[12.5px] text-[var(--text-3)]" title="משך שהייה מומלץ במקום">
-                                <Hourglass size={11} className="shrink-0" /> {stayHe(s.duration)}
-                              </span>
+                          {/* chevron slot always present so nothing shifts between rows */}
+                          <span className="mt-0.5 grid w-4 shrink-0 place-items-center">
+                            {hasDetails && (
+                              <ChevronDown size={16}
+                                className={`text-[var(--text-3)] transition-transform ${isOpen ? "rotate-180" : ""}`} />
                             )}
-                            {/* fixed-width so the star column lines up across every row */}
-                            <span className="flex min-w-[34px] items-center justify-end gap-1 text-[13px] font-medium text-[var(--accent-ink)]">
-                              {!!s.score && (<><Star size={13} fill="currentColor" /><span className="tabular-nums">{s.score}</span></>)}
+                          </span>
+                        </div>
+                        {/* meta line: rating + recommended stay (labelled so it isn't read
+                            as an arrival/travel time) */}
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12.5px] text-[var(--text-3)]">
+                          {!!s.score && (
+                            <span className="flex items-center gap-1 font-medium text-[var(--accent-ink)]">
+                              <Star size={12} fill="currentColor" /><span className="tabular-nums">{s.score}</span>
                             </span>
-                            {/* chevron slot is always present (empty when no details) so
-                                the rating doesn't shift between expandable / plain rows */}
-                            <span className="grid w-4 place-items-center">
-                              {hasDetails && (
-                                <ChevronDown size={16}
-                                  className={`text-[var(--text-3)] transition-transform ${isOpen ? "rotate-180" : ""}`} />
-                              )}
+                          )}
+                          {s.duration && (
+                            <span className="flex items-center gap-1" title="משך שהייה מומלץ במקום">
+                              <Hourglass size={11} className="shrink-0" /> {stayHe(s.duration)}
                             </span>
-                          </div>
+                          )}
                         </div>
                         {s.note && <p className={`mt-1 text-[13.5px] leading-snug text-[var(--text-2)] ${isOpen ? "" : "line-clamp-2"}`}>{s.note}</p>}
                       </div>
