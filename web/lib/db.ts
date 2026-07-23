@@ -1014,6 +1014,23 @@ export async function markTransitSynced(destId: number): Promise<void> {
   await query(`UPDATE destinations SET transit_synced_at = now() WHERE id = $1`, [destId]);
 }
 
+// --- Trips: anonymous → permanent carry-over ---------------------------------
+// When a traveller who created trips anonymously signs in (to a DIFFERENT existing
+// account than the linked one), move their anon trips onto the real user. Runs via
+// the service-level pg pool so it can reassign across users. Skips any client_id
+// the target already owns (keeps the target's version), then clears the anon rows.
+export async function adoptTrips(fromUserId: string, toUserId: string): Promise<number> {
+  if (!fromUserId || !toUserId || fromUserId === toUserId) return 0;
+  const moved = await query<{ id: string }>(
+    `UPDATE trips SET user_id = $2, updated_at = now()
+       WHERE user_id = $1
+         AND NOT EXISTS (SELECT 1 FROM trips t2 WHERE t2.user_id = $2 AND t2.client_id = trips.client_id)
+     RETURNING id`,
+    [fromUserId, toUserId]);
+  await query(`DELETE FROM trips WHERE user_id = $1`, [fromUserId]);
+  return moved.length;
+}
+
 // --- Neighbourhoods / areas (feature C) --------------------------------------
 export type Area = {
   id: number; name_he: string | null; name_en: string | null;

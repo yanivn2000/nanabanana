@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Itinerary } from "./trip-types";
+import { useSessionUser } from "./auth";
+import { fetchServerTrips, upsertServerTrip, deleteServerTrip, mergeTrips } from "./trips-sync";
 
 // randomUUID only exists in secure contexts (HTTPS/localhost); we serve over
 // plain HTTP, so fall back to a good-enough id everywhere.
@@ -220,6 +222,8 @@ export function monthSeason(month: number): { he: string; season: string } {
 
 const TRIPS_KEY = "nanabanana.trips.v1";
 
+const ANON_KEY = "nanabanana.anonuid";   // anon user id held across a login redirect
+
 export function useTrips(): {
   trips: Trip[];
   create: (t: Omit<Trip, "id" | "createdAt">) => Trip;
@@ -229,33 +233,77 @@ export function useTrips(): {
 } {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const { user } = useSessionUser();
+  // refs so create/update/remove compute + push synchronously off the latest state
+  const tripsRef = useRef<Trip[]>([]);
+  const userIdRef = useRef<string | null>(null);
 
+  // localStorage is the instant, offline-safe copy; server is the cross-device one.
+  const applyLocal = (next: Trip[]) => {
+    tripsRef.current = next;
+    setTrips(next);
+    try { localStorage.setItem(TRIPS_KEY, JSON.stringify(next)); } catch {}
+  };
+
+  // 1) hydrate from localStorage immediately (unchanged first paint)
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(TRIPS_KEY);
-      if (raw) setTrips(JSON.parse(raw));
-    } catch {}
+    try { const raw = localStorage.getItem(TRIPS_KEY); if (raw) applyLocal(JSON.parse(raw)); } catch {}
     setLoaded(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const persist = (next: Trip[]) => {
-    setTrips(next);
-    try {
-      localStorage.setItem(TRIPS_KEY, JSON.stringify(next));
-    } catch {}
-  };
+  // 2) once a session exists, sync with the server: adopt anon trips on first real
+  //    login, then merge (last-write-wins per trip) and push local-newer up.
+  useEffect(() => {
+    if (!user) return;
+    userIdRef.current = user.id;
+    let cancelled = false;
+    (async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isAnon = (user as any).is_anonymous === true;
+      if (isAnon) {
+        try { localStorage.setItem(ANON_KEY, user.id); } catch {}
+      } else {
+        // permanent user → fold in trips made under the earlier anon session
+        let pending: string | null = null;
+        try { pending = localStorage.getItem(ANON_KEY); } catch {}
+        if (pending && pending !== user.id) {
+          try {
+            await fetch("/api/trips/adopt", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ fromUserId: pending }) });
+          } catch {}
+        }
+        try { localStorage.removeItem(ANON_KEY); } catch {}
+      }
+      const server = await fetchServerTrips();
+      if (cancelled) return;
+      const { merged, toPush } = mergeTrips(tripsRef.current, server);
+      applyLocal(merged);
+      for (const t of toPush) upsertServerTrip(user.id, t);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   return {
     trips,
+    loaded,
     create: (t) => {
-      const trip: Trip = { ...t, id: uid(), createdAt: Date.now() };
-      persist([trip, ...trips]);
+      const trip: Trip = { ...t, id: uid(), createdAt: Date.now(), updatedAt: Date.now() };
+      applyLocal([trip, ...tripsRef.current]);
+      if (userIdRef.current) upsertServerTrip(userIdRef.current, trip);
       return trip;
     },
-    update: (id, patch) =>
-      persist(trips.map((x) => (x.id === id ? { ...x, ...patch, updatedAt: Date.now() } : x))),
-    remove: (id) => persist(trips.filter((x) => x.id !== id)),
-    loaded,
+    update: (id, patch) => {
+      const cur = tripsRef.current.find((x) => x.id === id);
+      if (!cur) return;
+      const updated: Trip = { ...cur, ...patch, updatedAt: Date.now() };
+      applyLocal(tripsRef.current.map((x) => (x.id === id ? updated : x)));
+      if (userIdRef.current) upsertServerTrip(userIdRef.current, updated);
+    },
+    remove: (id) => {
+      applyLocal(tripsRef.current.filter((x) => x.id !== id));
+      if (userIdRef.current) deleteServerTrip(userIdRef.current, id);
+    },
   };
 }
 
