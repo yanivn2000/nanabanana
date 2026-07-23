@@ -1243,17 +1243,17 @@ export function TripView({ tripId }: { tripId: string }) {
               )}
               {/* add a break to the day — dinner (default 1½h) or hotel rest (1h).
                   Added at the end (evening); drag to reposition. */}
-              <div className="mt-1 flex flex-wrap items-center gap-2 border-t border-[var(--border)] pt-2.5 text-[12.5px]">
+              <div className="mt-3 flex flex-wrap items-center gap-2.5 border-t border-[var(--border)] pt-3.5 text-[13px]">
                 <span className="text-[var(--text-3)]">הוסיפו:</span>
                 <button onClick={() => addBreak("food", "ארוחת ערב", 90, "מסעדה מקומית באזור")}
                   disabled={day.stops.some((s) => s.name === "ארוחת ערב")}
-                  className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)] disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-2)]">
-                  <Utensils size={12} /> ארוחת ערב
+                  className="flex items-center gap-1.5 rounded-full bg-[var(--brand-soft)] px-3.5 py-1.5 font-semibold text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:bg-[var(--brand)] hover:text-white disabled:opacity-40 disabled:shadow-none disabled:hover:bg-[var(--brand-soft)] disabled:hover:text-[var(--brand-ink)]">
+                  <Utensils size={13} /> ארוחת ערב
                 </button>
                 <button onClick={() => addBreak("rest", "מנוחה במלון", 60, "חזרה למלון להתרעננות", 17 * 60, hotelPoints[0] ? { lat: hotelPoints[0].lat, lng: hotelPoints[0].lng } : undefined)}
                   disabled={day.stops.some((s) => s.name === "מנוחה במלון")}
-                  className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)] disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-2)]">
-                  <Coffee size={12} /> מנוחה במלון
+                  className="flex items-center gap-1.5 rounded-full bg-[var(--brand-soft)] px-3.5 py-1.5 font-semibold text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:bg-[var(--brand)] hover:text-white disabled:opacity-40 disabled:shadow-none disabled:hover:bg-[var(--brand-soft)] disabled:hover:text-[var(--brand-ink)]">
+                  <Coffee size={13} /> מנוחה במלון
                 </button>
               </div>
             </div>
