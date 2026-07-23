@@ -144,12 +144,15 @@ export function TripView({ tripId }: { tripId: string }) {
   // REMOVE, for the day on screen. Committed together via "סדר את היום".
   const [pendAdd, setPendAdd] = useState<Set<number>>(new Set());
   const [pendRemove, setPendRemove] = useState<Set<number>>(new Set());
-  // Unified drag: a stop being dragged within the day (kind:"stop") OR a left-out
-  // pick being dragged in from the bank (kind:"bank"). Drop onto a stop row inserts
-  // there / reorders; drop onto the bank sends a stop out to the bank.
+  // Unified drag (pointer-based → works with mouse AND touch): a stop dragged within
+  // the day (kind:"stop") OR a left-out pick dragged in from the bank (kind:"bank").
+  // Drop onto a stop row inserts there / reorders; drop onto the bank sends a stop out.
   const [drag, setDrag] = useState<{ kind: "stop"; si: number } | { kind: "bank"; id: number } | null>(null);
-  const [dragOverSi, setDragOverSi] = useState<number | null>(null);
+  const [dragOverSi, setDragOverSi] = useState<number | null>(null);   // -1 = the end zone
   const [overBank, setOverBank] = useState(false);
+  const [ghost, setGhost] = useState<{ x: number; y: number; label: string } | null>(null);
+  const dragRef = useRef<typeof drag>(null);
+  const overRef = useRef<{ type: "stop"; si: number } | { type: "bank" } | { type: "end" } | null>(null);
   const [editTravelers, setEditTravelers] = useState(false);
   const [tool, setTool] = useState<ToolKey | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -522,6 +525,57 @@ export function TripView({ tripId }: { tripId: string }) {
     update(tripId, patch);
   };
 
+  // Pointer-drag manager (mouse + touch): start on a grip, follow the finger with a
+  // floating ghost, hit-test drop targets by their data-attrs, and on release route
+  // to reorder / insert-from-bank / move-to-bank. Replaces HTML5 DnD so it works on
+  // touch screens too. dragRef/overRef hold the live values the move/up handlers read.
+  const startPointerDrag = (
+    e: React.PointerEvent, item: NonNullable<typeof drag>, label: string
+  ) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    dragRef.current = item; overRef.current = null;
+    setDrag(item); setGhost({ x: e.clientX, y: e.clientY, label });
+    const dayLen = day?.stops.length ?? 0;
+    const onMove = (ev: PointerEvent) => {
+      ev.preventDefault();
+      setGhost((g) => (g ? { ...g, x: ev.clientX, y: ev.clientY } : g));
+      const el = document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null;
+      const endEl = el?.closest("[data-drop-end]");
+      const stopEl = el?.closest("[data-drop-idx]");
+      const bankEl = el?.closest("[data-drop-bank]");
+      if (endEl) { overRef.current = { type: "end" }; setDragOverSi(-1); setOverBank(false); }
+      else if (stopEl) { const si = Number(stopEl.getAttribute("data-drop-idx")); overRef.current = { type: "stop", si }; setDragOverSi(si); setOverBank(false); }
+      else if (bankEl && dragRef.current?.kind === "stop") { overRef.current = { type: "bank" }; setOverBank(true); setDragOverSi(null); }
+      else { overRef.current = null; setDragOverSi(null); setOverBank(false); }
+      // autoscroll when dragging near the top/bottom edge
+      const M = 64;
+      if (ev.clientY < M) window.scrollBy(0, -14);
+      else if (ev.clientY > window.innerHeight - M) window.scrollBy(0, 14);
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      const d = dragRef.current, over = overRef.current;
+      if (d && over) {
+        if (d.kind === "stop") {
+          if (over.type === "bank") moveStopToBank(curIdx, d.si);
+          else if (over.type === "end") reorderStop(curIdx, d.si, dayLen - 1);
+          else if (over.type === "stop" && over.si !== d.si) reorderStop(curIdx, d.si, over.si);
+        } else {
+          if (over.type === "stop") insertBankAt(curIdx, over.si, d.id);
+          else if (over.type === "end") insertBankAt(curIdx, dayLen, d.id);
+        }
+      }
+      dragRef.current = null; overRef.current = null;
+      setDrag(null); setGhost(null); setDragOverSi(null); setOverBank(false);
+    };
+    window.addEventListener("pointermove", onMove, { passive: false });
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+  };
+
   // compact date range for the thin top row (no permanent inputs)
   const fmtD = (iso?: string) => { if (!iso) return null; const p = iso.split("-"); return `${+p[2]}.${+p[1]}`; };
   const dateRangeText = trip?.startDate && trip?.endDate
@@ -873,13 +927,7 @@ export function TripView({ tripId }: { tripId: string }) {
                 const leg = legAfter[si];
                 return (
                   <div key={si} ref={(el) => { stopRefs.current[si] = el; }}
-                       onDragOver={(e) => { if (!drag) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (dragOverSi !== si) setDragOverSi(si); }}
-                       onDrop={(e) => {
-                         if (!drag) return; e.preventDefault();
-                         if (drag.kind === "stop") { if (drag.si !== si) reorderStop(curIdx, drag.si, si); }
-                         else insertBankAt(curIdx, si, drag.id);   // bank pick → this position
-                         setDrag(null); setDragOverSi(null); setOverBank(false);
-                       }}
+                       data-drop-idx={si}
                        className={drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}
                        style={dragOverSi === si && drag && !(drag.kind === "stop" && drag.si === si)
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
@@ -894,11 +942,10 @@ export function TripView({ tripId }: { tripId: string }) {
                           Hidden on the auto lunch row (it's re-timed, not user-managed). */}
                       <div className={`flex items-center gap-2 opacity-0 transition-opacity group-hover/row:opacity-100 ${s.kind === "food" ? "invisible" : ""}`}>
                         <span
-                          draggable
-                          onDragStart={(e) => { setDrag({ kind: "stop", si }); e.dataTransfer.effectAllowed = "move"; }}
-                          onDragEnd={() => { setDrag(null); setDragOverSi(null); setOverBank(false); }}
+                          onPointerDown={(e) => startPointerDrag(e, { kind: "stop", si }, s.name)}
                           onClick={(e) => e.stopPropagation()}
-                          className="grid size-6 cursor-grab place-items-center text-[var(--text-3)] active:cursor-grabbing" title="גררו לשינוי סדר · או אל 'לא נכנסו' כדי להוציא">
+                          style={{ touchAction: "none" }}
+                          className="grid size-6 cursor-grab touch-none place-items-center text-[var(--text-3)] active:cursor-grabbing" title="גררו לשינוי סדר · או אל 'לא נכנסו' כדי להוציא">
                           <GripVertical size={16} />
                         </span>
                         <button
@@ -1044,9 +1091,7 @@ export function TripView({ tripId }: { tripId: string }) {
               {/* drop-at-end zone — only while dragging a left-out pick, to place it
                   as the day's last stop. */}
               {drag?.kind === "bank" && (
-                <div
-                  onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverSi(-1); }}
-                  onDrop={(e) => { e.preventDefault(); if (drag.kind === "bank") insertBankAt(curIdx, day.stops.length, drag.id); setDrag(null); setDragOverSi(null); }}
+                <div data-drop-end
                   className="mx-2 my-1 rounded-[10px] border-2 border-dashed py-3 text-center text-[12.5px] transition-colors"
                   style={{ borderColor: dragOverSi === -1 ? "var(--brand)" : "var(--border)",
                            background: dragOverSi === -1 ? "var(--brand-soft)" : "transparent",
@@ -1067,10 +1112,7 @@ export function TripView({ tripId }: { tripId: string }) {
               it back here. Shown when it has picks OR while a stop is being dragged
               (so there's always somewhere to drop a stop you want to remove). */}
           {((trip?.leftOut?.length ?? 0) > 0 || drag?.kind === "stop") && (
-            <div
-              onDragOver={(e) => { if (drag?.kind !== "stop") return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (!overBank) setOverBank(true); }}
-              onDragLeave={(e) => { if (e.currentTarget === e.target) setOverBank(false); }}
-              onDrop={(e) => { if (drag?.kind !== "stop") return; e.preventDefault(); moveStopToBank(curIdx, drag.si); setDrag(null); setOverBank(false); setDragOverSi(null); }}
+            <div data-drop-bank
               className="mt-3 rounded-[var(--radius-card)] border bg-[var(--amber-soft)] p-4 transition-colors"
               style={{ borderColor: overBank ? "var(--brand)" : "var(--amber)",
                        boxShadow: overBank ? "inset 0 0 0 2px var(--brand)" : "none" }}>
@@ -1082,11 +1124,11 @@ export function TripView({ tripId }: { tripId: string }) {
               </p>
               <div className="mt-3 flex max-h-[320px] flex-col gap-2 overflow-y-auto">
                 {(trip?.leftOut ?? []).map((p) => (
-                  <div key={p.id} draggable
-                    onDragStart={(e) => { setDrag({ kind: "bank", id: p.id }); e.dataTransfer.effectAllowed = "move"; }}
-                    onDragEnd={() => { setDrag(null); setDragOverSi(null); setOverBank(false); }}
-                    className={`flex cursor-grab items-center gap-3 rounded-[10px] bg-[var(--surface)] p-2 shadow-[var(--shadow)] active:cursor-grabbing ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
-                    <span className="grid size-6 shrink-0 place-items-center text-[var(--text-3)]" title="גררו אל היום"><GripVertical size={16} /></span>
+                  <div key={p.id}
+                    className={`flex items-center gap-3 rounded-[10px] bg-[var(--surface)] p-2 shadow-[var(--shadow)] ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
+                    <span onPointerDown={(e) => startPointerDrag(e, { kind: "bank", id: p.id }, p.name_he || p.name_en)}
+                      style={{ touchAction: "none" }}
+                      className="grid size-6 shrink-0 cursor-grab touch-none place-items-center text-[var(--text-3)] active:cursor-grabbing" title="גררו אל היום"><GripVertical size={16} /></span>
                     {p.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={p.image_url} alt="" loading="lazy" className="size-11 shrink-0 rounded-[8px] object-cover" />
@@ -1210,6 +1252,15 @@ export function TripView({ tripId }: { tripId: string }) {
           </div>
         </aside>
       </div>
+
+      {/* floating drag ghost — follows the finger/cursor during a pointer drag so
+          touch users get the same "picked up" feedback native DnD gives the mouse. */}
+      {ghost && (
+        <div className="pointer-events-none fixed z-[100] max-w-[220px] truncate rounded-full border border-[var(--brand)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-medium shadow-[var(--shadow)]"
+          style={{ left: ghost.x + 12, top: ghost.y + 12 }}>
+          {ghost.label}
+        </div>
+      )}
     </main>
   );
 }
