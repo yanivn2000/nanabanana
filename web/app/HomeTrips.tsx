@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, Sparkles, BedDouble, Compass } from "lucide-react";
+import { Sparkles, BedDouble, Compass } from "lucide-react";
 import { useTrips } from "@/lib/store";
 import { CityPoster } from "@/components/CityPoster";
 
 // Home entry to "הטיולים שלי": a compact single row of SQUARE tiles — the
-// traveler's recent trips, then a "new trip" tile, then the two entry CTAs
-// ("לא יודעים לאן?" / "אני בטיול עכשיו") in their palette colours, so the whole
-// row sits high on the page and the destinations below peek above the fold.
-// Client-side (trips live in localStorage).
+// traveler's recent trips, then the two entry CTAs ("לא יודעים לאן?" / "אני
+// בטיול עכשיו") in their palette colours, so the whole row sits high on the page
+// and the destinations below peek above the fold. (Trips are built by entering a
+// city, not a blank new-trip form.) Client-side (trips live in localStorage).
 export function HomeTrips() {
   const { trips, loaded } = useTrips();
 
@@ -19,13 +19,6 @@ export function HomeTrips() {
          style={{ scrollbarWidth: "none" }}>
       {children}
     </div>
-  );
-
-  const NewTile = (
-    <Link href="/trips?new=1"
-      className="flex aspect-square flex-col items-center justify-center gap-2 rounded-[var(--radius-card)] border-2 border-dashed border-[var(--border)] bg-[var(--surface)] text-[var(--brand-ink)] transition hover:border-[var(--brand)]">
-      <Plus size={22} /> <span className="text-[15px] font-medium">טיול חדש</span>
-    </Link>
   );
 
   // The two standing entry points, as square tiles in their palette colours.
@@ -65,7 +58,7 @@ export function HomeTrips() {
     return (
       <div className="rise">
         {Head}
-        <Row>{NewTile}{ctas}</Row>
+        <Row>{ctas}</Row>
       </div>
     );
   }
@@ -94,7 +87,6 @@ export function HomeTrips() {
             </div>
           </Link>
         ))}
-        {NewTile}
         {ctas}
       </Row>
     </div>

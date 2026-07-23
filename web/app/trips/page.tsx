@@ -1,22 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useProfile, profileSummary, useTrips } from "@/lib/store";
 import { MapPin, ArrowLeft, Trash2, Sparkles, BedDouble } from "lucide-react";
-import { NewTrip } from "./NewTrip";
 import { SuitcaseArt } from "@/components/Illustrations";
 import { CityPoster } from "@/components/CityPoster";
 
 export default function TripsPage() {
   const [p, , profileLoaded] = useProfile();
   const { trips, remove, loaded } = useTrips();
-  const [creating, setCreating] = useState(false);
-
-  // Open the new-trip form straight away when arrived via "טיול חדש" (?new=1).
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("new") === "1") setCreating(true);
-  }, []);
 
   return (
     <main className="mx-auto w-full max-w-[440px] px-5 pb-28 pt-8 lg:max-w-[1600px] lg:px-8 lg:pb-12">
@@ -27,9 +19,7 @@ export default function TripsPage() {
         )}
       </header>
 
-      {creating && <NewTrip onClose={() => setCreating(false)} />}
-
-      {loaded && trips.length === 0 && !creating && (
+      {loaded && trips.length === 0 && (
         <div className="flex flex-col items-center rounded-[var(--radius-card)] bg-[var(--surface)] px-5 py-10 text-center shadow-[var(--shadow)]">
           <SuitcaseArt width={210} />
           <p className="serif mt-4 text-[20px] font-bold">המזוודה מוכנה. לאן טסים?</p>
