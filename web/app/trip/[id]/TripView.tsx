@@ -508,12 +508,22 @@ export function TripView({ tripId }: { tripId: string }) {
       s.duration = durationHe(next);
       it.days[di].stops = retimeStops(it.days[di].stops);
     });
-  // Add a break to the current day (dinner / hotel rest) — appended at the end, so
-  // it lands in the evening; the traveller can drag it earlier. Re-time after.
-  const addBreak = (kind: Stop["kind"], name: string, minutes: number, note: string) =>
+  // Add a break to the current day. Dinner (no target) is appended → evening.
+  // A hotel rest defaults to ~17:00 (late-afternoon freshen-up before the evening),
+  // so it's inserted before the first stop at/after that time — not at day's end.
+  // Either way the traveller can drag it, and the day re-times after.
+  const addBreak = (kind: Stop["kind"], name: string, minutes: number, note: string, targetMin?: number) =>
     mutate((it) => {
-      it.days[curIdx].stops.push({ name, kind, time: "", duration: durationHe(minutes), note });
-      it.days[curIdx].stops = retimeStops(it.days[curIdx].stops);
+      const stops = it.days[curIdx].stops;
+      const stop: Stop = { name, kind, time: "", duration: durationHe(minutes), note };
+      const toMin = (t?: string) => { const [h, m] = (t || "").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
+      let idx = stops.length;
+      if (targetMin != null) {
+        const at = stops.findIndex((s) => s.time && toMin(s.time) >= targetMin);
+        if (at !== -1) idx = at;
+      }
+      stops.splice(idx, 0, stop);
+      it.days[curIdx].stops = retimeStops(stops);
     });
 
   // Bank → day: drop a left-out pick into the current day at index `at`, re-time,
@@ -1193,7 +1203,7 @@ export function TripView({ tripId }: { tripId: string }) {
                   className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
                   <Utensils size={12} /> ארוחת ערב
                 </button>
-                <button onClick={() => addBreak("rest", "מנוחה במלון", 60, "חזרה למלון להתרעננות")}
+                <button onClick={() => addBreak("rest", "מנוחה במלון", 60, "חזרה למלון להתרעננות", 17 * 60)}
                   className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
                   <Coffee size={12} /> מנוחה במלון
                 </button>
