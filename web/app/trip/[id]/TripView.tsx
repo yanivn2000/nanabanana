@@ -955,12 +955,12 @@ export function TripView({ tripId }: { tripId: string }) {
                           gap between them: grip to drag-reorder, and a quick delete (the
                           gap keeps the destructive action from being an easy misclick).
                           Hidden on the auto lunch row (it's re-timed, not user-managed). */}
-                      <div className={`flex items-center gap-2 opacity-0 transition-opacity group-hover/row:opacity-100 ${s.kind === "food" ? "invisible" : ""}`}>
+                      <div className={`flex items-center gap-2 opacity-100 transition-opacity lg:opacity-0 lg:group-hover/row:opacity-100 ${s.kind === "food" ? "invisible" : ""}`}>
                         <span
                           onPointerDown={(e) => startPointerDrag(e, { kind: "stop", si }, s.name)}
                           onClick={(e) => e.stopPropagation()}
                           style={{ touchAction: "none" }}
-                          className="grid size-6 cursor-grab touch-none place-items-center text-[var(--text-3)] active:cursor-grabbing" title="גררו לשינוי סדר · או אל 'לא נכנסו' כדי להוציא">
+                          className="grid size-6 cursor-grab touch-none select-none place-items-center text-[var(--text-3)] [-webkit-touch-callout:none] active:cursor-grabbing" title="גררו לשינוי סדר · או אל 'לא נכנסו' כדי להוציא">
                           <GripVertical size={16} />
                         </span>
                         <button
@@ -1142,7 +1142,7 @@ export function TripView({ tripId }: { tripId: string }) {
                   <div key={p.id}
                     onPointerDown={(e) => startPointerDrag(e, { kind: "bank", id: p.id }, p.name_he || p.name_en)}
                     style={{ touchAction: "none" }}
-                    className={`flex cursor-grab touch-none items-center gap-3 rounded-[10px] bg-[var(--surface)] p-2 shadow-[var(--shadow)] active:cursor-grabbing ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
+                    className={`flex cursor-grab touch-none select-none items-center gap-3 rounded-[10px] bg-[var(--surface)] p-2 shadow-[var(--shadow)] [-webkit-touch-callout:none] active:cursor-grabbing ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
                     <span className="grid size-6 shrink-0 place-items-center text-[var(--text-3)]" title="גררו אל היום"><GripVertical size={16} /></span>
                     {p.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
