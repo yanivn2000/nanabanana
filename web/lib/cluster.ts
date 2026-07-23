@@ -168,7 +168,7 @@ function nnPath(items: Attraction[], start: Attraction): Attraction[] {
   return path;
 }
 
-const orderPath = (stops: Attraction[]): Attraction[] =>
+export const orderPath = (stops: Attraction[]): Attraction[] =>
   stops.length <= 2 ? stops : twoOpt(nnPath(stops, stops[0]));
 
 // Is `x` effectively the same place as something already placed? Guards against

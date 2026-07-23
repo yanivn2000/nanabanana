@@ -5,7 +5,7 @@ import type { Attraction } from "./db";
 import type { Itinerary, Stop, StopKind } from "./trip-types";
 import { descriptor } from "./labels";
 import { familyFit } from "./taste";
-import { clusterIntoDays, dayWalkMinutes, dropSamePlace } from "./cluster";
+import { clusterIntoDays, dayWalkMinutes, dropSamePlace, orderPath } from "./cluster";
 import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget } from "./daytrips";
 import { durationHe, haversineKm, round30, travelMinutes as travelMinutesKm } from "./geo";
 import { DWELL_DEFAULT, dwellMinutes, isInSeason, reorderByTimeOfDay, reorderDayEnders, stopMatchesType, type DwellCfg } from "./brain/traits";
@@ -144,8 +144,11 @@ export function buildHeuristicItinerary(
   }
 
   const dayList = capped.map((pickFinal, d) => {
-    // day-enders (water/adventure) to the end, then respect each place's timing advice.
-    let picks = pickFinal;
+    // Re-optimise the walking order AFTER cap+backfill — backfilled stops were
+    // appended out of place, which otherwise sends the traveller out and back (e.g.
+    // two north-of-the-IJ stops split to opposite ends of the day). Then day-enders
+    // (water/adventure) to the end, then respect each place's timing advice.
+    let picks = orderPath(pickFinal);
     if (opts?.dayEnderLast !== false) picks = reorderDayEnders(picks);
     // Respect each place's own timing advice: morning-only stops first, evening/night
     // ones last, geography in between (stable, so it only moves the time-exclusive few).
