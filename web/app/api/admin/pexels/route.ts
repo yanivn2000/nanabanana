@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAdmin } from "@/lib/admin";
 import { POSTER_QUERY } from "@/lib/posters";
+import { getDestination } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +14,15 @@ export async function GET(req: NextRequest) {
   if (!key) return NextResponse.json({ error: "no_pexels_key" }, { status: 500 });
 
   const dest = Number(new URL(req.url).searchParams.get("dest"));
-  const query = POSTER_QUERY[dest];
-  if (!query) return NextResponse.json({ error: "unknown_dest" }, { status: 400 });
+  // Landmark-anchored query per city; for any city not in the hand-tuned list
+  // (a newly-added destination), fall back to a query built from its own name so
+  // the picker still surfaces real candidates instead of an empty "unknown_dest".
+  let query = POSTER_QUERY[dest];
+  if (!query) {
+    const d = await getDestination(dest);
+    if (!d) return NextResponse.json({ error: "unknown_dest" }, { status: 400 });
+    query = `${d.city} ${d.country} skyline landmark`;
+  }
 
   const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=15&orientation=landscape`;
   // Pexels 403s requests without a browser-like User-Agent.

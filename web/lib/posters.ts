@@ -67,6 +67,13 @@ export const POSTER_QUERY: Record<number, string> = {
   24: "Nice French Riviera Promenade des Anglais",
   25: "Rhodes old town medieval harbour Greece",
   26: "Lefkada Porto Katsiki cliffs turquoise beach",
+  27: "Bucharest Romania Palace of Parliament old town",
+  28: "Brasov Romania Council Square old town mountains",
+  29: "Krakow Poland Wawel castle old town square",
+  30: "Porto Portugal Ribeira Douro river bridge",
+  31: "Paphos Cyprus harbour castle coast",
+  32: "Crete Greece Chania old venetian harbour lighthouse",
+  33: "New York Manhattan skyline Empire State",
 };
 
 // Ordered candidate srcs. The admin poster pick (served live via /api/poster)
