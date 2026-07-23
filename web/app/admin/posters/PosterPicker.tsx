@@ -77,11 +77,14 @@ export function PosterPicker({ cities, initialPicks }: { cities: City[]; initial
                   {chosen ? <CheckCircle2 size={18} className="text-[var(--brand)]" />
                           : <span className="size-[18px] rounded-full border-2 border-[var(--border)]" />}
                   <span className="text-[16px] font-medium">{city.city}</span>
+                  {/* A pick is served LIVE the moment it's chosen (via /api/poster) —
+                      both states are already shown on the site. "מותאם" just means the
+                      optional optimised static crops also exist (finalize_posters.py). */}
                   {chosen && !mat[city.id] && (
-                    <span className="rounded-full bg-[var(--amber-soft)] px-2 py-0.5 text-[11.5px] text-[var(--amber)]">ממתין להעלאה</span>
+                    <span className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11.5px] text-[var(--brand-ink)]">מוצג</span>
                   )}
                   {chosen && mat[city.id] && (
-                    <span className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11.5px] text-[var(--brand-ink)]">פורסם</span>
+                    <span className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11.5px] text-[var(--brand-ink)]">מוצג · מותאם</span>
                   )}
                 </span>
                 <ChevronDown size={18} className={`text-[var(--text-3)] transition-transform ${isOpen ? "rotate-180" : ""}`} />
