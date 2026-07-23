@@ -515,6 +515,7 @@ export function TripView({ tripId }: { tripId: string }) {
   const addBreak = (kind: Stop["kind"], name: string, minutes: number, note: string, targetMin?: number) =>
     mutate((it) => {
       const stops = it.days[curIdx].stops;
+      if (stops.some((s) => s.name === name)) return;   // one dinner / one rest per day
       const stop: Stop = { name, kind, time: "", duration: durationHe(minutes), note };
       const toMin = (t?: string) => { const [h, m] = (t || "").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
       let idx = stops.length;
@@ -1032,8 +1033,9 @@ export function TripView({ tripId }: { tripId: string }) {
                           className="grid size-6 cursor-grab touch-none select-none place-items-center text-[var(--text-3)] [-webkit-touch-callout:none] active:cursor-grabbing" title="גררו לשינוי סדר · או אל 'לא נכנסו' כדי להוציא">
                           <GripVertical size={16} />
                         </span>
-                        {/* delete only for real stops — the meal break is auto-managed */}
-                        {s.kind !== "food" && (
+                        {/* delete for real stops + user-added breaks (dinner/rest); only
+                            the auto lunch break is non-deletable (it's re-added on re-time) */}
+                        {s.name !== "הפסקת צהריים" && (
                           <button
                             onClick={(e) => { e.stopPropagation(); deleteStop(curIdx, si); }}
                             title="מחק עצירה" aria-label="מחק עצירה"
@@ -1200,11 +1202,13 @@ export function TripView({ tripId }: { tripId: string }) {
               <div className="mt-1 flex flex-wrap items-center gap-2 border-t border-[var(--border)] pt-2.5 text-[12.5px]">
                 <span className="text-[var(--text-3)]">הוסיפו:</span>
                 <button onClick={() => addBreak("food", "ארוחת ערב", 90, "מסעדה מקומית באזור")}
-                  className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
+                  disabled={day.stops.some((s) => s.name === "ארוחת ערב")}
+                  className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)] disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-2)]">
                   <Utensils size={12} /> ארוחת ערב
                 </button>
                 <button onClick={() => addBreak("rest", "מנוחה במלון", 60, "חזרה למלון להתרעננות", 17 * 60)}
-                  className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
+                  disabled={day.stops.some((s) => s.name === "מנוחה במלון")}
+                  className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)] disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-2)]">
                   <Coffee size={12} /> מנוחה במלון
                 </button>
               </div>
