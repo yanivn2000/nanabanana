@@ -977,7 +977,9 @@ export function TripView({ tripId }: { tripId: string }) {
                           gap between them: grip to drag-reorder, and a quick delete (the
                           gap keeps the destructive action from being an easy misclick).
                           Hidden on the auto lunch row (it's re-timed, not user-managed). */}
-                      <div className="flex flex-col items-center gap-1.5 self-center opacity-100 transition-opacity lg:order-last lg:flex-row lg:items-center lg:gap-2 lg:pl-1 lg:opacity-0 lg:group-hover/row:opacity-100">
+                      {/* fixed width on desktop so a grip-only row (the meal break) reserves
+                          the SAME space as grip+delete rows — keeps the time column aligned. */}
+                      <div className="flex flex-col items-center gap-1.5 self-center opacity-100 transition-opacity lg:order-last lg:w-[60px] lg:flex-row lg:items-center lg:justify-start lg:gap-2 lg:pl-1 lg:opacity-0 lg:group-hover/row:opacity-100">
                         <span
                           onPointerDown={(e) => startPointerDrag(e, { kind: "stop", si }, s.name)}
                           onClick={(e) => e.stopPropagation()}
