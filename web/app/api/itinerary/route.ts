@@ -240,14 +240,18 @@ export async function POST(req: NextRequest) {
   const areas = await areasForDestination(dest.id);
   // car_base cities (Salzburg, Brașov, islands…) get CAR day-trips to far worthy
   // clusters mixed with walkable in-city days; metros build in-city only.
-  const buildOpts = {
-    month: body.month, seasonFilter: rules.seasonFilter, dayEnderLast: rules.dayEnderLast,
-    maxTypePerDay: rules.maxTypePerDay, avoidCats: isFamily ? rules.avoid.families : rules.avoid.adults,
-    dayStartMin: rules.dayStartMin, lunchAfterMin: rules.lunchAfterMin, lunchMinutes: rules.lunchMinutes, dwell: rules.dwell,
-    center: { lat: dest.lat, lng: dest.lng },
-    daytripThresholdKm: rules.daytripThresholdKm, daytripPerDays: rules.daytripPerDays, daytripMaxStops: rules.daytripMaxStops,
-    samePlaceMeters: rules.samePlaceMeters, freeGemMaxPerDay: rules.freeGemMaxPerDay, freeGemDetourMin: rules.freeGemDetourMin,
-  };
+  // Assemble BuildOpts from a destination's own Brain techniques. Factored out so
+  // the multi-city path can build per-SEGMENT opts (each city's own rules/centre),
+  // not just reuse the first destination's.
+  const optsFor = (d: Destination, r: Awaited<ReturnType<typeof brainRulesForDest>>) => ({
+    month: body.month, seasonFilter: r.seasonFilter, dayEnderLast: r.dayEnderLast,
+    maxTypePerDay: r.maxTypePerDay, avoidCats: isFamily ? r.avoid.families : r.avoid.adults,
+    dayStartMin: r.dayStartMin, lunchAfterMin: r.lunchAfterMin, lunchMinutes: r.lunchMinutes, dwell: r.dwell,
+    center: { lat: d.lat, lng: d.lng },
+    daytripThresholdKm: r.daytripThresholdKm, daytripPerDays: r.daytripPerDays, daytripMaxStops: r.daytripMaxStops,
+    samePlaceMeters: r.samePlaceMeters, freeGemMaxPerDay: r.freeGemMaxPerDay, freeGemDetourMin: r.freeGemDetourMin,
+  });
+  const buildOpts = optsFor(dest, rules);
   const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary =>
     d.mobility === "car_base"
       ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp, buildOpts)
@@ -295,11 +299,13 @@ export async function POST(req: NextRequest) {
         ...x,
         attractions: rankByTaste(await topAttractions(x.dest.id, 150), body.taste, 90, isFamily),
         insights: await insightsForDestination(x.dest.id),
+        // each segment's OWN Brain techniques (avoids/dwell/lunch/centre)
+        opts: optsFor(x.dest, await brainRulesForDest(x.dest.id)),
       })));
     const allAttractions = segAttrs.flatMap((x) => x.attractions);
     const heuristic = () => attachDetails(
       buildMultiHeuristicItinerary(segAttrs.map((x) => ({
-        city: x.dest.city, country: x.dest.country, days: x.days, attractions: x.attractions,
+        city: x.dest.city, country: x.dest.country, days: x.days, attractions: x.attractions, opts: x.opts,
       })), isFamily, perDay, body.walkPref ?? 3), allAttractions);
 
     if (!body.ai || !aiConfigured()) {
@@ -329,8 +335,15 @@ export async function POST(req: NextRequest) {
     if (!body.current || body.dayIndex == null) {
       return NextResponse.json({ error: "missing current/dayIndex" }, { status: 400 });
     }
-    const r = arrangeDay(body.current, body.dayIndex, body.addIds ?? [], body.removeIds ?? [], attractions);
-    return NextResponse.json({ itinerary: attachDetails(r.itinerary, attractions), engine: "heuristic" });
+    // The marked "add" ids come from leftOut, which can include a "כן" pick ranked
+    // past the 90-item taste cap in `attractions`. Fetch those explicitly and merge,
+    // so an add is never silently dropped for being outside the ranked slice.
+    const known = new Set(attractions.map((a) => a.id));
+    const missing = (body.addIds ?? []).filter((id) => !known.has(id));
+    const extra = missing.length ? await attractionsByIds(missing) : [];
+    const arrangePool = [...attractions, ...extra];
+    const r = arrangeDay(body.current, body.dayIndex, body.addIds ?? [], body.removeIds ?? [], arrangePool);
+    return NextResponse.json({ itinerary: attachDetails(r.itinerary, arrangePool), engine: "heuristic" });
   }
 
   // Revise: DEFAULT is the deterministic engine (no Claude). The AI edit runs only

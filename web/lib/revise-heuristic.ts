@@ -6,7 +6,7 @@
 import type { Attraction } from "./db";
 import type { Itinerary, Day, Stop, StopKind } from "./trip-types";
 import { dwellMinutes, DWELL_DEFAULT } from "./brain/traits";
-import { haversineKm, walkMinutes, durationHe } from "./geo";
+import { haversineKm, travelMinutes, durationHe } from "./geo";
 
 const DAY_START = 9 * 60 + 30, LUNCH_AFTER = 12 * 60, LUNCH_MIN = 60;
 const fmt = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
@@ -31,7 +31,9 @@ function retime(day: Day, dwellOf: (s: Stop) => number): void {
     out.push({ ...s, time: fmt(clock), duration: durationHe(dw) });
     clock += dw;
     const nx = content[i + 1];
-    if (nx && s.lat != null && nx.lat != null) clock += walkMinutes(haversineKm(s.lat, s.lng as number, nx.lat, nx.lng as number));
+    // transit-aware (walk vs tube) — same model the builder uses, so a far hop
+    // isn't re-timed as a 3-hour walk after an edit.
+    if (nx && s.lat != null && nx.lat != null) clock += travelMinutes(haversineKm(s.lat, s.lng as number, nx.lat, nx.lng as number));
   });
   day.stops = out;
 }
@@ -79,9 +81,11 @@ export function reviseHeuristic(current: Itinerary, instruction: string, pool: A
   const dwellOf = (s: Stop) => { const a = s.id != null ? byId.get(s.id) : undefined; return a ? dwellMinutes(a, DWELL_DEFAULT) : 50; };
   const t = instruction;
 
-  // scope: "יום N" → that day only; else the whole trip
+  // scope: "יום N" → that day only; else the whole trip. `scopedDay` is the single
+  // explicit day index (or null) so add/remove can target it, not just nearest/all.
   const dm = t.match(/יום\s*(\d+)/);
-  const scope = dm ? [Number(dm[1]) - 1] : current.days.map((_, i) => i);
+  const scopedDay = dm && Number(dm[1]) - 1 >= 0 && Number(dm[1]) - 1 < current.days.length ? Number(dm[1]) - 1 : null;
+  const scope = scopedDay != null ? [scopedDay] : current.days.map((_, i) => i);
 
   const days: Day[] = current.days.map((d) => ({ ...d, stops: [...d.stops] }));
   let changed = false;
@@ -124,16 +128,22 @@ export function reviseHeuristic(current: Itinerary, instruction: string, pool: A
     const used = usedIds();
     const found = pool.find((a) => a.id != null && !used.has(a.id) && (a.name_he || a.name_en || "").includes(addName));
     if (found && found.lat != null) {
-      let best = 0, bd = Infinity;
-      days.forEach((d, i) => { const c = d.stops.filter((s) => s.lat != null); if (!c.length) return;
-        const cl = c.reduce((s, x) => s + (x.lat as number), 0) / c.length, cg = c.reduce((s, x) => s + (x.lng as number), 0) / c.length;
-        const dist = haversineKm(cl, cg, found.lat as number, found.lng as number); if (dist < bd) { bd = dist; best = i; } });
-      days[best].stops.push(attrToStop(found)); changed = true;
+      // Explicit "ליום N" → that day; otherwise the geographically nearest day.
+      let target = scopedDay ?? 0;
+      if (scopedDay == null) {
+        let bd = Infinity;
+        days.forEach((d, i) => { const c = d.stops.filter((s) => s.lat != null); if (!c.length) return;
+          const cl = c.reduce((s, x) => s + (x.lat as number), 0) / c.length, cg = c.reduce((s, x) => s + (x.lng as number), 0) / c.length;
+          const dist = haversineKm(cl, cg, found.lat as number, found.lng as number); if (dist < bd) { bd = dist; target = i; } });
+      }
+      days[target].stops.push(attrToStop(found)); changed = true;
     }
   }
   const remName = remM && !shorten && !lighten ? (remM[1] || "").trim() : "";
   if (remName.length >= 2) {
-    for (const d of days) { const n = d.stops.length; d.stops = d.stops.filter((s) => !(s.name || "").includes(remName)); if (d.stops.length !== n) changed = true; }
+    // Explicit "מיום N" → that day only; otherwise every day.
+    const targets = scopedDay != null ? [days[scopedDay]] : days;
+    for (const d of targets) { const n = d.stops.length; d.stops = d.stops.filter((s) => !(s.name || "").includes(remName)); if (d.stops.length !== n) changed = true; }
   }
 
   if (!changed) return { itinerary: current, changed: false,

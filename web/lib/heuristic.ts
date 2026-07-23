@@ -7,7 +7,7 @@ import { descriptor } from "./labels";
 import { familyFit } from "./taste";
 import { clusterIntoDays, dayWalkMinutes, dropSamePlace } from "./cluster";
 import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget } from "./daytrips";
-import { durationHe, haversineKm, walkMinutes } from "./geo";
+import { durationHe, haversineKm, travelMinutes as travelMinutesKm } from "./geo";
 import { DWELL_DEFAULT, dwellMinutes, isInSeason, reorderByTimeOfDay, reorderDayEnders, stopMatchesType, type DwellCfg } from "./brain/traits";
 
 // Resolved technique flags the builder honours (from brain_principles via
@@ -57,14 +57,10 @@ const DAY_START_MIN = 9 * 60 + 30;   // 09:30
 const LUNCH_AFTER_MIN = 12 * 60;     // drop the meal break at the first stop past 12:00
 const LUNCH_MIN = 60;
 const fmtClock = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
-// Time between stops: walk for short hops, but public transit for long ones (you
-// don't WALK 12km back from Richmond — you take the tube ~45min, not ~3h).
+// Time between stops — walk vs transit, shared with the editor via geo.travelMinutes.
 const travelMinutes = (a: Attraction, b: Attraction) => {
   if (!(Number.isFinite(a.lat) && Number.isFinite(a.lng) && Number.isFinite(b.lat) && Number.isFinite(b.lng))) return 10;
-  const km = haversineKm(a.lat as number, a.lng as number, b.lat as number, b.lng as number);
-  const walk = walkMinutes(km);
-  const transit = km <= 1 ? walk : 12 + (km / 22) * 60;   // access + wait + ~22km/h ride
-  return Math.round(Math.min(walk, transit));
+  return travelMinutesKm(haversineKm(a.lat as number, a.lng as number, b.lat as number, b.lng as number));
 };
 
 function kindOf(a: Attraction): StopKind {
@@ -204,16 +200,18 @@ export function buildCarBaseItinerary(
 }
 
 // Multi-city fallback: build each segment, concatenate with continuous day
-// numbering. Used when AI is unavailable for a multi-city trip.
+// numbering. Used when AI is unavailable for a multi-city trip. Each segment
+// carries its OWN Brain techniques (opts) — techniques are per-destination, so a
+// family Vienna→Salzburg trip applies each city's avoids/dwell/lunch, not defaults.
 export function buildMultiHeuristicItinerary(
-  segments: { city: string; country: string; days: number; attractions: Attraction[] }[],
+  segments: { city: string; country: string; days: number; attractions: Attraction[]; opts?: BuildOpts }[],
   isFamily = false,
   perDay = 5,
   walkPref = 3
 ): Itinerary {
   const days: Itinerary["days"] = [];
   for (const s of segments) {
-    const part = buildHeuristicItinerary(s.city, s.country, s.days, s.attractions, isFamily, perDay, walkPref);
+    const part = buildHeuristicItinerary(s.city, s.country, s.days, s.attractions, isFamily, perDay, walkPref, undefined, s.opts);
     for (const d of part.days) {
       days.push({ ...d, label: `יום ${days.length + 1}`, base: s.city });
     }

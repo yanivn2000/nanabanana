@@ -57,6 +57,17 @@ export function walkMinutes(km: number): number {
   return Math.max(1, Math.round(km * WALK_MIN_PER_KM));
 }
 
+// Between-stop travel time (minutes): walk for short hops, but public transit
+// for long ones — you don't WALK 12km back from Richmond, you take the tube
+// (~45min, not ~3h). The single travel-time model shared by BOTH the builder
+// (heuristic.ts) and the deterministic editor (revise-heuristic.ts) so a day
+// re-timed after an edit matches the day as first built.
+export function travelMinutes(km: number): number {
+  const walk = walkMinutes(km);
+  const transit = km <= 1 ? walk : 12 + (km / 22) * 60;   // access + wait + ~22km/h ride
+  return Math.round(Math.min(walk, transit));
+}
+
 // Recommended visit length in natural Hebrew — never "0 שעות" for sub-hour stops.
 // The single source of truth for stop durations across the builders.
 export function durationHe(minutes: number | null | undefined): string {
