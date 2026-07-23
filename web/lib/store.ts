@@ -181,7 +181,9 @@ export type Trip = {
   // tour → the builder makes one guaranteed day per area.
   areaGroups?: number[][];
   // "כן" picks the last build couldn't fit — surfaced so the user can add them.
-  leftOut?: { id: number; name_he: string | null; name_en: string; image_url: string | null; category: string; lat?: number | null; lng?: number | null; tagline_he?: string | null }[];
+  // Carry the same detail fields a scheduled stop has, so a bank card can be
+  // expanded and read before it's dragged into the day (everything but the time).
+  leftOut?: { id: number; name_he: string | null; name_en: string; image_url: string | null; category: string; lat?: number | null; lng?: number | null; tagline_he?: string | null; tips_he?: string | null; best_time_he?: string | null; dress_he?: string | null; cost_level?: number | null; website?: string | null }[];
   itinerary?: Itinerary;
   engine?: string;         // how the current itinerary was built: "heuristic" | "neighbourhoods" | "ai"
   // Community sharing (phase 0+1): the public copy's slug + the owner token

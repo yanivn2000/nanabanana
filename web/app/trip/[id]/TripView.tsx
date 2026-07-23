@@ -437,7 +437,9 @@ export function TripView({ tripId }: { tripId: string }) {
   useEffect(() => {
     const lo = trip?.leftOut;
     if (!lo?.length || !city || leftOutCoordsRef.current) return;
-    if (lo.every((l) => l.lat != null && l.lng != null)) return;   // already have coords
+    // Refetch when coords OR the readable detail fields are missing (older trips
+    // stored neither). "tips_he" in l distinguishes never-fetched from fetched-null.
+    if (lo.every((l) => l.lat != null && l.lng != null && "tips_he" in l)) return;
     leftOutCoordsRef.current = true;
     let cancelled = false;
     fetch("/api/itinerary", { method: "POST", headers: { "content-type": "application/json" },
@@ -530,14 +532,20 @@ export function TripView({ tripId }: { tripId: string }) {
   // to reorder / insert-from-bank / move-to-bank. Replaces HTML5 DnD so it works on
   // touch screens too. dragRef/overRef hold the live values the move/up handlers read.
   const startPointerDrag = (
-    e: React.PointerEvent, item: NonNullable<typeof drag>, label: string
+    e: React.PointerEvent, item: NonNullable<typeof drag>, label: string, onTap?: () => void
   ) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
-    e.preventDefault(); e.stopPropagation();
-    dragRef.current = item; overRef.current = null;
-    setDrag(item); setGhost({ x: e.clientX, y: e.clientY, label });
+    const startX = e.clientX, startY = e.clientY;
     const dayLen = day?.stops.length ?? 0;
-    let lastX = e.clientX, lastY = e.clientY, raf = 0;
+    let lastX = startX, lastY = startY, raf = 0, active = false;
+    // Begin the actual drag only once the pointer moves past a small threshold, so a
+    // plain tap on a card reads as "expand to read", and a drag as "move".
+    const activate = () => {
+      active = true;
+      dragRef.current = item; overRef.current = null;
+      setDrag(item); setGhost({ x: lastX, y: lastY, label });
+      raf = requestAnimationFrame(tick);
+    };
     // Resolve the drop target under (x,y). Shared by pointermove AND the autoscroll
     // loop, so the target keeps updating while the page scrolls under a still finger.
     const updateOver = (x: number, y: number) => {
@@ -561,8 +569,12 @@ export function TripView({ tripId }: { tripId: string }) {
       raf = requestAnimationFrame(tick);
     };
     const onMove = (ev: PointerEvent) => {
-      ev.preventDefault();
       lastX = ev.clientX; lastY = ev.clientY;
+      if (!active) {
+        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < 6) return;
+        activate();               // crossed the threshold → it's a drag
+      }
+      ev.preventDefault();
       setGhost((g) => (g ? { ...g, x: ev.clientX, y: ev.clientY } : g));
       updateOver(ev.clientX, ev.clientY);
     };
@@ -571,6 +583,7 @@ export function TripView({ tripId }: { tripId: string }) {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
+      if (!active) { onTap?.(); return; }   // never moved → a tap, not a drag
       const d = dragRef.current, over = overRef.current;
       if (d && over) {
         if (d.kind === "stop") {
@@ -588,7 +601,6 @@ export function TripView({ tripId }: { tripId: string }) {
     window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
-    raf = requestAnimationFrame(tick);
   };
 
   // compact date range for the thin top row (no permanent inputs)
@@ -1141,21 +1153,68 @@ export function TripView({ tripId }: { tripId: string }) {
                   : "גררו כרטיס למעלה אל היום — למקום המדויק שתרצו. כדי להוציא עצירה, גררו אותה לכאן."}
               </p>
               <div className="mt-3 flex max-h-[320px] flex-col gap-2 overflow-y-auto">
-                {(trip?.leftOut ?? []).map((p) => (
-                  <div key={p.id}
-                    onPointerDown={(e) => startPointerDrag(e, { kind: "bank", id: p.id }, p.name_he || p.name_en)}
-                    style={{ touchAction: "none" }}
-                    className={`flex cursor-grab touch-none select-none items-center gap-3 rounded-[10px] bg-[var(--surface)] p-2 shadow-[var(--shadow)] [-webkit-touch-callout:none] active:cursor-grabbing ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
-                    <span className="grid size-6 shrink-0 place-items-center text-[var(--text-3)]" title="גררו אל היום"><GripVertical size={16} /></span>
-                    {p.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.image_url} alt="" loading="lazy" className="size-11 shrink-0 rounded-[8px] object-cover" />
-                    ) : (
-                      <div className="grid size-11 shrink-0 place-items-center rounded-[8px] bg-[var(--surface-2)] text-[var(--text-3)]"><MapPin size={16} /></div>
+                {(trip?.leftOut ?? []).map((p) => {
+                  const bKey = `bank-${p.id}`;
+                  const bOpen = expanded === bKey;
+                  // is there anything worth reading before it goes into the day?
+                  const bHasDetails = !!(p.image_url || p.website || p.best_time_he || p.dress_he ||
+                    p.cost_level != null || p.tips_he || (p.tagline_he && p.tagline_he !== p.tips_he));
+                  return (
+                  <div key={p.id} className={`overflow-hidden rounded-[10px] bg-[var(--surface)] shadow-[var(--shadow)] ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
+                    {/* tap to read (expand), drag to move — a small move threshold in
+                        startPointerDrag tells them apart */}
+                    <div
+                      onPointerDown={(e) => startPointerDrag(e, { kind: "bank", id: p.id }, p.name_he || p.name_en,
+                        bHasDetails ? () => setExpanded(bOpen ? null : bKey) : undefined)}
+                      style={{ touchAction: "none" }}
+                      className="flex cursor-grab touch-none select-none items-center gap-3 p-2 [-webkit-touch-callout:none] active:cursor-grabbing">
+                      <span className="grid size-6 shrink-0 place-items-center text-[var(--text-3)]" title="גררו אל היום"><GripVertical size={16} /></span>
+                      {p.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.image_url} alt="" loading="lazy" className="size-11 shrink-0 rounded-[8px] object-cover" />
+                      ) : (
+                        <div className="grid size-11 shrink-0 place-items-center rounded-[8px] bg-[var(--surface-2)] text-[var(--text-3)]"><MapPin size={16} /></div>
+                      )}
+                      <span className="min-w-0 flex-1 truncate text-[14px] font-semibold">{p.name_he || p.name_en}</span>
+                      <span className="grid w-4 shrink-0 place-items-center">
+                        {bHasDetails && <ChevronDown size={16} className={`text-[var(--text-3)] transition-transform ${bOpen ? "rotate-180" : ""}`} />}
+                      </span>
+                    </div>
+                    {/* readable details — the same a scheduled stop shows, minus the time */}
+                    {bOpen && (
+                      <div className="border-t border-[var(--border)] px-3 pb-3 pt-3">
+                        {p.image_url && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={bigImage(p.image_url)} alt="" loading="lazy"
+                            onError={(e) => { const t = e.currentTarget; if (p.image_url && t.src !== p.image_url) t.src = p.image_url; }}
+                            className="mb-3 h-[200px] w-full max-w-[480px] rounded-[10px] object-cover" />
+                        )}
+                        {p.tagline_he && <p className="mb-2 text-[14.5px] italic text-[var(--text-2)]">{p.tagline_he}</p>}
+                        {p.tips_he && <p className="mb-2 text-[13.5px] leading-snug text-[var(--text-2)]">{p.tips_he}</p>}
+                        <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[13.5px] text-[var(--text-2)]">
+                          {p.best_time_he && <span><span className="text-[var(--text-3)]">מתי: </span>{p.best_time_he}</span>}
+                          {p.dress_he && <span><span className="text-[var(--text-3)]">לבוש: </span>{p.dress_he}</span>}
+                          {p.cost_level != null && <span><span className="text-[var(--text-3)]">עלות: </span>{COST_HE[p.cost_level] ?? ""}</span>}
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {p.website && (
+                            <a href={p.website} target="_blank" rel="noreferrer"
+                              className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[13.5px] text-[var(--blue)]">
+                              <ExternalLink size={13} /> אתר רשמי
+                            </a>
+                          )}
+                          {p.lat != null && p.lng != null && (
+                            <a href={googleMapsUrl(p.lat, p.lng)} target="_blank" rel="noreferrer"
+                              className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[13.5px] text-[var(--text-2)]">
+                              <Navigation size={13} /> פתח במפה
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     )}
-                    <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">{p.name_he || p.name_en}</span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
