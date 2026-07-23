@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { Share2, Copy, Check, Loader2, X, Trash2, MessageCircle, Send } from "lucide-react";
+import Link from "next/link";
+import { Share2, Copy, Check, Loader2, X, Trash2, MessageCircle, Send, LogIn } from "lucide-react";
 import type { Trip, FamilyProfile } from "@/lib/store";
+import { useSessionUser } from "@/lib/auth";
 
 // lucide dropped its brand glyphs — inline the Facebook "f"
 function Facebook({ size = 18, className }: { size?: number; className?: string }) {
@@ -24,8 +26,12 @@ export function ShareTrip({ trip, profile, onShared }: {
   onShared: (shared: { slug: string; token: string } | undefined) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [state, setState] = useState<"idle" | "publishing" | "done" | "error">("idle");
+  const [state, setState] = useState<"idle" | "publishing" | "done" | "error" | "needauth">("idle");
   const [copied, setCopied] = useState(false);
+  const { user } = useSessionUser();
+  // Registered = a real (non-anonymous) account. Publishing public content needs
+  // an identity so the share stays owned/manageable — anon users are nudged to sign in.
+  const registered = !!user && (user as { is_anonymous?: boolean }).is_anonymous !== true;
 
   if (!trip.itinerary) return null;
   const url = trip.shared ? `${typeof window !== "undefined" ? window.location.origin : ""}/t/${trip.shared.slug}` : null;
@@ -89,7 +95,11 @@ export function ShareTrip({ trip, profile, onShared }: {
 
   return (
     <>
-      <button onClick={() => { setOpen(true); if (!trip.shared) void publish(); }}
+      <button onClick={() => {
+          if (trip.shared) { setState("idle"); setOpen(true); return; }   // manage existing share
+          if (!registered) { setState("needauth"); setOpen(true); return; } // gate NEW share
+          setState("idle"); setOpen(true); void publish();
+        }}
         className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-3.5 py-2 text-[14.5px] font-medium text-[var(--brand-ink)]"
         style={{ background: trip.shared ? "var(--brand-soft)" : "var(--surface)" }}>
         <Share2 size={14} /> {trip.shared ? "משותף" : "שתפו"}
@@ -106,6 +116,17 @@ export function ShareTrip({ trip, profile, onShared }: {
               <button onClick={() => setOpen(false)} aria-label="סגור" className="text-[var(--text-3)]"><X size={18} /></button>
             </div>
 
+            {state === "needauth" && (
+              <div className="py-3">
+                <p className="mb-4 text-[14px] leading-relaxed text-[var(--text-2)]">
+                  כדי לשתף את הטיול צריך חשבון — ככה הקישור נשמר בבעלותכם, ותוכלו לעדכן או להסיר אותו בהמשך.
+                </p>
+                <Link href="/login" onClick={() => setOpen(false)}
+                  className="inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-6 py-2.5 text-[14.5px] font-medium text-white">
+                  <LogIn size={16} /> התחברות מהירה
+                </Link>
+              </div>
+            )}
             {state === "publishing" && (
               <p className="flex items-center gap-2 py-6 text-[14.5px] text-[var(--text-2)]">
                 <Loader2 size={16} className="animate-spin" /> מפרסמים עותק ציבורי…
