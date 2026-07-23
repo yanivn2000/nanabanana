@@ -13,9 +13,8 @@ const ITEMS = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  // Hide on the immersive trip screen (it has its own AskBar).
-  if (pathname.startsWith("/trip/")) return null;
-
+  // Kept present on every screen (incl. the trip page) so the phone always has
+  // app-style navigation — the trip page reserves bottom padding for it.
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[440px] border-t border-[var(--border)] bg-[var(--surface)]/90 backdrop-blur-lg lg:hidden">
       <div className="flex items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)] pt-2">

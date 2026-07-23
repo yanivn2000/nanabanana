@@ -657,7 +657,7 @@ export function TripView({ tripId }: { tripId: string }) {
   }
 
   return (
-    <main className="mx-auto w-full max-w-[440px] pb-16 lg:max-w-[1600px]">
+    <main className="mx-auto w-full max-w-[440px] pb-24 lg:max-w-[1600px] lg:pb-16">
       {/* THREE THIN ROWS — the map + itinerary are the hero and fill the first
           viewport, so trip info / day tabs / day summary are compressed to slim
           horizontal strips (no big card, no poster, no permanent date inputs). */}
