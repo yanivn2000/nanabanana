@@ -77,20 +77,30 @@ const durToMin = (d?: string): number => {
   return 90;
 };
 function retimeStops(stops: Stop[]): Stop[] {
-  const content = stops.filter((s) => s.kind !== "food");
+  // If the day already has a meal break, treat it as a REAL, user-placed stop: keep
+  // it wherever it sits in the order (so a stop dragged above/below it stays there)
+  // and just recompute times. Only a day with NO meal gets one auto-inserted at noon.
+  const hasFood = stops.some((s) => s.kind === "food");
+  const seq = hasFood ? stops : stops.filter((s) => s.kind !== "food");
   const out: Stop[] = [];
-  let clock = DAY_START_MIN, lunchDone = false;
-  content.forEach((s, i) => {
+  let clock = DAY_START_MIN, lunchDone = hasFood;
+  seq.forEach((s, i) => {
     if (!lunchDone && i > 0 && clock >= LUNCH_AFTER_MIN) {
       out.push({ name: "הפסקת צהריים", kind: "food", time: fmtClock(clock), duration: durationHe(LUNCH_MIN), note: "מסעדה מקומית באזור" });
       clock += LUNCH_MIN; lunchDone = true;
     }
+    if (s.kind === "food") {
+      out.push({ ...s, time: fmtClock(clock), duration: durationHe(LUNCH_MIN) });
+      clock += LUNCH_MIN;   // a meal break has no travel legs (no coords)
+      return;
+    }
     const dw = durToMin(s.duration);
     out.push({ ...s, time: fmtClock(clock), duration: durationHe(dw) });
     clock += dw;
-    const nx = content[i + 1];
-    if (nx && s.lat != null && s.lng != null && nx.lat != null && nx.lng != null) {
-      clock += travelMinutes(haversineKm(s.lat, s.lng, nx.lat, nx.lng));
+    // travel to the next COORD-bearing stop (skip over a meal break in between)
+    const nx = seq.slice(i + 1).find((x) => x.lat != null && x.lng != null);
+    if (nx && s.lat != null && s.lng != null) {
+      clock += travelMinutes(haversineKm(s.lat, s.lng, nx.lat as number, nx.lng as number));
     }
   });
   return out;
@@ -967,7 +977,7 @@ export function TripView({ tripId }: { tripId: string }) {
                           gap between them: grip to drag-reorder, and a quick delete (the
                           gap keeps the destructive action from being an easy misclick).
                           Hidden on the auto lunch row (it's re-timed, not user-managed). */}
-                      <div className={`flex flex-col items-center gap-1.5 self-center opacity-100 transition-opacity lg:flex-row lg:gap-2 lg:opacity-0 lg:group-hover/row:opacity-100 ${s.kind === "food" ? "invisible" : ""}`}>
+                      <div className="flex flex-col items-center gap-1.5 self-center opacity-100 transition-opacity lg:flex-row lg:gap-2 lg:opacity-0 lg:group-hover/row:opacity-100">
                         <span
                           onPointerDown={(e) => startPointerDrag(e, { kind: "stop", si }, s.name)}
                           onClick={(e) => e.stopPropagation()}
@@ -975,12 +985,15 @@ export function TripView({ tripId }: { tripId: string }) {
                           className="grid size-6 cursor-grab touch-none select-none place-items-center text-[var(--text-3)] [-webkit-touch-callout:none] active:cursor-grabbing" title="גררו לשינוי סדר · או אל 'לא נכנסו' כדי להוציא">
                           <GripVertical size={16} />
                         </span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); deleteStop(curIdx, si); }}
-                          title="מחק עצירה" aria-label="מחק עצירה"
-                          className="grid size-6 place-items-center rounded-md text-[var(--text-3)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--danger,#dc2626)]">
-                          <Trash2 size={15} />
-                        </button>
+                        {/* delete only for real stops — the meal break is auto-managed */}
+                        {s.kind !== "food" && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteStop(curIdx, si); }}
+                            title="מחק עצירה" aria-label="מחק עצירה"
+                            className="grid size-6 place-items-center rounded-md text-[var(--text-3)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--danger,#dc2626)]">
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
                       {/* photo (falls back to the kind icon) */}
                       <div className="py-2.5 pr-1">
