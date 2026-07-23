@@ -1067,11 +1067,12 @@ export function TripView({ tripId }: { tripId: string }) {
                       <div className="border-t border-[var(--border)] pb-3.5 pt-3">
                         {s.image && (
                           // eslint-disable-next-line @next/next/no-img-element
-                          // ~960px source so the 480px banner is crisp on retina; the
-                          // onError falls back to the stored URL if the original is smaller.
+                          // Natural aspect ratio (bounded), NOT a forced landscape crop — a
+                          // tall subject (a tower) shows tall, a wide one wide; nothing is
+                          // cropped or squished. ~960px source keeps it crisp on retina.
                           <img src={bigImage(s.image, 960)} alt="" loading="lazy"
                             onError={(e) => { const t = e.currentTarget; if (s.image && t.src !== s.image) t.src = s.image; }}
-                            className="mb-3 h-[220px] w-full max-w-[480px] rounded-[10px] object-cover" />
+                            className="mb-3 mx-auto block max-h-[440px] w-auto max-w-full rounded-[10px]" />
                         )}
                         {s.tagline && s.tagline !== s.note && (
                           <p className="mb-2 text-[14.5px] italic text-[var(--text-2)]">{s.tagline}</p>
@@ -1200,7 +1201,7 @@ export function TripView({ tripId }: { tripId: string }) {
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={bigImage(p.image_url, 960)} alt="" loading="lazy"
                             onError={(e) => { const t = e.currentTarget; if (p.image_url && t.src !== p.image_url) t.src = p.image_url; }}
-                            className="mb-3 h-[200px] w-full max-w-[480px] rounded-[10px] object-cover" />
+                            className="mb-3 mx-auto block max-h-[440px] w-auto max-w-full rounded-[10px]" />
                         )}
                         {p.tagline_he && <p className="mb-2 text-[14.5px] italic text-[var(--text-2)]">{p.tagline_he}</p>}
                         {p.tips_he && <p className="mb-2 text-[13.5px] leading-snug text-[var(--text-2)]">{p.tips_he}</p>}
