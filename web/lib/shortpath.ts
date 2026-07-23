@@ -5,10 +5,23 @@ import type { Attraction } from "./db";
 // take the top N. Optional taste boosts re-rank within. Pure + client-safe
 // (types only) so DestinationView can compute it live from the loaded data.
 
-export type Profile = "families" | "couples" | "friends";
-export const PROFILES: Profile[] = ["families", "couples", "friends"];
-export const PROFILE_HE: Record<Profile, string> = { families: "משפחות", couples: "זוגות", friends: "חברים" };
-export const PROFILE_EMOJI: Record<Profile, string> = { families: "👨‍👩‍👧", couples: "💑", friends: "🎉" };
+// UI audiences the traveller picks. The biggest real split is with-kids vs without,
+// so couples + friends are ONE choice ("זוגות וחברים"); families stay separate. The
+// data layer still stores all three per-audience fits — "adults" reads whichever of
+// couples/friends fits BEST for each place (a nightlife spot via friends, a wine bar
+// via couples), so merging the button keeps, not loses, the per-audience signal.
+export type Profile = "families" | "adults";
+export const PROFILES: Profile[] = ["families", "adults"];
+export const PROFILE_HE: Record<Profile, string> = { families: "משפחות", adults: "זוגות וחברים" };
+export const PROFILE_EMOJI: Record<Profile, string> = { families: "👨‍👩‍👧", adults: "💑" };
+
+// UI audience → the per-place fit (0-100). "adults" = the stronger of couples/friends.
+const fitFor = (a: Attraction, p: Profile): number =>
+  p === "families" ? (a.audience_fit?.families ?? 0)
+    : Math.max(a.audience_fit?.couples ?? 0, a.audience_fit?.friends ?? 0);
+const bonusFor = (a: Attraction, p: Profile): number =>
+  p === "families" ? (a.admin_bonus?.families ?? 0)
+    : Math.max(a.admin_bonus?.couples ?? 0, a.admin_bonus?.friends ?? 0);
 
 const FIT_FLOOR = 35; // below this, the place is not shown for that audience at all
 
@@ -42,8 +55,8 @@ export function shortPath(
     return Math.min(1, 0.10 + 0.28 * ts + 0.28 * (a.notable ? 1 : 0) + 0.34 * curation(a));
   };
   const consensus = (a: Attraction) =>
-    Math.round(100 * worth(a) * ((a.audience_fit![profile] ?? 0) / 100)) + (a.admin_bonus?.[profile] ?? 0);
-  const eligible = withFit.filter((a) => (a.audience_fit![profile] ?? 0) >= FIT_FLOOR);
+    Math.round(100 * worth(a) * (fitFor(a, profile) / 100)) + bonusFor(a, profile);
+  const eligible = withFit.filter((a) => fitFor(a, profile) >= FIT_FLOOR);
   const boostMatch = (a: Attraction) =>
     boosts.size > 0 && [...boosts].some((k) => INTERESTS.find((i) => i.key === k)?.match(a));
   const scored = eligible.map((a) => ({ a, base: consensus(a), boosted: boostMatch(a) }));
