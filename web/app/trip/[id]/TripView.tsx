@@ -1038,6 +1038,22 @@ export function TripView({ tripId }: { tripId: string }) {
                   <span><b className="text-[var(--text)]">איך מגיעים לאזור:</b> {day.gateway}</span>
                 </div>
               )}
+              {/* Add a dinner (1½h) or hotel rest — pinned at the TOP of the day so
+                  it's easy to reach; the break itself still drops into its right time
+                  slot (dinner in the evening) and can be dragged to reposition. */}
+              <div className="flex flex-wrap items-center gap-2.5 border-b border-[var(--border)] py-3 text-[13px]">
+                <span className="text-[var(--text-3)]">הוסיפו:</span>
+                <button onClick={() => addBreak("food", "ארוחת ערב", 90, "מסעדה מקומית באזור")}
+                  disabled={day.stops.some((s) => s.name === "ארוחת ערב")}
+                  className="flex items-center gap-1.5 rounded-full bg-[var(--brand-soft)] px-3.5 py-1.5 font-semibold text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:bg-[var(--brand)] hover:text-white disabled:opacity-40 disabled:shadow-none disabled:hover:bg-[var(--brand-soft)] disabled:hover:text-[var(--brand-ink)]">
+                  <Utensils size={13} /> ארוחת ערב
+                </button>
+                <button onClick={() => addBreak("rest", "מנוחה במלון", 60, "חזרה למלון להתרעננות", 17 * 60, hotelPoints[0] ? { lat: hotelPoints[0].lat, lng: hotelPoints[0].lng } : undefined)}
+                  disabled={day.stops.some((s) => s.name === "מנוחה במלון")}
+                  className="flex items-center gap-1.5 rounded-full bg-[var(--brand-soft)] px-3.5 py-1.5 font-semibold text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:bg-[var(--brand)] hover:text-white disabled:opacity-40 disabled:shadow-none disabled:hover:bg-[var(--brand-soft)] disabled:hover:text-[var(--brand-ink)]">
+                  <Coffee size={13} /> מנוחה במלון
+                </button>
+              </div>
               {day.stops.map((s, si) => {
                 const key = `${curIdx}-${si}`;
                 const isOpen = expanded === key;
@@ -1241,21 +1257,6 @@ export function TripView({ tripId }: { tripId: string }) {
                   שחררו כאן כדי להוסיף בסוף היום
                 </div>
               )}
-              {/* add a break to the day — dinner (default 1½h) or hotel rest (1h).
-                  Added at the end (evening); drag to reposition. */}
-              <div className="mt-3 flex flex-wrap items-center gap-2.5 border-t border-[var(--border)] pt-3.5 text-[13px]">
-                <span className="text-[var(--text-3)]">הוסיפו:</span>
-                <button onClick={() => addBreak("food", "ארוחת ערב", 90, "מסעדה מקומית באזור")}
-                  disabled={day.stops.some((s) => s.name === "ארוחת ערב")}
-                  className="flex items-center gap-1.5 rounded-full bg-[var(--brand-soft)] px-3.5 py-1.5 font-semibold text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:bg-[var(--brand)] hover:text-white disabled:opacity-40 disabled:shadow-none disabled:hover:bg-[var(--brand-soft)] disabled:hover:text-[var(--brand-ink)]">
-                  <Utensils size={13} /> ארוחת ערב
-                </button>
-                <button onClick={() => addBreak("rest", "מנוחה במלון", 60, "חזרה למלון להתרעננות", 17 * 60, hotelPoints[0] ? { lat: hotelPoints[0].lat, lng: hotelPoints[0].lng } : undefined)}
-                  disabled={day.stops.some((s) => s.name === "מנוחה במלון")}
-                  className="flex items-center gap-1.5 rounded-full bg-[var(--brand-soft)] px-3.5 py-1.5 font-semibold text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:bg-[var(--brand)] hover:text-white disabled:opacity-40 disabled:shadow-none disabled:hover:bg-[var(--brand-soft)] disabled:hover:text-[var(--brand-ink)]">
-                  <Coffee size={13} /> מנוחה במלון
-                </button>
-              </div>
             </div>
 
             {/* why this day is shaped this way — mobile only (desktop shows it in
