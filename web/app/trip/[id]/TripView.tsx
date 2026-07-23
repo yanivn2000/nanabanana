@@ -537,10 +537,11 @@ export function TripView({ tripId }: { tripId: string }) {
     dragRef.current = item; overRef.current = null;
     setDrag(item); setGhost({ x: e.clientX, y: e.clientY, label });
     const dayLen = day?.stops.length ?? 0;
-    const onMove = (ev: PointerEvent) => {
-      ev.preventDefault();
-      setGhost((g) => (g ? { ...g, x: ev.clientX, y: ev.clientY } : g));
-      const el = document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null;
+    let lastX = e.clientX, lastY = e.clientY, raf = 0;
+    // Resolve the drop target under (x,y). Shared by pointermove AND the autoscroll
+    // loop, so the target keeps updating while the page scrolls under a still finger.
+    const updateOver = (x: number, y: number) => {
+      const el = document.elementFromPoint(x, y) as HTMLElement | null;
       const endEl = el?.closest("[data-drop-end]");
       const stopEl = el?.closest("[data-drop-idx]");
       const bankEl = el?.closest("[data-drop-bank]");
@@ -548,12 +549,25 @@ export function TripView({ tripId }: { tripId: string }) {
       else if (stopEl) { const si = Number(stopEl.getAttribute("data-drop-idx")); overRef.current = { type: "stop", si }; setDragOverSi(si); setOverBank(false); }
       else if (bankEl && dragRef.current?.kind === "stop") { overRef.current = { type: "bank" }; setOverBank(true); setDragOverSi(null); }
       else { overRef.current = null; setDragOverSi(null); setOverBank(false); }
-      // autoscroll when dragging near the top/bottom edge
-      const M = 64;
-      if (ev.clientY < M) window.scrollBy(0, -14);
-      else if (ev.clientY > window.innerHeight - M) window.scrollBy(0, 14);
+    };
+    // Continuous edge autoscroll — runs every frame while the finger sits near the
+    // top/bottom, so a card from the bottom bank can reach a day higher up.
+    const tick = () => {
+      const M = 90;
+      let dy = 0;
+      if (lastY < M) dy = -Math.ceil((M - lastY) / 5);
+      else if (lastY > window.innerHeight - M) dy = Math.ceil((lastY - (window.innerHeight - M)) / 5);
+      if (dy) { window.scrollBy(0, dy); updateOver(lastX, lastY); }
+      raf = requestAnimationFrame(tick);
+    };
+    const onMove = (ev: PointerEvent) => {
+      ev.preventDefault();
+      lastX = ev.clientX; lastY = ev.clientY;
+      setGhost((g) => (g ? { ...g, x: ev.clientX, y: ev.clientY } : g));
+      updateOver(ev.clientX, ev.clientY);
     };
     const onUp = () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
@@ -574,6 +588,7 @@ export function TripView({ tripId }: { tripId: string }) {
     window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
+    raf = requestAnimationFrame(tick);
   };
 
   // compact date range for the thin top row (no permanent inputs)
@@ -1125,10 +1140,10 @@ export function TripView({ tripId }: { tripId: string }) {
               <div className="mt-3 flex max-h-[320px] flex-col gap-2 overflow-y-auto">
                 {(trip?.leftOut ?? []).map((p) => (
                   <div key={p.id}
-                    className={`flex items-center gap-3 rounded-[10px] bg-[var(--surface)] p-2 shadow-[var(--shadow)] ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
-                    <span onPointerDown={(e) => startPointerDrag(e, { kind: "bank", id: p.id }, p.name_he || p.name_en)}
-                      style={{ touchAction: "none" }}
-                      className="grid size-6 shrink-0 cursor-grab touch-none place-items-center text-[var(--text-3)] active:cursor-grabbing" title="גררו אל היום"><GripVertical size={16} /></span>
+                    onPointerDown={(e) => startPointerDrag(e, { kind: "bank", id: p.id }, p.name_he || p.name_en)}
+                    style={{ touchAction: "none" }}
+                    className={`flex cursor-grab touch-none items-center gap-3 rounded-[10px] bg-[var(--surface)] p-2 shadow-[var(--shadow)] active:cursor-grabbing ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
+                    <span className="grid size-6 shrink-0 place-items-center text-[var(--text-3)]" title="גררו אל היום"><GripVertical size={16} /></span>
                     {p.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={p.image_url} alt="" loading="lazy" className="size-11 shrink-0 rounded-[8px] object-cover" />
