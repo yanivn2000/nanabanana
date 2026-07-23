@@ -6,6 +6,7 @@ import { ChevronDown, Loader2, Check, ExternalLink } from "lucide-react";
 import { InsightsIngest } from "./InsightsIngest";
 import { AttractionsTable } from "./AttractionsTable";
 import { AreasTable } from "./AreasTable";
+import { StreetsTable } from "./StreetsTable";
 import { GraphTable } from "./GraphTable";
 import { BrainEval } from "./BrainEval";
 import { PrinciplesTable } from "./PrinciplesTable";
@@ -16,6 +17,7 @@ const TABS = [
   { key: "cities", label: "🏙️ ערים" },
   { key: "attractions", label: "📊 אטרקציות" },
   { key: "areas", label: "🗺️ שכונות" },
+  { key: "streets", label: "🛣️ רחובות" },
   { key: "graph", label: "🌉 גרף מרחקים" },
   { key: "brain", label: "🧠 המוח" },
   { key: "principles", label: "👨‍🍳 טכניקות" },
@@ -209,6 +211,15 @@ export function AdminView({ destinations, feedback, email, version }: {
             שכונות שהתגלו אוטומטית (k-means על אתרים שווי-ביקור) ותוארו ידנית. ערכו שם/אופי/רמז-הגעה ואשרו — רק אזורים מאושרים ישמשו בבנייה בהמשך.
           </p>
           <AreasTable destinations={destinations} />
+        </div>
+      )}
+
+      {tab === "streets" && (
+        <div className="rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
+          <p className="mb-3 text-[13px] text-[var(--text-3)]">
+            רחובות מומלצים (רחוב · תעלה · אשכול) עם תגית "מתאים ל…", גיאומטריה אמיתית מ-OSM, וקישור לשכונה. ערכו ואשרו — הקו על המפה מראה אם נתפס הרחוב הנכון.
+          </p>
+          <StreetsTable destinations={destinations} />
         </div>
       )}
 

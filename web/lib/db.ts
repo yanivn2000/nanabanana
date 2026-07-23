@@ -1123,3 +1123,29 @@ export async function updateArea(id: number, fields: Record<string, unknown>): P
   await query(`UPDATE areas SET ${sets} WHERE id = $1`, [id, ...vals]);
   return true;
 }
+
+// --- Streets: recommended streets / canals (model B — a linear entity of its
+// own, optionally linked to the neighbourhood it sits in). ------------------
+export type Street = {
+  id: number; destination_id: number; name_en: string; name_he: string | null;
+  kind: string | null; best_for_he: string | null; vibe_he: string | null;
+  lat: number | null; lng: number | null; geometry: [number, number][] | null;
+  osm_id: number | null; area_id: number | null; approved: boolean;
+  area_name_he?: string | null;
+};
+export async function streetsForCity(destId: number): Promise<Street[]> {
+  return query<Street>(
+    `SELECT s.id, s.destination_id, s.name_en, s.name_he, s.kind, s.best_for_he, s.vibe_he,
+            s.lat, s.lng, s.geometry, s.osm_id, s.area_id, s.approved, a.name_he AS area_name_he
+       FROM streets s LEFT JOIN areas a ON a.id = s.area_id
+      WHERE s.destination_id = $1
+      ORDER BY s.approved DESC, s.name_en`, [destId]);
+}
+const STREET_EDITABLE = new Set(["name_he", "name_en", "kind", "best_for_he", "vibe_he", "area_id", "approved"]);
+export async function updateStreet(id: number, fields: Record<string, unknown>): Promise<boolean> {
+  const entries = Object.entries(fields).filter(([k]) => STREET_EDITABLE.has(k));
+  if (!entries.length) return false;
+  const sets = entries.map(([k], i) => `${k} = $${i + 2}`).join(", ");
+  await query(`UPDATE streets SET ${sets} WHERE id = $1`, [id, ...entries.map(([, v]) => v)]);
+  return true;
+}
