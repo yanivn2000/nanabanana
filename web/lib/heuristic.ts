@@ -98,10 +98,54 @@ export function buildHeuristicItinerary(
   const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes: perDay * 84, perDay, seedGroups,
     freeMax: opts?.freeGemMaxPerDay, freeDetour: opts?.freeGemDetourMin, dwell, center: opts?.center });
 
-  const dayList = clustered.map((picksRaw, d) => {
-    // per-day techniques: drop same-place dups, cap types (e.g. ≤2 museums/day),
-    // then push day-enders (water/adventure) to the end (all from the principles).
-    let picks = capTypePerDay(dropSamePlace(picksRaw, opts?.samePlaceMeters), opts?.maxTypePerDay);
+  // Per-day techniques: drop same-place dups + cap types (e.g. ≤2 museums/day), then
+  // BACKFILL each thinned day back toward the pace from nearby unused worthy stops —
+  // so obeying "≤2 museums/day" on a museum-heavy city (Amsterdam) doesn't leave an
+  // intensive day with 3 stops. Backfill stays local (within the day's turf) and keeps
+  // the caps. Done across ALL days first (shared usedIds) so no stop is added twice.
+  const caps = opts?.maxTypePerDay;
+  const sameMeters = opts?.samePlaceMeters ?? 90;
+  // Backfill stays local (3.5km) on a normal day; a still-thin far cluster (a
+  // Richmond/Kew half-day) escalates to 7km so it fills toward the pace too.
+  const FILL_KM = 3.5, FILL_KM_FAR = 7;
+  const usedIds = new Set<number>();
+  const capped = clustered.map((picksRaw) => {
+    const picks = capTypePerDay(dropSamePlace(picksRaw, opts?.samePlaceMeters), caps);
+    picks.forEach((a) => usedIds.add(a.id));
+    return picks;
+  });
+  const nearAnyKm = (a: Attraction, stops: Attraction[]) => {
+    if (!(Number.isFinite(a.lat) && Number.isFinite(a.lng))) return Infinity;
+    return Math.min(...stops.map((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng)
+      ? haversineKm(a.lat as number, a.lng as number, s.lat as number, s.lng as number) : Infinity));
+  };
+  const isDup = (a: Attraction, stops: Attraction[]) => stops.some((s) =>
+    Number.isFinite(a.lat) && Number.isFinite(s.lat) &&
+    haversineKm(a.lat as number, a.lng as number, s.lat as number, s.lng as number) * 1000 <= sameMeters);
+  for (const picks of capped) {
+    if (picks.length >= perDay || !picks.length) continue;
+    const counts: Record<string, number> = {};
+    for (const a of picks) for (const c of caps ?? []) if (stopMatchesType(a, c.type)) counts[c.type] = (counts[c.type] ?? 0) + 1;
+    const underCap = (a: Attraction) => (caps ?? []).every((c) => !stopMatchesType(a, c.type) || (counts[c.type] ?? 0) < c.max);
+    const fill = (maxKm: number) => {
+      while (picks.length < perDay) {
+        const cand = pool
+          .filter((a) => !usedIds.has(a.id))
+          .map((a) => ({ a, d: nearAnyKm(a, picks) }))
+          .filter((x) => x.d <= maxKm && underCap(x.a) && !isDup(x.a, picks))
+          .sort((x, y) => x.d - y.d)[0];
+        if (!cand) break;
+        picks.push(cand.a); usedIds.add(cand.a.id);
+        for (const c of caps ?? []) if (stopMatchesType(cand.a, c.type)) counts[c.type] = (counts[c.type] ?? 0) + 1;
+      }
+    };
+    fill(FILL_KM);
+    if (picks.length < perDay - 1) fill(FILL_KM_FAR);   // thin far cluster → widen once
+  }
+
+  const dayList = capped.map((pickFinal, d) => {
+    // day-enders (water/adventure) to the end, then respect each place's timing advice.
+    let picks = pickFinal;
     if (opts?.dayEnderLast !== false) picks = reorderDayEnders(picks);
     // Respect each place's own timing advice: morning-only stops first, evening/night
     // ones last, geography in between (stable, so it only moves the time-exclusive few).

@@ -222,8 +222,13 @@ export async function POST(req: NextRequest) {
   // Reach demotion (metro only): push far outliers (a 12km-away park) down the ranking
   // by ~penalty/8 positions, so walkable days don't sprawl. Mirrors the eval. car_base
   // is exempt — its far places become car day-trips. (See brain/policy#reachPenalty.)
+  // A hard radius guard first DROPS the truly unreachable (e.g. Kröller-Müller ~65km,
+  // mis-catalogued to Amsterdam) from a metro walking trip — a metro day can't reach it
+  // and it otherwise ate a whole day. User's explicit picks are exempt.
+  const METRO_MAX_KM = 35;
   const attractions = dest.mobility === "car_base" ? rankedByTaste
     : rankedByTaste
+        .filter((a) => a.lat == null || a.lng == null || pickIds.includes(a.id) || haversineKm(dest.lat, dest.lng, a.lat, a.lng) <= METRO_MAX_KM)
         .map((a, i) => ({ a, k: i + (a.lat != null && a.lng != null ? reachPenalty(haversineKm(dest.lat, dest.lng, a.lat, a.lng), true) / 8 : 0) }))
         .sort((x, y) => x.k - y.k)
         .map((z) => z.a);

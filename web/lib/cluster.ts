@@ -236,19 +236,17 @@ export function clusterIntoDays(
     }
     const tour = twoOpt(nnPath(candidates, start));
 
-    // Cut the tour into `days` chunks of roughly EQUAL TIME. Because the tour is one
-    // continuous walking path, equal-time contiguous slices are BOTH balanced (each day
-    // ~same hours) AND geographically tight (each day a stretch of the route) — unlike
-    // an equal-stop-COUNT cut, which sprawled one day across the whole city.
-    let totalT = 0;
-    for (let i = 0; i < tour.length; i++) totalT += visitMin(tour[i], dwell) + (i > 0 ? walkBetween(tour[i - 1], tour[i]) : 0);
-    const perDayBudget = totalT / days;
+    // Cut the tour into `days` contiguous chunks of `perDay` stops each — so the trip
+    // honours the chosen pace EVENLY (intensive really means ~perDay/day, not "6 short
+    // stops on one day, 3 museums on another"). Because the tour is one 2-opt walking
+    // path, contiguous count-slices are also geographically tight (each day a stretch of
+    // the route). Realized day length stays sane downstream: the ≤N-museums/day cap
+    // trims the heaviest stops, so no time ceiling is needed here (it only lopsided the
+    // last day by dumping overflow onto it).
     let cur: Attraction[] = [], time = 0;
     for (const x of tour) {
       const leg = cur.length ? walkBetween(cur[cur.length - 1], x) : 0;
-      // close the day once it holds ~its time-share (count half the next stop so we cut
-      // at the nearer boundary), while days remain — the last day takes the rest.
-      if (cur.length && groups.length < days - 1 && time + leg + visitMin(x, dwell) / 2 >= perDayBudget) {
+      if (cur.length >= perDay && groups.length < days - 1) {
         groups.push({ stops: cur, time });
         cur = []; time = 0;
       }
@@ -262,10 +260,13 @@ export function clusterIntoDays(
   // techniques (free_gems principle); fall back to the built-in defaults.
   const freeMax = opts.freeMax ?? FREE_MAX_PER_DAY;
   const freeDetour = opts.freeDetour ?? FREE_DETOUR;
+  // Also cap the day at ~pace+1 stops so free gems enrich a day without ballooning it
+  // (a compact central day used to hit the time budget only after 8-9 stops).
+  const dayCeil = (opts.perDay ?? Math.round((opts.dayMinutes ?? 420) / 78)) + 1;
   for (const g of groups) {
     let added = 0;
     for (const x of pool) {
-      if (added >= freeMax) break;
+      if (added >= freeMax || g.stops.length >= dayCeil) break;
       if (placed.has(x.id)) continue;
       const dist = nearestMin(x, g.stops);
       if (dist <= freeDetour && !isDuplicate(x, g.stops) && g.time + visitMin(x, dwell) + dist <= budget) {
