@@ -968,7 +968,7 @@ export function TripView({ tripId }: { tripId: string }) {
                        className={drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}
                        style={dragOverSi === si && drag && !(drag.kind === "stop" && drag.si === si)
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
-                    <div className={`group/row -mx-2 flex gap-2 rounded-[12px] px-2 transition-colors lg:gap-3 ${hasDetails ? "cursor-pointer" : ""}`}
+                    <div className={`group/row relative -mx-2 flex gap-2 rounded-[12px] px-2 transition-colors lg:gap-3 ${hasDetails ? "cursor-pointer" : ""}`}
                          style={{ background: isActive ? `color-mix(in srgb, ${col} 12%, transparent)` : "transparent" }}
                          onMouseEnter={() => ci != null && setActive(ci)}
                          onMouseLeave={() => setActive(null)}
@@ -977,7 +977,7 @@ export function TripView({ tripId }: { tripId: string }) {
                           gap between them: grip to drag-reorder, and a quick delete (the
                           gap keeps the destructive action from being an easy misclick).
                           Hidden on the auto lunch row (it's re-timed, not user-managed). */}
-                      <div className="flex flex-col items-center gap-1.5 self-center opacity-100 transition-opacity lg:flex-row lg:gap-2 lg:opacity-0 lg:group-hover/row:opacity-100">
+                      <div className="flex flex-col items-center gap-1.5 self-center opacity-100 transition-opacity lg:absolute lg:start-0 lg:top-1/2 lg:z-10 lg:-translate-y-1/2 lg:flex-row lg:items-center lg:gap-2 lg:rounded-lg lg:bg-[color-mix(in_srgb,var(--surface)_92%,transparent)] lg:px-1.5 lg:py-1 lg:opacity-0 lg:shadow-[var(--shadow)] lg:backdrop-blur-sm lg:group-hover/row:opacity-100">
                         <span
                           onPointerDown={(e) => startPointerDrag(e, { kind: "stop", si }, s.name)}
                           onClick={(e) => e.stopPropagation()}
