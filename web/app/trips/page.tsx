@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useProfile, profileSummary, useTrips } from "@/lib/store";
-import { Plus, ArrowLeft, Trash2, Sparkles, BedDouble } from "lucide-react";
+import { MapPin, ArrowLeft, Trash2, Sparkles, BedDouble } from "lucide-react";
 import { NewTrip } from "./NewTrip";
 import { SuitcaseArt } from "@/components/Illustrations";
 import { CityPoster } from "@/components/CityPoster";
@@ -27,20 +27,17 @@ export default function TripsPage() {
         )}
       </header>
 
-      {!creating && (
-        <button onClick={() => setCreating(true)}
-          className="rise rise-1 mb-5 flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] bg-[var(--brand)] py-4 text-[16px] font-medium text-white shadow-[var(--shadow)] lg:max-w-xs">
-          <Plus size={18} /> טיול חדש
-        </button>
-      )}
-
       {creating && <NewTrip onClose={() => setCreating(false)} />}
 
       {loaded && trips.length === 0 && !creating && (
         <div className="flex flex-col items-center rounded-[var(--radius-card)] bg-[var(--surface)] px-5 py-10 text-center shadow-[var(--shadow)]">
           <SuitcaseArt width={210} />
           <p className="serif mt-4 text-[20px] font-bold">המזוודה מוכנה. לאן טסים?</p>
-          <p className="mt-1 text-[14px] text-[var(--text-2)]">צרו טיול ראשון — לפי העדפות או לפי מלונות שכבר הזמנתם.</p>
+          <p className="mt-1 text-[14px] text-[var(--text-2)]">בחרו עיר, גלו אטרקציות ושכונות — ונרכיב לכם טיול משם.</p>
+          <Link href="/"
+            className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-6 py-3 text-[15px] font-medium text-white shadow-[var(--shadow)]">
+            <MapPin size={16} /> בחרו עיר
+          </Link>
         </div>
       )}
 
