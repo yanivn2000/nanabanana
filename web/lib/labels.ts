@@ -108,14 +108,19 @@ export function countryFlag(country: string | null | undefined): string {
   return (country && COUNTRY_FLAG[country]) || "🌍";
 }
 
-// Request a larger Wikimedia image when it's SAFE to do so. Commons FilePath
-// "?width=" URLs regenerate from the original (serving the original if smaller),
-// so upscaling never fails. We deliberately do NOT touch upload.wikimedia
-// "/NNNpx-" thumbnails: requesting a width larger than the source returns HTTP
-// 400, which broke many images. Those stay at their stored size (the onError
-// fallback at each <img> is a final guard).
+// Request a larger Wikimedia image for the expanded view. Two URL shapes:
+//  - Commons FilePath "?width=" → regenerates from the original (serves the
+//    original if smaller), so upscaling never fails.
+//  - upload.wikimedia "/thumb/.../NNNpx-Name" thumbnails → bump the NNNpx to a
+//    bigger render so the banner isn't a blurry upscale of a ~320px thumb. If the
+//    requested width exceeds the source Wikimedia returns 400, but every <img>
+//    that uses bigImage has an onError that falls back to the stored URL, so the
+//    worst case is simply the old (small) image — never a broken one.
+// Only ENLARGE (never shrink a thumbnail that's already bigger than px).
 export function bigImage(url: string | null | undefined, px = 640): string | undefined {
   if (!url) return undefined;
   if (/[?&]width=\d+/.test(url)) return url.replace(/([?&]width=)\d+/, `$1${px}`);
+  const m = url.match(/\/(\d+)px-/);
+  if (m && Number(m[1]) < px) return url.replace(/\/\d+px-/, `/${px}px-`);
   return url;
 }

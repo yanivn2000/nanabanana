@@ -1054,9 +1054,9 @@ export function TripView({ tripId }: { tripId: string }) {
                       <div className="border-t border-[var(--border)] pb-3.5 pt-3">
                         {s.image && (
                           // eslint-disable-next-line @next/next/no-img-element
-                          // capped banner — never upscale past the ~640px source; a
-                          // full-width 4:3 was a huge block on the wide desktop column
-                          <img src={bigImage(s.image)} alt="" loading="lazy"
+                          // ~960px source so the 480px banner is crisp on retina; the
+                          // onError falls back to the stored URL if the original is smaller.
+                          <img src={bigImage(s.image, 960)} alt="" loading="lazy"
                             onError={(e) => { const t = e.currentTarget; if (s.image && t.src !== s.image) t.src = s.image; }}
                             className="mb-3 h-[220px] w-full max-w-[480px] rounded-[10px] object-cover" />
                         )}
@@ -1185,7 +1185,7 @@ export function TripView({ tripId }: { tripId: string }) {
                       <div className="border-t border-[var(--border)] px-3 pb-3 pt-3">
                         {p.image_url && (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={bigImage(p.image_url)} alt="" loading="lazy"
+                          <img src={bigImage(p.image_url, 960)} alt="" loading="lazy"
                             onError={(e) => { const t = e.currentTarget; if (p.image_url && t.src !== p.image_url) t.src = p.image_url; }}
                             className="mb-3 h-[200px] w-full max-w-[480px] rounded-[10px] object-cover" />
                         )}
