@@ -319,6 +319,17 @@ export default function AttractionsMap({
         );
       })}
 
+      {/* home base — the hotel anchors the day: dashed connectors from it to the
+          day's FIRST and LAST stop, so the route reads "hotel → … → hotel". */}
+      {ordered && hotels.length > 0 && orderedPts.length > 0 && [
+        { k: "h-start", a: hotels[0], b: orderedPts[0] },
+        { k: "h-end", a: orderedPts[orderedPts.length - 1], b: hotels[0] },
+      ].map(({ k, a, b }) => (
+        <Polyline key={k}
+          positions={[[a.lat as number, a.lng as number], [b.lat as number, b.lng as number]]}
+          pathOptions={{ color: "#0e6b5e", weight: 2.5, opacity: 0.5, dashArray: "3 7" }} />
+      ))}
+
       {/* left-out picks as GREY markers (day-editing): click → mark to add (turns
           green). They let the traveller see un-placed picks near the planned route. */}
       {ordered && extras.filter((a) => Number.isFinite(a.lat) && Number.isFinite(a.lng)).map((a) => {

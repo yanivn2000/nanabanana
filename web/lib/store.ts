@@ -99,6 +99,7 @@ export type Hotel = {
 };
 
 const HOTELS_KEY = "nanabanana.hotels.v1";
+const HOTELS_EVT = "nanabanana:hotels";   // same-tab cross-instance change signal
 
 export function useHotels(): {
   hotels: Hotel[];
@@ -111,29 +112,34 @@ export function useHotels(): {
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loaded, setLoaded] = useState(false);
 
+  const read = (): Hotel[] => { try { const raw = localStorage.getItem(HOTELS_KEY); return raw ? JSON.parse(raw) : []; } catch { return []; } };
+
+  // Reactive across ALL useHotels() instances (map + add-form live in different
+  // components): every write fires a custom event so each instance re-reads — the
+  // hotel marker now appears on the map immediately, without a page refresh.
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(HOTELS_KEY);
-      if (raw) setHotels(JSON.parse(raw));
-    } catch {}
+    setHotels(read());
     setLoaded(true);
+    const sync = () => setHotels(read());
+    window.addEventListener(HOTELS_EVT, sync);
+    window.addEventListener("storage", sync);   // also cross-tab
+    return () => { window.removeEventListener(HOTELS_EVT, sync); window.removeEventListener("storage", sync); };
   }, []);
 
+  // Operate on the freshest localStorage (read()), not a possibly-stale closure,
+  // then persist + broadcast so sibling instances update.
   const persist = (next: Hotel[]) => {
     setHotels(next);
-    try {
-      localStorage.setItem(HOTELS_KEY, JSON.stringify(next));
-    } catch {}
+    try { localStorage.setItem(HOTELS_KEY, JSON.stringify(next)); } catch {}
+    try { window.dispatchEvent(new Event(HOTELS_EVT)); } catch {}
   };
 
   return {
     hotels,
-    add: (h) => persist([...hotels, h]),
-    remove: (id) => persist(hotels.filter((x) => x.id !== id)),
-    link: (id, tripId) =>
-      persist(hotels.map((x) => (x.id === id ? { ...x, tripId } : x))),
-    assign: (id, segmentId) =>
-      persist(hotels.map((x) => (x.id === id ? { ...x, segmentId } : x))),
+    add: (h) => persist([...read(), h]),
+    remove: (id) => persist(read().filter((x) => x.id !== id)),
+    link: (id, tripId) => persist(read().map((x) => (x.id === id ? { ...x, tripId } : x))),
+    assign: (id, segmentId) => persist(read().map((x) => (x.id === id ? { ...x, segmentId } : x))),
     loaded,
   };
 }

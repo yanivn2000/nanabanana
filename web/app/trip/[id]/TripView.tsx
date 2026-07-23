@@ -511,11 +511,13 @@ export function TripView({ tripId }: { tripId: string }) {
   // A hotel rest defaults to ~17:00 (late-afternoon freshen-up before the evening),
   // so it's inserted before the first stop at/after that time — not at day's end.
   // Either way the traveller can drag it, and the day re-times after.
-  const addBreak = (kind: Stop["kind"], name: string, minutes: number, note: string, targetMin?: number) =>
+  const addBreak = (kind: Stop["kind"], name: string, minutes: number, note: string, targetMin?: number, coords?: { lat: number; lng: number }) =>
     mutate((it) => {
       const stops = it.days[curIdx].stops;
       if (stops.some((s) => s.name === name)) return;   // one dinner / one rest per day
-      const stop: Stop = { name, kind, time: "", duration: durationHe(minutes), note };
+      // a hotel rest carries the hotel's coords → it shows on the map at the hotel
+      // (a mid-day return home) and the route legs to/from it are real.
+      const stop: Stop = { name, kind, time: "", duration: durationHe(minutes), note, lat: coords?.lat, lng: coords?.lng };
       const toMin = (t?: string) => { const [h, m] = (t || "").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
       let idx = stops.length;
       if (targetMin != null) {
@@ -1284,7 +1286,7 @@ export function TripView({ tripId }: { tripId: string }) {
                   className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)] disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-2)]">
                   <Utensils size={12} /> ארוחת ערב
                 </button>
-                <button onClick={() => addBreak("rest", "מנוחה במלון", 60, "חזרה למלון להתרעננות", 17 * 60)}
+                <button onClick={() => addBreak("rest", "מנוחה במלון", 60, "חזרה למלון להתרעננות", 17 * 60, hotelPoints[0] ? { lat: hotelPoints[0].lat, lng: hotelPoints[0].lng } : undefined)}
                   disabled={day.stops.some((s) => s.name === "מנוחה במלון")}
                   className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)] disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-2)]">
                   <Coffee size={12} /> מנוחה במלון
