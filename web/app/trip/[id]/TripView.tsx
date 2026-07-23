@@ -5,8 +5,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ChevronRight, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
-  Sparkles, Star, Loader2, Pencil, ChevronUp, ChevronDown,
-  ChevronsUp, ChevronsDown, Trash2, ExternalLink, Navigation, Map as MapIcon, Route, Users, Luggage, ListChecks, Wallet, CalendarDays,
+  Sparkles, Star, Loader2, ChevronDown,
+  Trash2, ExternalLink, Navigation, Map as MapIcon, Route, Users, Luggage, ListChecks, Wallet, CalendarDays,
   Clock, MapPin, Ruler, Footprints, Copy, Lightbulb, Car, Hourglass, GripVertical,
 } from "lucide-react";
 
@@ -102,7 +102,6 @@ export function TripView({ tripId }: { tripId: string }) {
   // Drag-to-reorder stops within a day: the row being dragged, and the row it's over.
   const [dragSi, setDragSi] = useState<number | null>(null);
   const [dragOverSi, setDragOverSi] = useState<number | null>(null);
-  const [editing, setEditing] = useState(false);
   const [editTravelers, setEditTravelers] = useState(false);
   const [tool, setTool] = useState<ToolKey | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -422,17 +421,6 @@ export function TripView({ tripId }: { tripId: string }) {
     it.days.forEach((d, i) => { d.label = `יום ${i + 1}`; });
     update(tripId, { itinerary: it });
   }
-  const swap = <T,>(arr: T[], i: number, j: number) => {
-    if (j < 0 || j >= arr.length) return;
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  };
-  const moveDay = (di: number, dir: -1 | 1) => {
-    mutate((it) => swap(it.days, di, di + dir));
-    const tgt = di + dir;                       // follow the day the user is moving
-    if (tgt >= 0 && tgt < allDays.length) setDayIdx(tgt);
-  };
-  const moveStop = (di: number, si: number, dir: -1 | 1) =>
-    mutate((it) => swap(it.days[di].stops, si, si + dir));
   // Drag-and-drop: move a stop from index `from` to index `to` within the day.
   const reorderStop = (di: number, from: number, to: number) =>
     mutate((it) => {
@@ -440,13 +428,6 @@ export function TripView({ tripId }: { tripId: string }) {
       if (from === to || to < 0 || to >= stops.length) return;
       const [m] = stops.splice(from, 1);
       stops.splice(to, 0, m);
-    });
-  const moveStopToDay = (di: number, si: number, dir: -1 | 1) =>
-    mutate((it) => {
-      const tgt = di + dir;
-      if (tgt < 0 || tgt >= it.days.length) return;
-      const [s] = it.days[di].stops.splice(si, 1);
-      it.days[tgt].stops.push(s);
     });
   const deleteStop = (di: number, si: number) =>
     mutate((it) => { it.days[di].stops.splice(si, 1); });
@@ -647,21 +628,6 @@ export function TripView({ tripId }: { tripId: string }) {
               <MapPin size={11} /> {day.area}
             </span>
           )}
-          {editing && (
-            <span className="flex gap-1">
-              <button onClick={() => moveDay(curIdx, -1)} disabled={curIdx === 0} aria-label="הקדם את היום"
-                className="grid size-6 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronUp size={13} /></button>
-              <button onClick={() => moveDay(curIdx, 1)} disabled={curIdx === allDays.length - 1} aria-label="אחר את היום"
-                className="grid size-6 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronDown size={13} /></button>
-            </span>
-          )}
-          <button onClick={() => setEditing((v) => !v)}
-            className="flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[12.5px] font-medium transition"
-            style={{ background: editing ? "var(--accent-soft)" : "var(--surface)",
-                     borderColor: editing ? "var(--accent)" : "var(--border)",
-                     color: editing ? "var(--accent-ink)" : "var(--text-2)" }}>
-            <Pencil size={12} /> {editing ? "סיום" : "שינוי סדר"}
-          </button>
           <span className="hidden h-3.5 w-px bg-[var(--border)] sm:block" />
           <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[12.5px] text-[var(--text-2)]">
             {dayTotalKm > 0 && <span className="flex items-center gap-1"><Ruler size={12} className="text-[var(--text-3)]" /> {formatDistance(dayTotalKm)}</span>}
@@ -781,7 +747,7 @@ export function TripView({ tripId }: { tripId: string }) {
               the map as one continuous workspace */}
           <div className={mobileTab === "map" ? "hidden lg:block" : ""}>
             <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] px-3 lg:mt-0 lg:px-4">
-              {day.gateway && !editing && (
+              {day.gateway && (
                 <div className="flex items-start gap-2 border-b border-[var(--border)] py-2.5 text-[12.5px] leading-snug text-[var(--text-2)]">
                   <span aria-hidden className="mt-px">🚉</span>
                   <span><b className="text-[var(--text)]">איך מגיעים לאזור:</b> {day.gateway}</span>
@@ -790,7 +756,7 @@ export function TripView({ tripId }: { tripId: string }) {
               {day.stops.map((s, si) => {
                 const key = `${curIdx}-${si}`;
                 const isOpen = expanded === key;
-                const hasDetails = !editing && !!(
+                const hasDetails = !!(
                   s.image || s.website || s.bestTime || s.dress ||
                   s.cost != null || (s.tagline && s.tagline !== s.note)
                 );
@@ -877,26 +843,6 @@ export function TripView({ tripId }: { tripId: string }) {
                           </div>
                         </div>
                         {s.note && <p className={`mt-1 text-[13.5px] leading-snug text-[var(--text-2)] ${isOpen ? "" : "line-clamp-2"}`}>{s.note}</p>}
-                        {editing && (
-                          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-[var(--border)] pt-2.5"
-                               onClick={(e) => e.stopPropagation()}>
-                            <button onClick={() => moveStop(curIdx, si, -1)} disabled={si === 0} aria-label="העלה"
-                              className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronUp size={15} /></button>
-                            <button onClick={() => moveStop(curIdx, si, 1)} disabled={si === day.stops.length - 1} aria-label="הורד"
-                              className="grid size-7 place-items-center rounded-md bg-[var(--surface-2)] disabled:opacity-30"><ChevronDown size={15} /></button>
-                            <span className="mx-1 h-4 w-px bg-[var(--border)]"></span>
-                            <button onClick={() => moveStopToDay(curIdx, si, -1)} disabled={curIdx === 0}
-                              className="flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 text-[12px] disabled:opacity-30">
-                              <ChevronsUp size={13} /> ליום הקודם
-                            </button>
-                            <button onClick={() => moveStopToDay(curIdx, si, 1)} disabled={curIdx === allDays.length - 1}
-                              className="flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1 text-[12px] disabled:opacity-30">
-                              <ChevronsDown size={13} /> ליום הבא
-                            </button>
-                            <button onClick={() => deleteStop(curIdx, si)} aria-label="מחק"
-                              className="mr-auto grid size-7 place-items-center rounded-md text-[var(--text-3)]"><Trash2 size={15} /></button>
-                          </div>
-                        )}
                       </div>
                       {/* timeline spine — a numbered dot in the stop's own colour */}
                       <div className="flex w-7 shrink-0 flex-col items-center">
@@ -957,7 +903,7 @@ export function TripView({ tripId }: { tripId: string }) {
 
                     {/* how to get to the next stop — walk vs transit by the
                         traveler's tolerance, with a live-navigation deep-link */}
-                    {leg && !editing && !last && (
+                    {leg && !last && (
                       <div className="flex items-stretch gap-3">
                         <div className="w-12 shrink-0 pr-1" />
                         <div className="min-w-0 flex-1 py-0.5">
