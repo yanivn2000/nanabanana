@@ -562,6 +562,9 @@ export function DestinationView({
     setBuilding(true);
     // Neighbourhoods the traveller chose to tour → one guaranteed day each.
     const chosenAreaGroups = areas.filter((a) => chosenAreas.has(a.id)).map((a) => a.member_ids);
+    // Streets marked "כן" → each becomes a stop with its own dwell.
+    const pickedStreetIds = Object.entries(streetChoices)
+      .filter(([, c]) => c === "yes").map(([id]) => Number(id));
     const trip = create({
       title: `טיול ל${dest.city_he || dest.city}`,
       mode: "preferences",
@@ -574,6 +577,7 @@ export function DestinationView({
       profile: { ...profile, pace: buildPace, taste, dailyDriveHours: RADIUS_HOURS[buildRadius] },
       ...(yesFinal.length || no.length ? { selection: { yes: yesFinal, no } } : {}),
       ...(chosenAreaGroups.length ? { areaGroups: chosenAreaGroups } : {}),
+      ...(pickedStreetIds.length ? { streetIds: pickedStreetIds } : {}),
     });
     router.push(`/trip/${trip.id}?build=1`);
   }

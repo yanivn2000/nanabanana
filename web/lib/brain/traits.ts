@@ -56,7 +56,8 @@ export function dwellBucket(a: Attraction): DwellBucket {
   if ((a.category === "historic" && /memorial|monument|ruins/.test(a.subcategory ?? "")) || PASSBY_RX.test(t)) return "passby";
   return "standard";
 }
-export const dwellMinutes = (a: Attraction, cfg: DwellCfg = DWELL_DEFAULT): number => cfg[dwellBucket(a)];
+export const dwellMinutes = (a: Attraction, cfg: DwellCfg = DWELL_DEFAULT): number =>
+  a.visit_minutes ?? cfg[dwellBucket(a)];
 
 // Dark/heavy history (Nazism, Holocaust) — not a clean OSM category (usually tagged
 // "museum"/"historic"), so it needs a keyword trait. Lets a rule avoid it on family

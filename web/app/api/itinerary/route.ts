@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges, areasForDestination, brainRulesForDest } from "@/lib/db";
+import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds } from "@/lib/db";
 import { annotateDaysWithAreas } from "@/lib/cluster";
-import type { Attraction, Destination } from "@/lib/db";
+import type { Attraction, Destination, Street } from "@/lib/db";
 import {
   aiConfigured,
   generateItinerary,
@@ -102,6 +102,23 @@ function partitionBySelection(
   return { anchors, fillers, anchorIds };
 }
 
+
+// A picked street is a full stop, not a transition. It enters the build as a
+// synthetic attraction: a NEGATIVE id (its own id space, so it can never collide
+// with a real attraction id) and its curated dwell via visit_minutes.
+function streetAsStop(s: Street): Attraction {
+  return {
+    id: -s.id, name_he: s.name_he, name_en: s.name_en, lat: s.lat, lng: s.lng,
+    category: "attraction", subcategory: "street", indoor_outdoor: null,
+    family_score: null, tips_he: s.vibe_he, website: null, duration_minutes: null,
+    visit_minutes: s.dwell_min ?? 45, image_url: null, tagline_he: s.best_for_he,
+    best_season: null, best_time_he: null, time_of_day: null, dress_he: null,
+    cost_level: null, must_see: 1, osm_must_see: null, editor_rank: null,
+    editor_kids: null, description_he: null, taste_tags: null, audience_fit: null,
+    admin_bonus: null, notable: false,
+  };
+}
+
 // Match each itinerary stop back to its DB attraction and attach details
 // (image, website, coords, tagline, time/dress/cost) for the expandable view.
 // When anchorIds is given (Explore build), tag each matched stop as an anchor or
@@ -161,6 +178,7 @@ export async function POST(req: NextRequest) {
     // Explore build (F1): the traveler's per-trip picks. Drives an anchors-first,
     // "אם יש זמן" fillers plan on the single-city generate path.
     selection?: { yes: number[]; no: number[] };
+    streetIds?: number[];   // recommended streets the traveller marked "כן"
     // Only when there are kids: apply the family-friendliness lens (family_score
     // ranking). Adults-only trips (couple/friends) rank by taste + must-see only.
     isFamily?: boolean;
@@ -240,7 +258,12 @@ export async function POST(req: NextRequest) {
   // Explore build (F1): split into anchors + "אם יש זמן" fillers. Only used by
   // the single-city generate path below (details/revise/multi ignore it).
   const sel = body.selection ? partitionBySelection(pool, body.taste, body.selection, isFamily) : null;
-  const buildList = sel ? [...sel.anchors, ...sel.fillers] : attractions;
+  // Streets the traveller picked lead the build list, so the clusterer treats
+  // them as the day's top candidates (they were an explicit "כן").
+  const streetRows = Array.isArray(body.streetIds) && body.streetIds.length
+    ? await streetsByIds(body.streetIds.filter((n) => typeof n === "number")) : [];
+  const streetStops = streetRows.map(streetAsStop);
+  const buildList = [...streetStops, ...(sel ? [...sel.anchors, ...sel.fillers] : attractions)];
   // Only tag tiers when there's a real anchor set — otherwise every stop would
   // read "אם יש זמן" (e.g. a click-through selection with no picks / no must-sees).
   const anchorIds = sel && sel.anchors.length ? sel.anchorIds : undefined;
@@ -281,9 +304,9 @@ export async function POST(req: NextRequest) {
     annotateDaysWithAreas(withDetails.days, areas, { lat: dest.lat, lng: dest.lng });
     // car_base city → the whole trip is a rental-car trip; legs read as driving.
     if (dest.mobility === "car_base") withDetails.days.forEach((d) => { d.carBase = true; });
-    const surfaceIds = opts?.surfaceIds ?? yesSet;
-    const detailRows = opts?.detailRows ?? picks;
-    const leftOut = (body.selection || opts?.surfaceIds)
+    const surfaceIds = opts?.surfaceIds ?? new Set<number>([...yesSet, ...streetStops.map((s) => s.id)]);
+    const detailRows = opts?.detailRows ?? [...picks, ...streetStops];
+    const leftOut = (body.selection || streetStops.length || opts?.surfaceIds)
       ? detailRows.filter((a) => surfaceIds.has(a.id) && !scheduled.has(a.id)).map(detailOf)
       : [];
     return NextResponse.json({ itinerary: withDetails, ...(engine ? { engine } : {}), leftOut });

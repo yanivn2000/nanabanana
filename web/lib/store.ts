@@ -185,6 +185,7 @@ export type Trip = {
   selection?: {            // from the Explore flow: yes = anchors, no = excluded.
     yes: number[]; no: number[];
   };
+  streetIds?: number[];    // recommended streets marked "כן" — each becomes a stop
   // Chosen-neighbourhood tour: one member-id array per area the traveller picked to
   // tour → the builder makes one guaranteed day per area.
   areaGroups?: number[][];

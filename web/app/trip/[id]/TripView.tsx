@@ -339,6 +339,7 @@ export function TripView({ tripId }: { tripId: string }) {
     days: trip?.days ?? 4,
     month: trip?.month,
     selection: trip?.selection,   // Explore build: anchors-first, "אם יש זמן" fillers (F1)
+    streetIds: trip?.streetIds,   // picked streets — scheduled as stops with their own dwell
     hotels: tripHotels.map((h) => ({ name: h.name, city: h.city, lat: h.lat, lng: h.lng })),
     ...(trip?.segments && trip.segments.length > 1
       ? { segments: trip.segments.map((s) => ({
