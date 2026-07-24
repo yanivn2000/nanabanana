@@ -1146,6 +1146,16 @@ export async function streetsForCity(destId: number): Promise<Street[]> {
       WHERE s.destination_id = $1
       ORDER BY s.approved DESC, s.name_en`, [destId]);
 }
+// Consumer side: only approved streets, longest/most substantial first.
+export async function approvedStreetsForCity(destId: number): Promise<Street[]> {
+  return query<Street>(
+    `SELECT s.id, s.destination_id, s.name_en, s.name_he, s.kind, s.best_for_he, s.vibe_he,
+            s.lat, s.lng, s.geometry, s.osm_id, s.area_id, s.approved, s.dwell_min, s.length_m,
+            a.name_he AS area_name_he
+       FROM streets s LEFT JOIN areas a ON a.id = s.area_id
+      WHERE s.destination_id = $1 AND s.approved = true AND s.lat IS NOT NULL
+      ORDER BY s.dwell_min DESC NULLS LAST, s.length_m DESC NULLS LAST`, [destId]);
+}
 const STREET_EDITABLE = new Set(["name_he", "name_en", "kind", "best_for_he", "vibe_he", "area_id", "approved", "dwell_min"]);
 export async function updateStreet(id: number, fields: Record<string, unknown>): Promise<boolean> {
   const entries = Object.entries(fields).filter(([k]) => STREET_EDITABLE.has(k));

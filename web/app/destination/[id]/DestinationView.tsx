@@ -8,7 +8,7 @@ import { CityPoster } from "@/components/CityPoster";
 import { descriptor, catColor, bigImage, mergeCat, countryFlag } from "@/lib/labels";
 import { passUrl, type Pass } from "@/lib/passes";
 import { useRouter } from "next/navigation";
-import { useProfile, useTrips, useCitySelection, type Choice } from "@/lib/store";
+import { useProfile, useTrips, useCitySelection, useStreetSelection, type Choice } from "@/lib/store";
 
 // distance slider index → per-trip dailyDriveHours (same scale as the old flow)
 const RADIUS_HOURS = [0.5, 1, 2, 3];
@@ -22,7 +22,7 @@ import { PACE_PER_DAY } from "@/lib/trip-types";
 import { deriveTaste, tasteScore, INTEREST_TASTE, INTEREST_CATS } from "@/lib/taste";
 import { CategoryTile } from "@/components/CategoryTiles";
 import { shortPath, PROFILES, PROFILE_HE, PROFILE_EMOJI, INTERESTS, type Profile } from "@/lib/shortpath";
-import type { Attraction, Destination, Insight, AreaCard } from "@/lib/db";
+import type { Attraction, Destination, Insight, AreaCard, Street } from "@/lib/db";
 
 // Every interest in the profile vocabulary — used as the fallback tile set when
 // the traveler hasn't set profile interests yet.
@@ -226,6 +226,7 @@ export function DestinationView({
   isEditor = false,
   communityCount = 0,
   areas = [],
+  streets = [],
 }: {
   dest: Destination;
   attractions: Attraction[];
@@ -236,6 +237,7 @@ export function DestinationView({
   isEditor?: boolean;
   communityCount?: number;
   areas?: AreaCard[];
+  streets?: Street[];
 }) {
   const covered = new Set(coveredIds);
   // Editor curation: optimistic overrides of the two ratings while the write to
@@ -326,6 +328,9 @@ export function DestinationView({
   // Per-city yes/maybe/no marks (the "city profile") + the build modal.
   const { create } = useTrips();
   const { choices, setChoice, setMany, clear } = useCitySelection(dest.id);
+  // Streets are picked like attractions, but in their own store (their ids come
+  // from the streets table and would collide with attraction ids).
+  const { choices: streetChoices, setChoice: setStreetChoice } = useStreetSelection(dest.id);
   // Selections persist across visits (by design) — so give a way to wipe them
   // all, not just the current view. Confirm first: it kills the whole city's
   // marks, including ones hidden by the active filters.
@@ -734,6 +739,52 @@ export function DestinationView({
           if (chosenAreas.size) setBuildDays(Math.min(7, Math.max(2, chosenAreas.size)));
           setBuildFromSp(false); openBuild();
         }} />
+
+      {/* Recommended streets — a street is a full stop (you shop, eat and linger
+          on it), so it's picked exactly like an attraction. Each card shows its
+          own dwell, its length, and the neighbourhood it belongs to. */}
+      {streets.length > 0 && (
+        <section className="mx-auto max-w-[1600px] px-5 pt-5 lg:px-8">
+          <div className="mb-2.5 flex items-baseline justify-between gap-2">
+            <h2 className="text-[17px] font-bold">רחובות מומלצים</h2>
+            <span className="text-[13px] text-[var(--text-3)]">רחוב הוא עצירה בפני עצמה — סמנו מה מעניין</span>
+          </div>
+          <div className="-mx-5 grid grid-flow-col auto-cols-[248px] gap-3 overflow-x-auto px-5 pb-1 lg:mx-0 lg:auto-cols-[276px] lg:px-0"
+               style={{ scrollbarWidth: "none" }}>
+            {streets.map((s) => {
+              const ch = streetChoices[s.id];
+              const icon = s.kind === "canal" ? "🚤" : s.kind === "cluster" ? "🧩" : "🛣️";
+              return (
+                <div key={s.id}
+                  className="flex flex-col justify-between rounded-[var(--radius-card)] border bg-[var(--surface)] p-3.5 transition"
+                  style={{ borderColor: ch === "yes" ? "var(--brand)" : ch === "no" ? "#e3c9c7" : "var(--border)",
+                           opacity: ch === "no" ? 0.55 : 1 }}>
+                  <div>
+                    <div className="mb-1 flex items-center gap-1.5">
+                      <span aria-hidden>{icon}</span>
+                      <h3 className="serif text-[17px] font-bold leading-tight">{s.name_he || s.name_en}</h3>
+                    </div>
+                    {s.best_for_he && (
+                      <span className="inline-block rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--accent-ink)]">
+                        {s.best_for_he}
+                      </span>
+                    )}
+                    {s.vibe_he && <p className="mt-1.5 text-[13px] leading-snug text-[var(--text-2)]">{s.vibe_he}</p>}
+                    <p className="mt-1.5 text-[12px] text-[var(--text-3)]">
+                      ~{s.dwell_min ?? 45} דק׳{s.length_m ? ` · ${s.length_m >= 1000 ? (s.length_m / 1000).toFixed(1) + " ק״מ" : s.length_m + " מ׳"}` : ""}
+                      {s.area_name_he ? ` · ${s.area_name_he}` : ""}
+                    </p>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-1.5">
+                    <ChoiceBtn tone="yes" active={ch === "yes"} onClick={() => setStreetChoice(s.id, "yes")} icon={<Check size={13} />} label="כן" />
+                    <ChoiceBtn tone="no" active={ch === "no"} onClick={() => setStreetChoice(s.id, "no")} icon={<X size={13} />} label="לא" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* always-visible selection control — so marks (incl. ones saved from a past
           visit) are never a mystery: see the count, show only them, or clear all */}

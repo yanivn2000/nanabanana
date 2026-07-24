@@ -370,6 +370,45 @@ export function useCitySelection(destinationId: number | null | undefined): {
   };
 }
 
+// The traveller's כן/לא marks on recommended STREETS. Kept in its own store
+// because street ids live in their own table and would collide with attraction
+// ids if mixed into the same map.
+const STREETSEL_KEY = "nanabanana.streetsel.v1";
+
+export function useStreetSelection(destinationId: number | null | undefined): {
+  choices: Record<number, Choice>;
+  setChoice: (streetId: number, c: Choice) => void;
+  clear: () => void;
+  loaded: boolean;
+} {
+  const [all, setAll] = useState<Record<string, Record<number, Choice>>>({});
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STREETSEL_KEY);
+      if (raw) setAll(JSON.parse(raw));
+    } catch {}
+    setLoaded(true);
+  }, []);
+  const commit = (updater: (prev: Record<string, Record<number, Choice>>) => Record<string, Record<number, Choice>>) =>
+    setAll((prev) => {
+      const next = updater(prev);
+      try { localStorage.setItem(STREETSEL_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  const key = String(destinationId ?? "_");
+  return {
+    choices: all[key] ?? {},
+    loaded,
+    setChoice: (id, c) => commit((prev) => {
+      const cur = { ...(prev[key] ?? {}) };
+      if (cur[id] === c) delete cur[id]; else cur[id] = c;
+      return { ...prev, [key]: cur };
+    }),
+    clear: () => commit((prev) => { const n = { ...prev }; delete n[key]; return n; }),
+  };
+}
+
 // Read a single trip by id outside React (e.g. on the trip page initial load).
 export function readTrip(id: string): Trip | null {
   try {
