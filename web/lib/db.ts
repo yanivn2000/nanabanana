@@ -1163,6 +1163,23 @@ export async function approvedStreetsForCity(destId: number): Promise<Street[]> 
       WHERE s.destination_id = $1 AND s.approved = true AND s.lat IS NOT NULL
       ORDER BY s.dwell_min DESC NULLS LAST, s.length_m DESC NULLS LAST`, [destId]);
 }
+// Attractions that sit ON a street, in walking order along it. A street is a
+// CORRIDOR: these are the stops you hit while walking it, so the planner can walk
+// only the SPAN between the ones actually chosen instead of the whole way.
+export type OnStreet = {
+  street_id: number; attraction_id: number; dist_m: number; pos_pct: number;
+  name_he: string | null; name_en: string; must_see: number | null;
+};
+export async function onStreetAttractions(streetIds: number[]): Promise<OnStreet[]> {
+  if (!streetIds.length) return [];
+  return query<OnStreet>(
+    `SELECT sa.street_id, sa.attraction_id, sa.dist_m, sa.pos_pct,
+            a.name_he, a.name_en, a.must_see
+       FROM street_attractions sa JOIN attractions a ON a.id = sa.attraction_id
+      WHERE sa.street_id = ANY($1::int[]) AND sa.approved = true
+      ORDER BY sa.street_id, sa.pos_pct`, [streetIds]);
+}
+
 // The streets the traveller picked, for the builder.
 export async function streetsByIds(ids: number[]): Promise<Street[]> {
   if (!ids.length) return [];
