@@ -107,7 +107,11 @@ function partitionBySelection(
 // synthetic attraction: a NEGATIVE id (its own id space, so it can never collide
 // with a real attraction id) and its curated dwell via visit_minutes.
 function streetAsStop(s: Street): Attraction {
+  const g = s.geometry;
+  const ends: [[number, number], [number, number]] | null =
+    g && g.length > 1 ? [g[0], g[g.length - 1]] : null;
   return {
+    ends,
     id: -s.id, name_he: s.name_he, name_en: s.name_en, lat: s.lat, lng: s.lng,
     category: "attraction", subcategory: "street", indoor_outdoor: null,
     family_score: null, tips_he: s.vibe_he, website: null, duration_minutes: null,

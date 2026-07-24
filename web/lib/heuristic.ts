@@ -63,6 +63,35 @@ const travelMinutes = (a: Attraction, b: Attraction) => {
   return travelMinutesKm(haversineKm(a.lat as number, a.lng as number, b.lat as number, b.lng as number));
 };
 
+
+// Where the route ENTERS and LEAVES each stop. A point stop is both. A LINEAR stop
+// (a street) is entered at the end nearer where you came from and left from the
+// OTHER end — walking its length is dwell, not travel. Measuring a 3km canal from
+// its midpoint made every leg to/from it wrong by up to half its length.
+function resolveEnds(picks: Attraction[]): { arr: [number, number]; dep: [number, number] }[] {
+  const pt = (a: Attraction): [number, number] => [a.lat as number, a.lng as number];
+  const out: { arr: [number, number]; dep: [number, number] }[] = [];
+  let prev: [number, number] | null = null;
+  for (let i = 0; i < picks.length; i++) {
+    const a = picks[i];
+    if (!a.ends) { const p = pt(a); out.push({ arr: p, dep: p }); prev = p; continue; }
+    const [e0, e1] = a.ends;
+    const nxt = picks[i + 1];
+    // come FROM the previous stop; for the FIRST stop, orient by where we go next
+    const ref = prev ?? (nxt ? (nxt.ends ? nxt.ends[0] : pt(nxt)) : null);
+    let entry = e0, exit = e1;
+    if (ref) {
+      const d0 = haversineKm(ref[0], ref[1], e0[0], e0[1]);
+      const d1 = haversineKm(ref[0], ref[1], e1[0], e1[1]);
+      if (prev) { if (d1 < d0) { entry = e1; exit = e0; } }   // enter at the nearer end
+      else if (d0 < d1) { entry = e1; exit = e0; }            // first stop: exit toward the next
+    }
+    out.push({ arr: entry, dep: exit });
+    prev = exit;
+  }
+  return out;
+}
+
 function kindOf(a: Attraction): StopKind {
   return KIND_FROM_CAT[a.category] ?? "culture";
 }
@@ -160,6 +189,7 @@ export function buildHeuristicItinerary(
     const lunchLen = opts?.lunchMinutes ?? LUNCH_MIN;
     let clock = round30(startMin);
     let lunchDone = false;
+    const ends = resolveEnds(picks);
     picks.forEach((a, i) => {
       if (!lunchDone && i > 0 && clock >= lunchAfter) {
         const t = round30(clock);
@@ -181,7 +211,13 @@ export function buildHeuristicItinerary(
         id: a.id, lat: a.lat, lng: a.lng, image: a.image_url, tagline: a.tagline_he,
       });
       clock = arr + dwellMinutes(a, dwell);
-      if (i < picks.length - 1) clock += travelMinutes(a, picks[i + 1]);
+      // travel = from where we LEAVE this stop to where we ENTER the next
+      if (i < picks.length - 1) {
+        const from = ends[i].dep, to = ends[i + 1].arr;
+        clock += Number.isFinite(from[0]) && Number.isFinite(to[0])
+          ? travelMinutesKm(haversineKm(from[0], from[1], to[0], to[1]))
+          : travelMinutes(a, picks[i + 1]);
+      }
     });
 
     const kinds = new Set(picks.map((a) => kindOf(a)));

@@ -63,8 +63,17 @@ const FREE_MAX_PER_DAY = 3;     // don't drown a day in minor gems
 // (dwellMinutes), not OSM's unreliable duration. Config is a technique.
 const visitMin = (a: Attraction, dwell: DwellCfg = DWELL_DEFAULT): number => dwellMinutes(a, dwell);
 
+// A street is a LINE, so its "position" is either END, not just its midpoint —
+// otherwise a 3km canal reads as far even when you're standing at its corner.
+const refPts = (a: Attraction): [number, number][] =>
+  a.ends ?? [[a.lat as number, a.lng as number]];
 function walkBetween(a: Attraction, b: Attraction): number {
-  return walkMinutes(haversineKm(a.lat as number, a.lng as number, b.lat as number, b.lng as number));
+  let best = Infinity;
+  for (const p of refPts(a)) for (const q of refPts(b)) {
+    const d = haversineKm(p[0], p[1], q[0], q[1]);
+    if (d < best) best = d;
+  }
+  return walkMinutes(best);
 }
 
 // Nearest walk-minutes from x to any stop already in the day.

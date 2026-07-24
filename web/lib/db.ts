@@ -78,6 +78,10 @@ export type Attraction = {
   // Explicit dwell override in minutes. DB attractions never set this; synthetic
   // stops (a recommended street) carry their own curated dwell here.
   visit_minutes?: number | null;
+  // A LINEAR stop (a recommended street) carries its two endpoints, so the route
+  // can arrive at the near end and leave from the far one — the walk along the
+  // street itself is dwell, not travel.
+  ends?: [[number, number], [number, number]] | null;
   image_url: string | null;
   tagline_he: string | null;
   best_season: string | null;
