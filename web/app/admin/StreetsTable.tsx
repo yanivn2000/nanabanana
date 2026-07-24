@@ -140,7 +140,7 @@ export function StreetsTable({ destinations }: { destinations: AdminDestination[
                 <div className="flex items-center gap-1.5">
                   <span className="rounded-full px-2 py-0.5 text-[10.5px] font-medium"
                     style={hasGeo ? { background: "var(--brand-soft)", color: "var(--brand-ink)" } : { background: "#f6e0de", color: "#c0453f" }}>
-                    {hasGeo ? `🗺️ ${s.geometry!.length} נק׳` : "אין מפה"}
+                    {hasGeo ? `🗺️ ${s.length_m ?? 0} מ׳` : "אין מפה"}
                   </span>
                   <button onClick={() => save(s.id, { approved: !s.approved })} disabled={saving === s.id}
                     className="rounded-full border px-3 py-1 text-[12px] font-bold transition disabled:opacity-50"
@@ -163,7 +163,15 @@ export function StreetsTable({ destinations }: { destinations: AdminDestination[
               </label>
               <textarea value={d.vibe_he ?? ""} onChange={(e) => set(s.id, "vibe_he", e.target.value)} rows={2} placeholder="אופי הרחוב"
                 className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1.5 text-[13px] leading-snug outline-none focus:border-[var(--brand)]" />
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                {/* dwell is per-street on purpose: a shop-by-shop street eats hours,
+                    a pretty lane is a short stroll. Length is the walk itself. */}
+                <label className="flex items-center gap-1.5 text-[11.5px] text-[var(--text-3)]">שהות
+                  <input type="number" min={5} max={240} step={5} defaultValue={s.dwell_min ?? 45}
+                    onBlur={(e) => { const v = Number(e.target.value); if (v && v !== s.dwell_min) save(s.id, { dwell_min: v }); }}
+                    className="w-16 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 text-[13px] font-semibold text-[var(--text)] outline-none focus:border-[var(--brand)]" />
+                  <span>דק׳</span>
+                </label>
                 <label className="flex items-center gap-1.5 text-[11.5px] text-[var(--text-3)]">שכונה
                   <select value={s.area_id ?? ""} onChange={(e) => save(s.id, { area_id: e.target.value ? Number(e.target.value) : null })}
                     className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 text-[13px] text-[var(--text)]">
