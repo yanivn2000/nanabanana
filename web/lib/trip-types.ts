@@ -20,6 +20,13 @@ export type Stop = {
   id?: number;
   // Canonical cross-kind identity: "attr:123" | "street:4" | "zone:12".
   ref?: string;
+  // This attraction sits ON a chosen street → nest it under that street in the
+  // UI (posPct = how far along, 0..1). The street's dwell and this stop's dwell
+  // stay independent (the stroll vs the visit).
+  corridor?: { streetRef: string; name: string; posPct: number };
+  // On a STREET stop: notable places you pass while walking it ("בדרך: …") —
+  // whether or not you go inside them.
+  onWay?: string[];
   // Two-tier day (Explore build): true = day anchor (a chosen "כן"/must-see),
   // false = an "אם יש זמן" filler. Undefined = not built from a selection, or a
   // logistical stop (meal/rest) that matched no attraction.

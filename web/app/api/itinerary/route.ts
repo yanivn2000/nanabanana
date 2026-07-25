@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds } from "@/lib/db";
+import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds, onStreetAttractions } from "@/lib/db";
 import { annotateDaysWithAreas } from "@/lib/cluster";
+import { corridorize } from "@/lib/corridor";
 import type { Attraction, Destination, Street } from "@/lib/db";
 import { refOf, synthId, isRealAttraction } from "@/lib/place";
 import {
@@ -274,6 +275,7 @@ export async function POST(req: NextRequest) {
   const streetRows = Array.isArray(body.streetIds) && body.streetIds.length
     ? await streetsByIds(body.streetIds.filter((n) => typeof n === "number")) : [];
   const streetStops = streetRows.map(streetAsStop);
+  const onStreet = streetRows.length ? await onStreetAttractions(streetRows.map((s) => s.id)) : [];
   const buildList = [...streetStops, ...(sel ? [...sel.anchors, ...sel.fillers] : attractions)];
   // Only tag tiers when there's a real anchor set — otherwise every stop would
   // read "אם יש זמן" (e.g. a click-through selection with no picks / no must-sees).
@@ -313,6 +315,7 @@ export async function POST(req: NextRequest) {
     const withDetails = attachDetails(itin, opts?.list ?? buildList, anchorIds, scheduled);
     recordTripEdges(dest, withDetails);
     annotateDaysWithAreas(withDetails.days, areas, { lat: dest.lat, lng: dest.lng });
+    corridorize(withDetails, streetRows, onStreet);   // tag on-street stops + "בדרך" (additive)
     // car_base city → the whole trip is a rental-car trip; legs read as driving.
     if (dest.mobility === "car_base") withDetails.days.forEach((d) => { d.carBase = true; });
     const surfaceIds = opts?.surfaceIds ?? new Set<number>([...yesSet, ...streetStops.map((s) => s.id)]);

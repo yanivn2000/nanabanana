@@ -1126,6 +1126,11 @@ export function TripView({ tripId }: { tripId: string }) {
                         <div className="flex items-start justify-between gap-1.5">
                           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
                             <p className="line-clamp-2 text-[16.5px] font-semibold leading-snug">{s.name}</p>
+                            {s.corridor && (
+                              <span className="shrink-0 rounded-full bg-[var(--accent-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--accent-ink)]">
+                                🛣️ על {s.corridor.name}
+                              </span>
+                            )}
                             {fromSelection && s.anchor === true && (
                               <span className="shrink-0 rounded-full bg-[var(--brand-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--brand-ink)]">עוגן</span>
                             )}
@@ -1161,6 +1166,11 @@ export function TripView({ tripId }: { tripId: string }) {
                           )}
                         </div>
                         {s.note && <p className={`mt-1 text-[13.5px] leading-snug text-[var(--text-2)] ${isOpen ? "" : "line-clamp-2"}`}>{s.note}</p>}
+                        {s.onWay && s.onWay.length > 0 && (
+                          <p className="mt-1 text-[12.5px] leading-snug text-[var(--text-3)]">
+                            <span className="font-medium text-[var(--brand-ink)]">בדרך:</span> {s.onWay.join(" · ")}
+                          </p>
+                        )}
                       </div>
                       {/* timeline spine — a numbered dot in the stop's own colour */}
                       <div className="flex w-7 shrink-0 flex-col items-center">
