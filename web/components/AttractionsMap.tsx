@@ -6,6 +6,7 @@ import L from "leaflet";
 import type { CircleMarker as LeafletCircleMarker } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Attraction } from "@/lib/db";
+import { entryExit, type LatLng } from "@/lib/access";
 import { catColor, categoryHe as CAT_HE_FN, bigImage, segColor } from "@/lib/labels";
 
 // Flies to the selected attraction and opens its popup when selection changes.
@@ -305,19 +306,39 @@ export default function AttractionsMap({
 
       {/* Route as one coloured segment per leg — each takes the colour of the
           stop it leads TO, so the line, the pin and the timeline row all match.
-          Solid (a confirmed leg); the active leg (into/out of the hovered stop)
-          stays bright while the rest fade. */}
-      {ordered && orderedPts.slice(1).map((a, i) => {
-        const from = orderedPts[i], to = a;
-        const near = activeIdx != null && (activeIdx === i || activeIdx === i + 1);
-        const faded = activeIdx != null && !near;
-        return (
-          <Polyline key={"seg" + i}
-            positions={[[from.lat as number, from.lng as number], [to.lat as number, to.lng as number]]}
-            pathOptions={{ color: stopHue(to, i + 1), weight: near ? 4 : 3,
-              opacity: faded ? 0.25 : 0.7 }} />
-        );
-      })}
+          Legs touch each stop's ACCESS PORTS, not its centroid: for a street you
+          arrive at the end nearer the previous stop, walk its length (the drawn
+          polyline IS that walk), and leave from the far end toward the next stop —
+          so the route never cuts to a street's middle. Same enter/exit contract
+          the builder times with (lib/access). Active leg stays bright; rest fade. */}
+      {ordered && (() => {
+        // a street point carries `path`; treat its two ends as access ports.
+        const withEnds = (a: Attraction): Attraction =>
+          a.path && a.path.length > 1
+            ? { ...a, ends: [a.path[0] as LatLng, a.path[a.path.length - 1] as LatLng] }
+            : a;
+        let prevExit: LatLng | null = null;
+        const ports = orderedPts.map((a, i) => {
+          const nxt = orderedPts[i + 1];
+          const to: LatLng | null = nxt
+            ? (nxt.path?.length ? (nxt.path[0] as LatLng) : [nxt.lat as number, nxt.lng as number])
+            : null;
+          const { enter, exit } = entryExit(withEnds(a), prevExit, to);
+          prevExit = exit;
+          return { enter, exit };
+        });
+        return orderedPts.slice(1).map((a, i) => {
+          const from = ports[i].exit, to = ports[i + 1].enter;
+          const near = activeIdx != null && (activeIdx === i || activeIdx === i + 1);
+          const faded = activeIdx != null && !near;
+          return (
+            <Polyline key={"seg" + i}
+              positions={[from, to]}
+              pathOptions={{ color: stopHue(a, i + 1), weight: near ? 4 : 3,
+                opacity: faded ? 0.25 : 0.7 }} />
+          );
+        });
+      })()}
 
       {/* home base — the hotel anchors the day: dashed connectors from it to the
           day's FIRST and LAST stop, so the route reads "hotel → … → hotel". */}
