@@ -202,6 +202,7 @@ export async function POST(req: NextRequest) {
     // Chosen-neighbourhood tour: one member-id array per area the traveller picked
     // to tour. Present → build one guaranteed day per area (deterministic).
     areaGroups?: number[][];
+    areaIds?: number[];    // chosen area ids, parallel to areaGroups (so a street maps to its area's day)
     // Opt-in to the paid AI build. Default (false/undefined) = free instant
     // heuristic, so the paid API is never spent without the user asking (and can
     // be quota-gated later). revise always uses the AI (it's an AI edit).
@@ -446,6 +447,27 @@ export async function POST(req: NextRequest) {
       g.filter((id) => !noSet.has(id)).map((id, i) => ({ id, i }))
         .sort((x, y) => rankId(y.id) - rankId(x.id) || x.i - y.i).map((z) => z.id));
     const nAreas = orderedGroups.length;
+    // Picked STREETS join the neighbourhood build too: each street is slotted into
+    // its own area's day (by street.area_id ↔ the parallel areaIds), else the
+    // geographically nearest chosen area. Prepended so the seed schedules it first.
+    if (streetRows.length && nAreas) {
+      const areaIds = Array.isArray(body.areaIds) ? body.areaIds : [];
+      const centroid = orderedGroups.map((g) => {
+        const pts = g.map((id) => areaList.find((a) => a.id === id)).filter((a): a is Attraction => !!a && a.lat != null);
+        return pts.length ? [pts.reduce((t, a) => t + (a.lat as number), 0) / pts.length, pts.reduce((t, a) => t + (a.lng as number), 0) / pts.length] as [number, number] : null;
+      });
+      for (const st of streetRows) {
+        let gi = st.area_id != null ? areaIds.indexOf(st.area_id) : -1;
+        if (gi < 0 && st.lat != null) {           // no chosen-area match → nearest group
+          let bd = Infinity;
+          centroid.forEach((c, i) => { if (c) { const d = haversineKm(st.lat as number, st.lng as number, c[0], c[1]); if (d < bd) { bd = d; gi = i; } } });
+        }
+        if (gi < 0) gi = 0;
+        const synth = synthId("street", st.id);
+        orderedGroups[gi].unshift(synth);
+        areaList.unshift(streetAsStop(st));
+      }
+    }
     const itin = buildHeuristicItinerary(dest.city, dest.country, nAreas, areaList,
       isFamily, perDay, body.walkPref ?? 3, orderedGroups, buildOpts);
     // Requested more days than areas → central day(s) for the "כן" picks OUTSIDE
@@ -460,9 +482,9 @@ export async function POST(req: NextRequest) {
     }
     itin.days.forEach((d, i) => { d.label = `יום ${i + 1}`; });
     // Bank = every chosen-area member + every "כן" that didn't make a day.
-    const surfaceIds = new Set<number>([...memberIds, ...yesSet]);
+    const surfaceIds = new Set<number>([...memberIds, ...yesSet, ...streetStops.map((s) => s.id)]);
     return respondGenerate(itin, "neighbourhoods",
-      { list: areaList, surfaceIds, detailRows: [...memberRows, ...picks] });
+      { list: areaList, surfaceIds, detailRows: [...memberRows, ...picks, ...streetStops] });
   }
 
   // Generate works without a key via the heuristic builder; AI upgrades it.

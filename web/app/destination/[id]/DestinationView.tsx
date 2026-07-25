@@ -561,7 +561,9 @@ export function DestinationView({
       : yes.length ? yes : (audience && sp ? sp.path.map((x) => x.a.id) : yes);
     setBuilding(true);
     // Neighbourhoods the traveller chose to tour → one guaranteed day each.
-    const chosenAreaGroups = areas.filter((a) => chosenAreas.has(a.id)).map((a) => a.member_ids);
+    const chosenAreaList = areas.filter((a) => chosenAreas.has(a.id));
+    const chosenAreaGroups = chosenAreaList.map((a) => a.member_ids);
+    const chosenAreaIds = chosenAreaList.map((a) => a.id);
     // Streets marked "כן" → each becomes a stop with its own dwell.
     const pickedStreetIds = Object.entries(streetChoices)
       .filter(([, c]) => c === "yes").map(([id]) => Number(id));
@@ -576,7 +578,7 @@ export function DestinationView({
       month: new Date().getMonth() + 1,   // a default season; exact dates are set on the trip page
       profile: { ...profile, pace: buildPace, taste, dailyDriveHours: RADIUS_HOURS[buildRadius] },
       ...(yesFinal.length || no.length ? { selection: { yes: yesFinal, no } } : {}),
-      ...(chosenAreaGroups.length ? { areaGroups: chosenAreaGroups } : {}),
+      ...(chosenAreaGroups.length ? { areaGroups: chosenAreaGroups, areaIds: chosenAreaIds } : {}),
       ...(pickedStreetIds.length ? { streetIds: pickedStreetIds } : {}),
     });
     router.push(`/trip/${trip.id}?build=1`);

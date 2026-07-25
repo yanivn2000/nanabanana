@@ -189,6 +189,7 @@ export type Trip = {
   // Chosen-neighbourhood tour: one member-id array per area the traveller picked to
   // tour → the builder makes one guaranteed day per area.
   areaGroups?: number[][];
+  areaIds?: number[];       // chosen area ids, parallel to areaGroups
   // "כן" picks the last build couldn't fit — surfaced so the user can add them.
   // Carry the same detail fields a scheduled stop has, so a bank card can be
   // expanded and read before it's dragged into the day (everything but the time).
