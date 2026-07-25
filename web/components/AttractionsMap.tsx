@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, Fragment } from "react";
 import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Popup, ScaleControl, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import type { CircleMarker as LeafletCircleMarker } from "leaflet";
@@ -345,12 +345,17 @@ export default function AttractionsMap({
         );
       })}
 
-      {/* a STREET stop is a line, not a point — draw its polyline so it reads as a
-          street to walk, under the numbered pin at its centroid. */}
-      {(ordered ? orderedPts : attractions).map((a) =>
+      {/* a STREET stop is a line, not a point. Draw its polyline in the SAME colour
+          as its numbered pin (so "which thick line is stop 4" is obvious), with a
+          white casing under it so it stands out from the route legs. */}
+      {(ordered ? orderedPts : attractions).map((a, i) =>
         a.path && a.path.length > 1 ? (
-          <Polyline key={"st" + a.id} positions={a.path as [number, number][]}
-            pathOptions={{ color: "#0e6b5e", weight: 7, opacity: 0.4, lineCap: "round" }} />
+          <Fragment key={"st" + a.id}>
+            <Polyline positions={a.path as [number, number][]}
+              pathOptions={{ color: "#fff", weight: 9, opacity: 0.9, lineCap: "round", lineJoin: "round" }} />
+            <Polyline positions={a.path as [number, number][]}
+              pathOptions={{ color: ordered ? stopHue(a, i) : "#0e6b5e", weight: 5, opacity: 0.95, lineCap: "round", lineJoin: "round" }} />
+          </Fragment>
         ) : null
       )}
 
