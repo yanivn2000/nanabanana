@@ -29,6 +29,7 @@ function stayHe(d?: string): string | null {
 }
 import { googleMapsUrl, googleDirUrl, formatDistance, estimateLeg, haversineKm, travelMinutes, durationHe, round30, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
 import { stopColor } from "@/lib/labels";
+import { entryExit, type LatLng } from "@/lib/access";
 import { bigImage } from "@/lib/labels";
 import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
@@ -85,6 +86,26 @@ function retimeStops(stops: Stop[]): Stop[] {
   // arrival times snap to the nearest half hour so the day reads as clean :00/:30 slots.
   const hasFood = stops.some((s) => s.kind === "food");
   const seq = hasFood ? stops : stops.filter((s) => s.kind !== "food");
+  // Resolve each coord-bearing stop's ENTER/EXIT ports so a dragged street is timed
+  // end-to-end: you enter the end nearer the previous stop, walk it (dwell), and the
+  // leg to the next stop starts from the far end — same contract the builder + map
+  // use (lib/access), not the street's midpoint. Point stops → enter = exit = coord.
+  const coord = seq.filter((s) => s.lat != null && s.lng != null);
+  const port = new Map<Stop, { enter: LatLng; exit: LatLng }>();
+  let prevExit: LatLng | null = null;
+  coord.forEach((s, i) => {
+    const a = s.path && s.path.length > 1
+      ? { ends: [s.path[0], s.path[s.path.length - 1]] as [LatLng, LatLng], lat: s.lat, lng: s.lng }
+      : { lat: s.lat, lng: s.lng };
+    const nx = coord[i + 1];
+    const to: LatLng | null = nx
+      ? (nx.path && nx.path.length ? (nx.path[0] as LatLng) : [nx.lat as number, nx.lng as number])
+      : null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { enter, exit } = entryExit(a as any, prevExit, to);
+    port.set(s, { enter, exit });
+    prevExit = exit;
+  });
   const out: Stop[] = [];
   let clock = round30(DAY_START_MIN), lunchDone = hasFood;
   seq.forEach((s, i) => {
@@ -97,10 +118,12 @@ function retimeStops(stops: Stop[]): Stop[] {
     const arr = round30(clock);
     out.push({ ...s, time: fmtClock(arr), duration: durationHe(dw) });
     clock = arr + dw;
-    // travel to the next COORD-bearing stop (skip over a break with no coords)
+    // travel from THIS stop's exit port to the next COORD-bearing stop's enter port
     const nx = seq.slice(i + 1).find((x) => x.lat != null && x.lng != null);
     if (nx && s.lat != null && s.lng != null) {
-      clock += travelMinutes(haversineKm(s.lat, s.lng, nx.lat as number, nx.lng as number));
+      const from = port.get(s)?.exit ?? [s.lat, s.lng as number];
+      const dest = port.get(nx)?.enter ?? [nx.lat as number, nx.lng as number];
+      clock += travelMinutes(haversineKm(from[0], from[1], dest[0], dest[1]));
     }
   });
   return out;

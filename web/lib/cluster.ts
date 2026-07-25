@@ -18,7 +18,7 @@
 import type { Attraction } from "./db";
 import type { Day } from "./trip-types";
 import { haversineKm, walkMinutes } from "./geo";
-import { gapKm } from "./access";
+import { gapKm, entryExit, type LatLng } from "./access";
 import { DWELL_DEFAULT, dwellMinutes, type DwellCfg } from "./brain/traits";
 
 // A neighbourhood, trimmed to what day-labelling needs.
@@ -134,8 +134,45 @@ export function dedupeAcrossDays(days: Attraction[][], minMeters = 120): Attract
   return out;
 }
 
+// End-threaded travel cost of an ORDERED path. A street is a black box with two
+// ports: you ENTER at the end nearer where you came from and must EXIT the far end
+// (entryExit), so the leg to the next stop starts from that far end — not the
+// street's nearest point. Measuring this (instead of symmetric closest-pair) is
+// what lets 2-opt see the crossing a street creates when entered from the wrong
+// side. Point stops have one port (centroid), so for a point-only day this equals
+// the old centroid tour and nothing changes.
+function tourCost(path: Attraction[]): number {
+  if (path.length < 2) return 0;
+  let sum = 0, prevExit: LatLng | null = null;
+  const ports = path.map((a, i) => {
+    const nxt = path[i + 1];
+    const to: LatLng | null = nxt
+      ? (nxt.ends ? nxt.ends[0] : nxt.lat != null ? [nxt.lat, nxt.lng as number] : null)
+      : null;
+    const { enter, exit } = entryExit(a, prevExit, to);
+    prevExit = exit;
+    return { enter, exit };
+  });
+  for (let i = 0; i < path.length - 1; i++)
+    sum += walkMinutes(haversineKm(ports[i].exit[0], ports[i].exit[1], ports[i + 1].enter[0], ports[i + 1].enter[1]));
+  return sum;
+}
+
 // 2-opt: reverse segments while it shortens the path (undoes crossings).
+//
+// A path with NO street (every stop a single-port point) is scored by the cheap
+// LOCAL 4-edge delta — identical result to the old behaviour, O(n²), so the big
+// route-first tour over ~days*perDay point candidates keeps its speed.
+//
+// The moment a STREET is present, reversing a segment also flips which end of that
+// street is entered/exited, so a local delta is wrong — score the whole path with
+// the end-threaded tourCost instead. Street-bearing paths are small (a day), so the
+// O(n³) recompute is cheap there.
 function twoOpt(path: Attraction[]): Attraction[] {
+  return path.some((a) => a.ends) ? twoOptThreaded(path) : twoOptLocal(path);
+}
+
+function twoOptLocal(path: Attraction[]): Attraction[] {
   for (let pass = 0; pass < 5; pass++) {
     let improved = false;
     for (let i = 1; i < path.length - 1; i++) {
@@ -148,6 +185,24 @@ function twoOpt(path: Attraction[]): Attraction[] {
           while (lo < hi) { const t = path[lo]; path[lo] = path[hi]; path[hi] = t; lo++; hi--; }
           improved = true;
         }
+      }
+    }
+    if (!improved) break;
+  }
+  return path;
+}
+
+function twoOptThreaded(path: Attraction[]): Attraction[] {
+  let best = tourCost(path);
+  for (let pass = 0; pass < 5; pass++) {
+    let improved = false;
+    for (let i = 1; i < path.length - 1; i++) {
+      for (let k = i + 1; k < path.length; k++) {
+        const cand = path.slice();
+        let lo = i, hi = k;
+        while (lo < hi) { const t = cand[lo]; cand[lo] = cand[hi]; cand[hi] = t; lo++; hi--; }
+        const c = tourCost(cand);
+        if (c + 0.001 < best) { for (let m = 0; m < path.length; m++) path[m] = cand[m]; best = c; improved = true; }
       }
     }
     if (!improved) break;
