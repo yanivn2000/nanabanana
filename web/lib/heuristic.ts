@@ -8,6 +8,7 @@ import { familyFit } from "./taste";
 import { clusterIntoDays, dayWalkMinutes, dropSamePlace, orderPath } from "./cluster";
 import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget } from "./daytrips";
 import { durationHe, haversineKm, round30, travelMinutes as travelMinutesKm } from "./geo";
+import { entryExit, type LatLng } from "./access";
 import { DWELL_DEFAULT, dwellMinutes, isInSeason, orientDay, stopMatchesType, type DwellCfg } from "./brain/traits";
 
 // Resolved technique flags the builder honours (from brain_principles via
@@ -64,29 +65,18 @@ const travelMinutes = (a: Attraction, b: Attraction) => {
 };
 
 
-// Where the route ENTERS and LEAVES each stop. A point stop is both. A LINEAR stop
-// (a street) is entered at the end nearer where you came from and left from the
-// OTHER end — walking its length is dwell, not travel. Measuring a 3km canal from
-// its midpoint made every leg to/from it wrong by up to half its length.
-function resolveEnds(picks: Attraction[]): { arr: [number, number]; dep: [number, number] }[] {
-  const pt = (a: Attraction): [number, number] => [a.lat as number, a.lng as number];
-  const out: { arr: [number, number]; dep: [number, number] }[] = [];
-  let prev: [number, number] | null = null;
+// Resolve each stop's ENTER/EXIT ports for the ordered day, via the shared
+// access-point contract (lib/access.ts). A point is both; a street is entered at
+// the end nearer where you came from and left from the other.
+function resolveEnds(picks: Attraction[]): { arr: LatLng; dep: LatLng }[] {
+  const out: { arr: LatLng; dep: LatLng }[] = [];
+  let prev: LatLng | null = null;
   for (let i = 0; i < picks.length; i++) {
-    const a = picks[i];
-    if (!a.ends) { const p = pt(a); out.push({ arr: p, dep: p }); prev = p; continue; }
-    const [e0, e1] = a.ends;
-    const nxt = picks[i + 1];
-    // come FROM the previous stop; for the FIRST stop, orient by where we go next
-    const ref = prev ?? (nxt ? (nxt.ends ? nxt.ends[0] : pt(nxt)) : null);
-    let entry = e0, exit = e1;
-    if (ref) {
-      const d0 = haversineKm(ref[0], ref[1], e0[0], e0[1]);
-      const d1 = haversineKm(ref[0], ref[1], e1[0], e1[1]);
-      if (prev) { if (d1 < d0) { entry = e1; exit = e0; } }   // enter at the nearer end
-      else if (d0 < d1) { entry = e1; exit = e0; }            // first stop: exit toward the next
-    }
-    out.push({ arr: entry, dep: exit });
+    const nxt = picks[i + 1] ?? null;
+    const to: LatLng | null = nxt && nxt.lat != null && nxt.lng != null
+      ? (nxt.ends ? nxt.ends[0] : [nxt.lat, nxt.lng]) : null;
+    const { enter, exit } = entryExit(picks[i], prev, to);
+    out.push({ arr: enter, dep: exit });
     prev = exit;
   }
   return out;
