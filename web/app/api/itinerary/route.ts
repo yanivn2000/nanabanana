@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds } from "@/lib/db";
 import { annotateDaysWithAreas } from "@/lib/cluster";
 import type { Attraction, Destination, Street } from "@/lib/db";
+import { refOf, synthId, isRealAttraction } from "@/lib/place";
 import {
   aiConfigured,
   generateItinerary,
@@ -28,7 +29,10 @@ function recordTripEdges(dest: { id: number }, itin: ItineraryT): void {
     const s = day.stops;
     for (let i = 0; i < s.length - 1; i++) {
       const a = s[i], b = s[i + 1];
-      if (!a.id || !b.id || a.lat == null || a.lng == null || b.lat == null || b.lng == null) continue;
+      // attraction_edges' FK is to attractions — never record a synthetic stop
+      // (a street) as an endpoint.
+      if (!a.id || !b.id || !isRealAttraction(a.id) || !isRealAttraction(b.id)
+          || a.lat == null || a.lng == null || b.lat == null || b.lng == null) continue;
       const leg = estimateLeg(a.lat, a.lng, b.lat, b.lng);
       legs.push({ from: a.id, to: b.id, walk_m: leg.km * 1000, walk_min: leg.walkMin });
     }
@@ -104,15 +108,17 @@ function partitionBySelection(
 
 
 // A picked street is a full stop, not a transition. It enters the build as a
-// synthetic attraction: a NEGATIVE id (its own id space, so it can never collide
-// with a real attraction id) and its curated dwell via visit_minutes.
+// synthetic attraction: a namespaced id in the "street" range (its own id space,
+// so it can never collide with a real attraction id) + its canonical ref, and
+// its curated dwell via visit_minutes.
 function streetAsStop(s: Street): Attraction {
   const g = s.geometry;
   const ends: [[number, number], [number, number]] | null =
     g && g.length > 1 ? [g[0], g[g.length - 1]] : null;
   return {
     ends,
-    id: -s.id, name_he: s.name_he, name_en: s.name_en, lat: s.lat, lng: s.lng,
+    id: synthId("street", s.id), ref: refOf("street", s.id),
+    name_he: s.name_he, name_en: s.name_en, lat: s.lat, lng: s.lng,
     category: "attraction", subcategory: "street", indoor_outdoor: null,
     family_score: null, tips_he: s.vibe_he, website: null, duration_minutes: null,
     visit_minutes: s.dwell_min ?? 45, image_url: null, tagline_he: s.best_for_he,
@@ -150,6 +156,7 @@ function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set
         s.lat = a.lat; s.lng = a.lng;
         s.tagline = a.tagline_he; s.bestTime = a.best_time_he;
         s.dress = a.dress_he; s.cost = a.cost_level;
+        s.ref = a.ref ?? refOf("attr", a.id);
         if (anchorIds) s.anchor = anchorIds.has(a.id);
         scheduled?.add(a.id);
       }
