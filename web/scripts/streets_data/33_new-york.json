@@ -1,0 +1,160 @@
+{
+  "destination_id": 33,
+  "city": "New York",
+  "streets": [
+    {
+      "name_local": "5th Avenue",
+      "name_en": "Fifth Avenue",
+      "name_he": "השדרה החמישית",
+      "kind": "street",
+      "best_for_he": "קניות ומותגי על",
+      "vibe_he": "שדרת הקניות המפורסמת של מנהטן עם מותגי היוקרה, חלונות ראווה נוצצים ומגדלים איקוניים.",
+      "dwell_min": 50,
+      "approx_lat": 40.7640,
+      "approx_lng": -73.9740
+    },
+    {
+      "name_local": "Broadway",
+      "name_en": "Broadway",
+      "name_he": "ברודוויי",
+      "kind": "street",
+      "best_for_he": "תיאטראות ואורות",
+      "vibe_he": "הלב הפועם של טיימס סקוור, עם שלטי הניאון הענקיים, תיאטראות המחזמר וההמון הבלתי נגמר.",
+      "dwell_min": 45,
+      "approx_lat": 40.7580,
+      "approx_lng": -73.9855
+    },
+    {
+      "name_local": "Madison Avenue",
+      "name_en": "Madison Avenue",
+      "name_he": "שדרת מדיסון",
+      "kind": "street",
+      "best_for_he": "אופנה יוקרתית",
+      "vibe_he": "שדרת בוטיקי המעצבים האלגנטית של האפר איסט סייד, מוקד האופנה והפרסום של ניו יורק.",
+      "dwell_min": 40,
+      "approx_lat": 40.7720,
+      "approx_lng": -73.9645
+    },
+    {
+      "name_local": "Bleecker Street",
+      "name_en": "Bleecker Street",
+      "name_he": "רחוב בליקר",
+      "kind": "street",
+      "best_for_he": "בוהמה וכפר",
+      "vibe_he": "רחוב הגריניץ' וילג' הבוהמייני עם בתי קפה, חנויות תקליטים, בוטיקים ומועדוני ג'אז.",
+      "dwell_min": 40,
+      "approx_lat": 40.7320,
+      "approx_lng": -74.0030
+    },
+    {
+      "name_local": "MacDougal Street",
+      "name_en": "MacDougal Street",
+      "name_he": "רחוב מקדוגל",
+      "kind": "street",
+      "best_for_he": "אווירת סטודנטים",
+      "vibe_he": "סמטת הווילג' התוססת ליד NYU, מלאה בתי קפה היסטוריים, פלאפליות ומועדוני קומדיה.",
+      "dwell_min": 35,
+      "approx_lat": 40.7300,
+      "approx_lng": -74.0000
+    },
+    {
+      "name_local": "Mulberry Street",
+      "name_en": "Mulberry Street",
+      "name_he": "רחוב מלברי",
+      "kind": "street",
+      "best_for_he": "ליטל איטליה",
+      "vibe_he": "הרחוב הראשי של ליטל איטליה עם טרטוריות, שולחנות רחוב, דגלים ירוק-לבן-אדום ואווירה איטלקית.",
+      "dwell_min": 40,
+      "approx_lat": 40.7190,
+      "approx_lng": -73.9970
+    },
+    {
+      "name_local": "Canal Street",
+      "name_en": "Canal Street",
+      "name_he": "רחוב קנאל",
+      "kind": "street",
+      "best_for_he": "צ'יינטאון סואן",
+      "vibe_he": "עורק המסחר ההומה של צ'יינטאון עם דוכני חיקויים, שווקי דגים ופירות ואנרגיה בלתי פוסקת.",
+      "dwell_min": 35,
+      "approx_lat": 40.7185,
+      "approx_lng": -73.9990
+    },
+    {
+      "name_local": "Wall Street",
+      "name_en": "Wall Street",
+      "name_he": "וול סטריט",
+      "kind": "street",
+      "best_for_he": "רובע פיננסי היסטורי",
+      "vibe_he": "הסמטה ההיסטורית של הרובע הפיננסי עם הבורסה, פסל השור והחזיתות הניאו-קלאסיות המונומנטליות.",
+      "dwell_min": 35,
+      "approx_lat": 40.7069,
+      "approx_lng": -74.0100
+    },
+    {
+      "name_local": "Christopher Street",
+      "name_en": "Christopher Street",
+      "name_he": "רחוב כריסטופר",
+      "kind": "street",
+      "best_for_he": "וילג' היסטורי",
+      "vibe_he": "רחוב הווסט וילג' האייקוני עם ה-Stonewall, בתים בני המאה ה-19, בארים וגינות קטנות.",
+      "dwell_min": 35,
+      "approx_lat": 40.7335,
+      "approx_lng": -74.0025
+    },
+    {
+      "name_local": "St Marks Place",
+      "name_en": "St. Marks Place",
+      "name_he": "סנט מרקס פלייס",
+      "kind": "street",
+      "best_for_he": "איסט וילג' אלטרנטיבי",
+      "vibe_he": "רחוב האיסט וילג' הפאנקי עם חנויות וינטג', דוכני אוכל, קעקועים ואווירה אלטרנטיבית תוססת.",
+      "dwell_min": 35,
+      "approx_lat": 40.7285,
+      "approx_lng": -73.9880
+    },
+    {
+      "name_local": "Orchard Street",
+      "name_en": "Orchard Street",
+      "name_he": "רחוב אורצ'רד",
+      "kind": "street",
+      "best_for_he": "לואר איסט סייד",
+      "vibe_he": "רחוב מהגרים היסטורי בלואר איסט סייד שהפך למוקד בוטיקים, גלריות ובתי קפה טרנדיים.",
+      "dwell_min": 35,
+      "approx_lat": 40.7185,
+      "approx_lng": -73.9895
+    },
+    {
+      "name_local": "Prince Street",
+      "name_en": "Prince Street",
+      "name_he": "רחוב פרינס",
+      "kind": "street",
+      "best_for_he": "סוהו ואופנה",
+      "vibe_he": "רחוב הסוהו הקלאסי עם בנייני יציקת ברזל, חנויות אופנה, אמני רחוב וקהל אופנתי.",
+      "dwell_min": 40,
+      "approx_lat": 40.7240,
+      "approx_lng": -73.9985
+    },
+    {
+      "name_local": "West 34th Street",
+      "name_en": "West 34th Street",
+      "name_he": "רחוב 34 מערב",
+      "kind": "street",
+      "best_for_he": "קניות והרלד סקוור",
+      "vibe_he": "רחוב הקניות הסואן סביב הרלד סקוור עם מייסיס, אמפייר סטייט בילדינג וזרם קונים בלתי פוסק.",
+      "dwell_min": 35,
+      "approx_lat": 40.7500,
+      "approx_lng": -73.9880
+    },
+    {
+      "name_local": "Stone Street",
+      "name_en": "Stone Street",
+      "name_he": "רחוב סטון",
+      "kind": "street",
+      "best_for_he": "סמטת בילוי עתיקה",
+      "vibe_he": "אחת הסמטאות המרוצפות העתיקות של מנהטן ברובע הפיננסי, מלאה פאבים ושולחנות רחוב תחת בניינים היסטוריים.",
+      "dwell_min": 30,
+      "approx_lat": 40.7040,
+      "approx_lng": -74.0110
+    }
+  ]
+}

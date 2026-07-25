@@ -1,0 +1,138 @@
+{
+  "destination_id": 17,
+  "city": "Madrid",
+  "streets": [
+    {
+      "name_local": "Gran Vía",
+      "name_en": "Gran Vía",
+      "name_he": "גראן ויה",
+      "kind": "street",
+      "best_for_he": "השדרה הראשית",
+      "vibe_he": "השדרה הגדולה של מדריד עם בנייני ראווה, תיאטראות מחזמר, קולנועים וחנויות ענק.",
+      "dwell_min": 50,
+      "approx_lat": 40.4203,
+      "approx_lng": -3.7058
+    },
+    {
+      "name_local": "Calle de Preciados",
+      "name_en": "Calle de Preciados",
+      "name_he": "קאיה דה פרסיאדוס",
+      "kind": "street",
+      "best_for_he": "רחוב קניות להולכי רגל",
+      "vibe_he": "רחוב הקניות הצפוף של מרכז מדריד, מרחבת סול אל חנויות הכלבו הגדולות.",
+      "dwell_min": 40,
+      "approx_lat": 40.4185,
+      "approx_lng": -3.7050
+    },
+    {
+      "name_local": "Calle Mayor",
+      "name_en": "Calle Mayor",
+      "name_he": "קאיה מאיור",
+      "kind": "street",
+      "best_for_he": "הרחוב ההיסטורי",
+      "vibe_he": "הרחוב הראשי של מדריד העתיקה, מפלאסה מאיור אל הארמון המלכותי דרך בניינים היסטוריים.",
+      "dwell_min": 40,
+      "approx_lat": 40.4155,
+      "approx_lng": -3.7080
+    },
+    {
+      "name_local": "Calle de Alcalá",
+      "name_en": "Calle de Alcalá",
+      "name_he": "קאיה דה אלקאלה",
+      "kind": "street",
+      "best_for_he": "שדרה מונומנטלית",
+      "vibe_he": "אחד הרחובות הארוכים בעיר, ובו שער אלקאלה, מזרקת סיבלס ובנייני בנקים מפוארים.",
+      "dwell_min": 40,
+      "approx_lat": 40.4190,
+      "approx_lng": -3.6980
+    },
+    {
+      "name_local": "Calle de Serrano",
+      "name_en": "Calle de Serrano",
+      "name_he": "קאיה דה סראנו",
+      "kind": "street",
+      "best_for_he": "אופנה ויוקרה",
+      "vibe_he": "רחוב היוקרה של שכונת סלמנקה, מותגי אופנה בינלאומיים וחזיתות אלגנטיות.",
+      "dwell_min": 40,
+      "approx_lat": 40.4270,
+      "approx_lng": -3.6880
+    },
+    {
+      "name_local": "Calle de Fuencarral",
+      "name_en": "Calle de Fuencarral",
+      "name_he": "קאיה דה פואנקראל",
+      "kind": "street",
+      "best_for_he": "אופנה צעירה וטרנדים",
+      "vibe_he": "רחוב הולכי רגל אופנתי המחבר את צ'ואקה ומלסניה עם חנויות עצמאיות ומגניבות.",
+      "dwell_min": 40,
+      "approx_lat": 40.4240,
+      "approx_lng": -3.7010
+    },
+    {
+      "name_local": "Paseo del Prado",
+      "name_en": "Paseo del Prado",
+      "name_he": "פאסאו דל פראדו",
+      "kind": "street",
+      "best_for_he": "שדרת המוזיאונים",
+      "vibe_he": "שדרה מוצלת עצים לאורך משולש האמנות, ובה הפראדו, מזרקות ניפטונו וסיבלס.",
+      "dwell_min": 40,
+      "approx_lat": 40.4150,
+      "approx_lng": -3.6930
+    },
+    {
+      "name_local": "Calle del Arenal",
+      "name_en": "Calle del Arenal",
+      "name_he": "קאיה דל ארנאל",
+      "kind": "street",
+      "best_for_he": "רחוב מקשר להולכי רגל",
+      "vibe_he": "רחוב הולכי רגל תוסס המחבר את סול לאופרה המלכותית, עם חנויות ונגני רחוב.",
+      "dwell_min": 30,
+      "approx_lat": 40.4170,
+      "approx_lng": -3.7060
+    },
+    {
+      "name_local": "Calle de la Montera",
+      "name_en": "Calle de la Montera",
+      "name_he": "קאיה דה לה מונטרה",
+      "kind": "street",
+      "best_for_he": "רחוב מדרחוב סואן",
+      "vibe_he": "מדרחוב תלול היורד מגראן ויה אל פוארטה דל סול, מלא חנויות ותנועת אדם.",
+      "dwell_min": 30,
+      "approx_lat": 40.4195,
+      "approx_lng": -3.7020
+    },
+    {
+      "name_local": "Calle de las Huertas",
+      "name_en": "Calle de las Huertas",
+      "name_he": "קאיה דה לאס אוארטס",
+      "kind": "street",
+      "best_for_he": "טאפאס וחיי לילה",
+      "vibe_he": "רחוב הרובע הספרותי עם ברי טאפאס, ציטוטים חרוטים במדרכה ואווירת ערב עליזה.",
+      "dwell_min": 35,
+      "approx_lat": 40.4140,
+      "approx_lng": -3.6990
+    },
+    {
+      "name_local": "Calle de Goya",
+      "name_en": "Calle de Goya",
+      "name_he": "קאיה דה גויה",
+      "kind": "street",
+      "best_for_he": "שופינג בסלמנקה",
+      "vibe_he": "רחוב קניות רחב ואלגנטי בלב שכונת סלמנקה היוקרתית, מותגים וכלבו אל קורטה אינגלס.",
+      "dwell_min": 35,
+      "approx_lat": 40.4250,
+      "approx_lng": -3.6790
+    },
+    {
+      "name_local": "Cava Baja",
+      "name_en": "Cava Baja",
+      "name_he": "קאבה באחה",
+      "kind": "street",
+      "best_for_he": "טאפאס בלה לאטינה",
+      "vibe_he": "הרחוב המיתולוגי של סיבוב הטאפאס בלה לאטינה, מסבארים היסטוריים גב אל גב.",
+      "dwell_min": 35,
+      "approx_lat": 40.4110,
+      "approx_lng": -3.7095
+    }
+  ]
+}

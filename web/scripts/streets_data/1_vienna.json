@@ -1,0 +1,116 @@
+{
+  "destination_id": 1,
+  "city": "Vienna",
+  "streets": [
+    {
+      "name_local": "Kärntner Straße",
+      "name_en": "Kärntner Strasse",
+      "name_he": "רחוב קרנטנר",
+      "kind": "street",
+      "best_for_he": "קניות ובוטיקים",
+      "vibe_he": "רחוב הקניות הראשי והמפואר של וינה, מבניין האופרה ועד כיכר שטפן.",
+      "dwell_min": 45,
+      "approx_lat": 48.2045,
+      "approx_lng": 16.3712
+    },
+    {
+      "name_local": "Graben",
+      "name_en": "Graben",
+      "name_he": "גראבן",
+      "kind": "street",
+      "best_for_he": "בוטיקים ואופנה",
+      "vibe_he": "שדרת הרחבה יוקרתית ומרוצפת סביב עמוד המגפה הבארוקי, לב העיר העתיקה.",
+      "dwell_min": 40,
+      "approx_lat": 48.2088,
+      "approx_lng": 16.3695
+    },
+    {
+      "name_local": "Kohlmarkt",
+      "name_en": "Kohlmarkt",
+      "name_he": "קולמרקט",
+      "kind": "street",
+      "best_for_he": "מותרות ובתי קפה",
+      "vibe_he": "רחוב המותגים היוקרתי המוליך אל שער ארמון הופבורג, ובו קונדיטוריית דמל המפורסמת.",
+      "dwell_min": 35,
+      "approx_lat": 48.2091,
+      "approx_lng": 16.3676
+    },
+    {
+      "name_local": "Ringstraße",
+      "name_en": "Ringstrasse",
+      "name_he": "רינגשטראסה",
+      "kind": "street",
+      "best_for_he": "שדרה מונומנטלית",
+      "vibe_he": "השדרה הטבעתית הגדולה החובקת את מרכז העיר לאורך ארמונות, פרלמנט ובנייני פאר.",
+      "dwell_min": 60,
+      "approx_lat": 48.2100,
+      "approx_lng": 16.3590
+    },
+    {
+      "name_local": "Mariahilfer Straße",
+      "name_en": "Mariahilfer Strasse",
+      "name_he": "רחוב מריהילף",
+      "kind": "street",
+      "best_for_he": "קניות עממיות",
+      "vibe_he": "רחוב הקניות התוסס והארוך ביותר של וינה, חלקו מדרחוב עם רשתות ובתי קפה.",
+      "dwell_min": 50,
+      "approx_lat": 48.1975,
+      "approx_lng": 16.3480
+    },
+    {
+      "name_local": "Naschmarkt",
+      "name_en": "Naschmarkt",
+      "name_he": "נאשמרקט",
+      "kind": "street",
+      "best_for_he": "אוכל ושווקים",
+      "vibe_he": "רחוב השוק הפופולרי ביותר בעיר, דוכני מזון, מעדניות ומסעדות זו לצד זו.",
+      "dwell_min": 50,
+      "approx_lat": 48.1985,
+      "approx_lng": 16.3635
+    },
+    {
+      "name_local": "Rotenturmstraße",
+      "name_en": "Rotenturmstrasse",
+      "name_he": "רוטנטורמשטראסה",
+      "kind": "street",
+      "best_for_he": "מסעדות ובתי קפה",
+      "vibe_he": "רחוב מדרחוב תוסס המחבר את כיכר שטפן אל תעלת הדנובה, מלא בתי קפה ומסעדות.",
+      "dwell_min": 30,
+      "approx_lat": 48.2105,
+      "approx_lng": 16.3735
+    },
+    {
+      "name_local": "Herrengasse",
+      "name_en": "Herrengasse",
+      "name_he": "הרנגאסה",
+      "kind": "street",
+      "best_for_he": "ארמונות והיסטוריה",
+      "vibe_he": "רחוב אריסטוקרטי ובו ארמונות אצולה ובתי קפה היסטוריים סמוך להופבורג.",
+      "dwell_min": 30,
+      "approx_lat": 48.2105,
+      "approx_lng": 16.3655
+    },
+    {
+      "name_local": "Wollzeile",
+      "name_en": "Wollzeile",
+      "name_he": "וולצייל",
+      "kind": "street",
+      "best_for_he": "אוכל וסמטאות",
+      "vibe_he": "רחוב עתיק ומזמין בעיר הישנה, חנויות אוכל וסמטאות אווירתיות ליד הקתדרלה.",
+      "dwell_min": 30,
+      "approx_lat": 48.2085,
+      "approx_lng": 16.3745
+    },
+    {
+      "name_local": "Donaukanal",
+      "name_en": "Danube Canal",
+      "name_he": "טיילת תעלת הדנובה",
+      "kind": "canal",
+      "best_for_he": "טיילת ובארים",
+      "vibe_he": "טיילת מים עירונית עם גרפיטי, ברים צפים ובתי קפה על גדות תעלת הדנובה.",
+      "dwell_min": 45,
+      "approx_lat": 48.2130,
+      "approx_lng": 16.3785
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "destination_id": 5,
+  "city": "Budapest",
+  "streets": [
+    {
+      "name_local": "Váci utca",
+      "name_en": "Váci Street",
+      "name_he": "רחוב וואצי",
+      "kind": "street",
+      "best_for_he": "רחוב הליכה",
+      "vibe_he": "רחוב הקניות המרכזי והמדרחוב של פשט — חנויות, בתי קפה ותיירים מכל העולם.",
+      "dwell_min": 45,
+      "approx_lat": 47.4925,
+      "approx_lng": 19.0522
+    },
+    {
+      "name_local": "Andrássy út",
+      "name_en": "Andrássy Avenue",
+      "name_he": "שדרות אנדראשי",
+      "kind": "street",
+      "best_for_he": "שדרה מפוארת",
+      "vibe_he": "השדרה הגדולה של בודפשט, אתר מורשת עולמית של אונסק\"ו, עם ארמונות, האופרה ובוטיקים יוקרתיים.",
+      "dwell_min": 55,
+      "approx_lat": 47.5060,
+      "approx_lng": 19.0700
+    },
+    {
+      "name_local": "Ráday utca",
+      "name_en": "Ráday Street",
+      "name_he": "רחוב ראדאי",
+      "kind": "street",
+      "best_for_he": "רחוב בתי קפה",
+      "vibe_he": "רחוב מדרחוב תוסס מלא מסעדות, ברים ובתי קפה עם שולחנות בחוץ.",
+      "dwell_min": 35,
+      "approx_lat": 47.4862,
+      "approx_lng": 19.0625
+    },
+    {
+      "name_local": "Vörösmarty tér",
+      "name_en": "Vörösmarty Square",
+      "name_he": "כיכר ורשמארטי",
+      "kind": "cluster",
+      "best_for_he": "כיכר מרכזית",
+      "vibe_he": "כיכר רחבה ומטופחת בקצה רחוב וואצי, ביתו של בית הקפה ז'רבו האגדי.",
+      "dwell_min": 30,
+      "approx_lat": 47.4963,
+      "approx_lng": 19.0505
+    },
+    {
+      "name_local": "Nagymező utca",
+      "name_en": "Nagymező Street",
+      "name_he": "רחוב נאג'מזה",
+      "kind": "street",
+      "best_for_he": "רובע התיאטראות",
+      "vibe_he": "\"ברודוויי של בודפשט\" — רחוב התיאטראות והקברטים ההיסטוריים בליבה של פשט.",
+      "dwell_min": 30,
+      "approx_lat": 47.5040,
+      "approx_lng": 19.0620
+    },
+    {
+      "name_local": "Duna-korzó",
+      "name_en": "Danube Promenade",
+      "name_he": "טיילת הדנובה",
+      "kind": "canal",
+      "best_for_he": "טיילת נהר",
+      "vibe_he": "טיילת לאורך הדנובה עם נוף פנורמי לגבעת בודה, לגשר השרשראות ולבניין הפרלמנט.",
+      "dwell_min": 40,
+      "approx_lat": 47.4970,
+      "approx_lng": 19.0480
+    },
+    {
+      "name_local": "Liszt Ferenc tér",
+      "name_en": "Liszt Ferenc Square",
+      "name_he": "כיכר ליסט פרנץ",
+      "kind": "cluster",
+      "best_for_he": "כיכר בתי קפה",
+      "vibe_he": "כיכר עצים קטנה ואופנתית עם שורות של בתי קפה, ברים ומסעדות סמוך לאקדמיה למוזיקה.",
+      "dwell_min": 30,
+      "approx_lat": 47.5052,
+      "approx_lng": 19.0655
+    },
+    {
+      "name_local": "Kazinczy utca",
+      "name_en": "Kazinczy Street",
+      "name_he": "רחוב קאזינצי",
+      "kind": "street",
+      "best_for_he": "רובע הברים",
+      "vibe_he": "לב הרובע היהודי וברי ההריסות (romkocsma) — הרחוב הכי תוסס בלילות בודפשט.",
+      "dwell_min": 35,
+      "approx_lat": 47.4967,
+      "approx_lng": 19.0635
+    },
+    {
+      "name_local": "Fő utca",
+      "name_en": "Fő Street",
+      "name_he": "רחוב פֶה",
+      "kind": "street",
+      "best_for_he": "צד בודה",
+      "vibe_he": "הרחוב הראשי בגדה של בודה, בין הרובע ההיסטורי לדנובה, עם מבנים בארוקיים שקטים.",
+      "dwell_min": 30,
+      "approx_lat": 47.5035,
+      "approx_lng": 19.0385
+    },
+    {
+      "name_local": "Országház utca",
+      "name_en": "Országház Street",
+      "name_he": "רחוב אורסאגהאז",
+      "kind": "street",
+      "best_for_he": "העיר העתיקה",
+      "vibe_he": "סמטה מרוצפת אבן ברובע הטירה, מלאה בתים בפסטל בסגנון בארוק וגותי מימי הביניים.",
+      "dwell_min": 30,
+      "approx_lat": 47.5020,
+      "approx_lng": 19.0330
+    }
+  ]
+}

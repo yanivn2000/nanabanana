@@ -1,0 +1,105 @@
+{
+  "destination_id": 21,
+  "city": "Munich",
+  "streets": [
+    {
+      "name_local": "Kaufingerstraße",
+      "name_en": "Kaufingerstraße",
+      "name_he": "קאופינגרשטראסה",
+      "kind": "street",
+      "best_for_he": "מדרחוב קניות",
+      "vibe_he": "מדרחוב הקניות המרכזי והשוקק של מינכן, המחבר את שער קארל לכיכר מרינפלאץ.",
+      "dwell_min": 40,
+      "approx_lat": 48.1379,
+      "approx_lng": 11.5710
+    },
+    {
+      "name_local": "Neuhauser Straße",
+      "name_en": "Neuhauser Straße",
+      "name_he": "נויהאוזר שטראסה",
+      "kind": "street",
+      "best_for_he": "מדרחוב סואן",
+      "vibe_he": "המשך המדרחוב לכיוון שער קארל, רחב, מלא חנויות ומזרקות ואנשים.",
+      "dwell_min": 35,
+      "approx_lat": 48.1382,
+      "approx_lng": 11.5678
+    },
+    {
+      "name_local": "Maximilianstraße",
+      "name_en": "Maximilianstraße",
+      "name_he": "מקסימיליאנשטראסה",
+      "kind": "street",
+      "best_for_he": "יוקרה ואופנה",
+      "vibe_he": "השדרה הרחבה והמפוארת של מינכן, מלאה בתי אופנה יוקרתיים, בית האופרה והתיאטרון.",
+      "dwell_min": 40,
+      "approx_lat": 48.1395,
+      "approx_lng": 11.5810
+    },
+    {
+      "name_local": "Sendlinger Straße",
+      "name_en": "Sendlinger Straße",
+      "name_he": "זנדלינגר שטראסה",
+      "kind": "street",
+      "best_for_he": "קניות ואופי",
+      "vibe_he": "רחוב קניות אופייני ופחות תיירותי המוביל לשער זנדלינגר ולכנסיית אזאם המפוארת.",
+      "dwell_min": 35,
+      "approx_lat": 48.1352,
+      "approx_lng": 11.5695
+    },
+    {
+      "name_local": "Theatinerstraße",
+      "name_en": "Theatinerstraße",
+      "name_he": "תיאטינרשטראסה",
+      "kind": "street",
+      "best_for_he": "אלגנטיות ומעברים",
+      "vibe_he": "רחוב אלגנטי בין מרינפלאץ לאודאונספלאץ, עם ארקדות מקורות וחנויות מעוצבות.",
+      "dwell_min": 30,
+      "approx_lat": 48.1405,
+      "approx_lng": 11.5757
+    },
+    {
+      "name_local": "Residenzstraße",
+      "name_en": "Residenzstraße",
+      "name_he": "רזידנצשטראסה",
+      "kind": "street",
+      "best_for_he": "אווירה מלכותית",
+      "vibe_he": "רחוב ייצוגי לאורך ארמון הרזידנץ המוביל לכיכר אודאון המרשימה.",
+      "dwell_min": 30,
+      "approx_lat": 48.1415,
+      "approx_lng": 11.5773
+    },
+    {
+      "name_local": "Viktualienmarkt",
+      "name_en": "Viktualienmarkt",
+      "name_he": "ויקטואליינמרקט",
+      "kind": "cluster",
+      "best_for_he": "שוק מזון",
+      "vibe_he": "שוק המזון המפורסם והססגוני של מינכן, דוכני גבינות, פרחים וגן בירה תחת עצי ערמון.",
+      "dwell_min": 45,
+      "approx_lat": 48.1352,
+      "approx_lng": 11.5762
+    },
+    {
+      "name_local": "Leopoldstraße",
+      "name_en": "Leopoldstraße",
+      "name_he": "לאופולדשטראסה",
+      "kind": "street",
+      "best_for_he": "בוהמה וקפה",
+      "vibe_he": "השדרה התוססת של שכונת שוובינג, בתי קפה, ברים ואווירת סטודנטים ואמנים.",
+      "dwell_min": 35,
+      "approx_lat": 48.1595,
+      "approx_lng": 11.5860
+    },
+    {
+      "name_local": "Brienner Straße",
+      "name_en": "Brienner Straße",
+      "name_he": "ברינר שטראסה",
+      "kind": "street",
+      "best_for_he": "שדרה קלאסית",
+      "vibe_he": "שדרה מלכותית וירוקה עם כיכרות ניאו-קלאסיות המחברת בין הרזידנץ לרובע המוזיאונים.",
+      "dwell_min": 30,
+      "approx_lat": 48.1435,
+      "approx_lng": 11.5700
+    }
+  ]
+}

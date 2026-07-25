@@ -1,0 +1,72 @@
+{
+  "destination_id": 28,
+  "city": "Brasov",
+  "streets": [
+    {
+      "name_local": "Strada Republicii",
+      "name_en": "Republicii Street",
+      "name_he": "רחוב רפובליצ'י",
+      "kind": "street",
+      "best_for_he": "רחוב הולכי רגל ראשי",
+      "vibe_he": "הרחוב המרכזי להולכי רגל של בראשוב, מלא בתי קפה, חנויות ומרפסות שמובילות אל כיכר המועצה.",
+      "dwell_min": 40,
+      "approx_lat": 45.6420,
+      "approx_lng": 25.5905
+    },
+    {
+      "name_local": "Strada Sforii",
+      "name_en": "Rope Street",
+      "name_he": "רחוב החבל",
+      "kind": "street",
+      "best_for_he": "הסמטה הצרה",
+      "vibe_he": "אחת הסמטאות הצרות באירופה, ברוחב של כמטר וחצי, אטרקציה מצולמת בלב העיר העתיקה.",
+      "dwell_min": 30,
+      "approx_lat": 45.6395,
+      "approx_lng": 25.5880
+    },
+    {
+      "name_local": "Strada Mureșenilor",
+      "name_en": "Mureșenilor Street",
+      "name_he": "רחוב מורשנילור",
+      "kind": "street",
+      "best_for_he": "שדרה מטופחת",
+      "vibe_he": "שדרה רחבה עם בניינים היסטוריים, מסעדות ובתי קפה, המחברת את כיכר המועצה עם מרכז העיר.",
+      "dwell_min": 30,
+      "approx_lat": 45.6408,
+      "approx_lng": 25.5875
+    },
+    {
+      "name_local": "Piața Sfatului",
+      "name_en": "Council Square",
+      "name_he": "כיכר המועצה",
+      "kind": "cluster",
+      "best_for_he": "הכיכר ההיסטורית",
+      "vibe_he": "הכיכר ההיסטורית של בראשוב עם בית המועצה הישן, מוקפת בתים צבעוניים ובתי קפה עם שולחנות בחוץ.",
+      "dwell_min": 35,
+      "approx_lat": 45.6420,
+      "approx_lng": 25.5888
+    },
+    {
+      "name_local": "Strada Gheorghe Barițiu",
+      "name_en": "Gheorghe Barițiu Street",
+      "name_he": "רחוב ג'ורג'ה בריציו",
+      "kind": "street",
+      "best_for_he": "רחוב הכנסייה השחורה",
+      "vibe_he": "רחוב אבן אטמוספרי שמוביל אל הכנסייה השחורה המפורסמת, עם חנויות ואדריכלות עתיקה.",
+      "dwell_min": 30,
+      "approx_lat": 45.6410,
+      "approx_lng": 25.5885
+    },
+    {
+      "name_local": "Strada Michael Weiss",
+      "name_en": "Michael Weiss Street",
+      "name_he": "רחוב מיכאל וייס",
+      "kind": "street",
+      "best_for_he": "רחוב חיים",
+      "vibe_he": "רחוב תוסס עם בתי קפה, פאבים ומסעדות, אחד ממוקדי חיי הלילה של העיר העתיקה.",
+      "dwell_min": 30,
+      "approx_lat": 45.6430,
+      "approx_lng": 25.5895
+    }
+  ]
+}

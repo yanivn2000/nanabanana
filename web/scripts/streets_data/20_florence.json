@@ -1,0 +1,105 @@
+{
+  "destination_id": 20,
+  "city": "Florence",
+  "streets": [
+    {
+      "name_local": "Via de' Tornabuoni",
+      "name_en": "Via de' Tornabuoni",
+      "name_he": "ויה דה טורנבואוני",
+      "kind": "street",
+      "best_for_he": "אופנה יוקרתית",
+      "vibe_he": "שדרת המותגים האלגנטית של פירנצה, מלאה בחזיתות עתיקות ובוטיקים של בתי אופנה איטלקיים.",
+      "dwell_min": 40,
+      "approx_lat": 43.7710,
+      "approx_lng": 11.2508
+    },
+    {
+      "name_local": "Via dei Calzaiuoli",
+      "name_en": "Via dei Calzaiuoli",
+      "name_he": "ויה דיי קלצאיולי",
+      "kind": "street",
+      "best_for_he": "טיילת ראשית",
+      "vibe_he": "העורק המרכזי המחבר בין הדואומו לפיאצה דלה סיניוריה, רחב, סואן ומלא חנויות.",
+      "dwell_min": 35,
+      "approx_lat": 43.7710,
+      "approx_lng": 11.2551
+    },
+    {
+      "name_local": "Via del Corso",
+      "name_en": "Via del Corso",
+      "name_he": "ויה דל קורסו",
+      "kind": "street",
+      "best_for_he": "קניות והליכה",
+      "vibe_he": "רחוב עסקני ורומי במקורו, מלא חנויות ומגדלים מימי הביניים במרכז ההיסטורי.",
+      "dwell_min": 30,
+      "approx_lat": 43.7716,
+      "approx_lng": 11.2556
+    },
+    {
+      "name_local": "Borgo San Lorenzo",
+      "name_en": "Borgo San Lorenzo",
+      "name_he": "בורגו סן לורנצו",
+      "kind": "street",
+      "best_for_he": "שוק וססגוניות",
+      "vibe_he": "סמטה תוססת המובילה לשוק סן לורנצו ולדוכני העור, לב האזור העממי של פירנצה.",
+      "dwell_min": 30,
+      "approx_lat": 43.7735,
+      "approx_lng": 11.2540
+    },
+    {
+      "name_local": "Via Maggio",
+      "name_en": "Via Maggio",
+      "name_he": "ויה מאג'ו",
+      "kind": "street",
+      "best_for_he": "עתיקות ואמנות",
+      "vibe_he": "רחוב מכובד בשכונת אולטראנו, שורה של חנויות עתיקות וארמונות רנסאנס.",
+      "dwell_min": 30,
+      "approx_lat": 43.7672,
+      "approx_lng": 11.2485
+    },
+    {
+      "name_local": "Via de' Neri",
+      "name_en": "Via de' Neri",
+      "name_he": "ויה דה נרי",
+      "kind": "street",
+      "best_for_he": "אוכל רחוב",
+      "vibe_he": "סמטה צרה ואהובה של טרטוריות וכריכי למפרדוטו, ריח של אוכל פלורנטיני אותנטי.",
+      "dwell_min": 30,
+      "approx_lat": 43.7688,
+      "approx_lng": 11.2578
+    },
+    {
+      "name_local": "Borgo degli Albizi",
+      "name_en": "Borgo degli Albizi",
+      "name_he": "בורגו דלי אלביצי",
+      "kind": "street",
+      "best_for_he": "אווירת ימי ביניים",
+      "vibe_he": "רחוב אבן ציורי מלא ארמונות אצולה, בתי קפה ובוטיקים קטנים בלב הרובע ההיסטורי.",
+      "dwell_min": 30,
+      "approx_lat": 43.7708,
+      "approx_lng": 11.2601
+    },
+    {
+      "name_local": "Via Sant'Antonino",
+      "name_en": "Via Sant'Antonino",
+      "name_he": "ויה סנט אנטונינו",
+      "kind": "street",
+      "best_for_he": "שוק ואוכל",
+      "vibe_he": "סמטה עממית ליד שוק המרכזי, מלאה מעדניות, טרטוריות ודוכני מזון מקומיים.",
+      "dwell_min": 30,
+      "approx_lat": 43.7748,
+      "approx_lng": 11.2530
+    },
+    {
+      "name_local": "Piazzale Michelangelo",
+      "name_en": "Piazzale Michelangelo",
+      "name_he": "פיאצאלה מיכלאנג'לו",
+      "kind": "cluster",
+      "best_for_he": "תצפית פנורמית",
+      "vibe_he": "מרפסת התצפית המפורסמת מעל פירנצה, נוף מושלם לגגות האדומים ולדואומו בשקיעה.",
+      "dwell_min": 40,
+      "approx_lat": 43.7629,
+      "approx_lng": 11.2650
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "destination_id": 26,
+  "city": "Lefkada",
+  "streets": [
+    {
+      "name_local": "Ιωάννου Μελά",
+      "name_en": "Ioannou Mela",
+      "name_he": "יואנו מלא",
+      "kind": "street",
+      "best_for_he": "רחוב הולכי רגל",
+      "vibe_he": "הרחוב הראשי להולכי רגל של העיירה, מלא חנויות, טברנות ובתי קפה תחת בתי עץ צבעוניים.",
+      "dwell_min": 40,
+      "approx_lat": 38.8320,
+      "approx_lng": 20.7075
+    },
+    {
+      "name_local": "Δαίρπφελδ",
+      "name_en": "Dörpfeld",
+      "name_he": "דרפפלד",
+      "kind": "street",
+      "best_for_he": "רחוב מרכזי",
+      "vibe_he": "רחוב מרכזי ליד הכיכר על שם הארכיאולוג דרפפלד, עם מסעדות וחיי לילה.",
+      "dwell_min": 30,
+      "approx_lat": 38.8330,
+      "approx_lng": 20.7080
+    },
+    {
+      "name_local": "Αγγέλου Σικελιανού",
+      "name_en": "Angelou Sikelianou",
+      "name_he": "אנגלו סיקליאנו",
+      "kind": "street",
+      "best_for_he": "טיילת מרינה",
+      "vibe_he": "טיילת חוף לאורך המרינה והלגונה, נעימה לשקיעה עם נוף ליאכטות ולמצודה.",
+      "dwell_min": 35,
+      "approx_lat": 38.8345,
+      "approx_lng": 20.7095
+    },
+    {
+      "name_local": "Γολέμη",
+      "name_en": "Golemi",
+      "name_he": "גולמי",
+      "kind": "street",
+      "best_for_he": "רחוב חזית מים",
+      "vibe_he": "רחוב חזית-מים בכניסה לעיירה מול המעגן, עם קפה ונוף אל הגשר הצף.",
+      "dwell_min": 30,
+      "approx_lat": 38.8335,
+      "approx_lng": 20.7100
+    },
+    {
+      "name_local": "Στρατηγού Μεσσαλά",
+      "name_en": "Stratigou Messala",
+      "name_he": "סטרטיגו מסלה",
+      "kind": "street",
+      "best_for_he": "רחוב עתיק",
+      "vibe_he": "רחוב אבן שקט בעיירה העתיקה עם כנסיות מסורתיות ובתי אבן קטנים.",
+      "dwell_min": 30,
+      "approx_lat": 38.8315,
+      "approx_lng": 20.7070
+    }
+  ]
+}

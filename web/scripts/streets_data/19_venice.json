@@ -1,0 +1,138 @@
+{
+  "destination_id": 19,
+  "city": "Venice",
+  "streets": [
+    {
+      "name_local": "Strada Nova",
+      "name_en": "Strada Nova",
+      "name_he": "סטראדה נובה",
+      "kind": "street",
+      "best_for_he": "רחוב ראשי בקנאר'ג'ו",
+      "vibe_he": "העורק הרחב והשוקק של רובע קנאר'ג'ו, חנויות ובקארי מהתחנה אל ריאלטו.",
+      "dwell_min": 40,
+      "approx_lat": 45.4420,
+      "approx_lng": 12.3300
+    },
+    {
+      "name_local": "Rio Terà Lista di Spagna",
+      "name_en": "Rio Terà Lista di Spagna",
+      "name_he": "ריו טרה ליסטה די ספניה",
+      "kind": "street",
+      "best_for_he": "רחוב ליד התחנה",
+      "vibe_he": "הרחוב הראשון שפוגשים ליד תחנת הרכבת, עמוס חנויות מזכרות, פיצריות ומלונות.",
+      "dwell_min": 30,
+      "approx_lat": 45.4415,
+      "approx_lng": 12.3245
+    },
+    {
+      "name_local": "Calle Larga XXII Marzo",
+      "name_en": "Calle Larga XXII Marzo",
+      "name_he": "קאלה לארגה עשרים ושניים במרץ",
+      "kind": "street",
+      "best_for_he": "אופנה ויוקרה",
+      "vibe_he": "הרחוב הרחב והיוקרתי של ונציה ליד סן מרקו, מותגי אופנה בינלאומיים וחלונות ראווה.",
+      "dwell_min": 35,
+      "approx_lat": 45.4325,
+      "approx_lng": 12.3355
+    },
+    {
+      "name_local": "Riva degli Schiavoni",
+      "name_en": "Riva degli Schiavoni",
+      "name_he": "ריבה דלי סקיאבוני",
+      "kind": "canal",
+      "best_for_he": "טיילת מול הלגונה",
+      "vibe_he": "טיילת רחבה לאורך הלגונה ליד ארמון הדוג'ים, נוף לסן ג'ורג'ו ולגונדולות מתנדנדות.",
+      "dwell_min": 40,
+      "approx_lat": 45.4335,
+      "approx_lng": 12.3430
+    },
+    {
+      "name_local": "Riva del Vin",
+      "name_en": "Riva del Vin",
+      "name_he": "ריבה דל וין",
+      "kind": "canal",
+      "best_for_he": "טיילת ליד גשר ריאלטו",
+      "vibe_he": "טיילת שמש קטנה על תעלת גרנדה מדרום לגשר ריאלטו, מסעדות עם נוף למים.",
+      "dwell_min": 30,
+      "approx_lat": 45.4380,
+      "approx_lng": 12.3355
+    },
+    {
+      "name_local": "Ruga degli Orefici",
+      "name_en": "Ruga degli Orefici",
+      "name_he": "רוגה דלי אורפיצ'י",
+      "kind": "street",
+      "best_for_he": "שוק ריאלטו",
+      "vibe_he": "רחוב הצורפים ההיסטורי ליד גשר ריאלטו, בלב שוק הדגים והירקות התוסס.",
+      "dwell_min": 30,
+      "approx_lat": 45.4385,
+      "approx_lng": 12.3345
+    },
+    {
+      "name_local": "Fondamenta della Misericordia",
+      "name_en": "Fondamenta della Misericordia",
+      "name_he": "פונדמנטה דלה מיזריקורדיה",
+      "kind": "canal",
+      "best_for_he": "טיילת תעלה ובקארי",
+      "vibe_he": "טיילת תעלה אהובה על המקומיים בקנאר'ג'ו, מלאה בבקארי, ספריץ וערבים עליזים.",
+      "dwell_min": 35,
+      "approx_lat": 45.4440,
+      "approx_lng": 12.3320
+    },
+    {
+      "name_local": "Fondamenta dei Ormesini",
+      "name_en": "Fondamenta dei Ormesini",
+      "name_he": "פונדמנטה דיי אורמזיני",
+      "kind": "canal",
+      "best_for_he": "אווירה מקומית וברים",
+      "vibe_he": "המשך הטיילת לאורך התעלה בקנאר'ג'ו, אחת מפינות חיי הלילה האותנטיות של ונציה.",
+      "dwell_min": 30,
+      "approx_lat": 45.4450,
+      "approx_lng": 12.3305
+    },
+    {
+      "name_local": "Salizada San Lio",
+      "name_en": "Salizada San Lio",
+      "name_he": "סליצדה סן ליו",
+      "kind": "street",
+      "best_for_he": "סמטת מעבר שוקקת",
+      "vibe_he": "סליצדה עתיקה בין ריאלטו לסן מרקו, חנויות קטנות ואווירת ונציה יומיומית.",
+      "dwell_min": 30,
+      "approx_lat": 45.4370,
+      "approx_lng": 12.3390
+    },
+    {
+      "name_local": "Calle dei Fabbri",
+      "name_en": "Calle dei Fabbri",
+      "name_he": "קאלה דיי פאברי",
+      "kind": "street",
+      "best_for_he": "סמטת קניות לסן מרקו",
+      "vibe_he": "אחת הסמטאות הראשיות המובילות אל כיכר סן מרקו, חנויות ובוטיקים לכל אורכה.",
+      "dwell_min": 30,
+      "approx_lat": 45.4345,
+      "approx_lng": 12.3370
+    },
+    {
+      "name_local": "Merceria dell'Orologio",
+      "name_en": "Merceria dell'Orologio",
+      "name_he": "מרצריה דל'אורולוג'ו",
+      "kind": "street",
+      "best_for_he": "רחוב הקניות ההיסטורי",
+      "vibe_he": "תחילת ציר המרצריה ההיסטורי מתחת למגדל השעון של סן מרקו, רחוב הקניות העתיק של ונציה.",
+      "dwell_min": 30,
+      "approx_lat": 45.4345,
+      "approx_lng": 12.3380
+    },
+    {
+      "name_local": "Fondamenta Zattere ai Gesuati",
+      "name_en": "Fondamenta Zattere ai Gesuati",
+      "name_he": "פונדמנטה צאטרה איי ג'זואטי",
+      "kind": "canal",
+      "best_for_he": "טיילת נוף רחבה",
+      "vibe_he": "טיילת רחבה ושטופת שמש בדורסודורו מול תעלת ג'ודקה, גלידריות ונוף פתוח.",
+      "dwell_min": 40,
+      "approx_lat": 45.4300,
+      "approx_lng": 12.3250
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "destination_id": 22,
+  "city": "Zurich",
+  "streets": [
+    {
+      "name_local": "Bahnhofstrasse",
+      "name_en": "Bahnhofstrasse",
+      "name_he": "באנהופשטראסה",
+      "kind": "street",
+      "best_for_he": "קניות יוקרה",
+      "vibe_he": "רחוב הקניות היוקרתי הראשי של ציריך, מהתחנה המרכזית עד האגם, מלא בוטיקים ובנקים.",
+      "dwell_min": 45,
+      "approx_lat": 47.3730,
+      "approx_lng": 8.5390
+    },
+    {
+      "name_local": "Niederdorfstrasse",
+      "name_en": "Niederdorfstrasse",
+      "name_he": "נידרדורפשטראסה",
+      "kind": "street",
+      "best_for_he": "עיר עתיקה",
+      "vibe_he": "סמטת אבן ציורית בלב העיר העתיקה, מלאה בברים, מסעדות וחנויות קטנות ותוססות בערב.",
+      "dwell_min": 40,
+      "approx_lat": 47.3720,
+      "approx_lng": 8.5445
+    },
+    {
+      "name_local": "Augustinergasse",
+      "name_en": "Augustinergasse",
+      "name_he": "אאוגוסטינרגאסה",
+      "kind": "street",
+      "best_for_he": "סמטה היסטורית",
+      "vibe_he": "אחת הסמטאות היפות בציריך, עם חלונות זקיף צבעוניים מימי הביניים ואווירה שקטה.",
+      "dwell_min": 30,
+      "approx_lat": 47.3708,
+      "approx_lng": 8.5405
+    },
+    {
+      "name_local": "Rennweg",
+      "name_en": "Rennweg",
+      "name_he": "רנווג",
+      "kind": "street",
+      "best_for_he": "קניות ומעברים",
+      "vibe_he": "רחוב קניות עתיק המתפצל מבאנהופשטראסה עם חנויות ואווירת עיר עתיקה.",
+      "dwell_min": 30,
+      "approx_lat": 47.3733,
+      "approx_lng": 8.5395
+    },
+    {
+      "name_local": "Limmatquai",
+      "name_en": "Limmatquai",
+      "name_he": "לימאטקוואי",
+      "kind": "canal",
+      "best_for_he": "טיילת נהר",
+      "vibe_he": "טיילת ציורית לאורך נהר הלימאט מול בתי הגילדות ההיסטוריים ומגדלי הכנסיות.",
+      "dwell_min": 35,
+      "approx_lat": 47.3715,
+      "approx_lng": 8.5430
+    },
+    {
+      "name_local": "Marktgasse",
+      "name_en": "Marktgasse",
+      "name_he": "מרקטגאסה",
+      "kind": "street",
+      "best_for_he": "סמטאות ובוטיקים",
+      "vibe_he": "סמטה מקסימה בעיר העתיקה שמעבר לנהר, מלאה חנויות עיצוב ובתי קפה קטנים.",
+      "dwell_min": 30,
+      "approx_lat": 47.3712,
+      "approx_lng": 8.5438
+    },
+    {
+      "name_local": "Schifflände",
+      "name_en": "Schifflände",
+      "name_he": "שיפלנדה",
+      "kind": "street",
+      "best_for_he": "חוף האגם",
+      "vibe_he": "רחוב לצד מזח הסירות בקצה האגם, נקודת מוצא לטיולים ותצפית על האגם וההרים.",
+      "dwell_min": 30,
+      "approx_lat": 47.3665,
+      "approx_lng": 8.5418
+    },
+    {
+      "name_local": "Langstrasse",
+      "name_en": "Langstrasse",
+      "name_he": "לאנגשטראסה",
+      "kind": "street",
+      "best_for_he": "חיי לילה ואוכל",
+      "vibe_he": "הרחוב המולטי-קולטורלי והתוסס של ציריך, מלא ברים, מסעדות אתניות ואווירה אלטרנטיבית.",
+      "dwell_min": 35,
+      "approx_lat": 47.3785,
+      "approx_lng": 8.5305
+    }
+  ]
+}

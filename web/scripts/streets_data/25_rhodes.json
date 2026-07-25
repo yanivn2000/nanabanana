@@ -1,0 +1,83 @@
+{
+  "destination_id": 25,
+  "city": "Rhodes",
+  "streets": [
+    {
+      "name_local": "Ιπποτών",
+      "name_en": "Street of the Knights",
+      "name_he": "רחוב האבירים",
+      "kind": "street",
+      "best_for_he": "סמטת אבירים",
+      "vibe_he": "הרחוב המימי-ביניימי המפורסם של העיר העתיקה, מרוצף אבן ומוקף אכסניות האבירים.",
+      "dwell_min": 45,
+      "approx_lat": 36.4455,
+      "approx_lng": 28.2255
+    },
+    {
+      "name_local": "Σωκράτους",
+      "name_en": "Sokratous Street",
+      "name_he": "רחוב סוקרטוס",
+      "kind": "street",
+      "best_for_he": "רחוב שוק",
+      "vibe_he": "רחוב הבזאר הראשי של העיר העתיקה, עולה מהמסגד לחנויות תכשיטים ומזכרות.",
+      "dwell_min": 45,
+      "approx_lat": 36.4445,
+      "approx_lng": 28.2240
+    },
+    {
+      "name_local": "Αριστοτέλους",
+      "name_en": "Aristotelous Street",
+      "name_he": "רחוב אריסטוטלוס",
+      "kind": "street",
+      "best_for_he": "כיכר ובתי קפה",
+      "vibe_he": "רחוב אבן ציורי המוביל לכיכר איפוקרטס התוססת עם מזרקת הינשוף ובתי קפה.",
+      "dwell_min": 35,
+      "approx_lat": 36.4440,
+      "approx_lng": 28.2255
+    },
+    {
+      "name_local": "Ορφέως",
+      "name_en": "Orfeos Street",
+      "name_he": "רחוב אורפאוס",
+      "kind": "street",
+      "best_for_he": "סמטה מוצלת",
+      "vibe_he": "סמטה שקטה ומוצלת בעצים לאורך חומת מוזיאון הארכיאולוגי בעיר העתיקה.",
+      "dwell_min": 30,
+      "approx_lat": 36.4460,
+      "approx_lng": 28.2250
+    },
+    {
+      "name_local": "Απελλού",
+      "name_en": "Apellou Street",
+      "name_he": "רחוב אפלו",
+      "kind": "street",
+      "best_for_he": "סמטת עיר עתיקה",
+      "vibe_he": "סמטה אבן אותנטית בלב העיר העתיקה עם בתי אבן, קמרונות ובתי מלאכה קטנים.",
+      "dwell_min": 30,
+      "approx_lat": 36.4452,
+      "approx_lng": 28.2248
+    },
+    {
+      "name_local": "Ακτή Σαχτούρη",
+      "name_en": "Akti Sachtouri",
+      "name_he": "אקטי סאכטורי",
+      "kind": "street",
+      "best_for_he": "טיילת נמל",
+      "vibe_he": "טיילת נמל מנדראקי עם טחנות הרוח, פסלי האיילים ונופי המצודה.",
+      "dwell_min": 40,
+      "approx_lat": 36.4478,
+      "approx_lng": 28.2280
+    },
+    {
+      "name_local": "Ακτή Μιαούλη",
+      "name_en": "Akti Miaouli",
+      "name_he": "אקטי מיאולי",
+      "kind": "street",
+      "best_for_he": "טיילת חוף",
+      "vibe_he": "שדרת חוף רחבה בעיר החדשה לאורך מפרץ מנדראקי, עם דקלים ונוף לים.",
+      "dwell_min": 35,
+      "approx_lat": 36.4500,
+      "approx_lng": 28.2270
+    }
+  ]
+}

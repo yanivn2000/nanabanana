@@ -1,0 +1,72 @@
+{
+  "destination_id": 11,
+  "city": "Larnaca",
+  "streets": [
+    {
+      "name_local": "Λεωφόρος Αθηνών",
+      "name_en": "Finikoudes Promenade",
+      "name_he": "טיילת פיניקודס",
+      "kind": "street",
+      "best_for_he": "טיילת חוף דקלים",
+      "vibe_he": "טיילת החוף המפורסמת עם שדרת דקלים, בתי קפה, מסעדות דגים והחוף לצידה.",
+      "dwell_min": 55,
+      "approx_lat": 34.9155,
+      "approx_lng": 33.6375
+    },
+    {
+      "name_local": "Ερμού",
+      "name_en": "Ermou Street",
+      "name_he": "רחוב ארמו",
+      "kind": "street",
+      "best_for_he": "רחוב קניות להולכי רגל",
+      "vibe_he": "הרחוב המסחרי הראשי להולכי רגל, מלא חנויות, בוטיקים ובתי קפה בלב העיר.",
+      "dwell_min": 40,
+      "approx_lat": 34.9175,
+      "approx_lng": 33.6320
+    },
+    {
+      "name_local": "Ζήνωνος Κιτιέως",
+      "name_en": "Zinonos Kitieos Street",
+      "name_he": "רחוב זינונוס קיטייאוס",
+      "kind": "street",
+      "best_for_he": "רחוב מסחרי מסורתי",
+      "vibe_he": "רחוב מסחרי ותיק עם חנויות מקומיות, סדנאות וחיי יומיום קפריסאיים.",
+      "dwell_min": 35,
+      "approx_lat": 34.9180,
+      "approx_lng": 33.6300
+    },
+    {
+      "name_local": "Πιάλε Πασιά",
+      "name_en": "Piyale Pasha Promenade",
+      "name_he": "טיילת פיאלה פאשא",
+      "kind": "street",
+      "best_for_he": "טיילת דייגים ודגים",
+      "vibe_he": "רצועת חוף דרומית עם מרינה, סירות דייגים ומסעדות דגים אותנטיות מול הים.",
+      "dwell_min": 45,
+      "approx_lat": 34.9080,
+      "approx_lng": 33.6355
+    },
+    {
+      "name_local": "Λεωφόρος Γρηγόρη Αυξεντίου",
+      "name_en": "Grigori Afxentiou Avenue",
+      "name_he": "שדרת גריגורי אפקסנטיו",
+      "kind": "street",
+      "best_for_he": "שדרה מרכזית",
+      "vibe_he": "שדרה מרכזית רחבה המובילה מהחוף אל טירת לרנקה ורובע הכנסייה.",
+      "dwell_min": 30,
+      "approx_lat": 34.9165,
+      "approx_lng": 33.6290
+    },
+    {
+      "name_local": "Αγίου Λαζάρου",
+      "name_en": "Agiou Lazarou Street",
+      "name_he": "רחוב אגיו לזרו",
+      "kind": "street",
+      "best_for_he": "סמטת הכנסייה",
+      "vibe_he": "סמטה ציורית סביב כנסיית אגיוס לזרוס עם חנויות מזכרות ובתי קפה קטנים.",
+      "dwell_min": 30,
+      "approx_lat": 34.9105,
+      "approx_lng": 33.6320
+    }
+  ]
+}

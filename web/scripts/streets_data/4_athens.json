@@ -1,0 +1,127 @@
+{
+  "destination_id": 4,
+  "city": "Athens",
+  "streets": [
+    {
+      "name_local": "Ερμού",
+      "name_en": "Ermou Street",
+      "name_he": "רחוב ארמו",
+      "kind": "street",
+      "best_for_he": "קניות עממיות",
+      "vibe_he": "רחוב הקניות המרכזי והמדרחוב הראשי של אתונה, מכיכר סינטגמה ועד מונסטירקי.",
+      "dwell_min": 45,
+      "approx_lat": 37.9765,
+      "approx_lng": 23.7270
+    },
+    {
+      "name_local": "Αδριανού",
+      "name_en": "Adrianou Street",
+      "name_he": "רחוב אדריאנו",
+      "kind": "street",
+      "best_for_he": "מסעדות ועתיקות",
+      "vibe_he": "הרחוב העתיק ביותר של אתונה בפלאקה, מסעדות, חנויות מזכרות ונוף לאגורה.",
+      "dwell_min": 40,
+      "approx_lat": 37.9740,
+      "approx_lng": 23.7255
+    },
+    {
+      "name_local": "Διονυσίου Αρεοπαγίτου",
+      "name_en": "Dionysiou Areopagitou",
+      "name_he": "דיוניסיו אראופגיטו",
+      "kind": "street",
+      "best_for_he": "טיילת ארכאולוגית",
+      "vibe_he": "שדרת הולכי רגל מרוצפת שיש למרגלות האקרופוליס, טיילת הנוף היפה בעיר.",
+      "dwell_min": 45,
+      "approx_lat": 37.9695,
+      "approx_lng": 23.7275
+    },
+    {
+      "name_local": "Απόστολου Παύλου",
+      "name_en": "Apostolou Pavlou",
+      "name_he": "אפוסטולו פאבלו",
+      "kind": "street",
+      "best_for_he": "טיילת ובתי קפה",
+      "vibe_he": "מדרחוב מוצל למרגלות הגבעות, בתי קפה ונוף לאקרופוליס ולתסיאון.",
+      "dwell_min": 40,
+      "approx_lat": 37.9740,
+      "approx_lng": 23.7205
+    },
+    {
+      "name_local": "Κυδαθηναίων",
+      "name_en": "Kydathineon",
+      "name_he": "קידאתינאון",
+      "kind": "street",
+      "best_for_he": "מסעדות וסמטאות",
+      "vibe_he": "רחוב מרכזי ותוסס בלב פלאקה, טברנות מסורתיות וסמטאות אבן ציוריות.",
+      "dwell_min": 35,
+      "approx_lat": 37.9710,
+      "approx_lng": 23.7290
+    },
+    {
+      "name_local": "Αιόλου",
+      "name_en": "Aiolou Street",
+      "name_he": "רחוב איאולו",
+      "kind": "street",
+      "best_for_he": "קניות ובתי קפה",
+      "vibe_he": "רחוב מדרחוב ניאו-קלאסי עם נוף לאקרופוליס, חנויות ובתי קפה מקומיים.",
+      "dwell_min": 35,
+      "approx_lat": 37.9790,
+      "approx_lng": 23.7275
+    },
+    {
+      "name_local": "Πανδρόσου",
+      "name_en": "Pandrossou Street",
+      "name_he": "רחוב פנדרוסו",
+      "kind": "street",
+      "best_for_he": "שוק ומזכרות",
+      "vibe_he": "רחוב בזאר עתיק במונסטירקי, דוכני עור, מזכרות ועתיקות משני עברי הסמטה.",
+      "dwell_min": 30,
+      "approx_lat": 37.9760,
+      "approx_lng": 23.7255
+    },
+    {
+      "name_local": "Μητροπόλεως",
+      "name_en": "Mitropoleos Street",
+      "name_he": "רחוב מיטרופולאוס",
+      "kind": "street",
+      "best_for_he": "אוכל ומסעדות",
+      "vibe_he": "רחוב תוסס המחבר את סינטגמה למונסטירקי, מוקד הסובלקי המפורסם של אתונה.",
+      "dwell_min": 35,
+      "approx_lat": 37.9765,
+      "approx_lng": 23.7290
+    },
+    {
+      "name_local": "Βουκουρεστίου",
+      "name_en": "Voukourestiou Street",
+      "name_he": "רחוב וקורסטיו",
+      "kind": "street",
+      "best_for_he": "מותרות ואופנה",
+      "vibe_he": "רחוב המותגים היוקרתי של אתונה, בוטיקים בינלאומיים ותכשיטנים סמוך לסינטגמה.",
+      "dwell_min": 30,
+      "approx_lat": 37.9780,
+      "approx_lng": 23.7345
+    },
+    {
+      "name_local": "Μνησικλέους",
+      "name_en": "Mnisikleous Street",
+      "name_he": "רחוב מניסיקלאוס",
+      "kind": "street",
+      "best_for_he": "מדרגות וטברנות",
+      "vibe_he": "רחוב מדרגות ציורי במחוז אנפיוטיקה, טברנות עם שולחנות על המדרגות ואווירה כפרית.",
+      "dwell_min": 30,
+      "approx_lat": 37.9725,
+      "approx_lng": 23.7280
+    },
+    {
+      "name_local": "Σκουφά",
+      "name_en": "Skoufa Street",
+      "name_he": "רחוב סקופא",
+      "kind": "street",
+      "best_for_he": "בתי קפה ובוטיקים",
+      "vibe_he": "רחוב אופנתי ברובע קולונאקי, בתי קפה מודרניים, בוטיקים וגלריות אמנות.",
+      "dwell_min": 30,
+      "approx_lat": 37.9810,
+      "approx_lng": 23.7380
+    }
+  ]
+}

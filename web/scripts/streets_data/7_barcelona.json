@@ -1,0 +1,116 @@
+{
+  "destination_id": 7,
+  "city": "Barcelona",
+  "streets": [
+    {
+      "name_local": "La Rambla",
+      "name_en": "La Rambla",
+      "name_he": "לה ראמבלה",
+      "kind": "street",
+      "best_for_he": "טיילת מרכזית",
+      "vibe_he": "השדרה המפורסמת של ברצלונה — דוכנים, אמני רחוב והמון חיים בין פלאסה קטלוניה לנמל.",
+      "dwell_min": 50,
+      "approx_lat": 41.3809,
+      "approx_lng": 2.1734
+    },
+    {
+      "name_local": "Passeig de Gràcia",
+      "name_en": "Passeig de Gràcia",
+      "name_he": "פאסז' דה גראסיה",
+      "kind": "street",
+      "best_for_he": "שדרת יוקרה",
+      "vibe_he": "השדרה היוקרתית של העיר — בתי גאודי קאזה בטליו וקאזה מילא לצד מותגי אופנה עילית.",
+      "dwell_min": 50,
+      "approx_lat": 41.3925,
+      "approx_lng": 2.1650
+    },
+    {
+      "name_local": "Passeig del Born",
+      "name_en": "Passeig del Born",
+      "name_he": "פאסז' דל בורן",
+      "kind": "street",
+      "best_for_he": "רובע אופנתי",
+      "vibe_he": "טיילת רחבה בלב רובע אל בורן, מוקפת ברים אופנתיים, בוטיקים ובתי קפה עם אווירה מקומית.",
+      "dwell_min": 35,
+      "approx_lat": 41.3852,
+      "approx_lng": 2.1830
+    },
+    {
+      "name_local": "Carrer de Blai",
+      "name_en": "Carrer de Blai",
+      "name_he": "קארר דה בלאי",
+      "kind": "street",
+      "best_for_he": "רחוב טאפאס",
+      "vibe_he": "מדרחוב פינצ'וס ותאפאס אהוב ברובע פובלה סק, מלא ברים זולים ואווירה מקומית.",
+      "dwell_min": 35,
+      "approx_lat": 41.3735,
+      "approx_lng": 2.1620
+    },
+    {
+      "name_local": "Carrer de Montcada",
+      "name_en": "Carrer de Montcada",
+      "name_he": "קארר דה מונקאדה",
+      "kind": "street",
+      "best_for_he": "סמטה עתיקה",
+      "vibe_he": "סמטה מימי הביניים ברובע אל בורן, ובה ארמונות אצולה שהפכו למוזיאונים כמו מוזיאון פיקאסו.",
+      "dwell_min": 30,
+      "approx_lat": 41.3852,
+      "approx_lng": 2.1815
+    },
+    {
+      "name_local": "Rambla de Catalunya",
+      "name_en": "Rambla de Catalunya",
+      "name_he": "ראמבלה דה קטלוניה",
+      "kind": "street",
+      "best_for_he": "שדרה מוצללת",
+      "vibe_he": "שדרה אלגנטית ומוצללת עצים המקבילה לפאסז' דה גראסיה, עם בתי קפה ומסעדות רגועים.",
+      "dwell_min": 35,
+      "approx_lat": 41.3900,
+      "approx_lng": 2.1625
+    },
+    {
+      "name_local": "Carrer de Ferran",
+      "name_en": "Carrer de Ferran",
+      "name_he": "קארר דה פראן",
+      "kind": "street",
+      "best_for_he": "רובע גותי",
+      "vibe_he": "רחוב מרכזי ברובע הגותי המחבר בין לה ראמבלה לכיכר סנט ז'אומה, מלא חנויות וחזיתות היסטוריות.",
+      "dwell_min": 30,
+      "approx_lat": 41.3800,
+      "approx_lng": 2.1760
+    },
+    {
+      "name_local": "Passeig Marítim de la Barceloneta",
+      "name_en": "Barceloneta Seafront Promenade",
+      "name_he": "טיילת החוף ברסלונטה",
+      "kind": "canal",
+      "best_for_he": "טיילת ים",
+      "vibe_he": "טיילת החוף לאורך הים התיכון עם חופים, מסעדות דגים ואווירת נופש ים-תיכונית.",
+      "dwell_min": 40,
+      "approx_lat": 41.3780,
+      "approx_lng": 2.1935
+    },
+    {
+      "name_local": "Avinguda del Portal de l'Àngel",
+      "name_en": "Portal de l'Àngel",
+      "name_he": "פורטל דה ל'אנז'ל",
+      "kind": "street",
+      "best_for_he": "מדרחוב קניות",
+      "vibe_he": "אחד ממדרחובי הקניות העמוסים בעולם, מוביל מפלאסה קטלוניה אל לב הרובע הגותי.",
+      "dwell_min": 30,
+      "approx_lat": 41.3860,
+      "approx_lng": 2.1730
+    },
+    {
+      "name_local": "Carrer Gran de Gràcia",
+      "name_en": "Carrer Gran de Gràcia",
+      "name_he": "קארר גראן דה גראסיה",
+      "kind": "street",
+      "best_for_he": "רובע גראסיה",
+      "vibe_he": "העורק הראשי של שכונת גראסיה הבוהמית, עם כיכרות קטנות, בתי קפה ואווירת כפר בעיר.",
+      "dwell_min": 35,
+      "approx_lat": 41.4010,
+      "approx_lng": 2.1560
+    }
+  ]
+}

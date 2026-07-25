@@ -1,0 +1,116 @@
+{
+  "destination_id": 10,
+  "city": "Thessaloniki",
+  "streets": [
+    {
+      "name_local": "Τσιμισκή",
+      "name_en": "Tsimiski Street",
+      "name_he": "רחוב טסימיסקי",
+      "kind": "street",
+      "best_for_he": "רחוב קניות ראשי",
+      "vibe_he": "רחוב הקניות המרכזי של סלוניקי, מלא חנויות אופנה, בוטיקים ובתי קפה תוססים.",
+      "dwell_min": 50,
+      "approx_lat": 40.6338,
+      "approx_lng": 22.9420
+    },
+    {
+      "name_local": "Αριστοτέλους",
+      "name_en": "Aristotelous Square",
+      "name_he": "כיכר אריסטוטלוס",
+      "kind": "street",
+      "best_for_he": "כיכר וטיילת ים",
+      "vibe_he": "השדרה המונומנטלית שיורדת אל מפרץ הים, עם בתי קפה מרווחים ואדריכלות ניאו-ביזנטית.",
+      "dwell_min": 45,
+      "approx_lat": 40.6329,
+      "approx_lng": 22.9410
+    },
+    {
+      "name_local": "Λαδάδικα",
+      "name_en": "Ladadika",
+      "name_he": "לאדאדיקה",
+      "kind": "cluster",
+      "best_for_he": "רובע בילוי אטמוספרי",
+      "vibe_he": "רובע הסמטאות המרוצפות של הנמל הישן, מלא טברנות, ברים ומסעדות שמתעוררים בלילה.",
+      "dwell_min": 55,
+      "approx_lat": 40.6386,
+      "approx_lng": 22.9358
+    },
+    {
+      "name_local": "Νέα Παραλία",
+      "name_en": "Nea Paralia Promenade",
+      "name_he": "טיילת ניאה פאראליה",
+      "kind": "street",
+      "best_for_he": "טיילת ים ארוכה",
+      "vibe_he": "טיילת החוף המפורסמת עם המגדל הלבן, גינות פסלים, אופניים ושקיעות אל המפרץ.",
+      "dwell_min": 55,
+      "approx_lat": 40.6155,
+      "approx_lng": 22.9530
+    },
+    {
+      "name_local": "Μητροπόλεως",
+      "name_en": "Mitropoleos Street",
+      "name_he": "רחוב מיטרופולאוס",
+      "kind": "street",
+      "best_for_he": "בוטיקים ומסעדות",
+      "vibe_he": "רחוב אלגנטי מקביל לים עם בוטיקים, מסעדות שף וכנסיית המטרופוליטן.",
+      "dwell_min": 40,
+      "approx_lat": 40.6318,
+      "approx_lng": 22.9440
+    },
+    {
+      "name_local": "Προξένου Κορομηλά",
+      "name_en": "Proxenou Koromila Street",
+      "name_he": "רחוב פרוקסנו קורומילה",
+      "kind": "street",
+      "best_for_he": "בתי קפה שקטים",
+      "vibe_he": "רחוב שקט ומעודן ליד הים עם בתי קפה, קונסוליות ובתים ניאו-קלאסיים.",
+      "dwell_min": 35,
+      "approx_lat": 40.6300,
+      "approx_lng": 22.9470
+    },
+    {
+      "name_local": "Αγίας Σοφίας",
+      "name_en": "Agias Sofias Street",
+      "name_he": "רחוב אגיאס סופיאס",
+      "kind": "street",
+      "best_for_he": "רחוב קניות מרכזי",
+      "vibe_he": "רחוב מסחרי חוצה שמחבר את הים אל העיר העתיקה, עם חנויות וכנסיית אגיה סופיה.",
+      "dwell_min": 35,
+      "approx_lat": 40.6340,
+      "approx_lng": 22.9465
+    },
+    {
+      "name_local": "Ίωνος Δραγούμη",
+      "name_en": "Ionos Dragoumi Street",
+      "name_he": "רחוב יונוס דראגומי",
+      "kind": "street",
+      "best_for_he": "רחוב מסחרי",
+      "vibe_he": "רחוב מסחרי סואן בלב העיר עם חנויות, שווקים קטנים ואווירה מקומית.",
+      "dwell_min": 30,
+      "approx_lat": 40.6360,
+      "approx_lng": 22.9385
+    },
+    {
+      "name_local": "Ναυάρχου Βότση",
+      "name_en": "Navarchou Votsi Street",
+      "name_he": "רחוב נווארחו ווטסי",
+      "kind": "street",
+      "best_for_he": "סמטת ברים",
+      "vibe_he": "סמטה קטנה בלאדאדיקה שהפכה למוקד ברים ומזטדיקו אינטימיים.",
+      "dwell_min": 35,
+      "approx_lat": 40.6390,
+      "approx_lng": 22.9365
+    },
+    {
+      "name_local": "Δημητρίου Γούναρη",
+      "name_en": "Dimitriou Gounari Street",
+      "name_he": "רחוב דימיטריו גונארי",
+      "kind": "street",
+      "best_for_he": "טיילת סטודנטים",
+      "vibe_he": "רחוב מדורג ותוסס שעולה מקמארה אל שער גלריוס, מלא קפה, בירה וסטודנטים.",
+      "dwell_min": 40,
+      "approx_lat": 40.6295,
+      "approx_lng": 22.9520
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+{
+  "destination_id": 3,
+  "city": "Rome",
+  "streets": [
+    {
+      "name_local": "Via del Corso",
+      "name_en": "Via del Corso",
+      "name_he": "ויה דל קורסו",
+      "kind": "street",
+      "best_for_he": "קניות עממיות",
+      "vibe_he": "הרחוב הישר והארוך של רומא, ציר קניות ראשי מכיכר העם ועד כיכר ונציה.",
+      "dwell_min": 50,
+      "approx_lat": 41.9015,
+      "approx_lng": 12.4790
+    },
+    {
+      "name_local": "Via dei Condotti",
+      "name_en": "Via dei Condotti",
+      "name_he": "ויה דיי קונדוטי",
+      "kind": "street",
+      "best_for_he": "מותרות ואופנה",
+      "vibe_he": "רחוב המותגים היוקרתי של רומא, מוליך אל מדרגות הפיאצה די ספניה.",
+      "dwell_min": 35,
+      "approx_lat": 41.9055,
+      "approx_lng": 12.4805
+    },
+    {
+      "name_local": "Via del Governo Vecchio",
+      "name_en": "Via del Governo Vecchio",
+      "name_he": "ויה דל גוברנו וקיו",
+      "kind": "street",
+      "best_for_he": "בוטיקים ועתיקות",
+      "vibe_he": "רחוב מרוצף וינטג' וקסום ליד פיאצה נאבונה, מלא בבוטיקים ומסעדות קטנות.",
+      "dwell_min": 30,
+      "approx_lat": 41.8985,
+      "approx_lng": 12.4700
+    },
+    {
+      "name_local": "Via dei Fori Imperiali",
+      "name_en": "Via dei Fori Imperiali",
+      "name_he": "ויה דיי פורי אימפריאלי",
+      "kind": "street",
+      "best_for_he": "שדרה היסטורית",
+      "vibe_he": "שדרה רחבה החוצה את הפורומים הקיסריים מכיכר ונציה ועד הקולוסיאום.",
+      "dwell_min": 45,
+      "approx_lat": 41.8930,
+      "approx_lng": 12.4870
+    },
+    {
+      "name_local": "Via Margutta",
+      "name_en": "Via Margutta",
+      "name_he": "ויה מרגוטה",
+      "kind": "street",
+      "best_for_he": "אמנות וגלריות",
+      "vibe_he": "סמטה ציורית ושקטה עם גלריות אמנות, קירות מטופסי קיסוס ואטמוספרה בוהמיינית.",
+      "dwell_min": 30,
+      "approx_lat": 41.9075,
+      "approx_lng": 12.4790
+    },
+    {
+      "name_local": "Via Giulia",
+      "name_en": "Via Giulia",
+      "name_he": "ויה ג'וליה",
+      "kind": "street",
+      "best_for_he": "רנסאנס ואווירה",
+      "vibe_he": "רחוב רנסאנס אלגנטי וישר לאורך הטיבר, ארמונות עתיקים וקשת מטופסת קיסוס.",
+      "dwell_min": 35,
+      "approx_lat": 41.8945,
+      "approx_lng": 12.4680
+    },
+    {
+      "name_local": "Via dei Coronari",
+      "name_en": "Via dei Coronari",
+      "name_he": "ויה דיי קורונרי",
+      "kind": "street",
+      "best_for_he": "עתיקות ובוטיקים",
+      "vibe_he": "רחוב מרוצף וציורי הידוע בחנויות עתיקות, גלריות ובתי קפה סמוך לפיאצה נאבונה.",
+      "dwell_min": 30,
+      "approx_lat": 41.9005,
+      "approx_lng": 12.4700
+    },
+    {
+      "name_local": "Via Veneto",
+      "name_en": "Via Veneto",
+      "name_he": "ויה ונטו",
+      "kind": "street",
+      "best_for_he": "בתי קפה מהודרים",
+      "vibe_he": "שדרה מפותלת ומהודרת של עידן ה'דולצ'ה ויטה', בתי קפה מפוארים ומלונות יוקרה.",
+      "dwell_min": 35,
+      "approx_lat": 41.9070,
+      "approx_lng": 12.4890
+    },
+    {
+      "name_local": "Via del Babuino",
+      "name_en": "Via del Babuino",
+      "name_he": "ויה דל באבואינו",
+      "kind": "street",
+      "best_for_he": "אמנות ואופנה",
+      "vibe_he": "רחוב אלגנטי המחבר את כיכר העם למדרגות ספרד, גלריות עתיקות ומעצבים.",
+      "dwell_min": 30,
+      "approx_lat": 41.9080,
+      "approx_lng": 12.4780
+    },
+    {
+      "name_local": "Via Nazionale",
+      "name_en": "Via Nazionale",
+      "name_he": "ויה נציונאלה",
+      "kind": "street",
+      "best_for_he": "קניות ורחוב ראשי",
+      "vibe_he": "שדרת קניות רחבה ותוססת המחברת את תחנת טרמיני אל לב העיר.",
+      "dwell_min": 40,
+      "approx_lat": 41.8985,
+      "approx_lng": 12.4930
+    },
+    {
+      "name_local": "Via del Boschetto",
+      "name_en": "Via del Boschetto",
+      "name_he": "ויה דל בוסקטו",
+      "kind": "street",
+      "best_for_he": "בוטיקים ובוהמה",
+      "vibe_he": "רחוב מקסים ברובע מונטי, בוטיקים עצמאיים, בתי קפה ואווירה שכונתית טרנדית.",
+      "dwell_min": 30,
+      "approx_lat": 41.8955,
+      "approx_lng": 12.4910
+    },
+    {
+      "name_local": "Via della Pace",
+      "name_en": "Via della Pace",
+      "name_he": "ויה דלה פאצ'ה",
+      "kind": "street",
+      "best_for_he": "בתי קפה וסמטאות",
+      "vibe_he": "סמטה רומנטית ומקושתת ליד פיאצה נאבונה, בתי קפה היסטוריים וכנסיית סנטה מריה.",
+      "dwell_min": 30,
+      "approx_lat": 41.8998,
+      "approx_lng": 12.4710
+    }
+  ]
+}

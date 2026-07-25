@@ -1,0 +1,94 @@
+{
+  "destination_id": 32,
+  "city": "Crete",
+  "streets": [
+    {
+      "name_local": "25ης Αυγούστου",
+      "name_en": "25th August Street",
+      "name_he": "רחוב 25 באוגוסט",
+      "kind": "street",
+      "best_for_he": "שדרה ראשית ורקליון",
+      "vibe_he": "השדרה המרכזית של ורקליון היורדת מהמזרקה הוונציאנית אל הנמל, מוקפת בנייני נאו-קלאסיקה, סוכנויות ובתי קפה.",
+      "dwell_min": 45,
+      "approx_lat": 35.3400,
+      "approx_lng": 25.1345
+    },
+    {
+      "name_local": "Δαιδάλου",
+      "name_en": "Daedalou Street",
+      "name_he": "רחוב דדאלוס",
+      "kind": "street",
+      "best_for_he": "רחוב הולכי רגל",
+      "vibe_he": "רחוב מרוצף להולכי רגל בלב ורקליון, מלא מסעדות, בוטיקים ושולחנות שמתפרשים על המדרכה.",
+      "dwell_min": 40,
+      "approx_lat": 35.3389,
+      "approx_lng": 25.1350
+    },
+    {
+      "name_local": "1866",
+      "name_en": "1866 Market Street",
+      "name_he": "רחוב השוק 1866",
+      "kind": "street",
+      "best_for_he": "רחוב שוק ססגוני",
+      "vibe_he": "סמטת השוק העממית של ורקליון עם דוכני תבלינים, גבינות, פירות וזיתים בין ריחות ואנשי מקום.",
+      "dwell_min": 35,
+      "approx_lat": 35.3381,
+      "approx_lng": 25.1338
+    },
+    {
+      "name_local": "Κοραή",
+      "name_en": "Korai Street",
+      "name_he": "רחוב קוראי",
+      "kind": "street",
+      "best_for_he": "סמטת בתי קפה",
+      "vibe_he": "סמטה תוססת בורקליון שהפכה למוקד בתי קפה, ברים ומסעדות אופנתיות עם קהל צעיר.",
+      "dwell_min": 35,
+      "approx_lat": 35.3392,
+      "approx_lng": 25.1330
+    },
+    {
+      "name_local": "Ακτή Ενωσεως",
+      "name_en": "Chania Old Harbour Front",
+      "name_he": "טיילת הנמל הוונציאני חאניה",
+      "kind": "street",
+      "best_for_he": "טיילת נמל ונציאני",
+      "vibe_he": "טיילת הנמל הוונציאני המפורסמת של חאניה עם המגדלור, טברנות דגים ובתים צבעוניים המשתקפים במים.",
+      "dwell_min": 55,
+      "approx_lat": 35.5175,
+      "approx_lng": 24.0190
+    },
+    {
+      "name_local": "Χάληδων",
+      "name_en": "Chalidon Street",
+      "name_he": "רחוב חאלידון",
+      "kind": "street",
+      "best_for_he": "רחוב ראשי עתיק",
+      "vibe_he": "העורק המרכזי של העיר העתיקה בחאניה המוביל אל הנמל, מלא חנויות עור, תכשיטים ומזכרות.",
+      "dwell_min": 40,
+      "approx_lat": 35.5155,
+      "approx_lng": 24.0185
+    },
+    {
+      "name_local": "Σκρύδλωφ",
+      "name_en": "Skridlof (Leather Street)",
+      "name_he": "רחוב סקרידלוף",
+      "kind": "street",
+      "best_for_he": "סמטת סנדלרים",
+      "vibe_he": "סמטת העור ההיסטורית של חאניה עם סדנאות סנדלרים וריח עבודת יד מסורתית.",
+      "dwell_min": 30,
+      "approx_lat": 35.5152,
+      "approx_lng": 24.0188
+    },
+    {
+      "name_local": "Ζαμπελίου",
+      "name_en": "Zambeliou Street",
+      "name_he": "רחוב זמבליו",
+      "kind": "street",
+      "best_for_he": "סמטת עיר עתיקה",
+      "vibe_he": "סמטה ונציאנית צרה ואטמוספרית בחאניה, עם בתי בוגר ישנים, מסעדות אינטימיות ובתי מלון בוטיק.",
+      "dwell_min": 35,
+      "approx_lat": 35.5163,
+      "approx_lng": 24.0180
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+{
+  "destination_id": 30,
+  "city": "Porto",
+  "streets": [
+    {
+      "name_local": "Rua de Santa Catarina",
+      "name_en": "Santa Catarina Street",
+      "name_he": "רחוב סנטה קטרינה",
+      "kind": "street",
+      "best_for_he": "רחוב הקניות הראשי",
+      "vibe_he": "רחוב הקניות המרכזי להולכי רגל של פורטו, מלא חנויות ובית הקפה ההיסטורי מז'סטיק.",
+      "dwell_min": 40,
+      "approx_lat": 41.1478,
+      "approx_lng": -8.6060
+    },
+    {
+      "name_local": "Rua das Flores",
+      "name_en": "Flores Street",
+      "name_he": "רחוב הפרחים",
+      "kind": "street",
+      "best_for_he": "רחוב אטמוספרי",
+      "vibe_he": "רחוב מרוצף וקסום עם חזיתות אזולז'ו, חנויות בוטיק, בתי קפה ובניין הכנסייה דה מיזריקורדיה.",
+      "dwell_min": 35,
+      "approx_lat": 41.1435,
+      "approx_lng": -8.6115
+    },
+    {
+      "name_local": "Cais da Ribeira",
+      "name_en": "Ribeira Quay",
+      "name_he": "טיילת הריביירה",
+      "kind": "canal",
+      "best_for_he": "טיילת הנהר",
+      "vibe_he": "טיילת ססגונית לאורך נהר הדואורו ברובע ריביירה, מסעדות, בתים צבעוניים ונוף לגשר דום לואיש.",
+      "dwell_min": 40,
+      "approx_lat": 41.1405,
+      "approx_lng": -8.6110
+    },
+    {
+      "name_local": "Rua de Miguel Bombarda",
+      "name_en": "Miguel Bombarda Street",
+      "name_he": "רחוב מיגל בומברדה",
+      "kind": "street",
+      "best_for_he": "רובע הגלריות",
+      "vibe_he": "מרכז האמנות של פורטו, מלא גלריות עכשוויות, חנויות עיצוב וקפה אלטרנטיבי.",
+      "dwell_min": 35,
+      "approx_lat": 41.1517,
+      "approx_lng": -8.6165
+    },
+    {
+      "name_local": "Rua das Carmelitas",
+      "name_en": "Carmelitas Street",
+      "name_he": "רחוב קרמליטאס",
+      "kind": "street",
+      "best_for_he": "רחוב חנות הספרים",
+      "vibe_he": "רחוב קצר ומפורסם שבו חנות הספרים לֶלוֹ המרהיבה, מלא תיירים והמון קסם.",
+      "dwell_min": 30,
+      "approx_lat": 41.1467,
+      "approx_lng": -8.6148
+    },
+    {
+      "name_local": "Rua de Cedofeita",
+      "name_en": "Cedofeita Street",
+      "name_he": "רחוב סדופייטה",
+      "kind": "street",
+      "best_for_he": "רחוב עצמאי וטרנדי",
+      "vibe_he": "רחוב הולכי רגל אופנתי עם חנויות עצמאיות, מותגים מקומיים ובתי קפה צעירים.",
+      "dwell_min": 35,
+      "approx_lat": 41.1512,
+      "approx_lng": -8.6135
+    },
+    {
+      "name_local": "Rua de Cândido dos Reis",
+      "name_en": "Cândido dos Reis Street",
+      "name_he": "רחוב קנדידו דוש רייש",
+      "kind": "street",
+      "best_for_he": "חיי הלילה",
+      "vibe_he": "לב חיי הלילה של פורטו סביב הגאלריאס, רחוב מלא ברים שמתעורר בלילה.",
+      "dwell_min": 30,
+      "approx_lat": 41.1470,
+      "approx_lng": -8.6130
+    },
+    {
+      "name_local": "Rua de Passos Manuel",
+      "name_en": "Passos Manuel Street",
+      "name_he": "רחוב פאסוש מנואל",
+      "kind": "street",
+      "best_for_he": "רחוב היסטורי",
+      "vibe_he": "רחוב מרכזי עם קולנוע ותאטרון היסטוריים, בתי קפה ואדריכלות מתחילת המאה ה-20.",
+      "dwell_min": 30,
+      "approx_lat": 41.1470,
+      "approx_lng": -8.6070
+    },
+    {
+      "name_local": "Rua de Mouzinho da Silveira",
+      "name_en": "Mouzinho da Silveira Street",
+      "name_he": "רחוב מוזיניו דה סילביירה",
+      "kind": "street",
+      "best_for_he": "רחוב מחבר לריביירה",
+      "vibe_he": "רחוב רחב ומרשים היורד מהמרכז אל תחנת סאו בנטו והריביירה, עם חזיתות היסטוריות.",
+      "dwell_min": 30,
+      "approx_lat": 41.1425,
+      "approx_lng": -8.6135
+    },
+    {
+      "name_local": "Rua de São Bento da Vitória",
+      "name_en": "São Bento da Vitória Street",
+      "name_he": "רחוב סאו בנטו דה ויטוריה",
+      "kind": "street",
+      "best_for_he": "סמטה אותנטית",
+      "vibe_he": "סמטה שקטה ואותנטית ברובע ויטוריה ההיסטורי, עם מנזר וכביסה תלויה בין הבתים.",
+      "dwell_min": 30,
+      "approx_lat": 41.1445,
+      "approx_lng": -8.6155
+    }
+  ]
+}

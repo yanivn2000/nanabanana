@@ -1,0 +1,94 @@
+{
+  "destination_id": 23,
+  "city": "Tbilisi",
+  "streets": [
+    {
+      "name_local": "რუსთაველის გამზირი",
+      "name_en": "Rustaveli Avenue",
+      "name_he": "שדרות רוסתאבלי",
+      "kind": "street",
+      "best_for_he": "שדרה ראשית",
+      "vibe_he": "השדרה המרכזית והמפוארת של טביליסי, מלאה מבני ממשל, תיאטראות, מוזיאונים ובתי קפה.",
+      "dwell_min": 45,
+      "approx_lat": 41.6975,
+      "approx_lng": 44.7975
+    },
+    {
+      "name_local": "დავით აღმაშენებლის გამზირი",
+      "name_en": "Davit Aghmashenebeli Avenue",
+      "name_he": "שדרות אגמאשנבלי",
+      "kind": "street",
+      "best_for_he": "שדרה משופצת",
+      "vibe_he": "שדרה היסטורית משוחזרת בגדה השמאלית עם חזיתות ניאו-קלאסיות, בתי קפה ומדרחוב.",
+      "dwell_min": 40,
+      "approx_lat": 41.7095,
+      "approx_lng": 44.7960
+    },
+    {
+      "name_local": "შარდენის ქუჩა",
+      "name_en": "Shardeni Street",
+      "name_he": "רחוב שארדני",
+      "kind": "street",
+      "best_for_he": "עיר עתיקה וברים",
+      "vibe_he": "סמטת אבן תוססת בעיר העתיקה, לב חיי הלילה עם ברים, מסעדות וגלריות אמנות.",
+      "dwell_min": 35,
+      "approx_lat": 41.6920,
+      "approx_lng": 44.8075
+    },
+    {
+      "name_local": "კოტე აფხაზის ქუჩა",
+      "name_en": "Kote Afkhazi Street",
+      "name_he": "רחוב קוטה אפחזי",
+      "kind": "street",
+      "best_for_he": "אווירת עיר עתיקה",
+      "vibe_he": "רחוב מפותל בלב טביליסי העתיקה, שופע חנויות מזכרות, בתי קפה ובתים היסטוריים.",
+      "dwell_min": 35,
+      "approx_lat": 41.6905,
+      "approx_lng": 44.8065
+    },
+    {
+      "name_local": "იერუსალიმის ქუჩა",
+      "name_en": "Ierusalimis Street",
+      "name_he": "רחוב ירושלים",
+      "kind": "street",
+      "best_for_he": "מרחצאות גופרית",
+      "vibe_he": "הרחוב הציורי של רובע אבנוטבני עם כיפות המרחצאות הגופריתיים והקניון סטפאנצמינדה.",
+      "dwell_min": 30,
+      "approx_lat": 41.6885,
+      "approx_lng": 44.8090
+    },
+    {
+      "name_local": "ლესელიძის ქუჩა",
+      "name_en": "Leselidze Street",
+      "name_he": "רחוב לסלידזה",
+      "kind": "street",
+      "best_for_he": "מסחר וססגוניות",
+      "vibe_he": "עורק מסחרי סואן בעיר העתיקה המחבר בין כנסיות, מסגד ובית כנסת ברוח רב-תרבותית.",
+      "dwell_min": 30,
+      "approx_lat": 41.6912,
+      "approx_lng": 44.8058
+    },
+    {
+      "name_local": "აღმაშენებლის აღმართი",
+      "name_en": "Aghmashenebeli Aghmarti",
+      "name_he": "מדרחוב אגמאשנבלי",
+      "kind": "street",
+      "best_for_he": "מדרחוב וקפה",
+      "vibe_he": "קטע המדרחוב הפינתי של שדרות אגמאשנבלי, מרוצף ומלא ישיבה חיצונית ובתי קפה.",
+      "dwell_min": 30,
+      "approx_lat": 41.7085,
+      "approx_lng": 44.7995
+    },
+    {
+      "name_local": "აბანოთუბანი",
+      "name_en": "Abanotubani",
+      "name_he": "אבנוטבני",
+      "kind": "cluster",
+      "best_for_he": "רובע המרחצאות",
+      "vibe_he": "הרובע העתיק של מרחצאות הגופרית עם כיפות הלבנים, מסעדות וקניון הנהר הקסום.",
+      "dwell_min": 40,
+      "approx_lat": 41.6878,
+      "approx_lng": 44.8095
+    }
+  ]
+}

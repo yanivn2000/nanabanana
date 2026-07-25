@@ -1,0 +1,72 @@
+{
+  "destination_id": 12,
+  "city": "Batumi",
+  "streets": [
+    {
+      "name_local": "ბათუმის ბულვარი",
+      "name_en": "Batumi Boulevard",
+      "name_he": "שדרת בטומי",
+      "kind": "street",
+      "best_for_he": "טיילת ים ארוכה",
+      "vibe_he": "טיילת הים המפורסמת של בטומי, קילומטרים של דקלים, מזרקות, פסלים ובתי קפה מול הים השחור.",
+      "dwell_min": 60,
+      "approx_lat": 41.6480,
+      "approx_lng": 41.6300
+    },
+    {
+      "name_local": "მემედ აბაშიძის გამზირი",
+      "name_en": "Memed Abashidze Avenue",
+      "name_he": "שדרת ממד אבאשידזה",
+      "kind": "street",
+      "best_for_he": "שדרה מרכזית",
+      "vibe_he": "שדרה מרכזית רחבה עם חנויות, מסעדות ובנייני מגורים אלגנטיים המובילה אל הטיילת.",
+      "dwell_min": 35,
+      "approx_lat": 41.6455,
+      "approx_lng": 41.6355
+    },
+    {
+      "name_local": "ჭავჭავაძის ქუჩა",
+      "name_en": "Chavchavadze Street",
+      "name_he": "רחוב צ'אווצ'אוואדזה",
+      "kind": "street",
+      "best_for_he": "רחוב קניות ראשי",
+      "vibe_he": "רחוב הקניות המרכזי של בטומי עם בוטיקים, בתי קפה ומותגים לאורך שדרה סואנת.",
+      "dwell_min": 40,
+      "approx_lat": 41.6430,
+      "approx_lng": 41.6360
+    },
+    {
+      "name_local": "ბათუმის პიაცა",
+      "name_en": "Batumi Piazza",
+      "name_he": "פיאצה בטומי",
+      "kind": "cluster",
+      "best_for_he": "כיכר איטלקית",
+      "vibe_he": "כיכר בסגנון איטלקי עם פסיפסים, מסעדות, מוזיקה חיה ואווירה תוססת בערב.",
+      "dwell_min": 40,
+      "approx_lat": 41.6497,
+      "approx_lng": 41.6383
+    },
+    {
+      "name_local": "მემედ აბაშიძის ქუჩა",
+      "name_en": "Old Town Batumi",
+      "name_he": "העיר העתיקה של בטומי",
+      "kind": "cluster",
+      "best_for_he": "סמטאות עיר עתיקה",
+      "vibe_he": "רובע הסמטאות המרוצפות סביב הפיאצה, מלא בתים היסטוריים, בתי קפה וגלריות.",
+      "dwell_min": 45,
+      "approx_lat": 41.6510,
+      "approx_lng": 41.6385
+    },
+    {
+      "name_local": "ზურაბ გორგილაძის ქუჩა",
+      "name_en": "Zurab Gorgiladze Street",
+      "name_he": "רחוב זוראב גורגילאדזה",
+      "kind": "street",
+      "best_for_he": "רחוב מקומי חי",
+      "vibe_he": "רחוב מקומי תוסס עם מסעדות, בתי קפה ואווירה יומיומית אותנטית של בטומי.",
+      "dwell_min": 30,
+      "approx_lat": 41.6420,
+      "approx_lng": 41.6335
+    }
+  ]
+}

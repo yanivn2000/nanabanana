@@ -1,0 +1,116 @@
+{
+  "destination_id": 9,
+  "city": "Berlin",
+  "streets": [
+    {
+      "name_local": "Kurfürstendamm",
+      "name_en": "Kurfürstendamm",
+      "name_he": "קורפירסטנדאם",
+      "kind": "street",
+      "best_for_he": "שדרת קניות",
+      "vibe_he": "השדרה המפוארת של מערב ברלין — מותגי יוקרה, חנויות כלבו וכנסיית הזיכרון בקצה.",
+      "dwell_min": 50,
+      "approx_lat": 52.5030,
+      "approx_lng": 13.3270
+    },
+    {
+      "name_local": "Unter den Linden",
+      "name_en": "Unter den Linden",
+      "name_he": "אונטר דן לינדן",
+      "kind": "street",
+      "best_for_he": "שדרה היסטורית",
+      "vibe_he": "השדרה ההיסטורית הגדולה של ברלין, משער ברנדנבורג אל האי המוזיאונים לצד עצי טיליה.",
+      "dwell_min": 50,
+      "approx_lat": 52.5170,
+      "approx_lng": 13.3900
+    },
+    {
+      "name_local": "Friedrichstraße",
+      "name_en": "Friedrichstraße",
+      "name_he": "פרידריכשטראסה",
+      "kind": "street",
+      "best_for_he": "רחוב קניות",
+      "vibe_he": "רחוב קניות אלגנטי עם גלריות לפאייט, בוטיקים ומעבר צ'ק פוינט צ'רלי ההיסטורי בקצה הדרומי.",
+      "dwell_min": 40,
+      "approx_lat": 52.5170,
+      "approx_lng": 13.3880
+    },
+    {
+      "name_local": "Kastanienallee",
+      "name_en": "Kastanienallee",
+      "name_he": "קסטניאנאלה",
+      "kind": "street",
+      "best_for_he": "רחוב אופנתי",
+      "vibe_he": "רחוב טרנדי בפרנצלאואר ברג עם חנויות וינטג', בתי קפה ואווירה בוהמית צעירה.",
+      "dwell_min": 35,
+      "approx_lat": 52.5385,
+      "approx_lng": 13.4050
+    },
+    {
+      "name_local": "Oranienstraße",
+      "name_en": "Oranienstraße",
+      "name_he": "אורניינשטראסה",
+      "kind": "street",
+      "best_for_he": "רובע קרויצברג",
+      "vibe_he": "לב קרויצברג הרב-תרבותי — ברים, גרפיטי, אוכל רחוב טורקי וחיי לילה סוערים.",
+      "dwell_min": 35,
+      "approx_lat": 52.5010,
+      "approx_lng": 13.4200
+    },
+    {
+      "name_local": "Simon-Dach-Straße",
+      "name_en": "Simon-Dach-Straße",
+      "name_he": "סימון-דאך-שטראסה",
+      "kind": "street",
+      "best_for_he": "רחוב ברים",
+      "vibe_he": "רחוב מסעדות וברים תוסס בפרידריכסהיין, מלא שולחנות בחוץ ואווירה צעירה.",
+      "dwell_min": 30,
+      "approx_lat": 52.5105,
+      "approx_lng": 13.4560
+    },
+    {
+      "name_local": "Bergmannstraße",
+      "name_en": "Bergmannstraße",
+      "name_he": "ברגמנשטראסה",
+      "kind": "street",
+      "best_for_he": "רחוב שכונתי",
+      "vibe_he": "רחוב ציורי בקרויצברג עם חנויות עתיקות, שוק אוכל ובתי קפה נעימים.",
+      "dwell_min": 35,
+      "approx_lat": 52.4885,
+      "approx_lng": 13.3960
+    },
+    {
+      "name_local": "Oberbaumbrücke",
+      "name_en": "Oberbaum Bridge",
+      "name_he": "גשר אוברבאום",
+      "kind": "canal",
+      "best_for_he": "גשר על השפרה",
+      "vibe_he": "גשר לבנים אדום ומקומר מעל נהר השפרה, מחבר בין קרויצברג לפרידריכסהיין ליד איסט סייד גלרי.",
+      "dwell_min": 30,
+      "approx_lat": 52.5018,
+      "approx_lng": 13.4460
+    },
+    {
+      "name_local": "Hackescher Markt",
+      "name_en": "Hackescher Markt",
+      "name_he": "האקשר מרקט",
+      "kind": "cluster",
+      "best_for_he": "רובע האקשה",
+      "vibe_he": "כיכר ורשת חצרות (Höfe) מעוצבות במיטה, מלאות גלריות, בוטיקים ומסעדות באווירת אמנות.",
+      "dwell_min": 35,
+      "approx_lat": 52.5225,
+      "approx_lng": 13.4025
+    },
+    {
+      "name_local": "Schlossstraße",
+      "name_en": "Schloßstraße",
+      "name_he": "שלוסשטראסה",
+      "kind": "street",
+      "best_for_he": "מדרחוב קניות",
+      "vibe_he": "מדרחוב קניות ראשי בשטגליץ עם מרכזי קניות, חנויות כלבו וזרם מקומיים תמידי.",
+      "dwell_min": 30,
+      "approx_lat": 52.4610,
+      "approx_lng": 13.3210
+    }
+  ]
+}

@@ -1,0 +1,138 @@
+{
+  "destination_id": 18,
+  "city": "Milan",
+  "streets": [
+    {
+      "name_local": "Via Monte Napoleone",
+      "name_en": "Via Monte Napoleone",
+      "name_he": "ויה מונטה נפוליאונה",
+      "kind": "street",
+      "best_for_he": "אופנה ויוקרה",
+      "vibe_he": "רחוב האופנה היוקרתי ביותר במילאנו, לב ריבוע הזהב עם מותגי העל האיטלקיים.",
+      "dwell_min": 40,
+      "approx_lat": 45.4685,
+      "approx_lng": 9.1950
+    },
+    {
+      "name_local": "Via della Spiga",
+      "name_en": "Via della Spiga",
+      "name_he": "ויה דלה ספיגה",
+      "kind": "street",
+      "best_for_he": "בוטיקים ואופנה",
+      "vibe_he": "סמטת הולכי רגל מרוצפת אבן בריבוע הזהב, עמוסת חלונות ראווה של מעצבים.",
+      "dwell_min": 35,
+      "approx_lat": 45.4690,
+      "approx_lng": 9.1965
+    },
+    {
+      "name_local": "Corso Vittorio Emanuele II",
+      "name_en": "Corso Vittorio Emanuele II",
+      "name_he": "קורסו ויטוריו אמנואלה השני",
+      "kind": "street",
+      "best_for_he": "שופינג מרכזי",
+      "vibe_he": "מדרחוב הקניות הראשי בין הדואומו לסן באבילה, מותגים פופולריים והמון אדם.",
+      "dwell_min": 40,
+      "approx_lat": 45.4650,
+      "approx_lng": 9.1930
+    },
+    {
+      "name_local": "Via Dante",
+      "name_en": "Via Dante",
+      "name_he": "ויה דנטה",
+      "kind": "street",
+      "best_for_he": "שדרת הולכי רגל",
+      "vibe_he": "שדרה רחבה ומרוצפת המחברת את הדואומו לטירת ספורצה, מוקפת בנייני ראווה ובתי קפה.",
+      "dwell_min": 35,
+      "approx_lat": 45.4660,
+      "approx_lng": 9.1855
+    },
+    {
+      "name_local": "Corso Buenos Aires",
+      "name_en": "Corso Buenos Aires",
+      "name_he": "קורסו בואנוס איירס",
+      "kind": "street",
+      "best_for_he": "שופינג עממי",
+      "vibe_he": "אחד מרחובות הקניות הארוכים והצפופים באירופה, מותגי רחוב לאורך קילומטר וחצי.",
+      "dwell_min": 40,
+      "approx_lat": 45.4790,
+      "approx_lng": 9.2110
+    },
+    {
+      "name_local": "Corso Como",
+      "name_en": "Corso Como",
+      "name_he": "קורסו קומו",
+      "kind": "street",
+      "best_for_he": "עיצוב וחיי לילה",
+      "vibe_he": "מדרחוב אופנתי עם קונספט־סטור מפורסם, בארים וברנצ' ליד שכונת פורטה נואובה המודרנית.",
+      "dwell_min": 35,
+      "approx_lat": 45.4820,
+      "approx_lng": 9.1870
+    },
+    {
+      "name_local": "Via Torino",
+      "name_en": "Via Torino",
+      "name_he": "ויה טורינו",
+      "kind": "street",
+      "best_for_he": "שופינג צעיר",
+      "vibe_he": "רחוב קניות שוקק היוצא מהדואומו דרומה, חנויות אופנה במחירים נוחים לצעירים.",
+      "dwell_min": 35,
+      "approx_lat": 45.4600,
+      "approx_lng": 9.1850
+    },
+    {
+      "name_local": "Via Brera",
+      "name_en": "Via Brera",
+      "name_he": "ויה בררה",
+      "kind": "street",
+      "best_for_he": "אמנות ואווירה בוהמית",
+      "vibe_he": "רחוב מרוצף ציורי ברובע האמנים בררה, גלריות, בתי קפה ופינאקוטקה מפורסמת.",
+      "dwell_min": 40,
+      "approx_lat": 45.4720,
+      "approx_lng": 9.1880
+    },
+    {
+      "name_local": "Corso di Porta Ticinese",
+      "name_en": "Corso di Porta Ticinese",
+      "name_he": "קורסו די פורטה טיצ'ינזה",
+      "kind": "street",
+      "best_for_he": "וינטג' וצעירים",
+      "vibe_he": "רחוב תוסס אל שער טיצ'ינזה ורובע הנאווילי, חנויות וינטג', מסעדות וכנסייה עתיקה.",
+      "dwell_min": 35,
+      "approx_lat": 45.4530,
+      "approx_lng": 9.1810
+    },
+    {
+      "name_local": "Galleria Vittorio Emanuele II",
+      "name_en": "Galleria Vittorio Emanuele II",
+      "name_he": "גלריה ויטוריו אמנואלה השני",
+      "kind": "cluster",
+      "best_for_he": "פסאז' מקורה מפואר",
+      "vibe_he": "הפסאז' המקורה בכיפת הזכוכית בין הדואומו לסקאלה, פסיפסים, בתי קפה ומותגי על היסטוריים.",
+      "dwell_min": 30,
+      "approx_lat": 45.4655,
+      "approx_lng": 9.1900
+    },
+    {
+      "name_local": "Corso Vercelli",
+      "name_en": "Corso Vercelli",
+      "name_he": "קורסו ורצ'לי",
+      "kind": "street",
+      "best_for_he": "שופינג שכונתי",
+      "vibe_he": "רחוב קניות אלגנטי במערב העיר, אהוב על המקומיים ורחוק מהצפיפות התיירותית.",
+      "dwell_min": 30,
+      "approx_lat": 45.4660,
+      "approx_lng": 9.1600
+    },
+    {
+      "name_local": "Alzaia Naviglio Grande",
+      "name_en": "Alzaia Naviglio Grande",
+      "name_he": "אלצאיה נאוויליו גראנדה",
+      "kind": "canal",
+      "best_for_he": "טיילת תעלה וחיי לילה",
+      "vibe_he": "טיילת לאורך התעלה ההיסטורית נאוויליו גראנדה, מלאה בברים, מסעדות ואפריטיבו בערב.",
+      "dwell_min": 45,
+      "approx_lat": 45.4520,
+      "approx_lng": 9.1720
+    }
+  ]
+}

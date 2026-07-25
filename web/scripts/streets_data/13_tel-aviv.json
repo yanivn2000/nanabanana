@@ -1,0 +1,116 @@
+{
+  "destination_id": 13,
+  "city": "Tel-Aviv",
+  "streets": [
+    {
+      "name_local": "רוטשילד",
+      "name_en": "Rothschild Boulevard",
+      "name_he": "שדרות רוטשילד",
+      "kind": "street",
+      "best_for_he": "שדרה ובאוהאוס",
+      "vibe_he": "השדרה הירוקה עם ביתני קפה, אדריכלות באוהאוס ואופניים לאורך רצועת ההליכה המרכזית.",
+      "dwell_min": 50,
+      "approx_lat": 32.0637,
+      "approx_lng": 34.7710
+    },
+    {
+      "name_local": "דיזנגוף",
+      "name_en": "Dizengoff Street",
+      "name_he": "רחוב דיזנגוף",
+      "kind": "street",
+      "best_for_he": "קניות וקפה",
+      "vibe_he": "רחוב תל-אביבי אייקוני עם בוטיקים, בתי קפה, כיכר דיזנגוף המזרקה והמזרקה המתחדשת.",
+      "dwell_min": 50,
+      "approx_lat": 32.0785,
+      "approx_lng": 34.7740
+    },
+    {
+      "name_local": "שינקין",
+      "name_en": "Sheinkin Street",
+      "name_he": "רחוב שינקין",
+      "kind": "street",
+      "best_for_he": "בוהמה ואופנה",
+      "vibe_he": "רחוב בוהמייני קלאסי עם מעצבים עצמאיים, בתי קפה קטנים ואווירה תל-אביבית מקורית.",
+      "dwell_min": 40,
+      "approx_lat": 32.0685,
+      "approx_lng": 34.7745
+    },
+    {
+      "name_local": "נחלת בנימין",
+      "name_en": "Nachalat Binyamin Street",
+      "name_he": "רחוב נחלת בנימין",
+      "kind": "street",
+      "best_for_he": "שוק אמנים",
+      "vibe_he": "מדרחוב עם שוק אמנים בימי שלישי ושישי, בניינים מעוטרים ובתי קפה בוהמייניים.",
+      "dwell_min": 40,
+      "approx_lat": 32.0655,
+      "approx_lng": 34.7695
+    },
+    {
+      "name_local": "טיילת תל אביב",
+      "name_en": "Tel Aviv Promenade",
+      "name_he": "טיילת תל אביב",
+      "kind": "street",
+      "best_for_he": "טיילת חוף ים",
+      "vibe_he": "טיילת החוף לאורך הים התיכון עם רוכבי אופניים, שקיעות, בתי קפה וחופי הרחצה.",
+      "dwell_min": 55,
+      "approx_lat": 32.0800,
+      "approx_lng": 34.7660
+    },
+    {
+      "name_local": "אבן גבירול",
+      "name_en": "Ibn Gabirol Street",
+      "name_he": "רחוב אבן גבירול",
+      "kind": "street",
+      "best_for_he": "רחוב עירוני חי",
+      "vibe_he": "עורק עירוני תוסס עם בתי קפה, מסעדות, כיכר רבין וחיי רחוב תל-אביביים אמיתיים.",
+      "dwell_min": 40,
+      "approx_lat": 32.0810,
+      "approx_lng": 34.7810
+    },
+    {
+      "name_local": "נמל תל אביב",
+      "name_en": "Tel Aviv Port",
+      "name_he": "נמל תל אביב",
+      "kind": "cluster",
+      "best_for_he": "נמל ובילוי ליד הים",
+      "vibe_he": "מתחם הנמל המשופץ עם דקים מעץ מול הים, מסעדות, שוק האוכל ובילוי משפחתי.",
+      "dwell_min": 50,
+      "approx_lat": 32.0975,
+      "approx_lng": 34.7720
+    },
+    {
+      "name_local": "נווה צדק",
+      "name_en": "Neve Tzedek",
+      "name_he": "שכונת נווה צדק",
+      "kind": "cluster",
+      "best_for_he": "סמטאות ציוריות",
+      "vibe_he": "השכונה העתיקה הראשונה עם סמטאות ציוריות, בתים משומרים, גלריות ובוטיקים בשדרות רוקח.",
+      "dwell_min": 45,
+      "approx_lat": 32.0620,
+      "approx_lng": 34.7660
+    },
+    {
+      "name_local": "כרם התימנים",
+      "name_en": "Kerem HaTeimanim",
+      "name_he": "שכונת כרם התימנים",
+      "kind": "cluster",
+      "best_for_he": "סמטאות אוכל",
+      "vibe_he": "רובע סמטאות צמוד לשוק הכרמל, מלא מסעדות תימניות, בארים ואווירה אותנטית.",
+      "dwell_min": 40,
+      "approx_lat": 32.0680,
+      "approx_lng": 34.7680
+    },
+    {
+      "name_local": "אלנבי",
+      "name_en": "Allenby Street",
+      "name_he": "רחוב אלנבי",
+      "kind": "street",
+      "best_for_he": "רחוב היסטורי סואן",
+      "vibe_he": "רחוב היסטורי שוקק המחבר בין הים לשוק הכרמל, עם חנויות ותיקות, בארים ולילה תוסס.",
+      "dwell_min": 40,
+      "approx_lat": 32.0685,
+      "approx_lng": 34.7710
+    }
+  ]
+}

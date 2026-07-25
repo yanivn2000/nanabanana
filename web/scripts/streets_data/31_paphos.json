@@ -1,0 +1,61 @@
+{
+  "destination_id": 31,
+  "city": "Paphos",
+  "streets": [
+    {
+      "name_local": "Λεωφόρος Αποστόλου Παύλου",
+      "name_en": "Apostolou Pavlou Avenue",
+      "name_he": "שדרות אפוסטולו פאבלו",
+      "kind": "street",
+      "best_for_he": "השדרה הראשית לנמל",
+      "vibe_he": "השדרה המרכזית שיורדת מהעיר העליונה אל נמל קאטו פאפוס, מלאה מסעדות, בתי קפה וחנויות.",
+      "dwell_min": 35,
+      "approx_lat": 34.7660,
+      "approx_lng": 32.4155
+    },
+    {
+      "name_local": "Λεωφόρος Ποσειδώνος",
+      "name_en": "Poseidonos Avenue",
+      "name_he": "שדרות פוסידונוס",
+      "kind": "street",
+      "best_for_he": "רצועת המלונות והחוף",
+      "vibe_he": "השדרה החופית לאורך מלונות קאטו פאפוס, עם טיילת, חופים ומסעדות לצד הים.",
+      "dwell_min": 35,
+      "approx_lat": 34.7595,
+      "approx_lng": 32.4300
+    },
+    {
+      "name_local": "Paphos Harbour",
+      "name_en": "Paphos Harbour Promenade",
+      "name_he": "טיילת נמל פאפוס",
+      "kind": "canal",
+      "best_for_he": "טיילת הנמל",
+      "vibe_he": "טיילת הנמל הציורית עם המצודה הימי-ביניימית, סירות דייגים, מסעדות דגים ונוף לים.",
+      "dwell_min": 40,
+      "approx_lat": 34.7538,
+      "approx_lng": 32.4085
+    },
+    {
+      "name_local": "Αγοράς",
+      "name_en": "Agoras Street",
+      "name_he": "רחוב אגורס",
+      "kind": "street",
+      "best_for_he": "שוק העיר העתיקה",
+      "vibe_he": "רחוב השוק ההיסטורי בעיר העליונה, סמוך לשוק המקורה, עם חנויות מסורתיות וקפה מקומי.",
+      "dwell_min": 30,
+      "approx_lat": 34.7745,
+      "approx_lng": 32.4235
+    },
+    {
+      "name_local": "Μακαρίου Γ΄",
+      "name_en": "Makariou III Avenue",
+      "name_he": "שדרות מקריוס השלישי",
+      "kind": "street",
+      "best_for_he": "לב העיר העליונה",
+      "vibe_he": "השדרה הראשית של פאפוס העליונה (קטימה), מרכז החיים העירוני עם חנויות, בנקים ובתי קפה.",
+      "dwell_min": 30,
+      "approx_lat": 34.7720,
+      "approx_lng": 32.4265
+    }
+  ]
+}

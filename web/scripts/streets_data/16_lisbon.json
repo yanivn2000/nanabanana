@@ -1,0 +1,138 @@
+{
+  "destination_id": 16,
+  "city": "Lisbon",
+  "streets": [
+    {
+      "name_local": "Rua Augusta",
+      "name_en": "Rua Augusta",
+      "name_he": "רואה אאוגושטה",
+      "kind": "street",
+      "best_for_he": "רחוב הולכי רגל ראשי",
+      "vibe_he": "השדרה הראשית של הבאישה, מרוצפת פסיפס ומובילה בקשת הניצחון אל נהר הטז'ו.",
+      "dwell_min": 45,
+      "approx_lat": 38.7100,
+      "approx_lng": -9.1370
+    },
+    {
+      "name_local": "Rua Garrett",
+      "name_en": "Rua Garrett",
+      "name_he": "רואה גארט",
+      "kind": "street",
+      "best_for_he": "שופינג ובתי קפה",
+      "vibe_he": "הרחוב האלגנטי של שכונת שיאדו עם חנויות ותיקות ובית הקפה ההיסטורי א ברזיליירה.",
+      "dwell_min": 40,
+      "approx_lat": 38.7107,
+      "approx_lng": -9.1410
+    },
+    {
+      "name_local": "Avenida da Liberdade",
+      "name_en": "Avenida da Liberdade",
+      "name_he": "אווניידה דה ליברדאדה",
+      "kind": "street",
+      "best_for_he": "שדרה יוקרתית",
+      "vibe_he": "שדרה רחבה מוצלת עצים עם מותגי יוקרה, מזרקות ומדרכות פסיפס בסגנון פריזאי.",
+      "dwell_min": 45,
+      "approx_lat": 38.7188,
+      "approx_lng": -9.1450
+    },
+    {
+      "name_local": "Rua do Carmo",
+      "name_en": "Rua do Carmo",
+      "name_he": "רואה דו קארמו",
+      "kind": "street",
+      "best_for_he": "שופינג ומעלית סנטה ז'וסטה",
+      "vibe_he": "רחוב קניות תוסס המחבר את הבאישה לשיאדו לצד מעלית סנטה ז'וסטה הברזלית.",
+      "dwell_min": 35,
+      "approx_lat": 38.7112,
+      "approx_lng": -9.1395
+    },
+    {
+      "name_local": "Rua da Prata",
+      "name_en": "Rua da Prata",
+      "name_he": "רואה דה פראטה",
+      "kind": "street",
+      "best_for_he": "רחוב מסחרי היסטורי",
+      "vibe_he": "אחד הרחובות הישרים של הבאישה הפומבלינית, עם חזיתות אחידות וחנויות ותיקות.",
+      "dwell_min": 30,
+      "approx_lat": 38.7095,
+      "approx_lng": -9.1378
+    },
+    {
+      "name_local": "Rua Áurea",
+      "name_en": "Rua Áurea",
+      "name_he": "רואה אאורה",
+      "kind": "street",
+      "best_for_he": "רחוב הזהב",
+      "vibe_he": "רחוב הזהב ההיסטורי של הבאישה, שבו שכנו הצורפים ומוכרי הזהב של ליסבון.",
+      "dwell_min": 30,
+      "approx_lat": 38.7098,
+      "approx_lng": -9.1385
+    },
+    {
+      "name_local": "Rua Nova do Carvalho",
+      "name_en": "Rua Nova do Carvalho",
+      "name_he": "רואה נובה דו קרוואליו",
+      "kind": "street",
+      "best_for_he": "הרחוב הוורוד",
+      "vibe_he": "הרחוב הוורוד המפורסם של קאיש דו סודרה, בר על בר ומרצפת צבועה ורוד לחיי הלילה.",
+      "dwell_min": 35,
+      "approx_lat": 38.7075,
+      "approx_lng": -9.1442
+    },
+    {
+      "name_local": "Rua das Portas de Santo Antão",
+      "name_en": "Rua das Portas de Santo Antão",
+      "name_he": "רואה דאש פורטאש דה סנטו אנטאו",
+      "kind": "street",
+      "best_for_he": "מסעדות ואוכל",
+      "vibe_he": "סמטת הולכי רגל צפופה במסעדות דגים ושולחנות רחוב, ליד תיאטרון ובית הקזה דו אלנטז'ו.",
+      "dwell_min": 35,
+      "approx_lat": 38.7160,
+      "approx_lng": -9.1398
+    },
+    {
+      "name_local": "Rua da Bica de Duarte Belo",
+      "name_en": "Rua da Bica de Duarte Belo",
+      "name_he": "רואה דה ביקה דה דוארטה בלו",
+      "kind": "street",
+      "best_for_he": "רחוב הפוניקולר האייקוני",
+      "vibe_he": "הרחוב התלול והמצולם ביותר בליסבון, שבו מטפס הפוניקולר הצהוב של ביקה בין הבתים.",
+      "dwell_min": 30,
+      "approx_lat": 38.7098,
+      "approx_lng": -9.1452
+    },
+    {
+      "name_local": "Rua de São Bento",
+      "name_en": "Rua de São Bento",
+      "name_he": "רואה דה סאו בנטו",
+      "kind": "street",
+      "best_for_he": "עתיקות ועיצוב",
+      "vibe_he": "רחוב חנויות העתיקות והרהיטים של ליסבון, מתחת לארמון הפרלמנט.",
+      "dwell_min": 30,
+      "approx_lat": 38.7128,
+      "approx_lng": -9.1530
+    },
+    {
+      "name_local": "Rua da Conceição",
+      "name_en": "Rua da Conceição",
+      "name_he": "רואה דה קונסייסאו",
+      "kind": "street",
+      "best_for_he": "רחוב חוצה בבאישה",
+      "vibe_he": "רחוב רוחב תוסס בבאישה עם חנויות בדים וכפתורים ותיקות והחשמלית 28 חולפת בו.",
+      "dwell_min": 30,
+      "approx_lat": 38.7095,
+      "approx_lng": -9.1375
+    },
+    {
+      "name_local": "Calçada do Carmo",
+      "name_en": "Calçada do Carmo",
+      "name_he": "קלסאדה דו קארמו",
+      "kind": "street",
+      "best_for_he": "עלייה ציורית לחורבות",
+      "vibe_he": "מדרון מרוצף מתחנת רוסיו אל מנזר הכרמל, פינה שקטה וציורית מעל ההמולה.",
+      "dwell_min": 30,
+      "approx_lat": 38.7128,
+      "approx_lng": -9.1400
+    }
+  ]
+}

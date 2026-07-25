@@ -1,0 +1,116 @@
+{
+  "destination_id": 27,
+  "city": "Bucharest",
+  "streets": [
+    {
+      "name_local": "Calea Victoriei",
+      "name_en": "Victory Avenue",
+      "name_he": "קאלאה ויקטוריאי",
+      "kind": "street",
+      "best_for_he": "שדרה היסטורית",
+      "vibe_he": "השדרה המפוארת והמפורסמת של בוקרשט, לאורכה ארמונות, מוזיאונים ומלונות יוקרה.",
+      "dwell_min": 55,
+      "approx_lat": 44.4400,
+      "approx_lng": 26.0965
+    },
+    {
+      "name_local": "Strada Lipscani",
+      "name_en": "Lipscani Street",
+      "name_he": "סטרדה ליפסקאני",
+      "kind": "street",
+      "best_for_he": "עיר עתיקה",
+      "vibe_he": "לב העיר העתיקה להולכי רגל, עמוס פאבים, מסעדות וחיי לילה בבניינים היסטוריים.",
+      "dwell_min": 45,
+      "approx_lat": 44.4318,
+      "approx_lng": 26.1010
+    },
+    {
+      "name_local": "Strada Stavropoleos",
+      "name_en": "Stavropoleos Street",
+      "name_he": "סטרדה סטברופולאוס",
+      "kind": "street",
+      "best_for_he": "סמטה ציורית",
+      "vibe_he": "סמטה קצרה ומקסימה בעיר העתיקה עם מנזר סטברופולאוס ומסעדת קארו בערכה.",
+      "dwell_min": 30,
+      "approx_lat": 44.4322,
+      "approx_lng": 26.0985
+    },
+    {
+      "name_local": "Strada Franceză",
+      "name_en": "Franceză Street",
+      "name_he": "סטרדה פרנצ'זה",
+      "kind": "street",
+      "best_for_he": "רחוב מרוצף",
+      "vibe_he": "אחד הרחובות העתיקים של בוקרשט, מרוצף אבן ומלא ברסטרים ובתי קפה.",
+      "dwell_min": 35,
+      "approx_lat": 44.4308,
+      "approx_lng": 26.1015
+    },
+    {
+      "name_local": "Strada Smârdan",
+      "name_en": "Smârdan Street",
+      "name_he": "סטרדה סמרדן",
+      "kind": "street",
+      "best_for_he": "רחוב בילויים",
+      "vibe_he": "רחוב הולכי רגל תוסס בעיר העתיקה עם בארים, טראסות וארכיטקטורה מהמאה ה-19.",
+      "dwell_min": 30,
+      "approx_lat": 44.4325,
+      "approx_lng": 26.0998
+    },
+    {
+      "name_local": "Bulevardul General Gheorghe Magheru",
+      "name_en": "Gheorghe Magheru Boulevard",
+      "name_he": "בולברד מאגרו",
+      "kind": "street",
+      "best_for_he": "שדרת קניות",
+      "vibe_he": "שדרה מודרנית ורחבה במרכז העיר עם חנויות, בתי קולנוע ומבנים מודרניסטיים.",
+      "dwell_min": 35,
+      "approx_lat": 44.4415,
+      "approx_lng": 26.1000
+    },
+    {
+      "name_local": "Șoseaua Kiseleff",
+      "name_en": "Kiseleff Avenue",
+      "name_he": "שוסאווה קיסלף",
+      "kind": "street",
+      "best_for_he": "שדרה ירוקה",
+      "vibe_he": "שדרה מרוצפת עצים בסגנון פריזאי המובילה לשער הניצחון ולגני הריסאה.",
+      "dwell_min": 40,
+      "approx_lat": 44.4600,
+      "approx_lng": 26.0830
+    },
+    {
+      "name_local": "Bulevardul Unirii",
+      "name_en": "Unirii Boulevard",
+      "name_he": "בולברד אונירי",
+      "kind": "street",
+      "best_for_he": "שדרה מונומנטלית",
+      "vibe_he": "שדרה ענקית עם מזרקות המובילה אל ארמון הפרלמנט הכביר מתקופת צ'אושסקו.",
+      "dwell_min": 45,
+      "approx_lat": 44.4270,
+      "approx_lng": 26.1080
+    },
+    {
+      "name_local": "Strada Covaci",
+      "name_en": "Covaci Street",
+      "name_he": "סטרדה קובאצ'י",
+      "kind": "street",
+      "best_for_he": "רחוב אוכל",
+      "vibe_he": "סמטת אוכל בעיר העתיקה עם טברנות מסורתיות ומסעדת קרו הידועה למיצ'י.",
+      "dwell_min": 30,
+      "approx_lat": 44.4315,
+      "approx_lng": 26.1020
+    },
+    {
+      "name_local": "Calea Dorobanți",
+      "name_en": "Dorobanți Avenue",
+      "name_he": "קאלאה דורובאנץ'",
+      "kind": "street",
+      "best_for_he": "רובע יוקרה",
+      "vibe_he": "שדרה אופנתית בצפון העיר עם בוטיקים, מסעדות שף ובתי קפה לקהל מקומי.",
+      "dwell_min": 35,
+      "approx_lat": 44.4560,
+      "approx_lng": 26.0955
+    }
+  ]
+}

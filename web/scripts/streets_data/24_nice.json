@@ -1,0 +1,105 @@
+{
+  "destination_id": 24,
+  "city": "Nice",
+  "streets": [
+    {
+      "name_local": "Promenade des Anglais",
+      "name_en": "Promenade des Anglais",
+      "name_he": "פרומנד דז אנגלה",
+      "kind": "street",
+      "best_for_he": "טיילת ים",
+      "vibe_he": "הטיילת האגדית של ניס לאורך המפרץ התכול, עם ספסלים כחולים ורוכבי אופניים.",
+      "dwell_min": 55,
+      "approx_lat": 43.6945,
+      "approx_lng": 7.2620
+    },
+    {
+      "name_local": "Quai des États-Unis",
+      "name_en": "Quai des États-Unis",
+      "name_he": "קה דז אטא-זוני",
+      "kind": "street",
+      "best_for_he": "טיילת חוף",
+      "vibe_he": "המשך מזרחי של הטיילת לאורך החוף, מתחת לגבעת הטירה עם גלריות ומסעדות דגים.",
+      "dwell_min": 40,
+      "approx_lat": 43.6947,
+      "approx_lng": 7.2760
+    },
+    {
+      "name_local": "Cours Saleya",
+      "name_en": "Cours Saleya",
+      "name_he": "קור סאלייה",
+      "kind": "street",
+      "best_for_he": "שוק פרחים",
+      "vibe_he": "רחבת השוק הצבעונית של העיר העתיקה עם דוכני פרחים, ירקות ובתי קפה.",
+      "dwell_min": 45,
+      "approx_lat": 43.6955,
+      "approx_lng": 7.2745
+    },
+    {
+      "name_local": "Rue Masséna",
+      "name_en": "Rue Masséna",
+      "name_he": "רו מאסנה",
+      "kind": "street",
+      "best_for_he": "רחוב הולכי רגל",
+      "vibe_he": "רחוב קניות מרוצף להולכי רגל בלב העיר, מלא חנויות, גלידריות ובתי קפה.",
+      "dwell_min": 40,
+      "approx_lat": 43.6962,
+      "approx_lng": 7.2680
+    },
+    {
+      "name_local": "Rue de France",
+      "name_en": "Rue de France",
+      "name_he": "רו דה פראנס",
+      "kind": "street",
+      "best_for_he": "רחוב קניות",
+      "vibe_he": "רחוב הולכי רגל תוסס המקביל לטיילת, עם חנויות, מסעדות ובּיסטרו מקומיים.",
+      "dwell_min": 35,
+      "approx_lat": 43.6955,
+      "approx_lng": 7.2620
+    },
+    {
+      "name_local": "Avenue Jean Médecin",
+      "name_en": "Avenue Jean Médecin",
+      "name_he": "אבניו ז'אן מדסן",
+      "kind": "street",
+      "best_for_he": "שדרת קניות",
+      "vibe_he": "השדרה הראשית לקניות של ניס עם רשתות אופנה, קניון וקו הטרמוויי.",
+      "dwell_min": 40,
+      "approx_lat": 43.7015,
+      "approx_lng": 7.2680
+    },
+    {
+      "name_local": "Rue Droite",
+      "name_en": "Rue Droite",
+      "name_he": "רו דרואט",
+      "kind": "street",
+      "best_for_he": "סמטת עיר עתיקה",
+      "vibe_he": "סמטה צרה ואותנטית בלב הוייה ניס עם ארמונות ברוק, סדנאות ומעדניות.",
+      "dwell_min": 35,
+      "approx_lat": 43.6970,
+      "approx_lng": 7.2760
+    },
+    {
+      "name_local": "Rue Pairolière",
+      "name_en": "Rue Pairolière",
+      "name_he": "רו פּיירוֹלייר",
+      "kind": "street",
+      "best_for_he": "רחוב אוכל",
+      "vibe_he": "רחוב עממי בשולי העיר העתיקה עם מעדניות איטלקיות, גבינות ואוכל רחוב.",
+      "dwell_min": 30,
+      "approx_lat": 43.6982,
+      "approx_lng": 7.2775
+    },
+    {
+      "name_local": "Rue Saint-François-de-Paule",
+      "name_en": "Rue Saint-François-de-Paule",
+      "name_he": "רו סן-פרנסואה-דה-פּול",
+      "kind": "street",
+      "best_for_he": "רחוב היסטורי",
+      "vibe_he": "רחוב קצר ומעודן ליד האופרה עם חנות הזיתים אליזיאר-בּלאן והממתקים המקומיים.",
+      "dwell_min": 30,
+      "approx_lat": 43.6952,
+      "approx_lng": 7.2730
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "destination_id": 2,
+  "city": "Salzburg",
+  "streets": [
+    {
+      "name_local": "Getreidegasse",
+      "name_en": "Getreidegasse",
+      "name_he": "גטריידגאסה",
+      "kind": "street",
+      "best_for_he": "קניות וסמטאות",
+      "vibe_he": "הרחוב המפורסם של העיר העתיקה עם שלטי ברזל מחושלים ובית הולדתו של מוצרט.",
+      "dwell_min": 45,
+      "approx_lat": 47.8000,
+      "approx_lng": 13.0435
+    },
+    {
+      "name_local": "Linzer Gasse",
+      "name_en": "Linzer Gasse",
+      "name_he": "לינצר גאסה",
+      "kind": "street",
+      "best_for_he": "קניות ובתי קפה",
+      "vibe_he": "רחוב מדרחוב אווירתי בגדה הימנית, חנויות קטנות ובתי קפה הרחק מהצפיפות.",
+      "dwell_min": 35,
+      "approx_lat": 47.8018,
+      "approx_lng": 13.0480
+    },
+    {
+      "name_local": "Judengasse",
+      "name_en": "Judengasse",
+      "name_he": "יודנגאסה",
+      "kind": "street",
+      "best_for_he": "סמטאות עתיקות",
+      "vibe_he": "סמטה עתיקה וצרה של הרובע היהודי לשעבר, המשך אורגני של גטריידגאסה.",
+      "dwell_min": 30,
+      "approx_lat": 47.7994,
+      "approx_lng": 13.0460
+    },
+    {
+      "name_local": "Steingasse",
+      "name_en": "Steingasse",
+      "name_he": "שטיינגאסה",
+      "kind": "street",
+      "best_for_he": "סמטאות ובארים",
+      "vibe_he": "סמטה מימי הביניים צמודה לצוק, שקטה ביום ומלאת ברים אינטימיים בלילה.",
+      "dwell_min": 30,
+      "approx_lat": 47.8028,
+      "approx_lng": 13.0498
+    },
+    {
+      "name_local": "Universitätsplatz",
+      "name_en": "Universitätsplatz",
+      "name_he": "כיכר האוניברסיטה",
+      "kind": "street",
+      "best_for_he": "שוק ואוכל",
+      "vibe_he": "כיכר רחבה שבה נערך שוק היריד היומי עם דוכני מזון מקומיים לצד כנסיית הקולג'.",
+      "dwell_min": 30,
+      "approx_lat": 47.7995,
+      "approx_lng": 13.0448
+    },
+    {
+      "name_local": "Griesgasse",
+      "name_en": "Griesgasse",
+      "name_he": "גריסגאסה",
+      "kind": "street",
+      "best_for_he": "סמטאות ומסעדות",
+      "vibe_he": "רחוב אווירתי בעיר העתיקה סמוך לנהר, סמטאות מקושתות ומסעדות מסורתיות.",
+      "dwell_min": 30,
+      "approx_lat": 47.8000,
+      "approx_lng": 13.0418
+    },
+    {
+      "name_local": "Franz-Josef-Kai",
+      "name_en": "Franz-Josef-Kai",
+      "name_he": "טיילת נהר הזלצאך",
+      "kind": "street",
+      "best_for_he": "טיילת נהר",
+      "vibe_he": "טיילת לאורך נהר הזלצאך עם נוף לגדה העתיקה ולמצודה שעל ההר.",
+      "dwell_min": 35,
+      "approx_lat": 47.8020,
+      "approx_lng": 13.0430
+    },
+    {
+      "name_local": "Kaigasse",
+      "name_en": "Kaigasse",
+      "name_he": "קאיגאסה",
+      "kind": "street",
+      "best_for_he": "סמטאות שקטות",
+      "vibe_he": "רחוב אבן שקט בעיר העתיקה המוליך מכיכר מוצרט אל שער הטירה.",
+      "dwell_min": 30,
+      "approx_lat": 47.7975,
+      "approx_lng": 13.0475
+    }
+  ]
+}

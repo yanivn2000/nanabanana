@@ -1,0 +1,116 @@
+{
+  "destination_id": 29,
+  "city": "Krakow",
+  "streets": [
+    {
+      "name_local": "Floriańska",
+      "name_en": "Floriańska Street",
+      "name_he": "רחוב פלוריאנסקה",
+      "kind": "street",
+      "best_for_he": "רחוב מרכזי בעיר העתיקה",
+      "vibe_he": "הרחוב הראשי של קרקוב מהשער הישן אל כיכר השוק, מלא חנויות, מסעדות והמון תיירים.",
+      "dwell_min": 35,
+      "approx_lat": 50.0632,
+      "approx_lng": 19.9408
+    },
+    {
+      "name_local": "Grodzka",
+      "name_en": "Grodzka Street",
+      "name_he": "רחוב גרודזקה",
+      "kind": "street",
+      "best_for_he": "הדרך המלכותית",
+      "vibe_he": "רחוב אבן מלכותי המחבר את כיכר השוק אל גבעת ואוול, מלא כנסיות, ארמונות ובתי קפה.",
+      "dwell_min": 40,
+      "approx_lat": 50.0585,
+      "approx_lng": 19.9385
+    },
+    {
+      "name_local": "Ulica Szeroka",
+      "name_en": "Szeroka Street",
+      "name_he": "רחוב שרוקה",
+      "kind": "street",
+      "best_for_he": "לב הרובע היהודי",
+      "vibe_he": "הכיכר-רחוב הרחבה בלב קז'ימייז' היהודי, מוקפת בתי כנסת עתיקים, מסעדות ואווירה נוסטלגית.",
+      "dwell_min": 35,
+      "approx_lat": 50.0518,
+      "approx_lng": 19.9478
+    },
+    {
+      "name_local": "Rynek Główny",
+      "name_en": "Main Market Square",
+      "name_he": "כיכר השוק הראשית",
+      "kind": "cluster",
+      "best_for_he": "כיכר השוק הגדולה",
+      "vibe_he": "אחת הכיכרות הימי-ביניימיות הגדולות באירופה, עם אולם הבד, כרכרות ובתי קפה בכל פינה.",
+      "dwell_min": 45,
+      "approx_lat": 50.0616,
+      "approx_lng": 19.9373
+    },
+    {
+      "name_local": "Ulica Kanonicza",
+      "name_en": "Kanonicza Street",
+      "name_he": "רחוב קנוניצ'ה",
+      "kind": "street",
+      "best_for_he": "הרחוב היפה ביותר",
+      "vibe_he": "אחד הרחובות העתיקים והיפים בקרקוב, אבן מרוצפת ובתים רנסאנסיים סמוך לגבעת ואוול.",
+      "dwell_min": 30,
+      "approx_lat": 50.0568,
+      "approx_lng": 19.9378
+    },
+    {
+      "name_local": "Ulica Józefa",
+      "name_en": "Józefa Street",
+      "name_he": "רחוב יוזפה",
+      "kind": "street",
+      "best_for_he": "רחוב בוהמייני",
+      "vibe_he": "רחוב אמנותי ובוהמייני בקז'ימייז', מלא גלריות, בוטיקים עצמאיים ובתי קפה נסתרים בחצרות.",
+      "dwell_min": 30,
+      "approx_lat": 50.0502,
+      "approx_lng": 19.9455
+    },
+    {
+      "name_local": "Ulica Sławkowska",
+      "name_en": "Sławkowska Street",
+      "name_he": "רחוב סלבקובסקה",
+      "kind": "street",
+      "best_for_he": "רחוב שקט ואלגנטי",
+      "vibe_he": "רחוב אלגנטי ורגוע היוצא מכיכר השוק, עם בתי קפה היסטוריים ואדריכלות מרשימה.",
+      "dwell_min": 30,
+      "approx_lat": 50.0632,
+      "approx_lng": 19.9370
+    },
+    {
+      "name_local": "Ulica Szewska",
+      "name_en": "Szewska Street",
+      "name_he": "רחוב שבסקה",
+      "kind": "street",
+      "best_for_he": "רחוב חנויות ובילוי",
+      "vibe_he": "רחוב תוסס מכיכר השוק אל הפלאנטי, מלא חנויות, פאבים ומקומות בילוי.",
+      "dwell_min": 30,
+      "approx_lat": 50.0620,
+      "approx_lng": 19.9350
+    },
+    {
+      "name_local": "Ulica Mostowa",
+      "name_en": "Mostowa Street",
+      "name_he": "רחוב מוסטובה",
+      "kind": "street",
+      "best_for_he": "רחוב טרנדי",
+      "vibe_he": "רחוב מרוצף מקז'ימייז' אל הנהר, שדרג בשנים האחרונות עם מסעדות וברים אופנתיים.",
+      "dwell_min": 30,
+      "approx_lat": 50.0490,
+      "approx_lng": 19.9470
+    },
+    {
+      "name_local": "Ulica Retoryka",
+      "name_en": "Retoryka Street",
+      "name_he": "רחוב רטוריקה",
+      "kind": "street",
+      "best_for_he": "פנינה אדריכלית",
+      "vibe_he": "רחוב קסום עם בתים בסגנון סצסיון ואר-נובו, מהיפים ביותר מחוץ לעיר העתיקה.",
+      "dwell_min": 30,
+      "approx_lat": 50.0588,
+      "approx_lng": 19.9285
+    }
+  ]
+}

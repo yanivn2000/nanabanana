@@ -1,0 +1,116 @@
+{
+  "destination_id": 6,
+  "city": "Prague",
+  "streets": [
+    {
+      "name_local": "Karlův most",
+      "name_en": "Charles Bridge",
+      "name_he": "גשר קארל",
+      "kind": "street",
+      "best_for_he": "גשר היסטורי",
+      "vibe_he": "הגשר המפורסם ביותר בפראג — פסלים בארוקיים, אמני רחוב ונוף מרהיב לנהר ולטירה.",
+      "dwell_min": 40,
+      "approx_lat": 50.0865,
+      "approx_lng": 14.4114
+    },
+    {
+      "name_local": "Nerudova",
+      "name_en": "Nerudova Street",
+      "name_he": "נרודובה",
+      "kind": "street",
+      "best_for_he": "עלייה לטירה",
+      "vibe_he": "רחוב מרוצף אבן ותלול העולה לטירת פראג, מלא בתים בארוקיים עם סמלי בית עתיקים.",
+      "dwell_min": 30,
+      "approx_lat": 50.0885,
+      "approx_lng": 14.4020
+    },
+    {
+      "name_local": "Pařížská",
+      "name_en": "Pařížská Street",
+      "name_he": "פארז'סקה",
+      "kind": "street",
+      "best_for_he": "רחוב יוקרה",
+      "vibe_he": "השדרה היוקרתית של פראג — מותגי אופנה עילית, בניינים בסגנון ארט נובו ועצים לאורך הדרך.",
+      "dwell_min": 35,
+      "approx_lat": 50.0898,
+      "approx_lng": 14.4185
+    },
+    {
+      "name_local": "Na Příkopě",
+      "name_en": "Na Příkopě Street",
+      "name_he": "נה פרז'יקופה",
+      "kind": "street",
+      "best_for_he": "רחוב קניות",
+      "vibe_he": "רחוב קניות ראשי ותוסס המחבר בין הכיכר העתיקה לכיכר וונצסלאס.",
+      "dwell_min": 35,
+      "approx_lat": 50.0862,
+      "approx_lng": 14.4270
+    },
+    {
+      "name_local": "Václavské náměstí",
+      "name_en": "Wenceslas Square",
+      "name_he": "כיכר וונצסלאס",
+      "kind": "street",
+      "best_for_he": "שדרה מרכזית",
+      "vibe_he": "שדרה רחבה שהיא לב העיר החדשה — חנויות, מלונות והמוזיאון הלאומי בקצה העליון.",
+      "dwell_min": 40,
+      "approx_lat": 50.0810,
+      "approx_lng": 14.4280
+    },
+    {
+      "name_local": "Celetná",
+      "name_en": "Celetná Street",
+      "name_he": "צלטנה",
+      "kind": "street",
+      "best_for_he": "רחוב עתיק",
+      "vibe_he": "אחד הרחובות העתיקים בפראג, מוביל לכיכר העתיקה עם חזיתות פסטל וחנויות זכוכית בוהמית.",
+      "dwell_min": 30,
+      "approx_lat": 50.0872,
+      "approx_lng": 14.4245
+    },
+    {
+      "name_local": "Karlova",
+      "name_en": "Karlova Street",
+      "name_he": "קרלובה",
+      "kind": "street",
+      "best_for_he": "הדרך המלכותית",
+      "vibe_he": "סמטה עקלקלה ומרוצפת המחברת את הכיכר העתיקה לגשר קארל, הומה תיירים ומזכרות.",
+      "dwell_min": 30,
+      "approx_lat": 50.0858,
+      "approx_lng": 14.4165
+    },
+    {
+      "name_local": "Zlatá ulička",
+      "name_en": "Golden Lane",
+      "name_he": "הסמטה הזהובה",
+      "kind": "street",
+      "best_for_he": "סמטה ציורית",
+      "vibe_he": "סמטה זעירה של בתי צבע קטנטנים בתוך מתחם טירת פראג, שבה התגורר פעם קפקא.",
+      "dwell_min": 30,
+      "approx_lat": 50.0918,
+      "approx_lng": 14.4045
+    },
+    {
+      "name_local": "Kampa",
+      "name_en": "Kampa Island",
+      "name_he": "קמפה",
+      "kind": "canal",
+      "best_for_he": "אי על הנהר",
+      "vibe_he": "פינה שקטה ורומנטית על אי קטן ליד תעלת צ'רטובקה, עם טחנות מים וגלריות.",
+      "dwell_min": 30,
+      "approx_lat": 50.0855,
+      "approx_lng": 14.4085
+    },
+    {
+      "name_local": "Staroměstské náměstí",
+      "name_en": "Old Town Square",
+      "name_he": "כיכר העיר העתיקה",
+      "kind": "cluster",
+      "best_for_he": "כיכר מרכזית",
+      "vibe_he": "הכיכר האגדית של פראג — השעון האסטרונומי, כנסיית טין וחזיתות צבעוניות מכל התקופות.",
+      "dwell_min": 40,
+      "approx_lat": 50.0875,
+      "approx_lng": 14.4210
+    }
+  ]
+}
