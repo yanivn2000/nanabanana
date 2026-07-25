@@ -86,6 +86,46 @@ function kindOf(a: Attraction): StopKind {
   return KIND_FROM_CAT[a.category] ?? "culture";
 }
 
+// A long street (Prinsengracht is 3.3km) shouldn't be drawn or walked end-to-end
+// — you do a STRETCH of it. Take the ~STRETCH_M window of the polyline nearest
+// `near` (where you enter it from the previous stop), so the map isn't dominated
+// by one giant line and the walk reflects a realistic segment. Returns the trimmed
+// path; the caller resets ends + centroid from it.
+const STRETCH_M = 750;
+function metersBetween(p: LatLng, q: LatLng): number {
+  const R = 6371000, rad = (d: number) => (d * Math.PI) / 180;
+  const dLa = rad(q[0] - p[0]), dLo = rad(q[1] - p[1]);
+  const x = Math.sin(dLa / 2) ** 2 + Math.cos(rad(p[0])) * Math.cos(rad(q[0])) * Math.sin(dLo / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+function stretchAround(path: LatLng[], near: LatLng, maxM: number): LatLng[] {
+  let bi = 0, bd = Infinity;
+  for (let k = 0; k < path.length; k++) { const d = metersBetween(path[k], near); if (d < bd) { bd = d; bi = k; } }
+  let lo = bi, hi = bi, acc = 0;
+  while (acc < maxM && (lo > 0 || hi < path.length - 1)) {
+    const canLo = lo > 0, canHi = hi < path.length - 1;
+    const dLo = canLo ? metersBetween(path[lo - 1], path[lo]) : Infinity;
+    const dHi = canHi ? metersBetween(path[hi], path[hi + 1]) : Infinity;
+    if (dLo <= dHi) { acc += dLo; lo--; } else { acc += dHi; hi++; }
+  }
+  return path.slice(lo, hi + 1);
+}
+// Trim any long linear stop in an ordered day to a stretch near the previous stop.
+function trimLongStreets(picks: Attraction[]): Attraction[] {
+  return picks.map((a, i) => {
+    if (!a.path || a.path.length < 3) return a;
+    let len = 0;
+    for (let k = 1; k < a.path.length; k++) len += metersBetween(a.path[k - 1], a.path[k]);
+    if (len <= STRETCH_M) return a;
+    const prev = picks[i - 1];
+    const near: LatLng = prev && prev.lat != null ? [prev.lat, prev.lng as number] : [a.lat as number, a.lng as number];
+    const seg = stretchAround(a.path, near, STRETCH_M);
+    const clat = seg.reduce((s, p) => s + p[0], 0) / seg.length;
+    const clng = seg.reduce((s, p) => s + p[1], 0) / seg.length;
+    return { ...a, path: seg, ends: [seg[0], seg[seg.length - 1]], lat: clat, lng: clng };
+  });
+}
+
 export function buildHeuristicItinerary(
   city: string,
   country: string,
@@ -198,7 +238,7 @@ export function buildHeuristicItinerary(
     // sequence. A per-stop time-of-day reshuffle used to tear a cluster apart (a
     // sunset museum sent across the IJ to the day's end, away from its neighbour). The
     // orientation keeps every adjacency intact — proximity wins, timing is a nudge.
-    const picks = orientDay(orderPath(pickFinal), opts?.dayEnderLast !== false);
+    const picks = trimLongStreets(orientDay(orderPath(pickFinal), opts?.dayEnderLast !== false));
     const stops: Stop[] = [];
     // Sequential clock: arrival = running time, then add the stay + travel to the
     // next stop, so times always increase and reflect real durations. The lunch

@@ -348,18 +348,27 @@ export default function AttractionsMap({
       {/* a STREET stop is a line, not a point. Draw its polyline in the SAME colour
           as its numbered pin (so "which thick line is stop 4" is obvious), with a
           white casing under it so it stands out from the route legs. */}
-      {(ordered ? orderedPts : attractions).map((a, i) =>
-        a.path && a.path.length > 1 ? (
+      {(ordered ? orderedPts : attractions).map((a, i) => {
+        if (!a.path || a.path.length < 2) return null;
+        const hue = ordered ? stopHue(a, i) : "#0e6b5e";
+        const mid = a.path[Math.floor(a.path.length / 2)] as [number, number];
+        const label = ordered ? `${i + 1} · ${a.name_he || a.name_en}` : (a.name_he || a.name_en);
+        return (
           <Fragment key={"st" + a.id}>
             <Polyline positions={a.path as [number, number][]}
               pathOptions={{ color: "#fff", weight: 9, opacity: 0.9, lineCap: "round", lineJoin: "round" }} />
             <Polyline positions={a.path as [number, number][]}
-              pathOptions={{ color: ordered ? stopHue(a, i) : "#0e6b5e", weight: 5, opacity: 0.95, lineCap: "round", lineJoin: "round" }}>
-              <Tooltip permanent direction="center" className="street-label">{a.name_he || a.name_en}</Tooltip>
-            </Polyline>
+              pathOptions={{ color: hue, weight: 5, opacity: 0.95, lineCap: "round", lineJoin: "round" }} />
+            {/* label anchored to the street's true midpoint vertex, not the
+                bounding-box centre, so it sits on the line; tinted to the pin hue. */}
+            <CircleMarker center={mid} radius={0} pathOptions={{ opacity: 0, fillOpacity: 0 }}>
+              <Tooltip permanent direction="center" className="street-label" opacity={1}>
+                <span style={{ borderColor: hue as string, color: hue as string }}>{label}</span>
+              </Tooltip>
+            </CircleMarker>
           </Fragment>
-        ) : null
-      )}
+        );
+      })}
 
       {ordered
         ? orderedPts.map((a, i) => {

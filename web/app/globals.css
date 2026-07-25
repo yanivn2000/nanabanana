@@ -123,14 +123,21 @@ body {
 
 /* Street name labels on the trip map — a clean pill, no default tooltip chrome. */
 .leaflet-tooltip.street-label {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 1px 8px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text);
-  box-shadow: var(--shadow);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
   white-space: nowrap;
+}
+/* the pill lives on the inner span so its inline colour = the pin hue */
+.leaflet-tooltip.street-label span {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-size: 11.5px;
+  font-weight: 700;
+  box-shadow: var(--shadow);
 }
 .leaflet-tooltip.street-label::before { display: none; } /* hide the arrow */

@@ -153,11 +153,13 @@ function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set
       if (a) {
         s.id = a.id;
         s.image = a.image_url; s.website = a.website;
-        s.lat = a.lat; s.lng = a.lng;
+        // A builder-trimmed street carries its own (trimmed) path + centroid;
+        // don't clobber it with the full-street geometry from the pool.
+        if (!s.path) { s.lat = a.lat; s.lng = a.lng; }
         s.tagline = a.tagline_he; s.bestTime = a.best_time_he;
         s.dress = a.dress_he; s.cost = a.cost_level;
         s.ref = a.ref ?? refOf("attr", a.id);
-        if (a.path) s.path = a.path;
+        if (a.path && !s.path) s.path = a.path;
         if (anchorIds) s.anchor = anchorIds.has(a.id);
         scheduled?.add(a.id);
       }
