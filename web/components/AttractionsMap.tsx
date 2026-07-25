@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, Fragment } from "react";
-import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Popup, ScaleControl, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Popup, Tooltip, ScaleControl, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import type { CircleMarker as LeafletCircleMarker } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -354,7 +354,9 @@ export default function AttractionsMap({
             <Polyline positions={a.path as [number, number][]}
               pathOptions={{ color: "#fff", weight: 9, opacity: 0.9, lineCap: "round", lineJoin: "round" }} />
             <Polyline positions={a.path as [number, number][]}
-              pathOptions={{ color: ordered ? stopHue(a, i) : "#0e6b5e", weight: 5, opacity: 0.95, lineCap: "round", lineJoin: "round" }} />
+              pathOptions={{ color: ordered ? stopHue(a, i) : "#0e6b5e", weight: 5, opacity: 0.95, lineCap: "round", lineJoin: "round" }}>
+              <Tooltip permanent direction="center" className="street-label">{a.name_he || a.name_en}</Tooltip>
+            </Polyline>
           </Fragment>
         ) : null
       )}
