@@ -87,10 +87,12 @@ function kindOf(a: Attraction): StopKind {
 }
 
 // A long street (Prinsengracht is 3.3km) shouldn't be drawn or walked end-to-end
-// — you do a STRETCH of it. Take the ~STRETCH_M window of the polyline nearest
-// `near` (where you enter it from the previous stop), so the map isn't dominated
-// by one giant line and the walk reflects a realistic segment. Returns the trimmed
-// path; the caller resets ends + centroid from it.
+// — you do a STRETCH of it. Take the ~STRETCH_M window of the polyline nearest the
+// day's OTHER stops, so the map isn't dominated by one giant line and the walk
+// reflects a realistic segment. Returns the trimmed path; the caller resets ends +
+// centroid from it. Anchoring to the nearest other stop (not the ordered-previous
+// one) is order-independent, so trimming can run BEFORE ordering — the order then
+// reacts to where the segment really sits, not the full-street midpoint.
 const STRETCH_M = 750;
 function metersBetween(p: LatLng, q: LatLng): number {
   const R = 6371000, rad = (d: number) => (d * Math.PI) / 180;
@@ -110,15 +112,26 @@ function stretchAround(path: LatLng[], near: LatLng, maxM: number): LatLng[] {
   }
   return path.slice(lo, hi + 1);
 }
-// Trim any long linear stop in an ordered day to a stretch near the previous stop.
+// Trim any long linear stop to a stretch near the day's other stops.
 function trimLongStreets(picks: Attraction[]): Attraction[] {
   return picks.map((a, i) => {
     if (!a.path || a.path.length < 3) return a;
     let len = 0;
     for (let k = 1; k < a.path.length; k++) len += metersBetween(a.path[k - 1], a.path[k]);
     if (len <= STRETCH_M) return a;
-    const prev = picks[i - 1];
-    const near: LatLng = prev && prev.lat != null ? [prev.lat, prev.lng as number] : [a.lat as number, a.lng as number];
+    // Anchor = whichever OTHER chosen stop sits closest to any point on the street.
+    // Order-independent, so this runs before ordering; the stretch lands on the part
+    // of the street facing the rest of the day.
+    let near: LatLng = a.path[Math.floor(a.path.length / 2)];
+    let best = Infinity;
+    for (let j = 0; j < picks.length; j++) {
+      const o = picks[j];
+      if (j === i || o.lat == null || o.lng == null) continue;
+      const op: LatLng = [o.lat as number, o.lng as number];
+      let dmin = Infinity;
+      for (const p of a.path) { const d = metersBetween(op, p); if (d < dmin) dmin = d; }
+      if (dmin < best) { best = dmin; near = op; }
+    }
     const seg = stretchAround(a.path, near, STRETCH_M);
     const clat = seg.reduce((s, p) => s + p[0], 0) / seg.length;
     const clng = seg.reduce((s, p) => s + p[1], 0) / seg.length;
@@ -238,7 +251,10 @@ export function buildHeuristicItinerary(
     // sequence. A per-stop time-of-day reshuffle used to tear a cluster apart (a
     // sunset museum sent across the IJ to the day's end, away from its neighbour). The
     // orientation keeps every adjacency intact — proximity wins, timing is a nudge.
-    const picks = trimLongStreets(orientDay(orderPath(pickFinal), opts?.dayEnderLast !== false));
+    // Trim long streets to their stretch FIRST (anchored to the nearest other stop),
+    // so orderPath sees each street at the location it will actually be drawn — not
+    // its full-length midpoint, which slotted it in the wrong place in the sequence.
+    const picks = orientDay(orderPath(trimLongStreets(pickFinal)), opts?.dayEnderLast !== false);
     const stops: Stop[] = [];
     // Sequential clock: arrival = running time, then add the stay + travel to the
     // next stop, so times always increase and reflect real durations. The lunch
