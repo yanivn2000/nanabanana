@@ -133,6 +133,35 @@ export function buildHeuristicItinerary(
     picks.forEach((a) => usedIds.add(a.id));
     return picks;
   });
+  // Day cohesion: a day must be a WALKABLE cluster. If its route has a "bridge"
+  // leg (one long hop splitting it into two clusters — a South-Ken museum day with
+  // Richmond Park 9km away, or a canal day with a suburban forest 6km south), drop
+  // the lower-worth side. A far NON-nature must-see (a palace) is kept — worth the
+  // transit — but a far nature must-see (a suburban forest/park) is a nice-to-have
+  // that must never anchor a tight city day, so it's shed. Runs BEFORE the backfill
+  // so the thinned day refills with NEARBY stops, not the far outlier again.
+  // Skipped for a chosen-neighbourhood tour (seedGroups) — those days are intentional.
+  const COHESION_KM = 4.5;
+  const worth = (a: Attraction) => (a.must_see === 1 ? 1000 : 0) +
+    Math.max(a.audience_fit?.families ?? 0, a.audience_fit?.couples ?? 0, a.audience_fit?.friends ?? 0);
+  if (!seedGroups?.length) {
+    for (const day of capped) {
+      for (let guard = 0; guard < 4 && day.length > 2; guard++) {
+        const path = orderPath(day);
+        let bi = -1, bd = 0;
+        for (let i = 1; i < path.length; i++) {
+          const km = haversineKm(path[i - 1].lat as number, path[i - 1].lng as number, path[i].lat as number, path[i].lng as number);
+          if (km > bd) { bd = km; bi = i; }
+        }
+        if (bd <= COHESION_KM || bi < 1) break;
+        const A = path.slice(0, bi), B = path.slice(bi);
+        const wA = A.reduce((s, a) => s + worth(a), 0), wB = B.reduce((s, a) => s + worth(a), 0);
+        const low = wA <= wB ? A : B;
+        if (low.some((a) => a.must_see === 1 && a.category !== "nature")) break;
+        day.length = 0; day.push(...(low === A ? B : A));
+      }
+    }
+  }
   const nearAnyKm = (a: Attraction, stops: Attraction[]) => {
     if (!(Number.isFinite(a.lat) && Number.isFinite(a.lng))) return Infinity;
     return Math.min(...stops.map((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng)
