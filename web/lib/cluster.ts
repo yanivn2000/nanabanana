@@ -230,6 +230,20 @@ function nnPath(items: Attraction[], start: Attraction): Attraction[] {
 export const orderPath = (stops: Attraction[]): Attraction[] =>
   stops.length <= 2 ? stops : twoOpt(nnPath(stops, stops[0]));
 
+// Re-order a day as an OPEN tour that DEPARTS from a fixed depot — the hotel. The
+// depot joins as a virtual single-port stop, we NN + 2-opt from it, then drop it:
+// the route now starts at the stop nearest the hotel (e.g. add a hotel by street 2
+// → the day opens on street 2, not street 1 across town). Uses the same end-aware
+// machinery, so a street is still entered/left at its ports. Order-preserving for
+// ≤1 stop; leaves the interior optimised, not just rotated.
+export function orderFromDepot(stops: Attraction[], depot: { lat: number; lng: number }): Attraction[] {
+  if (stops.length <= 1) return stops;
+  // virtual depot: a point stop (single access port) with an id that can't collide.
+  const anchor = { id: -1, lat: depot.lat, lng: depot.lng } as unknown as Attraction;
+  const path = twoOpt(nnPath([anchor, ...stops], anchor)); // nnPath starts at anchor; 2-opt pins index 0
+  return path.filter((a) => a.id !== -1);
+}
+
 // Is `x` effectively the same place as something already placed? Guards against
 // near-duplicate DB rows (e.g. "Big Ben" / "Elizabeth Tower") sneaking in as a
 // "free gem" 0 minutes away from their twin.

@@ -30,6 +30,7 @@ function stayHe(d?: string): string | null {
 import { googleMapsUrl, googleDirUrl, formatDistance, estimateLeg, haversineKm, travelMinutes, durationHe, round30, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
 import { stopColor } from "@/lib/labels";
 import { entryExit, type LatLng } from "@/lib/access";
+import { orderFromDepot } from "@/lib/cluster";
 import { bigImage } from "@/lib/labels";
 import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
@@ -476,6 +477,45 @@ export function TripView({ tripId }: { tripId: string }) {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId, city, trip?.leftOut?.length]);
+
+  // Re-anchor to the hotel: a hotel added/moved AFTER the trip is built should make
+  // each day DEPART from the stop nearest it — add a hotel by street 2 and the day
+  // opens on street 2, not on street 1 across town. Keyed on the hotel position so it
+  // runs once per change and never re-fights a later manual reorder. Break slots
+  // (lunch/dinner/rest) stay put; only the sightseeing stops are re-sequenced.
+  const hotelKey = hotelPoints.map((h) => `${h.lat.toFixed(4)},${h.lng.toFixed(4)}`).sort().join("|");
+  useEffect(() => {
+    if (!itinerary || !hotelPoints.length || !hotelKey) return;
+    if (trip?.hotelAnchorKey === hotelKey) return;
+    const isBreak = (s: Stop) => s.kind === "food" || s.kind === "rest";
+    const it: Itinerary = JSON.parse(JSON.stringify(itinerary));
+    let changed = false;
+    for (const d of it.days) {
+      const movable = d.stops.filter((s) => !isBreak(s) && s.lat != null && s.lng != null);
+      if (movable.length <= 1) continue;
+      // this day's depot = the hotel nearest its stops (handles multi-hotel trips)
+      const depot = hotelPoints.slice().sort((h1, h2) =>
+        Math.min(...movable.map((s) => haversineKm(h1.lat, h1.lng, s.lat as number, s.lng as number))) -
+        Math.min(...movable.map((s) => haversineKm(h2.lat, h2.lng, s.lat as number, s.lng as number))))[0];
+      // shim each movable Stop → a point/line Attraction carrying a back-ref, reorder
+      // from the depot, then read the reordered Stops back off the shims.
+      const shims = movable.map((s, i) => ({
+        id: i, lat: s.lat as number, lng: s.lng as number,
+        ends: s.path && s.path.length > 1 ? [s.path[0], s.path[s.path.length - 1]] : undefined,
+        __s: s,
+      }));
+      const ordered = orderFromDepot(shims as unknown as Attraction[], depot) as unknown as typeof shims;
+      const seq = ordered.map((o) => o.__s);
+      if (seq.some((s, i) => s !== movable[i])) changed = true;
+      // splice the re-sequenced stops back into the non-break slots, breaks untouched
+      let mi = 0;
+      d.stops = d.stops.map((s) => (isBreak(s) || s.lat == null ? s : seq[mi++]));
+      d.stops = retimeStops(d.stops);
+    }
+    if (changed) update(tripId, { itinerary: it, hotelAnchorKey: hotelKey });
+    else update(tripId, { hotelAnchorKey: hotelKey });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripId, hotelKey, itinerary]);
 
   // Left-out markers to show on the map: only picks within a walkable/short-transit
   // reach of the CURRENT day's stops — a far pick (Kew) isn't a sensible add to a

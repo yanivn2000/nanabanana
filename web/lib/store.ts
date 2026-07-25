@@ -200,6 +200,9 @@ export type Trip = {
   // that proves ownership (updates / marking comments as helpful).
   shared?: { slug: string; token: string };
   remixOf?: string;        // slug of the shared trip this one was copied from
+  // Hotel-position signature the days were last re-anchored to (so adding/moving a
+  // hotel re-routes each day's start once, and never re-fights a later manual edit).
+  hotelAnchorKey?: string;
   createdAt: number;
   updatedAt?: number;      // last time the trip was changed (stamped on every update)
 };
