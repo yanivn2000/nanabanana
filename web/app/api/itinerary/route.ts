@@ -116,7 +116,7 @@ function streetAsStop(s: Street): Attraction {
   const ends: [[number, number], [number, number]] | null =
     g && g.length > 1 ? [g[0], g[g.length - 1]] : null;
   return {
-    ends,
+    ends, path: g ?? null,
     id: synthId("street", s.id), ref: refOf("street", s.id),
     name_he: s.name_he, name_en: s.name_en, lat: s.lat, lng: s.lng,
     category: "attraction", subcategory: "street", indoor_outdoor: null,
@@ -157,6 +157,7 @@ function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set
         s.tagline = a.tagline_he; s.bestTime = a.best_time_he;
         s.dress = a.dress_he; s.cost = a.cost_level;
         s.ref = a.ref ?? refOf("attr", a.id);
+        if (a.path) s.path = a.path;
         if (anchorIds) s.anchor = anchorIds.has(a.id);
         scheduled?.add(a.id);
       }

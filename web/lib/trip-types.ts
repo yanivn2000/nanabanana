@@ -20,6 +20,8 @@ export type Stop = {
   id?: number;
   // Canonical cross-kind identity: "attr:123" | "street:4" | "zone:12".
   ref?: string;
+  // A street stop's full polyline → drawn as a LINE on the map (not just a pin).
+  path?: [number, number][];
   // Two-tier day (Explore build): true = day anchor (a chosen "כן"/must-see),
   // false = an "אם יש זמן" filler. Undefined = not built from a selection, or a
   // logistical stop (meal/rest) that matched no attraction.

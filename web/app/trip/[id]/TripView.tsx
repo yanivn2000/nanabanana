@@ -212,6 +212,7 @@ export function TripView({ tripId }: { tripId: string }) {
     website: s.website ?? null, duration_minutes: null, image_url: s.image ?? null,
     tagline_he: s.tagline ?? null, best_season: null, best_time_he: s.bestTime ?? null,
     dress_he: null, cost_level: s.cost ?? null, must_see: null,
+    ...(s.path ? { path: s.path } : {}),
   })) as Attraction[];
   // Give every LOCATED stop a stable index in the same order the map numbers
   // them, so a stop's colour + number match across the timeline and the map.

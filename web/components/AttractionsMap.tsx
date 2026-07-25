@@ -345,6 +345,15 @@ export default function AttractionsMap({
         );
       })}
 
+      {/* a STREET stop is a line, not a point — draw its polyline so it reads as a
+          street to walk, under the numbered pin at its centroid. */}
+      {(ordered ? orderedPts : attractions).map((a) =>
+        a.path && a.path.length > 1 ? (
+          <Polyline key={"st" + a.id} positions={a.path as [number, number][]}
+            pathOptions={{ color: "#0e6b5e", weight: 7, opacity: 0.4, lineCap: "round" }} />
+        ) : null
+      )}
+
       {ordered
         ? orderedPts.map((a, i) => {
               const rm = pendingRemoveLocated?.has(i);

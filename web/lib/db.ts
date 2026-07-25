@@ -82,6 +82,8 @@ export type Attraction = {
   // can arrive at the near end and leave from the far one — the walk along the
   // street itself is dwell, not travel.
   ends?: [[number, number], [number, number]] | null;
+  // The full street polyline (a linear stop) — for drawing it as a LINE on the map.
+  path?: [number, number][] | null;
   // Canonical cross-kind identity (attr/street/zone). Undefined on a real DB
   // attraction → it IS "attr:<id>"; synthetic stops (a street) set it explicitly.
   ref?: import("./place").PlaceRef;

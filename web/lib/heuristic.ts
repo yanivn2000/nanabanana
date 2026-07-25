@@ -228,6 +228,7 @@ export function buildHeuristicItinerary(
         // carry coords/id so between-stop travel legs + map pins work without
         // depending on a later attachDetails pass (e.g. saved modules).
         id: a.id, lat: a.lat, lng: a.lng, image: a.image_url, tagline: a.tagline_he,
+        ...(a.path ? { path: a.path } : {}),
       });
       clock = arr + dwellMinutes(a, dwell);
       // travel = from where we LEAVE this stop to where we ENTER the next
