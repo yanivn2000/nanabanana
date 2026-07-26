@@ -20,7 +20,6 @@ const PACES = ["רגוע", "בינוני", "אינטנסיבי"] as const;
 type Pace = (typeof PACES)[number];
 import { PACE_PER_DAY } from "@/lib/trip-types";
 import { deriveTaste, tasteScore, coarseFits, audienceFit, INTEREST_TASTE, INTEREST_CATS, GOVERNING_INTERESTS } from "@/lib/taste";
-import { CategoryTile } from "@/components/CategoryTiles";
 import { PROFILES, PROFILE_HE, PROFILE_EMOJI, type Profile } from "@/lib/shortpath";
 
 // Below this audience-fit (0-100) a place is "less relevant" for the chosen
@@ -309,7 +308,7 @@ export function DestinationView({
   // "מומלץ למשפחות" filter, the score star) when the traveler has kids.
   // The profile is editable right here: the interest tiles are the same 3-state
   // control as the profile page, writing to profile.interests / profile.dislikes.
-  const [profile, setProfile] = useProfile();
+  const [profile] = useProfile();
   const isFamily = profile.kids.length > 0;
   // "solo" — a transient focus (not saved to the profile): show ONLY this topic.
   // Single-select. It's the 4th step of the tile cycle, after "לא מעוניין".
@@ -319,18 +318,8 @@ export function DestinationView({
   // How the attraction list renders: a compact LIST in the trip-page design language
   // (default — row → expands down, image on the right, info across) or image-top TILES.
   const [listView, setListView] = useState(true);
-  const interestState = (v: string): "yes" | "no" | "none" | "solo" =>
-    soloInterest === v ? "solo"
-      : profile.interests.includes(v) ? "yes"
-      : profile.dislikes.includes(v) ? "no" : "none";
-  const cycleInterest = (v: string) => {   // none → מעוניין → לא מעוניין → רק אותו → none
-    const s = interestState(v);
-    if (s === "none") setProfile({ ...profile, interests: [...profile.interests, v], dislikes: profile.dislikes.filter((x) => x !== v) });
-    else if (s === "yes") setProfile({ ...profile, interests: profile.interests.filter((x) => x !== v), dislikes: [...profile.dislikes, v] });
-    else if (s === "no") { setProfile({ ...profile, dislikes: profile.dislikes.filter((x) => x !== v) }); setSoloInterest(v); setSelectedOnly(false); }
-    else setSoloInterest(null);   // solo → none
-  };
-  const hasPrefs = profile.interests.length > 0 || profile.dislikes.length > 0;
+  // (The interest ✓/✕/solo cycler + editor were retired with the "הכל" mode;
+  // soloInterest state stays as a harmless no-op the list filter still reads.)
   const [selected, setSelected] = useState<Attraction | null>(null);
   const [hoveredId, setHoveredId] = useState<number | null>(null);  // card hover → grow its map marker
   const [query, setQuery] = useState("");
@@ -343,14 +332,11 @@ export function DestinationView({
   const toggleFlag = (k: keyof typeof flags) =>
     setFlags((f) => ({ ...f, [k]: !f[k] }));
   // #13 — narrow the list to what's currently visible on the map.
-  // Three ways in: "choose" (the default — pick an audience), "short" (an
-  // audience is chosen → the curated ~12 "people like you loved", calibratable),
-  // and "explore" (the almost-hidden deep dive — all attractions, decide each).
+  // Two ways in: "choose" (the default — pick an audience) and "short" (an audience
+  // is chosen → the calibratable topic chips + one-tap build). The old "explore /
+  // הכל" deep-editor mode was retired; its filters live next to the search now.
   const [audience, setAudience] = useState<Profile | null>(null);
   const [boosts, setBoosts] = useState<Set<string>>(new Set());
-  const [exploreAll, setExploreAll] = useState(false);
-  const goExplore = () => { setAudience(null); setBoosts(new Set()); setExploreAll(true); };
-  const goChoose = () => { setAudience(null); setBoosts(new Set()); setExploreAll(false); };
   const [mapOnly, setMapOnly] = useState(false);
   const [bounds, setBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
   // Desktop tags row: sort order + the "more filters" popover.
@@ -440,14 +426,6 @@ export function DestinationView({
       }),
     [attractions, mustOnly, query, flags, insights, selectedOnly, choices, profile.dislikes, soloInterest]
   );
-  // Does an attraction match the traveler's profile? A ✓ interest includes it;
-  // a ✕ interest excludes it; no interests set = everything matches (default).
-  const profileMatch = useMemo(() => {
-    const ints = profile.interests, dis = profile.dislikes;
-    return (a: Attraction) =>
-      (ints.length === 0 || ints.some((it) => matchesInterest(a, it)))
-      && !dis.some((it) => matchesInterest(a, it));
-  }, [profile.interests, profile.dislikes]);
 
   // The list shows the filtered set, optionally narrowed to the map viewport.
   const listItems = useMemo(() => {
@@ -489,19 +467,17 @@ export function DestinationView({
     // "matched" = fits the chosen audience (couples/friends or families) and isn't
     // an explicit ✕-dislike. What doesn't fit drops BELOW the divider — still fully
     // markable, never hidden and never greyed.
-    // The ✓ interest EDITOR (profile.interests) governs only in EXPLORE mode — that's
-    // where the traveller sets it. In the audience/choose flow the topic chips are a
-    // separate input, so stale explore-interests must NOT silently narrow this list
-    // (that was cutting a 20-must-see city down to ~5). Dislikes stay a global ✕.
-    const inExplore = !audience && exploreAll;
+    // "matched" = fits the chosen audience and isn't an explicit ✕-dislike. The
+    // topic chips (boosts) only re-order within the matched set (via boostTier above),
+    // they don't narrow it — everything stays visible, the off-fit tail below the divider.
     const audienceOk = (a: Attraction) => !audience || audienceFit(a, audience) >= AUDIENCE_FIT_FLOOR;
     const notDisliked = (a: Attraction) => !profile.dislikes.some((it) => matchesInterest(a, it));
-    const isMatch = (a: Attraction) => audienceOk(a) && notDisliked(a) && (!inExplore || profileMatch(a));
+    const isMatch = (a: Attraction) => audienceOk(a) && notDisliked(a);
     const matched: Attraction[] = [], dimmed: Attraction[] = [];
     for (const a of listItems) ((selectedOnly || soloInterest || isMatch(a)) ? matched : dimmed).push(a);
     matched.sort(cmp); dimmed.sort(cmp);
     return { sortedItems: [...matched, ...dimmed], dimmedIds: new Set(dimmed.map((a) => a.id)), matchedIds: matched.map((a) => a.id) };
-  }, [listItems, sort, cityTasteTagged, taste, profileMatch, profile.dislikes, selectedOnly, soloInterest, audience, exploreAll, boostMatch]);
+  }, [listItems, sort, cityTasteTagged, taste, profile.dislikes, selectedOnly, soloInterest, audience, boostMatch]);
 
   // Paginate: show PAGE at a time; reset to page 1 on any change.
   useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, selectedOnly, soloInterest, profile.interests, profile.dislikes, audience, boosts]);
@@ -512,10 +488,16 @@ export function DestinationView({
   // One unified list in every mode — audience is folded into the matched split
   // above (no separate curated screen).
   const displayItems = visible;
-  const mode: "choose" | "short" | "explore" = audience ? "short" : exploreAll ? "explore" : "choose";
+  const mode: "choose" | "short" = audience ? "short" : "choose";
   const belowLabel = audience
     ? `פחות מתאים ל${PROFILE_HE[audience]} — אפשר בכל זאת לסמן`
     : "מחוץ להעדפות שלכם — אפשר בכל זאת לסמן";
+  // Governing topic chips this CITY can actually deliver — only offer a chip with
+  // ≥2 matching places (so niche topics like חופים/פארקי שעשועים hide where the
+  // city has none). Keeps the audience flow honest per destination.
+  const govInterests = useMemo(
+    () => GOVERNING_INTERESTS.filter((it) => attractions.filter((a) => matchesInterest(a, it.key)).length >= 2),
+    [attractions]);
   // Bulk marks over the matched set (the primary view).
   const viewIds = matchedIds;
   const viewSelected = viewIds.filter((id) => choices[id]).length;
@@ -578,7 +560,7 @@ export function DestinationView({
   // scope. It deliberately ignores the "רק אתרי חובה" toggle: that's an
   // additional filter on the grid, not a preference, so it must not rewrite
   // "ספורט 4" to "ספורט 0" just because none of those 4 are editor-picks.
-  const { interestTiles, flagCount } = useMemo(() => {
+  const { flagCount } = useMemo(() => {
     const q = query.toLowerCase();
     const mQ = (a: Attraction) => !q || `${a.name_he ?? ""} ${a.name_en} ${descriptor(a)}`.toLowerCase().includes(q);
     const mMap = (a: Attraction) => !mapOnly || !bounds ||
@@ -674,7 +656,7 @@ export function DestinationView({
               <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
                 orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
             </div>
-            {mode === "explore" && yesCount === 0 && (
+            {mode === "short" && yesCount === 0 && (
               <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[var(--border)] pb-3 text-[15px] text-[var(--text-2)] lg:pr-[176px]">
                 <span className="text-[16px] font-bold text-[var(--brand-ink)]">איך בונים טיול?</span>
                 <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">1</b> בחרו נושאים שאתם אוהבים</span>
@@ -716,13 +698,13 @@ export function DestinationView({
                 )}
               </div>
 
-              {/* audience tabs — in the top bar, transparent (no card). 'הכל' opens the deep explore filters. */}
+              {/* audience tabs — pick who the trip is for (families / couples&friends). */}
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[13.5px] font-semibold text-[var(--text-2)]">בשביל מי הטיול?</span>
                 {PROFILES.map((p) => {
                   const on = audience === p;
                   return (
-                    <button key={p} onClick={() => { setAudience(on ? null : p); setBoosts(new Set()); setExploreAll(false); }}
+                    <button key={p} onClick={() => { setAudience(on ? null : p); setBoosts(new Set()); }}
                       className="rounded-full border px-3.5 py-1.5 text-[13.5px] font-semibold transition"
                       style={{ background: on ? "var(--brand)" : "var(--surface)", color: on ? "#fff" : "var(--text-2)",
                                borderColor: on ? "var(--brand)" : "var(--border)" }}>
@@ -730,12 +712,6 @@ export function DestinationView({
                     </button>
                   );
                 })}
-                <button onClick={() => (mode === "explore" ? goChoose() : goExplore())}
-                  className="rounded-full border px-3.5 py-1.5 text-[13.5px] font-semibold transition"
-                  style={{ background: mode === "explore" ? "var(--brand)" : "var(--surface)", color: mode === "explore" ? "#fff" : "var(--text-2)",
-                           borderColor: mode === "explore" ? "var(--brand)" : "var(--border)" }}>
-                  🔎 הכל
-                </button>
               </div>
 
               {/* short mode — taste calibration + one-tap build, transparent (no card) */}
@@ -743,7 +719,7 @@ export function DestinationView({
                 <div className="flex flex-col gap-2.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[12.5px] text-[var(--text-3)]"><b className="text-[var(--text-2)]">{matchedIds.length}</b> מקומות שמתאימים ל{PROFILE_HE[audience!]} · כיילו:</span>
-                    {GOVERNING_INTERESTS.map((it) => {
+                    {govInterests.map((it) => {
                       const on = boosts.has(it.key);
                       return (
                         <button key={it.key}
@@ -763,40 +739,7 @@ export function DestinationView({
                 </div>
               )}
               {mode === "choose" && (
-                <p className="text-[13px] text-[var(--text-3)]">בחרו למי הטיול — ונראה לכם את המקומות שהכי אהובים על אנשים כמוכם. או “🔎 הכל” לחקירה מלאה.</p>
-              )}
-
-              {/* interests — the deep-explore topic editor; only in explore mode */}
-              {mode === "explore" && (
-              <div className="min-w-0">
-                <div className="mb-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-                  <h2 className="text-[16px] font-bold text-[var(--text)]">מה מעניין אתכם?</h2>
-                  <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13.5px] text-[var(--text-2)]">
-                    <span>הקישו כדי לעבור בין:</span>
-                    <span className="inline-flex items-center gap-1.5"><span className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">✓</span> מעוניין</span>
-                    <span className="inline-flex items-center gap-1.5"><span className="grid size-[20px] place-items-center rounded-full bg-[var(--text-3)] text-[12px] font-bold text-white">✕</span> לא מעוניין</span>
-                    <span className="inline-flex items-center gap-1.5"><span className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)]"><span className="size-[7px] rounded-full bg-white" /></span> רק אותו</span>
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {interestTiles.map(({ key, count }) => (
-                    <CategoryTile key={key} label={key} state={interestState(key)} count={count} pill
-                      dim={soloInterest != null && soloInterest !== key}
-                      onClick={() => cycleInterest(key)} />
-                  ))}
-                </div>
-                {soloInterest && (
-                  <div className="mt-2 flex items-center justify-between gap-2 rounded-full bg-[var(--brand)] px-4 py-1.5 text-[13px] font-medium text-white">
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="grid size-[16px] place-items-center rounded-full bg-white"><span className="size-[6px] rounded-full bg-[var(--brand)]" /></span>
-                      מציג רק: {soloInterest}
-                    </span>
-                    <button onClick={() => setSoloInterest(null)} className="rounded-full bg-white/20 px-3 py-0.5 text-[12.5px] font-semibold transition hover:bg-white/30">
-                      הצג הכל
-                    </button>
-                  </div>
-                )}
-              </div>
+                <p className="text-[13px] text-[var(--text-3)]">בחרו למי הטיול — ונראה לכם את המקומות שהכי אהובים על אנשים כמוכם.</p>
               )}
             </div>
           </div>
@@ -869,85 +812,8 @@ export function DestinationView({
         </div>
       )}
 
-      {/* desktop toolbar — sticky filters/search above the list. Interests moved
-          up into the top block; this keeps must-see · bulk · sort · filters. */}
-      <div className={`sticky top-[57px] z-30 hidden bg-[var(--bg)] shadow-[0_10px_12px_-12px_rgba(16,29,43,0.12)] ${mode === "explore" ? "lg:block" : ""}`}>
-        <div className="mx-auto max-w-[1600px] px-8">
-          {/* filters row — search · must-see facet · bulk-select · sort · filters.
-              Wraps to a second line when the controls (esp. with selections
-              active) exceed the width, instead of overflowing off the edge. */}
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2 py-2">
-            <div className="flex w-[300px] shrink-0 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
-              <Search size={16} className="shrink-0 text-[var(--text-3)]" />
-              <input value={query} onChange={(e) => setQuery(e.target.value)}
-                placeholder="חיפוש אטרקציה, שכונה או סוג מקום…"
-                className="flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--text-3)]" />
-            </div>
-            {/* sort */}
-            <div className="relative shrink-0">
-              <button onClick={() => { setSortOpen((o) => !o); setFiltersOpen(false); }}
-                className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-1.5 text-[13.5px] text-[var(--text-2)]">
-                מיון: <span className="font-medium text-[var(--text)]">{SORT_HE[sort]}</span>
-                <ChevronDown size={14} className={sortOpen ? "rotate-180" : ""} />
-              </button>
-              {sortOpen && (
-                <div className="absolute z-40 mt-1 w-44 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)]">
-                  {(Object.keys(SORT_HE) as SortKey[]).map((k) => (
-                    <button key={k} onClick={() => { setSort(k); setSortOpen(false); }}
-                      className="block w-full px-3 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]"
-                      style={{ color: sort === k ? "var(--brand-ink)" : "var(--text-2)", fontWeight: sort === k ? 600 : 400 }}>
-                      {SORT_HE[k]}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* filters popover — the less-used toggles */}
-            <div className="relative shrink-0">
-              <button onClick={() => { setFiltersOpen((o) => !o); setSortOpen(false); }}
-                className="flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] transition"
-                style={{ borderColor: moreFilterCount ? "var(--brand)" : "var(--border)",
-                         background: moreFilterCount ? "var(--brand-soft)" : "var(--surface)",
-                         color: moreFilterCount ? "var(--brand-ink)" : "var(--text-2)" }}>
-                <SlidersHorizontal size={15} /> פילטרים{moreFilterCount ? ` · ${moreFilterCount}` : ""}
-                <ChevronDown size={14} className={filtersOpen ? "rotate-180" : ""} />
-              </button>
-              {filtersOpen && (
-                <div className="absolute z-40 mt-1 w-60 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]">
-                  {/* "רק אתרי חובה" moved OUT to a always-visible tag above the list. */}
-                  {([["free", "חינם"], ["indoor", "מקורה"],
-                     ...(isFamily ? [["top", "מומלץ למשפחות"]] : []),
-                     ["withInsights", "💬 עם תובנות מטיילים"]] as [keyof typeof flags, string][]).map(([k, label]) => (
-                    <button key={k} onClick={() => toggleFlag(k)}
-                      className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]">
-                      <span style={{ color: flags[k] ? "var(--brand-ink)" : "var(--text-2)", fontWeight: flags[k] ? 600 : 400 }}>
-                        {label} <span className="text-[var(--text-3)]">{flagCount[k]}</span>
-                      </span>
-                      {flags[k] && <Check size={15} className="text-[var(--brand)]" />}
-                    </button>
-                  ))}
-                  <button onClick={() => setMapOnly((v) => !v)}
-                    className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]">
-                    <span style={{ color: mapOnly ? "var(--brand-ink)" : "var(--text-2)", fontWeight: mapOnly ? 600 : 400 }}>📍 רק מה שעל המפה</span>
-                    {mapOnly && <Check size={15} className="text-[var(--brand)]" />}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="mr-auto flex shrink-0 items-center gap-3">
-              <span className="text-[13px] text-[var(--text-3)]">
-                {matchedIds.length > 0 || sortedItems.length === 0
-                  ? `${matchedIds.length} מקומות`
-                  : `${sortedItems.length} מקומות · מחוץ להעדפות`}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* (Editor's-picks rail removed — the list below has a "חובה לביקור" filter.) */}
+      {/* (The old explore-only sticky toolbar was retired — search + sort + filters
+          now live in the always-visible toolbar just above the list, in every mode.) */}
 
       {/* Recommended specific places we don't have as attractions (hotels,
           restaurants, tours, day-trips) — from travelers, grouped by place. */}
@@ -1009,9 +875,9 @@ export function DestinationView({
 
         {/* attraction cards — a grid on desktop, single column on mobile */}
         <section id="picks" className="scroll-mt-[120px] px-5 lg:order-1 lg:min-w-0 lg:flex-1 lg:px-8 lg:pb-16">
-          {/* mobile filter header (search + categories + quick tags) — desktop
-              uses the toolbar above */}
-          <div className={`sticky ${mapOpen ? "top-[240px]" : "top-0"} z-20 -mx-5 bg-[var(--bg)] px-5 pb-2 pt-4 shadow-[0_8px_10px_-10px_rgba(16,29,43,0.2)] ${mode === "explore" ? "lg:hidden" : "hidden"}`}>
+          {/* (retired mobile filter header — the always-visible toolbar below now
+              serves every breakpoint.) */}
+          <div className="hidden">
             <div className="mb-3 flex items-center gap-2.5 border-b border-[var(--border)] pb-2">
               <span className="serif shrink-0 text-[16px] font-bold text-[var(--text)]">{dest.city_he || dest.city}</span>
               <span className="h-4 w-px shrink-0 bg-[var(--border)]" />
@@ -1061,23 +927,72 @@ export function DestinationView({
             </p>
           )}
 
-          {/* toolbar above the list — visible in EVERY mode (the sticky desktop
-              toolbar only shows in explore). Holds a live search, the "רק אתרי חובה"
-              facet as a clickable tag (pressed by default, instead of buried in the
-              filters popover), and the list/tiles view toggle. */}
-          {/* Live search — filters as you type (every keystroke). Hidden only where
-              the sticky explore toolbar already shows its own search (lg + explore),
-              so there's never a duplicate; shown everywhere else incl. mobile explore. */}
-          <div className={`flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 mt-3 ${mode === "explore" ? "lg:hidden" : ""}`}>
-            <Search size={16} className="shrink-0 text-[var(--text-3)]" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)}
-              placeholder="חיפוש אטרקציה, שכונה או סוג מקום…"
-              className="flex-1 bg-transparent text-[14.5px] outline-none placeholder:text-[var(--text-3)]" />
-            {query && (
-              <button onClick={() => setQuery("")} aria-label="נקה חיפוש" className="shrink-0 text-[var(--text-3)] transition hover:text-[var(--text)]">
-                <X size={16} />
+          {/* toolbar above the list — ALWAYS visible (the old explore-only sticky
+              toolbar was retired). Live search + sort + filters on one row; the
+              "רק אתרי חובה" tag + view toggle on the next. */}
+          <div className="flex flex-wrap items-center gap-2 pt-3">
+            {/* live search — filters as you type; ✕ clears */}
+            <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
+              <Search size={16} className="shrink-0 text-[var(--text-3)]" />
+              <input value={query} onChange={(e) => setQuery(e.target.value)}
+                placeholder="חיפוש אטרקציה, שכונה או סוג מקום…"
+                className="flex-1 bg-transparent text-[14.5px] outline-none placeholder:text-[var(--text-3)]" />
+              {query && (
+                <button onClick={() => setQuery("")} aria-label="נקה חיפוש" className="shrink-0 text-[var(--text-3)] transition hover:text-[var(--text)]">
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            {/* sort */}
+            <div className="relative shrink-0">
+              <button onClick={() => { setSortOpen((o) => !o); setFiltersOpen(false); }}
+                className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-[13.5px] text-[var(--text-2)]">
+                מיון: <span className="font-medium text-[var(--text)]">{SORT_HE[sort]}</span>
+                <ChevronDown size={14} className={sortOpen ? "rotate-180" : ""} />
               </button>
-            )}
+              {sortOpen && (
+                <div className="absolute z-40 mt-1 w-44 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)]">
+                  {(Object.keys(SORT_HE) as SortKey[]).map((k) => (
+                    <button key={k} onClick={() => { setSort(k); setSortOpen(false); }}
+                      className="block w-full px-3 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]"
+                      style={{ color: sort === k ? "var(--brand-ink)" : "var(--text-2)", fontWeight: sort === k ? 600 : 400 }}>
+                      {SORT_HE[k]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* filters popover */}
+            <div className="relative shrink-0">
+              <button onClick={() => { setFiltersOpen((o) => !o); setSortOpen(false); }}
+                className="flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] transition"
+                style={{ borderColor: moreFilterCount ? "var(--brand)" : "var(--border)",
+                         background: moreFilterCount ? "var(--brand-soft)" : "var(--surface)",
+                         color: moreFilterCount ? "var(--brand-ink)" : "var(--text-2)" }}>
+                <SlidersHorizontal size={15} /> פילטרים{moreFilterCount ? ` · ${moreFilterCount}` : ""}
+                <ChevronDown size={14} className={filtersOpen ? "rotate-180" : ""} />
+              </button>
+              {filtersOpen && (
+                <div className="absolute left-0 z-40 mt-1 w-60 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]">
+                  {([["free", "חינם"], ["indoor", "מקורה"],
+                     ...(isFamily ? [["top", "מומלץ למשפחות"]] : []),
+                     ["withInsights", "💬 עם תובנות מטיילים"]] as [keyof typeof flags, string][]).map(([k, label]) => (
+                    <button key={k} onClick={() => toggleFlag(k)}
+                      className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]">
+                      <span style={{ color: flags[k] ? "var(--brand-ink)" : "var(--text-2)", fontWeight: flags[k] ? 600 : 400 }}>
+                        {label} <span className="text-[var(--text-3)]">{flagCount[k]}</span>
+                      </span>
+                      {flags[k] && <Check size={15} className="text-[var(--brand)]" />}
+                    </button>
+                  ))}
+                  <button onClick={() => setMapOnly((v) => !v)}
+                    className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]">
+                    <span style={{ color: mapOnly ? "var(--brand-ink)" : "var(--text-2)", fontWeight: mapOnly ? 600 : 400 }}>📍 רק מה שעל המפה</span>
+                    {mapOnly && <Check size={15} className="text-[var(--brand)]" />}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
             {!soloInterest && !selectedOnly ? (
@@ -1344,7 +1259,7 @@ export function DestinationView({
       {/* persistent build bar — the flow's finish line, always visible so the
           goal is unmistakable: mark attractions, then build. Progress fills
           toward the minimum; the CTA activates once there are enough picks. */}
-      <div className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 shadow-[0_-8px_20px_rgba(16,29,43,0.08)] lg:px-8 ${mode === "explore" ? "" : "hidden"}`}>
+      <div className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 shadow-[0_-8px_20px_rgba(16,29,43,0.08)] lg:px-8 ${mode === "short" && yesCount > 0 ? "" : "hidden"}`}>
         <div className="mx-auto max-w-[1600px]">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">

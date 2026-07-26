@@ -172,6 +172,13 @@ export const GOVERNING_INTERESTS: { key: string; label: string; emoji: string }[
   { key: "חיי לילה", label: "חיי לילה", emoji: "🍸" },
   { key: "היסטוריה", label: "היסטוריה ותרבות", emoji: "🏛️" },
   { key: "אדריכלות", label: "אדריכלות ורחובות", emoji: "🏙️" },
+  // Promoted out of the old deep-explore editor into the audience flow. Shown to
+  // BOTH audiences, but each city only renders a chip with ≥2 matching places
+  // (govInterests gate in DestinationView) — so niche ones hide where irrelevant.
+  { key: "וינטג'", label: "וינטג' ואספנות", emoji: "🕰️" },
+  { key: "יוקרה", label: "יוקרה", emoji: "💎" },
+  { key: "פארקי שעשועים", label: "פארקי שעשועים", emoji: "🎡" },
+  { key: "חופים", label: "חופים", emoji: "🏖️" },
 ];
 
 // Name-keyword fallback for the theme reservation, for interests whose places are
