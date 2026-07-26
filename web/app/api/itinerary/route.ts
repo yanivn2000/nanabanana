@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds, approvedStreetsForCity } from "@/lib/db";
+import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, interestCandidates, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds, approvedStreetsForCity } from "@/lib/db";
 import { annotateDaysWithAreas } from "@/lib/cluster";
 import type { Attraction, Destination, Street } from "@/lib/db";
 import { refOf, synthId, isRealAttraction } from "@/lib/place";
@@ -15,7 +15,7 @@ import { checkRateLimit } from "@/lib/db";
 import { rateLimit } from "@/lib/ratelimit";
 import * as Sentry from "@sentry/nextjs";
 import { paceToPerDay } from "@/lib/trip-types";
-import { rankByTaste, tasteEmphasis, tasteScore, coarseFits, interestTasteMap, INTEREST_KEYWORDS } from "@/lib/taste";
+import { rankByTaste, tasteEmphasis, tasteScore, coarseFits, interestTasteMap, INTEREST_KEYWORDS, INTEREST_TASTE, INTEREST_CATS } from "@/lib/taste";
 import { haversineKm, estimateLeg } from "@/lib/geo";
 import { reachPenalty } from "@/lib/brain/policy";
 import type { Itinerary as ItineraryT } from "@/lib/trip-types";
@@ -274,6 +274,16 @@ export async function POST(req: NextRequest) {
   // taste, and drive the coarse fallback + theme reservation below.
   const interests = Array.isArray(body.interests) ? body.interests.filter((s): s is string => typeof s === "string") : [];
   const audience = body.audience === "families" || body.audience === "adults" ? body.audience : undefined;
+  // Thin-interest rescue: nightlife/niche-shop venues rank too low to reach the base
+  // pool, so an explicitly chosen thin interest would surface NOTHING. Fetch the best
+  // matches directly (union across chosen interests, quality-first) and guarantee them
+  // as candidates below — the theme reservation then reserves its share of them.
+  const interestRows = interests.length ? await interestCandidates(dest.id, {
+    tags: [...new Set(interests.flatMap((k) => INTEREST_TASTE[k] ?? []))],
+    cats: [...new Set(interests.flatMap((k) => INTEREST_CATS[k]?.cats ?? []))],
+    subs: [...new Set(interests.flatMap((k) => INTEREST_CATS[k]?.subs ?? []))],
+    kws:  [...new Set(interests.flatMap((k) => INTEREST_KEYWORDS[k] ?? []))],
+  }, Math.max(16, 4 * (body.days ?? 4))) : [];
   // Wider pool (was 50) so the clusterer has a long tail of minor places to pull
   // in as "free gems" on the walking path (cluster.ts pass B).
   const rankedByTaste = rankByTaste(pool, body.taste, 90, isFamily, interests, audience);
@@ -297,7 +307,7 @@ export async function POST(req: NextRequest) {
   // them regardless of rank position). Deduped, coords required.
   const haveA = new Set(rankedReach.map((a) => a.id));
   const guaranteedExtra: Attraction[] = [];
-  for (const a of [...areaMemberRows, ...picks]) {
+  for (const a of [...areaMemberRows, ...picks, ...interestRows]) {
     if (a.lat == null || a.lng == null || haveA.has(a.id)) continue;
     haveA.add(a.id); guaranteedExtra.push(a);
   }
@@ -389,7 +399,9 @@ export async function POST(req: NextRequest) {
     for (const it of interests) {
       const w = interestTasteMap(it), kws = INTEREST_KEYWORDS[it] ?? [];
       let k = 0;
-      for (const a of attractions) {
+      // interestRows first (quality-ordered thin-interest venues), then the ranked
+      // pool — so a chosen thin interest reserves its best venues before generic fill.
+      for (const a of [...interestRows, ...attractions]) {
         if (k >= perInterest) break;
         if (chosen.has(a.id)) continue;
         const nm = a.name_he || a.name_en || "";

@@ -192,6 +192,42 @@ export async function topAttractions(destinationId: number, limit = 40): Promise
   );
 }
 
+// Interest-matching venues BEYOND the base pool. Thin interests (nightlife, niche
+// shops) have places that rank too low to reach topAttractions, so when that
+// interest is explicitly chosen the builder force-includes the best matches here.
+// Matched by taste-tag / category / subcategory / name keyword; best-first
+// (effective must-see, then has-image, then family score). Editor-rejected excluded.
+export async function interestCandidates(
+  destinationId: number,
+  m: { tags?: string[]; cats?: string[]; subs?: string[]; kws?: string[] },
+  limit = 24,
+): Promise<Attraction[]> {
+  const tags = m.tags ?? [], cats = m.cats ?? [], subs = m.subs ?? [], kws = m.kws ?? [];
+  if (!tags.length && !cats.length && !subs.length && !kws.length) return [];
+  const kwLike = kws.map((k) => `%${k}%`);
+  return query<Attraction>(
+    `SELECT ${ATTR_COLS_EFF}
+       FROM attractions a ${EDITOR_JOIN}
+      WHERE a.destination_id = $1
+        AND a.lat IS NOT NULL AND a.lng IS NOT NULL
+        AND (a.quality_keep = 1 OR a.quality_keep IS NULL)
+        AND (a.is_duplicate IS NULL OR a.is_duplicate = 0)
+        AND (a.is_component IS NULL OR a.is_component = 0)
+        AND (ep.rank IS NULL OR ep.rank <> 'no')
+        AND (
+          (cardinality($2::text[]) > 0 AND a.taste_tags ?| $2)
+          OR (cardinality($3::text[]) > 0 AND a.category = ANY($3))
+          OR (cardinality($4::text[]) > 0 AND a.subcategory = ANY($4))
+          OR (cardinality($5::text[]) > 0 AND (a.name_he ILIKE ANY($6) OR a.name_en ILIKE ANY($6)))
+        )
+      ORDER BY ${EDITOR_ORDER},
+               (a.image_url IS NOT NULL) DESC,
+               COALESCE(a.family_score, 0) DESC, a.name_en
+      LIMIT $7`,
+    [destinationId, tags, cats, subs, kws, kwLike, limit]
+  );
+}
+
 // Fetch specific attractions by id — the traveler's exact picks. Keeps
 // editor-rejected ones (the user explicitly chose them; their choice wins), but
 // still carries the effective must_see + editor ratings.

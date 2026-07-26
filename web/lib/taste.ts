@@ -82,6 +82,10 @@ export const INTEREST_CATS: Record<string, { cats?: string[]; subs?: string[] }>
   "יוקרה": { subs: ["jewelry", "watches", "perfumery", "department_store", "boutique", "bag", "fashion_accessories"] },
   "ספורט": { cats: ["sport"] },
   "היסטוריה": { cats: ["historic"] },
+  // Nightlife venues are ingested as food/<sub> — match the going-out subcategories
+  // so the "חיי לילה" chip actually finds bars/clubs/live-music (they rank too low to
+  // reach the base pool on their own; route.ts force-includes the top matches).
+  "חיי לילה": { subs: ["bar", "pub", "nightclub", "cocktail", "wine_bar", "biergarten", "brewery", "jazz_club", "music_venue", "lounge", "nightlife", "disco"] },
   "פארקי שעשועים": { subs: ["theme_park", "water_park"] },
   // Genuinely kid-oriented places only (not big adult museums that merely have a
   // high family_score) — so ✕ "ילדים" hides these while museums still show.
