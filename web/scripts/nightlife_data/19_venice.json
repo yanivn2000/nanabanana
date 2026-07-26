@@ -1,0 +1,186 @@
+{
+  "destination_id": 19,
+  "city": "Venice",
+  "venues": [
+    {
+      "name_local": "Cantine del Vino già Schiavi",
+      "name_en": "Cantine del Vino gia Schiavi",
+      "name_he": "קנטינה דל וינו ג'א סקיאבי",
+      "kind": "wine_bar",
+      "best_for_he": "באקרו יין וצ'יקטי",
+      "vibe_he": "באקרו ונציאני אגדי מול תעלה קטנה בדורסודורו, עם קיר בקבוקי יין ומבחר צ'יקטי ענק שאוכלים בעמידה ברחוב.",
+      "approx_lat": 45.4312,
+      "approx_lng": 12.3268
+    },
+    {
+      "name_local": "Cantina Do Mori",
+      "name_en": "Cantina Do Mori",
+      "name_he": "קנטינה דו מורי",
+      "kind": "wine_bar",
+      "best_for_he": "באקרו היסטורי",
+      "vibe_he": "הבאקרו הוותיק בוונציה מ-1462, חלל אפלולי עם סירי נחושת תלויים, יין הבית ו\"פרנצ'ובלי\" כריכונים קטנים.",
+      "approx_lat": 45.4388,
+      "approx_lng": 12.3339
+    },
+    {
+      "name_local": "Cantina Do Spade",
+      "name_en": "Cantina Do Spade",
+      "name_he": "קנטינה דו ספאדה",
+      "kind": "wine_bar",
+      "best_for_he": "באקרו ליד ריאלטו",
+      "vibe_he": "באקרו עתיק בסמטה ליד שוק ריאלטו, אווירה חמימה עם קשתות לבנים, צ'יקטי מטוגנים וכוס יין בין המקומיים.",
+      "approx_lat": 45.4390,
+      "approx_lng": 12.3342
+    },
+    {
+      "name_local": "Al Mercà",
+      "name_en": "Al Merca",
+      "name_he": "אל מרקה",
+      "kind": "wine_bar",
+      "best_for_he": "שפריץ ליד השוק",
+      "vibe_he": "דוכן זעיר בכיכר ליד שוק ריאלטו שבו כולם עומדים ברחוב עם שפריץ וכריכוני צ'יקטי לפני ארוחת הערב.",
+      "approx_lat": 45.4384,
+      "approx_lng": 12.3348
+    },
+    {
+      "name_local": "Bacareto Da Lele",
+      "name_en": "Bacareto Da Lele",
+      "name_he": "בקרטו דה לֶלֶה",
+      "kind": "wine_bar",
+      "best_for_he": "יין וכריכונים זולים",
+      "vibe_he": "מוסד סטודנטיאלי זעיר ליד תחנת הרכבת, כוס יין בפרוטות וכריכוני פנצ'טה קטנטנים שאוכלים על שפת התעלה.",
+      "approx_lat": 45.4372,
+      "approx_lng": 12.3186
+    },
+    {
+      "name_local": "Osteria all'Arco",
+      "name_en": "Osteria all'Arco",
+      "name_he": "אוסטריה אל-ארקו",
+      "kind": "wine_bar",
+      "best_for_he": "צ'יקטי איכותיים",
+      "vibe_he": "באקרו קטן ואותנטי בסמטה ליד ריאלטו, מפורסם בצ'יקטי טריים שמכינים לפי הזמנה וקהל מקומי צפוף.",
+      "approx_lat": 45.4383,
+      "approx_lng": 12.3331
+    },
+    {
+      "name_local": "Il Caffè Rosso",
+      "name_en": "Il Caffe Rosso",
+      "name_he": "איל קפה רוסו",
+      "kind": "bar",
+      "best_for_he": "שפריץ בכיכר",
+      "vibe_he": "בית קפה-בר אדום ומיתולוגי בכיכר סנטה מרגריטה, לב הבילוי הסטודנטיאלי עם שולחנות בחוץ ושפריץ עד הלילה.",
+      "approx_lat": 45.4356,
+      "approx_lng": 12.3242
+    },
+    {
+      "name_local": "Osteria alla Bifora",
+      "name_en": "Osteria alla Bifora",
+      "name_he": "אוסטריה אלה ביפורה",
+      "kind": "wine_bar",
+      "best_for_he": "יין ומטעמים",
+      "vibe_he": "אוסטריה חמימה עם קמרונות אבן בכיכר סנטה מרגריטה, מבחר יינות ומגשי בשר וגבינות באווירה רגועה יותר מהכיכר.",
+      "approx_lat": 45.4353,
+      "approx_lng": 12.3238
+    },
+    {
+      "name_local": "Cantina Vecia Carbonera",
+      "name_en": "Cantina Vecia Carbonera",
+      "name_he": "קנטינה וקיה קרבונרה",
+      "kind": "wine_bar",
+      "best_for_he": "יין ומוזיקה חיה",
+      "vibe_he": "אנוטקה על פינת תעלה בקנארג'ו עם ערבי מוזיקת ג'אז וסווינג לפעמים, מבחר יינות טוב ואווירה מקומית.",
+      "approx_lat": 45.4419,
+      "approx_lng": 12.3298
+    },
+    {
+      "name_local": "Paradiso Perduto",
+      "name_en": "Paradiso Perduto",
+      "name_he": "פרדיזו פרדוטו",
+      "kind": "live_music",
+      "best_for_he": "מוזיקה חיה ופירות ים",
+      "vibe_he": "מוסד בוהמייני שוקק על פונדמנטה דלה מיזריקורדיה בקנארג'ו, עם ג'אז חי, שולחנות ארוכים ואווירה חוגגת עד מאוחר.",
+      "approx_lat": 45.4442,
+      "approx_lng": 12.3320
+    },
+    {
+      "name_local": "Venice Jazz Club",
+      "name_en": "Venice Jazz Club",
+      "name_he": "ונציה ג'אז קלאב",
+      "kind": "live_music",
+      "best_for_he": "ג'אז חי",
+      "vibe_he": "מועדון ג'אז אינטימי בדורסודורו עם הופעות חיות מדי ערב של רביעיות סווינג ובופ, כרטיס כולל משקה.",
+      "approx_lat": 45.4335,
+      "approx_lng": 12.3243
+    },
+    {
+      "name_local": "Skyline Rooftop Bar",
+      "name_en": "Skyline Rooftop Bar",
+      "name_he": "סקייליין רופטופ בר",
+      "kind": "rooftop",
+      "best_for_he": "קוקטייל בגג עם נוף",
+      "vibe_he": "בר גג על ראש מלון הילטון בג'ודקה עם נוף פנורמי מרהיב לתעלת ג'ודקה וסן מרקו, קוקטיילים לשקיעה.",
+      "approx_lat": 45.4262,
+      "approx_lng": 12.3178
+    },
+    {
+      "name_local": "Harry's Bar",
+      "name_en": "Harry's Bar",
+      "name_he": "הריס בר",
+      "kind": "cocktail",
+      "best_for_he": "בליני קלאסי",
+      "vibe_he": "הבר האגדי של המינגוויי ליד סן מרקו, מקום הולדתו של קוקטייל הבליני וקרפצ'יו הבשר, יוקרתי ויקר אך היסטורי.",
+      "approx_lat": 45.4325,
+      "approx_lng": 12.3372
+    },
+    {
+      "name_local": "Caffè Florian",
+      "name_en": "Caffe Florian",
+      "name_he": "קפה פלוריאן",
+      "kind": "bar",
+      "best_for_he": "קפה היסטורי בכיכר",
+      "vibe_he": "בית הקפה העתיק באירופה מ-1720 על כיכר סן מרקו, סלונים מצוירים ותזמורת חיה שמנגנת מתחת לכיפות בערב.",
+      "approx_lat": 45.4340,
+      "approx_lng": 12.3387
+    },
+    {
+      "name_local": "Gran Caffè Quadri",
+      "name_en": "Gran Caffe Quadri",
+      "name_he": "גראן קפה קוואדרי",
+      "kind": "bar",
+      "best_for_he": "קפה היסטורי בכיכר",
+      "vibe_he": "יריבו ההיסטורי של פלוריאן בצד הנגדי של כיכר סן מרקו, תזמורת חיה משלו ואווירת קטיפה של המאה ה-18.",
+      "approx_lat": 45.4342,
+      "approx_lng": 12.3390
+    },
+    {
+      "name_local": "Bacaro Jazz",
+      "name_en": "Bacaro Jazz",
+      "name_he": "בקארו ג'אז",
+      "kind": "bar",
+      "best_for_he": "בר עד מאוחר",
+      "vibe_he": "בר תוסס ליד ריאלטו עם תקרת חזיות מלאה ומוזיקת ג'אז ברקע, מהמעטים בוונציה שפתוחים עד השעות הקטנות.",
+      "approx_lat": 45.4381,
+      "approx_lng": 12.3363
+    },
+    {
+      "name_local": "Piccolo Mondo (El Suk)",
+      "name_en": "Piccolo Mondo (El Suk)",
+      "name_he": "פיקולו מונדו (אל סוק)",
+      "kind": "nightclub",
+      "best_for_he": "המועדון של ונציה",
+      "vibe_he": "המועדון האגדי והכמעט-יחיד של ונציה ליד האקדמיה, חלל קטן ורטרו עם ריקודים עד עלות השחר לתיירים ומקומיים.",
+      "approx_lat": 45.4315,
+      "approx_lng": 12.3283
+    },
+    {
+      "name_local": "Torrefazione Cannaregio",
+      "name_en": "Torrefazione Cannaregio",
+      "name_he": "טוריפציונה קנארג'ו",
+      "kind": "bar",
+      "best_for_he": "קפה ושפריץ שקטים",
+      "vibe_he": "בית קלייה ותיק בקנארג'ו שהופך בערב לבר שפריץ אינטימי ואהוב על מקומיים, הרחק מהמולת התיירים.",
+      "approx_lat": 45.4425,
+      "approx_lng": 12.3230
+    }
+  ]
+}

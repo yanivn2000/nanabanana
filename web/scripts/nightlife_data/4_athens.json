@@ -1,0 +1,216 @@
+{
+  "destination_id": 4,
+  "city": "Athens",
+  "venues": [
+    {
+      "name_local": "The Clumsies",
+      "name_en": "The Clumsies",
+      "name_he": "דה קלאמסיז",
+      "kind": "cocktail",
+      "best_for_he": "בר קוקטיילים עולמי",
+      "vibe_he": "בר קוקטיילים שדורג שוב ושוב מבין הטובים בעולם — אווירה משוחררת וקוקטיילים יצירתיים בלב אתונה.",
+      "approx_lat": 37.9829,
+      "approx_lng": 23.7301
+    },
+    {
+      "name_local": "Baba Au Rum",
+      "name_en": "Baba Au Rum",
+      "name_he": "בבא או רום",
+      "kind": "cocktail",
+      "best_for_he": "בר ראם וטיקי",
+      "vibe_he": "בר קוקטיילים אינטימי ואייקוני שמתמחה בראם ובטעמים טרופיים, מדורג בין הטובים בעולם.",
+      "approx_lat": 37.9769,
+      "approx_lng": 23.7290
+    },
+    {
+      "name_local": "A for Athens",
+      "name_en": "A for Athens",
+      "name_he": "איי פור אתונה",
+      "kind": "rooftop",
+      "best_for_he": "בר גג נוף אקרופוליס",
+      "vibe_he": "בר גג מעל מונסטיראקי עם נוף פנורמי מרהיב לאקרופוליס — פופולרי לשקיעות וקוקטיילים.",
+      "approx_lat": 37.9761,
+      "approx_lng": 23.7255
+    },
+    {
+      "name_local": "360 Cocktail Bar",
+      "name_en": "360 Cocktail Bar",
+      "name_he": "360 קוקטייל בר",
+      "kind": "rooftop",
+      "best_for_he": "בר גג פנורמי",
+      "vibe_he": "בר גג מסתובב בכיכר מונסטיראקי עם נוף של 360 מעלות לאקרופוליס ולעיר העתיקה.",
+      "approx_lat": 37.9760,
+      "approx_lng": 23.7262
+    },
+    {
+      "name_local": "Six d.o.g.s",
+      "name_en": "Six d.o.g.s",
+      "name_he": "סיקס דוגס",
+      "kind": "nightclub",
+      "best_for_he": "מועדון ותרבות",
+      "vibe_he": "מתחם תרבות היברידי בפסירי — חצר, בר, גלריה ובמת מוזיקה חיה שהופכת למועדון בלילה.",
+      "approx_lat": 37.9785,
+      "approx_lng": 23.7267
+    },
+    {
+      "name_local": "Bios",
+      "name_en": "Bios",
+      "name_he": "ביוס",
+      "kind": "nightclub",
+      "best_for_he": "מתחם אלטרנטיבי",
+      "vibe_he": "מתחם רב-קומתי בגאזי לתרבות עצמאית — מופעים, בר גג ומסיבות אלקטרוניות עד הבוקר.",
+      "approx_lat": 37.9787,
+      "approx_lng": 23.7135
+    },
+    {
+      "name_local": "Booze Cooperativa",
+      "name_en": "Booze Cooperativa",
+      "name_he": "בוז קואופרטיבה",
+      "kind": "bar",
+      "best_for_he": "בר אמנים בוהמייני",
+      "vibe_he": "בר-קפה-גלריה בוהמייני בלב אתונה, מרכז לאמנים ולצעירים שנמשך משעות היום עד עמוק בלילה.",
+      "approx_lat": 37.9780,
+      "approx_lng": 23.7280
+    },
+    {
+      "name_local": "Gazarte",
+      "name_en": "Gazarte",
+      "name_he": "גזארטה",
+      "kind": "live_music",
+      "best_for_he": "מוזיקה חיה וגג",
+      "vibe_he": "מתחם מוזיקה חיה בגאזי עם אולם הופעות, בר גג ונוף לאקרופוליס.",
+      "approx_lat": 37.9781,
+      "approx_lng": 23.7118
+    },
+    {
+      "name_local": "MoMix Bar Athens",
+      "name_en": "MoMix Bar",
+      "name_he": "מומיקס",
+      "kind": "cocktail",
+      "best_for_he": "קוקטיילים מולקולריים",
+      "vibe_he": "בר קוקטיילים תיאטרלי המתמחה במיקסולוגיה מולקולרית עם מנות בר מרהיבות ומפתיעות.",
+      "approx_lat": 37.9776,
+      "approx_lng": 23.7245
+    },
+    {
+      "name_local": "Noel",
+      "name_en": "Noel",
+      "name_he": "נואל",
+      "kind": "cocktail",
+      "best_for_he": "בר גלמורי חגיגי",
+      "vibe_he": "בר קוקטיילים אלגנטי ותיאטרלי במרכז אתונה עם עיצוב מושקע ואווירת חגיגה כל השנה.",
+      "approx_lat": 37.9803,
+      "approx_lng": 23.7300
+    },
+    {
+      "name_local": "CV Distiller",
+      "name_en": "CV Distiller",
+      "name_he": "סי-וי דיסטילר",
+      "kind": "cocktail",
+      "best_for_he": "בר משקאות משובחים",
+      "vibe_he": "בר קוקטיילים מעוצב עם מבחר ענק של משקאות חריפים נדירים וקוקטיילים מוקפדים.",
+      "approx_lat": 37.9800,
+      "approx_lng": 23.7315
+    },
+    {
+      "name_local": "Couleur Locale",
+      "name_en": "Couleur Locale",
+      "name_he": "קולר לוקאל",
+      "kind": "rooftop",
+      "best_for_he": "בר גג נסתר",
+      "vibe_he": "בר גג חבוי בסמטאות מונסטיראקי עם נוף ישיר לאקרופוליס ואווירה צעירה ושוקקת.",
+      "approx_lat": 37.9767,
+      "approx_lng": 23.7268
+    },
+    {
+      "name_local": "Odori Vermuteria di Atene",
+      "name_en": "Odori Vermuteria",
+      "name_he": "אודורי ורמוטריה",
+      "kind": "cocktail",
+      "best_for_he": "בר ורמוט איטלקי",
+      "vibe_he": "בר קטן וקסום המתמחה בורמוט ובקוקטיילים בהשראה איטלקית באחת מסמטאות המרכז.",
+      "approx_lat": 37.9779,
+      "approx_lng": 23.7256
+    },
+    {
+      "name_local": "Drupes & Drips",
+      "name_en": "Drupes",
+      "name_he": "דרופס",
+      "kind": "cocktail",
+      "best_for_he": "בר קוקטיילים יצירתי",
+      "vibe_he": "בר קוקטיילים אינטימי המתמחה במרכיבים עונתיים ובשילובים בוטניים מפתיעים.",
+      "approx_lat": 37.9812,
+      "approx_lng": 23.7318
+    },
+    {
+      "name_local": "Galaxy Bar",
+      "name_en": "Galaxy Bar",
+      "name_he": "גלקסי בר",
+      "kind": "bar",
+      "best_for_he": "בר קלאסי ותיק",
+      "vibe_he": "בר אגדי ומינימליסטי שפועל מאז 1972, מקום מפגש אלגנטי ושקט לקוקטייל קלאסי בלב אתונה.",
+      "approx_lat": 37.9793,
+      "approx_lng": 23.7327
+    },
+    {
+      "name_local": "Lohan Nightclub",
+      "name_en": "Lohan Nightclub",
+      "name_he": "לוהאן",
+      "kind": "nightclub",
+      "best_for_he": "מועדון ריקודים גדול",
+      "vibe_he": "מועדון לילה נוצץ שהקימה לינדזי לוהאן — מופעים, די-ג'יים בינלאומיים ואווירת יוקרה סוערת.",
+      "approx_lat": 37.9866,
+      "approx_lng": 23.7196
+    },
+    {
+      "name_local": "Gazi Music Hall",
+      "name_en": "Gazi Music Hall",
+      "name_he": "גאזי מיוזיק הול",
+      "kind": "live_music",
+      "best_for_he": "בוזוקיה יוונית",
+      "vibe_he": "אולם מוזיקה יוונית עממית (בוזוקיה) בגאזי עם זמרים חיים, ריקודים ופרחים עד עלות השחר.",
+      "approx_lat": 37.9779,
+      "approx_lng": 23.7108
+    },
+    {
+      "name_local": "Kapnikarea",
+      "name_en": "Kapnikarea Cafe",
+      "name_he": "קפניקריאה",
+      "kind": "live_music",
+      "best_for_he": "רבטיקו חי",
+      "vibe_he": "קפה-מזטו אותנטי ליד הכנסייה הביזנטית עם ערבי רבטיקו וגיטרות חיות באווירה עממית.",
+      "approx_lat": 37.9779,
+      "approx_lng": 23.7288
+    },
+    {
+      "name_local": "Heteroclito",
+      "name_en": "Heteroclito",
+      "name_he": "הטרוקליטו",
+      "kind": "wine_bar",
+      "best_for_he": "בר יין יווני",
+      "vibe_he": "בר יין קסום ורומנטי המתמחה ביינות יווניים ובגבינות מקומיות באווירה פריזאית-אתונאית.",
+      "approx_lat": 37.9767,
+      "approx_lng": 23.7297
+    },
+    {
+      "name_local": "By the Glass",
+      "name_en": "By the Glass",
+      "name_he": "ביי דה גלאס",
+      "kind": "wine_bar",
+      "best_for_he": "בר יין מקצועי",
+      "vibe_he": "בר יין אלגנטי במרכז עם מבחר רחב של יינות בכוס וצלחות מלוות מוקפדות.",
+      "approx_lat": 37.9757,
+      "approx_lng": 23.7350
+    },
+    {
+      "name_local": "Rooster",
+      "name_en": "Rooster Cafe",
+      "name_he": "רוסטר",
+      "kind": "bar",
+      "best_for_he": "בר-קפה חיים בכיכר",
+      "vibe_he": "בר-קפה תוסס ופתוח בכיכר אגיה איריני, ליבה של סצנת הבילוי הצעירה של אתונה.",
+      "approx_lat": 37.9789,
+      "approx_lng": 23.7268
+    }
+  ]
+}

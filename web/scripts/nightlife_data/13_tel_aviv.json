@@ -1,0 +1,206 @@
+{
+  "destination_id": 13,
+  "city": "Tel Aviv",
+  "venues": [
+    {
+      "name_local": "Kuli Alma",
+      "name_en": "Kuli Alma",
+      "name_he": "קולי אלמה",
+      "kind": "nightclub",
+      "best_for_he": "מועדון אמנות ומוזיקה",
+      "vibe_he": "מרתף אמנותי תוסס עם שתי רחבות, גרפיטי וקהל צעיר — אחד מסמלי הלילה של תל אביב.",
+      "approx_lat": 32.0631,
+      "approx_lng": 34.7716
+    },
+    {
+      "name_local": "Radio EPGB",
+      "name_en": "Radio EPGB",
+      "name_he": "רדיו אי-פי-ג'י-בי",
+      "kind": "live_music",
+      "best_for_he": "מרתף רוקנרול",
+      "vibe_he": "מרתף אינדי אפל ומיוזע עם דיג'יים והופעות חיות — מקדש לרוקיסטים ולחובבי מוזיקה חלופית.",
+      "approx_lat": 32.0645,
+      "approx_lng": 34.7720
+    },
+    {
+      "name_local": "Teder.fm",
+      "name_en": "Teder.fm",
+      "name_he": "טדר",
+      "kind": "bar",
+      "best_for_he": "חצר תחנת רדיו",
+      "vibe_he": "בר חצר עם תחנת רדיו חיה, פיצה ורחבת ריקודים תחת כיפת השמיים — לב הלילה הצעיר של פלורנטין.",
+      "approx_lat": 32.0577,
+      "approx_lng": 34.7695
+    },
+    {
+      "name_local": "Jimmy Who",
+      "name_en": "Jimmy Who",
+      "name_he": "ג'ימי הו",
+      "kind": "nightclub",
+      "best_for_he": "מועדון ריקודים",
+      "vibe_he": "מועדון קטן ואינטימי עם דיג'יים מובילים ורחבה צפופה שרוקדת עד אור הבוקר.",
+      "approx_lat": 32.0648,
+      "approx_lng": 34.7688
+    },
+    {
+      "name_local": "The Block",
+      "name_en": "The Block",
+      "name_he": "הבלוק",
+      "kind": "nightclub",
+      "best_for_he": "מקדש טכנו",
+      "vibe_he": "מועדון טכנו רציני עם מערכת סאונד מהטובות בעולם — יעד עלייה לרגל לחובבי מוזיקה אלקטרונית.",
+      "approx_lat": 32.0555,
+      "approx_lng": 34.7797
+    },
+    {
+      "name_local": "Beit Maariv",
+      "name_en": "Beit Maariv",
+      "name_he": "בית מעריב",
+      "kind": "nightclub",
+      "best_for_he": "מועדון אלקטרוני",
+      "vibe_he": "מועדון תעשייתי מרווח באתר עיתון מעריב לשעבר, עם ליינים אלקטרוניים וקהל שוחר לילה.",
+      "approx_lat": 32.0663,
+      "approx_lng": 34.7823
+    },
+    {
+      "name_local": "Sputnik",
+      "name_en": "Sputnik",
+      "name_he": "ספוטניק",
+      "kind": "bar",
+      "best_for_he": "בר גג ורחבה",
+      "vibe_he": "בר-מועדון עם גג פתוח ורחבה תוססת בלב אלנבי — סמל ללילה הבוהמייני והצעיר של העיר.",
+      "approx_lat": 32.0662,
+      "approx_lng": 34.7710
+    },
+    {
+      "name_local": "Pasáž",
+      "name_en": "Pasáž",
+      "name_he": "פאסאז'",
+      "kind": "nightclub",
+      "best_for_he": "מועדון קווירי",
+      "vibe_he": "מרתף קווירי פרוע וחופשי עם דיג'יים ומסיבות עד מאוחר — עוגן של הסצנה הלהט\"בית.",
+      "approx_lat": 32.0658,
+      "approx_lng": 34.7705
+    },
+    {
+      "name_local": "Shpagat",
+      "name_en": "Shpagat",
+      "name_he": "שפגט",
+      "kind": "bar",
+      "best_for_he": "בר להט\"בי",
+      "vibe_he": "בר קטן ואהוב שגולש לרחוב על נחלת בנימין — לב פועם של הקהילה הגאה בעיר.",
+      "approx_lat": 32.0638,
+      "approx_lng": 34.7702
+    },
+    {
+      "name_local": "Imperial Craft Cocktail Bar",
+      "name_en": "Imperial Craft Cocktail Bar",
+      "name_he": "אימפריאל",
+      "kind": "cocktail",
+      "best_for_he": "בר קוקטיילים מוביל",
+      "vibe_he": "בר קוקטיילים קולוניאלי-אקזוטי שדורג מהטובים בעולם — סטנדרט הזהב של המיקסולוגיה הישראלית.",
+      "approx_lat": 32.0808,
+      "approx_lng": 34.7676
+    },
+    {
+      "name_local": "Bellboy",
+      "name_en": "Bellboy",
+      "name_he": "בלבוי",
+      "kind": "cocktail",
+      "best_for_he": "בר קוקטיילים תיאטרלי",
+      "vibe_he": "בר קוקטיילים שובב ותיאטרלי עם ברמנים-פרפורמרים ומנות שתייה מפתיעות — חוויה ולא רק כוס.",
+      "approx_lat": 32.0778,
+      "approx_lng": 34.7688
+    },
+    {
+      "name_local": "Butler",
+      "name_en": "Butler",
+      "name_he": "באטלר",
+      "kind": "cocktail",
+      "best_for_he": "קוקטייל בר מעוצב",
+      "vibe_he": "בר קוקטיילים אלגנטי ואפלולי ברוטשילד עם מיקסולוגיה מוקפדת וקהל מהודר.",
+      "approx_lat": 32.0637,
+      "approx_lng": 34.7712
+    },
+    {
+      "name_local": "223 Cocktail Bar",
+      "name_en": "223 Cocktail Bar",
+      "name_he": "223",
+      "kind": "cocktail",
+      "best_for_he": "קוקטייל בר ותיק",
+      "vibe_he": "בר קוקטיילים קלאסי וחמים בדיזנגוף, מהחלוצים של תרבות הקוקטייל בתל אביב.",
+      "approx_lat": 32.0793,
+      "approx_lng": 34.7738
+    },
+    {
+      "name_local": "Jajo",
+      "name_en": "Jajo",
+      "name_he": "ג'אג'ו",
+      "kind": "wine_bar",
+      "best_for_he": "בר יין בנווה צדק",
+      "vibe_he": "בר יין קטן ומקסים בנווה צדק עם מבחר רחב לגלוגים ואווירה בוהמיינית שקטה.",
+      "approx_lat": 32.0605,
+      "approx_lng": 34.7658
+    },
+    {
+      "name_local": "Alphabet",
+      "name_en": "Alphabet",
+      "name_he": "אלפבית",
+      "kind": "wine_bar",
+      "best_for_he": "בר יינות טבעיים",
+      "vibe_he": "בר יינות טבעיים אינטימי בפלורנטין עם מבחר סקרני וקהל מבין — לחובבי היין הרציניים.",
+      "approx_lat": 32.0575,
+      "approx_lng": 34.7702
+    },
+    {
+      "name_local": "Port Said",
+      "name_en": "Port Said",
+      "name_he": "פורט סעיד",
+      "kind": "bar",
+      "best_for_he": "בר-מסעדה תוסס",
+      "vibe_he": "בר-מסעדה של אייל שני מול הגדול, עם תקליטי ויניל, אוכל מעולה וקהל שגולש לרחוב עד הלילה.",
+      "approx_lat": 32.0632,
+      "approx_lng": 34.7698
+    },
+    {
+      "name_local": "Breakfast Club",
+      "name_en": "Breakfast Club",
+      "name_he": "ברקפסט קלאב",
+      "kind": "nightclub",
+      "best_for_he": "מועדון האוס אחרי חצות",
+      "vibe_he": "מועדון מרתפי אינטימי הפועל עד אור הבוקר עם ליינים אלקטרוניים וקהל שיודע לרקוד.",
+      "approx_lat": 32.0642,
+      "approx_lng": 34.7717
+    },
+    {
+      "name_local": "The Prince",
+      "name_en": "The Prince",
+      "name_he": "הנסיך",
+      "kind": "rooftop",
+      "best_for_he": "בר חצר וגג",
+      "vibe_he": "בר חצר וגג מוסתר ליד רוטשילד עם אווירה חופשית, ספות וקהל צעיר עד השעות הקטנות.",
+      "approx_lat": 32.0648,
+      "approx_lng": 34.7695
+    },
+    {
+      "name_local": "Rothschild 12",
+      "name_en": "Rothschild 12",
+      "name_he": "רוטשילד 12",
+      "kind": "live_music",
+      "best_for_he": "בר עם הופעות חיות",
+      "vibe_he": "בר-חצר ותיק בשדרות רוטשילד עם הופעות חיות, ג'אז וקהל אורבני — מוסד לילי אמיתי.",
+      "approx_lat": 32.0640,
+      "approx_lng": 34.7708
+    },
+    {
+      "name_local": "Hoodna Brewery",
+      "name_en": "Hoodna Brewery",
+      "name_he": "הודנה",
+      "kind": "pub",
+      "best_for_he": "מבשלת בירה בדרום",
+      "vibe_he": "מבשלת בירה עצמאית עם חצר גדולה, בירות קרפט טריות ואווירה נינוחה בדרום העיר.",
+      "approx_lat": 32.0533,
+      "approx_lng": 34.7745
+    }
+  ]
+}

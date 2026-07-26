@@ -1,0 +1,236 @@
+{
+  "destination_id": 33,
+  "city": "New York",
+  "venues": [
+    {
+      "name_local": "Village Vanguard",
+      "name_en": "Village Vanguard",
+      "name_he": "וילג' וונגארד",
+      "kind": "live_music",
+      "best_for_he": "מועדון ג'אז אגדי",
+      "vibe_he": "מרתף הג'אז המיתולוגי של גריניץ' וילג' — כאן הוקלטו כמה מאלבומי הג'אז הגדולים בהיסטוריה.",
+      "approx_lat": 40.7357,
+      "approx_lng": -74.0012
+    },
+    {
+      "name_local": "Blue Note",
+      "name_en": "Blue Note",
+      "name_he": "בלו נוט",
+      "kind": "live_music",
+      "best_for_he": "ג'אז עולמי",
+      "vibe_he": "אחד ממועדוני הג'אז המפורסמים בעולם, מארח את גדולי הנגנים במרחק נגיעה מהבמה.",
+      "approx_lat": 40.7309,
+      "approx_lng": -74.0007
+    },
+    {
+      "name_local": "Birdland",
+      "name_en": "Birdland Jazz Club",
+      "name_he": "בירדלנד",
+      "kind": "live_music",
+      "best_for_he": "ג'אז קלאסי",
+      "vibe_he": "מוסד ג'אז היסטורי ליד טיימס סקוור, על שמו של צ'רלי \"בירד\" פרקר.",
+      "approx_lat": 40.7591,
+      "approx_lng": -73.9905
+    },
+    {
+      "name_local": "Smalls Jazz Club",
+      "name_en": "Smalls Jazz Club",
+      "name_he": "סמולס",
+      "kind": "live_music",
+      "best_for_he": "ג'אז אינטימי",
+      "vibe_he": "מרתף ג'אז זעיר וקסום בווילג', מקום מפגש של מוזיקאים עד השעות הקטנות.",
+      "approx_lat": 40.7355,
+      "approx_lng": -74.0021
+    },
+    {
+      "name_local": "Please Don't Tell",
+      "name_en": "Please Don't Tell (PDT)",
+      "name_he": "פליז דונט טל",
+      "kind": "cocktail",
+      "best_for_he": "ספיקאיזי מיתולוגי",
+      "vibe_he": "בר קוקטיילים נסתר שנכנסים אליו דרך תא טלפון ישן במסעדת נקניקיות — מהאגדיים בעולם.",
+      "approx_lat": 40.7256,
+      "approx_lng": -73.9838
+    },
+    {
+      "name_local": "Attaboy",
+      "name_en": "Attaboy",
+      "name_he": "אטהבוי",
+      "kind": "cocktail",
+      "best_for_he": "קוקטיילים בהזמנה",
+      "vibe_he": "בר ללא תפריט בלואר איסט סייד — אומרים לברמן מה אתם אוהבים והוא מכין בול בשבילכם.",
+      "approx_lat": 40.7183,
+      "approx_lng": -73.9915
+    },
+    {
+      "name_local": "Employees Only",
+      "name_en": "Employees Only",
+      "name_he": "אמפלויז אונלי",
+      "kind": "cocktail",
+      "best_for_he": "קוקטייל בר קלאסי",
+      "vibe_he": "בר קוקטיילים בסגנון שנות ה-20 עם מגידת עתידות בכניסה, מוסד לילי של הווילג'.",
+      "approx_lat": 40.7339,
+      "approx_lng": -74.0058
+    },
+    {
+      "name_local": "The Dead Rabbit",
+      "name_en": "The Dead Rabbit",
+      "name_he": "דד ראביט",
+      "kind": "cocktail",
+      "best_for_he": "בר אירי מעוטר",
+      "vibe_he": "בר בפייננשל דיסטריקט שזכה לתואר הבר הטוב בעולם — קוקטיילים אירים וויסקי בשפע.",
+      "approx_lat": 40.7033,
+      "approx_lng": -74.0113
+    },
+    {
+      "name_local": "Angel's Share",
+      "name_en": "Angel's Share",
+      "name_he": "אנג'לס שר",
+      "kind": "cocktail",
+      "best_for_he": "ספיקאיזי יפני",
+      "vibe_he": "בר נסתר בסגנון יפני מאחורי דלת לא מסומנת, שקט ומוקפד עם קוקטיילים אמנותיים.",
+      "approx_lat": 40.7295,
+      "approx_lng": -73.9885
+    },
+    {
+      "name_local": "Dear Irving",
+      "name_en": "Dear Irving",
+      "name_he": "דיר אירווינג",
+      "kind": "cocktail",
+      "best_for_he": "בר קוקטיילים אלגנטי",
+      "vibe_he": "בר בעיצוב מסע בזמן דרך תקופות שונות, קוקטיילים מהוקצעים באווירה רומנטית.",
+      "approx_lat": 40.7360,
+      "approx_lng": -73.9877
+    },
+    {
+      "name_local": "Bemelmans Bar",
+      "name_en": "Bemelmans Bar",
+      "name_he": "במלמנס בר",
+      "kind": "bar",
+      "best_for_he": "בר מלון אייקוני",
+      "vibe_he": "בר מלון קרלייל עם ציורי קיר קסומים ופסנתר חי — קלאסיקה של אפר איסט סייד.",
+      "approx_lat": 40.7745,
+      "approx_lng": -73.9635
+    },
+    {
+      "name_local": "The Campbell",
+      "name_en": "The Campbell",
+      "name_he": "דה קמפבל",
+      "kind": "cocktail",
+      "best_for_he": "בר מפואר בגרנד סנטרל",
+      "vibe_he": "בר בתוך משרד מהודר משנות ה-20 בתחנת גרנד סנטרל, תקרות מעוטרות ואווירת גטסבי.",
+      "approx_lat": 40.7527,
+      "approx_lng": -73.9772
+    },
+    {
+      "name_local": "230 Fifth Rooftop",
+      "name_en": "230 Fifth Rooftop Bar",
+      "name_he": "230 פיפת' רופטופ",
+      "kind": "rooftop",
+      "best_for_he": "גג עם נוף לאמפייר סטייט",
+      "vibe_he": "בר גג ענק עם נוף מטריף לבניין האמפייר סטייט, גן חורף חמים בעונה הקרה.",
+      "approx_lat": 40.7440,
+      "approx_lng": -73.9884
+    },
+    {
+      "name_local": "Le Bain",
+      "name_en": "Le Bain",
+      "name_he": "לה בן",
+      "kind": "rooftop",
+      "best_for_he": "מסיבות גג במיטפקינג",
+      "vibe_he": "מועדון גג במלון סטנדרד עם ג'קוזי על הרחבה ונוף להדסון — מסיבות עד הבוקר.",
+      "approx_lat": 40.7407,
+      "approx_lng": -74.0080
+    },
+    {
+      "name_local": "Westlight",
+      "name_en": "Westlight",
+      "name_he": "וסטלייט",
+      "kind": "rooftop",
+      "best_for_he": "גג עם נוף לקו הרקיע",
+      "vibe_he": "בר בקומה ה-22 בוויליאמסבורג עם פנורמה מלאה של קו הרקיע של מנהטן.",
+      "approx_lat": 40.7220,
+      "approx_lng": -73.9573
+    },
+    {
+      "name_local": "House of Yes",
+      "name_en": "House of Yes",
+      "name_he": "האוס אוף יס",
+      "kind": "nightclub",
+      "best_for_he": "מסיבות תיאטרליות",
+      "vibe_he": "מועדון פרוע בבושוויק עם מופעי קברט, אקרובטיקה ותחפושות — חוויה שאין דומה לה.",
+      "approx_lat": 40.7069,
+      "approx_lng": -73.9233
+    },
+    {
+      "name_local": "Webster Hall",
+      "name_en": "Webster Hall",
+      "name_he": "וובסטר הול",
+      "kind": "live_music",
+      "best_for_he": "אולם הופעות היסטורי",
+      "vibe_he": "אולם הופעות ומועדון אגדי משנת 1886 באיסט וילג', במה למיטב האמנים.",
+      "approx_lat": 40.7317,
+      "approx_lng": -73.9891
+    },
+    {
+      "name_local": "Brooklyn Bowl",
+      "name_en": "Brooklyn Bowl",
+      "name_he": "ברוקלין בול",
+      "kind": "live_music",
+      "best_for_he": "הופעות ובאולינג",
+      "vibe_he": "שילוב מנצח של הופעות חיות, מסלולי באולינג ואוכל בוויליאמסבורג — כיף למשפחות וחברים.",
+      "approx_lat": 40.7218,
+      "approx_lng": -73.9576
+    },
+    {
+      "name_local": "Marquee",
+      "name_en": "Marquee New York",
+      "name_he": "מרקי",
+      "kind": "nightclub",
+      "best_for_he": "מגה-קלאב של צ'לסי",
+      "vibe_he": "מועדון ריקודים יוקרתי עם דיג'ייז עולמיים והפקות ראווה — לילות זוהר בצ'לסי.",
+      "approx_lat": 40.7476,
+      "approx_lng": -74.0035
+    },
+    {
+      "name_local": "Nowadays",
+      "name_en": "Nowadays",
+      "name_he": "נאוודייז",
+      "kind": "nightclub",
+      "best_for_he": "מסיבות טכנו וחצר",
+      "vibe_he": "מרחב ריקודים ענק עם חצר חוץ בקווינס, סאונד מהטובים בעיר ומסיבות מרתון.",
+      "approx_lat": 40.7085,
+      "approx_lng": -73.9235
+    },
+    {
+      "name_local": "Little Branch",
+      "name_en": "Little Branch",
+      "name_he": "ליטל בראנץ'",
+      "kind": "cocktail",
+      "best_for_he": "מרתף קוקטיילים וג'אז",
+      "vibe_he": "מרתף אפלולי ואינטימי בווילג' עם ג'אז חי מדי ערב וקוקטיילים קלאסיים מוקפדים.",
+      "approx_lat": 40.7305,
+      "approx_lng": -74.0060
+    },
+    {
+      "name_local": "The Back Room",
+      "name_en": "The Back Room",
+      "name_he": "דה בק רום",
+      "kind": "cocktail",
+      "best_for_he": "ספיקאיזי מתקופת האיסור",
+      "vibe_he": "אחד הברים היחידים ששרדו מתקופת היובש — מגישים קוקטיילים בספלי תה בכניסה נסתרת.",
+      "approx_lat": 40.7188,
+      "approx_lng": -73.9878
+    },
+    {
+      "name_local": "Katana Kitten",
+      "name_en": "Katana Kitten",
+      "name_he": "קטאנה קיטן",
+      "kind": "cocktail",
+      "best_for_he": "בר יפני-אמריקאי",
+      "vibe_he": "בר מדובר בווסט וילג' המשלב מסורת יפנית עם באר אמריקאי — מדורג בין הטובים בעולם.",
+      "approx_lat": 40.7346,
+      "approx_lng": -74.0068
+    }
+  ]
+}
