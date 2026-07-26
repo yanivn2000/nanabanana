@@ -257,7 +257,10 @@ export async function POST(req: NextRequest) {
   // Broad candidate pool, then narrow to the group's TASTE (#63): a music/
   // vintage couple and a sports/history couple get different attraction sets
   // fed to the builder → genuinely different trips. No taste → family order.
-  const isFamily = body.isFamily === true;
+  // The "משפחות" audience chip alone (not only a kids-in-profile flag) drives the
+  // family build path: family-friendly ranking of the FILL, so a family trip skews
+  // to places kids enjoy while the shared must-see icons stay in for everyone.
+  const isFamily = body.isFamily === true || body.audience === "families";
   // The Brain's techniques (brain_principles) for this city — the builder obeys these.
   const rules = await brainRulesForDest(dest.id);
   // heuristic stops/day. Families get at least their pace-rule floor (fuller day).
