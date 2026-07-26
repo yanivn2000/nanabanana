@@ -303,15 +303,22 @@ export async function POST(req: NextRequest) {
   // them as the day's top candidates (they were an explicit "כן").
   const streetRows = Array.isArray(body.streetIds) && body.streetIds.length
     ? await streetsByIds(body.streetIds.filter((n) => typeof n === "number")) : [];
-  // Layer 2: a chosen neighbourhood AUTO-INCLUDES its own streets — "I'm already in
-  // the area, of course I'll walk its main streets" (independent of interests). Merged
-  // with any explicitly-picked streets (deduped), so they schedule into the trip too.
+  // Streets now enter AUTOMATICALLY (there's no manual street-picking strip):
+  //  • a chosen neighbourhood pulls its own streets — "I'm already in the area, of
+  //    course I'll walk its main streets" (independent of interests);
+  //  • the "אדריכלות ורחובות" interest pulls the city's top worthy streets, so "I
+  //    love walking pretty streets" delivers streets even without choosing an area.
+  // Deduped against each other + any legacy body.streetIds (saved trips).
   const chosenAreaIds = Array.isArray(body.areaIds) ? body.areaIds.filter((n): n is number => typeof n === "number") : [];
-  if (chosenAreaIds.length) {
+  const wantStreetInterest = interests.includes("אדריכלות");
+  if (chosenAreaIds.length || wantStreetInterest) {
+    const allStreets = await approvedStreetsForCity(dest.id);
     const have = new Set(streetRows.map((s) => s.id));
-    const areaStreets = (await approvedStreetsForCity(dest.id))
-      .filter((s) => s.area_id != null && chosenAreaIds.includes(s.area_id) && !have.has(s.id));
-    streetRows.push(...areaStreets);
+    const add: typeof allStreets = [];
+    const take = (s: (typeof allStreets)[number]) => { if (!have.has(s.id)) { have.add(s.id); add.push(s); } };
+    if (chosenAreaIds.length) allStreets.filter((s) => s.area_id != null && chosenAreaIds.includes(s.area_id)).forEach(take);
+    if (wantStreetInterest) allStreets.filter((s) => s.lat != null).slice(0, 5).forEach(take);
+    streetRows.push(...add);
   }
   const streetStops = streetRows.map(streetAsStop);
   // Interest-governed reservation (single-city, no explicit selection): guarantee
