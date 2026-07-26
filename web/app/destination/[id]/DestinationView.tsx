@@ -555,13 +555,16 @@ export function DestinationView({
     for (const [id, c] of Object.entries(choices)) {
       (c === "yes" ? yes : no).push(Number(id));
     }
-    // Only EXPLICIT card marks become a hard selection. The audience + interest chips
-    // now govern the build (audience_fit ranking + interest reservation), so we no
-    // longer freeze the curated short-path as a selection — that let museums (high
-    // consensus) flood and bypassed the interest governance. A pure "build for
-    // <audience>" with no marks/chips falls through to an audience-ranked, icon-
-    // reserved build.
-    const yesFinal = yes;
+    // Card marks (כן/לא) are the deliberate act of the EXPLORE ("הכל") flow, and they
+    // persist per-city in localStorage. In the audience/interest (short) flow they'd
+    // be STALE leftovers from a past visit — and any selection silently sends the
+    // build down the selection path, bypassing the interest governance (reservation,
+    // museum cap, additive areas). So marks only drive the build in explore mode; the
+    // interest flow stays interest-governed regardless of old marks. (Layer 4 will
+    // unify these — marks as refinements ON the interest build.)
+    const useMarks = mode === "explore";
+    const yesFinal = useMarks ? yes : [];
+    const noFinal = useMarks ? no : [];
     setBuilding(true);
     // Neighbourhoods the traveller chose to tour → one guaranteed day each.
     const chosenAreaList = areas.filter((a) => chosenAreas.has(a.id));
@@ -590,7 +593,7 @@ export function DestinationView({
       profile: { ...profile, pace: buildPace, taste: buildTaste, dailyDriveHours: RADIUS_HOURS[buildRadius] },
       ...(chosenInterests.length ? { interests: chosenInterests } : {}),
       ...(audience ? { audience } : {}),
-      ...(yesFinal.length || no.length ? { selection: { yes: yesFinal, no } } : {}),
+      ...(yesFinal.length || noFinal.length ? { selection: { yes: yesFinal, no: noFinal } } : {}),
       ...(chosenAreaGroups.length ? { areaGroups: chosenAreaGroups, areaIds: chosenAreaIds } : {}),
       ...(pickedStreetIds.length ? { streetIds: pickedStreetIds } : {}),
     });
