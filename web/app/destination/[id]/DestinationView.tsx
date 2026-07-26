@@ -484,16 +484,22 @@ export function DestinationView({
     };
     const cmp = (a: Attraction, b: Attraction) =>
       tier(b) - tier(a) || boostTier(b) - boostTier(a) || img(b) - img(a) || within(a, b);
-    // "matched" = fits the traveller's interests AND the chosen audience
-    // (couples/friends or families). What doesn't fit drops BELOW the divider —
-    // still fully markable, never hidden and never greyed.
+    // "matched" = fits the chosen audience (couples/friends or families) and isn't
+    // an explicit ✕-dislike. What doesn't fit drops BELOW the divider — still fully
+    // markable, never hidden and never greyed.
+    // The ✓ interest EDITOR (profile.interests) governs only in EXPLORE mode — that's
+    // where the traveller sets it. In the audience/choose flow the topic chips are a
+    // separate input, so stale explore-interests must NOT silently narrow this list
+    // (that was cutting a 20-must-see city down to ~5). Dislikes stay a global ✕.
+    const inExplore = !audience && exploreAll;
     const audienceOk = (a: Attraction) => !audience || audienceFit(a, audience) >= AUDIENCE_FIT_FLOOR;
-    const isMatch = (a: Attraction) => profileMatch(a) && audienceOk(a);
+    const notDisliked = (a: Attraction) => !profile.dislikes.some((it) => matchesInterest(a, it));
+    const isMatch = (a: Attraction) => audienceOk(a) && notDisliked(a) && (!inExplore || profileMatch(a));
     const matched: Attraction[] = [], dimmed: Attraction[] = [];
     for (const a of listItems) ((selectedOnly || soloInterest || isMatch(a)) ? matched : dimmed).push(a);
     matched.sort(cmp); dimmed.sort(cmp);
     return { sortedItems: [...matched, ...dimmed], dimmedIds: new Set(dimmed.map((a) => a.id)), matchedIds: matched.map((a) => a.id) };
-  }, [listItems, sort, cityTasteTagged, taste, profileMatch, selectedOnly, soloInterest, audience, boostMatch]);
+  }, [listItems, sort, cityTasteTagged, taste, profileMatch, profile.dislikes, selectedOnly, soloInterest, audience, exploreAll, boostMatch]);
 
   // Paginate: show PAGE at a time; reset to page 1 on any change.
   useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, selectedOnly, soloInterest, profile.interests, profile.dislikes, audience, boosts]);
@@ -907,15 +913,7 @@ export function DestinationView({
               </button>
               {filtersOpen && (
                 <div className="absolute z-40 mt-1 w-60 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]">
-                  {!soloInterest && !selectedOnly && (
-                    <button onClick={() => setMustOnly((v) => !v)}
-                      className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]">
-                      <span style={{ color: mustOnly ? "var(--brand-ink)" : "var(--text-2)", fontWeight: mustOnly ? 600 : 400 }}>
-                        ⭐ אתרי חובה <span className="text-[var(--text-3)]">{mustSeeCount}</span>
-                      </span>
-                      {mustOnly && <Check size={15} className="text-[var(--brand)]" />}
-                    </button>
-                  )}
+                  {/* "רק אתרי חובה" moved OUT to a always-visible tag above the list. */}
                   {([["free", "חינם"], ["indoor", "מקורה"],
                      ...(isFamily ? [["top", "מומלץ למשפחות"]] : []),
                      ["withInsights", "💬 עם תובנות מטיילים"]] as [keyof typeof flags, string][]).map(([k, label]) => (
@@ -1061,8 +1059,21 @@ export function DestinationView({
             </p>
           )}
 
-          {/* view toggle — TILES (image-top cards) vs LIST (trip-page language) */}
-          <div className="flex justify-end pt-3">
+          {/* toolbar above the list — visible in EVERY mode (the sticky desktop
+              toolbar only shows in explore). The "רק אתרי חובה" facet lives here as
+              a clickable tag (pressed by default) instead of buried in the filters
+              popover, so travellers can always broaden past the must-sees. */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-3">
+            {!soloInterest && !selectedOnly ? (
+              <button onClick={() => setMustOnly((v) => !v)} aria-pressed={mustOnly}
+                className="inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition"
+                style={{ background: mustOnly ? "var(--brand)" : "var(--surface)", color: mustOnly ? "#fff" : "var(--text-2)",
+                         borderColor: mustOnly ? "var(--brand)" : "var(--border)" }}>
+                <span>⭐ רק אתרי חובה</span>
+                <span className={mustOnly ? "text-white/80" : "text-[var(--text-3)]"}>{mustSeeCount}</span>
+                {mustOnly && <Check size={14} />}
+              </button>
+            ) : <span />}
             <div className="inline-flex rounded-full border border-[var(--border)] bg-[var(--surface)] p-0.5 text-[13px] font-medium">
               <button onClick={() => setListView(false)} aria-pressed={!listView}
                 className="flex items-center gap-1.5 rounded-full px-3 py-1 transition"
