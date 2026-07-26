@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, Fragment } from "react";
 import Link from "next/link";
-import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin, X, Loader2 } from "lucide-react";
+import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin, X, Loader2, LayoutGrid, List } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
 import { CityPoster } from "@/components/CityPoster";
 import { descriptor, catColor, bigImage, mergeCat, countryFlag } from "@/lib/labels";
@@ -284,6 +284,9 @@ export function DestinationView({
   const [soloInterest, setSoloInterest] = useState<string | null>(null);
   const [selectedOnly, setSelectedOnly] = useState(false);  // "הצג רק נבחרים" — mutually exclusive with solo
   const toggleSelectedOnly = () => { setSoloInterest(null); setSelectedOnly((v) => !v); };
+  // How the attraction list renders: image-top TILES (default) or a compact LIST in
+  // the trip-page design language (row → expands down, image on the right, info across).
+  const [listView, setListView] = useState(false);
   const interestState = (v: string): "yes" | "no" | "none" | "solo" =>
     soloInterest === v ? "solo"
       : profile.interests.includes(v) ? "yes"
@@ -1012,8 +1015,123 @@ export function DestinationView({
             </p>
           )}
 
-          {/* rich image-top cards — matches first, then the profile-cut tail
-              (dimmed, still markable) after a divider */}
+          {/* view toggle — TILES (image-top cards) vs LIST (trip-page language) */}
+          <div className="flex justify-end pt-3">
+            <div className="inline-flex rounded-full border border-[var(--border)] bg-[var(--surface)] p-0.5 text-[13px] font-medium">
+              <button onClick={() => setListView(false)} aria-pressed={!listView}
+                className="flex items-center gap-1.5 rounded-full px-3 py-1 transition"
+                style={{ background: !listView ? "var(--brand)" : "transparent", color: !listView ? "#fff" : "var(--text-2)" }}>
+                <LayoutGrid size={14} /> משבצות
+              </button>
+              <button onClick={() => setListView(true)} aria-pressed={listView}
+                className="flex items-center gap-1.5 rounded-full px-3 py-1 transition"
+                style={{ background: listView ? "var(--brand)" : "transparent", color: listView ? "#fff" : "var(--text-2)" }}>
+                <List size={14} /> רשימה
+              </button>
+            </div>
+          </div>
+
+          {/* LIST view — compact rows in the trip-page design language; a row expands
+              DOWN with the image on the right and all its info laid out across. */}
+          {listView ? (
+          <div className="flex flex-col gap-2.5 pt-3">
+            {displayItems.map((a) => {
+              const isSel = selected?.id === a.id;
+              const cost = a.cost_level != null ? COST_HE[a.cost_level] : null;
+              const dur = durationHe(a.duration_minutes);
+              const cat = mergeCat(a.category);
+              const insList = insights[a.id] ?? [];
+              const tip = insList[0]?.text_he || a.tips_he;
+              const choice = choices[a.id];
+              const dim = dimmedIds.has(a.id);
+              return (
+                <Fragment key={a.id}>
+                {a.id === firstDimId && (
+                  <div className="mt-1 flex items-center gap-3 pb-1 pt-2">
+                    <div className="h-px flex-1 bg-[var(--border)]" />
+                    <span className="shrink-0 text-[12.5px] text-[var(--text-3)]">מחוץ להעדפות שלכם — אפשר בכל זאת לסמן</span>
+                    <div className="h-px flex-1 bg-[var(--border)]" />
+                  </div>
+                )}
+                <div onMouseEnter={() => setHoveredId(a.id)} onMouseLeave={() => setHoveredId((h) => (h === a.id ? null : h))}
+                  className="overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] shadow-[var(--shadow)] transition"
+                  style={{ borderColor: choice === "yes" || isSel ? "var(--brand)" : "var(--border)",
+                           opacity: choice === "no" ? 0.5 : dim ? 0.6 : 1 }}>
+                  {/* header row — click to expand + fly the map */}
+                  <button onClick={() => setSelected(isSel ? null : a)} className="flex w-full items-center gap-3 p-2.5 text-right">
+                    {a.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={bigImage(a.image_url, 200)} alt="" loading="lazy" className="size-14 shrink-0 rounded-[10px] object-cover" />
+                    ) : (
+                      <div className="grid size-14 shrink-0 place-items-center rounded-[10px]" style={{ background: `color-mix(in srgb, ${catColor(cat)} 16%, var(--surface-2))` }}>
+                        <MapPin size={20} style={{ color: catColor(cat) }} />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="serif truncate text-[16px] font-bold leading-tight">
+                        {a.must_see === 1 && <span className="ml-1 align-middle text-[var(--accent-ink)]">⭐</span>}
+                        {a.name_he || a.name_en}
+                      </p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] text-[var(--text-3)]">
+                        <span>{CAT_HE[cat] ?? a.category}</span>
+                        {dur && <span>🕐 {dur}</span>}
+                        {cost && <span className="text-[var(--brand-ink)]">{cost}</span>}
+                        {covered.has(a.id) && <span className="text-[var(--brand-ink)]">💳 בכרטיס</span>}
+                      </div>
+                    </div>
+                    <ChevronDown size={18} className={`shrink-0 text-[var(--text-3)] transition-transform ${isSel ? "rotate-180" : ""}`} />
+                  </button>
+                  {/* expand — image on the RIGHT (first child, RTL), info across the left */}
+                  {isSel && (
+                    <div className="border-t border-[var(--border)] p-3">
+                      <div className="flex flex-col gap-3 sm:flex-row">
+                        {a.image_url && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={bigImage(a.image_url, 640)} alt="" loading="lazy"
+                            className="w-full rounded-[10px] object-cover sm:w-2/5 sm:max-w-[360px] sm:self-start" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          {a.tagline_he && <p className="text-[14px] italic text-[var(--text-2)]">{a.tagline_he}</p>}
+                          {a.description_he && <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--text-2)]">{a.description_he}</p>}
+                          {tip && <p className="mt-1.5 flex items-start gap-1 text-[13px] leading-snug text-[var(--brand-ink)]"><span className="shrink-0">💡</span><span>טיפ מטיילים: {tip}</span></p>}
+                          {insList.length > 1 && (
+                            <div className="mt-1.5 flex flex-col gap-1">
+                              {insList.slice(1).map((ins) => (
+                                <p key={ins.id} className="flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]"><span className="shrink-0">{KIND_ICON[ins.kind] ?? "💬"}</span><span>{ins.text_he}</span></p>
+                              ))}
+                            </div>
+                          )}
+                          {(a.best_time_he || a.dress_he) && (
+                            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-[var(--text-2)]">
+                              {a.best_time_he && <span><span className="text-[var(--text-3)]">מתי: </span>{a.best_time_he}</span>}
+                              {a.dress_he && <span><span className="text-[var(--text-3)]">לבוש: </span>{a.dress_he}</span>}
+                            </div>
+                          )}
+                          {a.website && (
+                            <a href={a.website} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--blue)]">אתר רשמי ↗</a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {isEditor && (
+                    <div className="flex flex-col gap-1.5 border-t border-[var(--border)] bg-[var(--surface-2)] py-2">
+                      <EditorRateRow label="דירוג" value={a.editor_rank} onPick={(v) => setRating(a, "rank", v)}
+                        options={[{ v: "must", t: "חובה", bg: "var(--brand)", ink: "#fff" }, { v: "maybe", t: "אולי", bg: "var(--amber-fill)", ink: "#3d2c0a" }, { v: "no", t: "ממש לא", bg: "#c0453f", ink: "#fff" }]} />
+                      <EditorRateRow label="ילדים" value={a.editor_kids} onPick={(v) => setRating(a, "kids", v)}
+                        options={[{ v: "yes", t: "מתאים", bg: "var(--brand)", ink: "#fff" }, { v: "maybe", t: "אולי", bg: "var(--amber-fill)", ink: "#3d2c0a" }, { v: "no", t: "ממש לא", bg: "#c0453f", ink: "#fff" }]} />
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-1.5 border-t border-[var(--border)] p-2">
+                    <ChoiceBtn tone="yes" active={choice === "yes"} onClick={() => setChoice(a.id, "yes")} icon={<Check size={13} />} label="כן" />
+                    <ChoiceBtn tone="no" active={choice === "no"} onClick={() => setChoice(a.id, "no")} icon={<X size={13} />} label="לא" />
+                  </div>
+                </div>
+                </Fragment>
+              );
+            })}
+          </div>
+          ) : (
           <div className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-2 lg:pt-4 xl:grid-cols-3">
             {displayItems.map((a) => {
               const isSel = selected?.id === a.id;
@@ -1132,6 +1250,7 @@ export function DestinationView({
               );
             })}
           </div>
+          )}
 
           {mode === "explore" && visibleCount < sortedItems.length && (
             <div className="mt-6 flex justify-center pb-4">
