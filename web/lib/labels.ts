@@ -42,6 +42,13 @@ export function categoryHe(c: string): string {
   return CAT_HE[mergeCat(c)] ?? c;
 }
 
+// Short "what is this" TAG for an itinerary stop — the specific subcategory when we
+// have a memorable one (מוזיאון / פארק / טירה / שוק…), otherwise the broad category.
+export function catLabel(category?: string | null, subcategory?: string | null): string {
+  if (subcategory && SUB_HE[subcategory]) return SUB_HE[subcategory];
+  return category ? (CAT_HE[mergeCat(category)] ?? category) : "";
+}
+
 // Marker/legend colour per category — shared by the map and the filter legend.
 export const CAT_COLOR: Record<string, string> = {
   nature: "#1d9e75",

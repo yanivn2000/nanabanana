@@ -31,7 +31,7 @@ import { googleMapsUrl, googleDirUrl, formatDistance, estimateLeg, haversineKm, 
 import { stopColor } from "@/lib/labels";
 import { entryExit, type LatLng } from "@/lib/access";
 import { orderFromDepot } from "@/lib/cluster";
-import { bigImage } from "@/lib/labels";
+import { bigImage, catLabel, catColor } from "@/lib/labels";
 import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
 import type { Attraction } from "@/lib/db";
@@ -444,7 +444,12 @@ export function TripView({ tripId }: { tripId: string }) {
     if (!itinerary || !city) return;
     const stops = itinerary.days.flatMap((d) => d.stops);
     if (stops.length === 0) return;
-    if (stops.some((s) => s.image)) return;   // already has photos → enriched
+    // Re-attach when photos are missing OR when the category tag (s.cat) hasn't been
+    // back-filled yet on a real attraction stop — so trips built before the tag existed
+    // pick it up once. (details mode only attaches fields; it never reorders.)
+    const realStops = stops.filter((s) => s.id != null && s.kind !== "food" && s.kind !== "rest");
+    const enriched = stops.some((s) => s.image) && realStops.every((s) => s.cat != null);
+    if (enriched) return;
     if (detailsTriedRef.current) return;       // already refreshed this mount
     detailsTriedRef.current = true;
     let cancelled = false;
@@ -596,6 +601,7 @@ export function TripView({ tripId }: { tripId: string }) {
     const stop: Stop = {
       name: p.name_he || p.name_en, kind: CAT_TO_KIND[p.category] ?? "culture", time: "", duration: "",
       id: p.id, lat: p.lat ?? undefined, lng: p.lng ?? undefined, image: p.image_url ?? undefined, tagline: p.tagline_he ?? undefined,
+      cat: p.category,
     };
     const it: Itinerary = JSON.parse(JSON.stringify(itinerary));
     const stops = it.days[di].stops;
@@ -630,7 +636,7 @@ export function TripView({ tripId }: { tripId: string }) {
   const insertAttraction = (di: number, at: number, a: { id: number; name_he: string | null; name_en: string; category: string; lat?: number | null; lng?: number | null; image_url?: string | null; tagline_he?: string | null; tips_he?: string | null }) =>
     mutate((it) => {
       const stop: Stop = { name: a.name_he || a.name_en, kind: CAT_TO_KIND[a.category] ?? "culture", time: "", duration: "",
-        id: a.id, lat: a.lat ?? undefined, lng: a.lng ?? undefined, image: a.image_url ?? undefined, tagline: a.tagline_he ?? undefined, note: a.tips_he || a.tagline_he || undefined };
+        id: a.id, lat: a.lat ?? undefined, lng: a.lng ?? undefined, image: a.image_url ?? undefined, tagline: a.tagline_he ?? undefined, note: a.tips_he || a.tagline_he || undefined, cat: a.category };
       const stops = it.days[di].stops;
       stops.splice(Math.max(0, Math.min(at, stops.length)), 0, stop);
       it.days[di].stops = retimeStops(stops);
@@ -1210,6 +1216,21 @@ export function TripView({ tripId }: { tripId: string }) {
                         {/* meta line: rating + recommended stay (labelled so it isn't read
                             as an arrival/travel time) */}
                         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12.5px] text-[var(--text-3)]">
+                          {(() => {
+                            // "what is this" tag — the specific subcategory (מוזיאון / פארק /
+                            // טירה / שוק…) when we have it, else the broad category. Skips
+                            // logistical break stops (lunch / hotel rest).
+                            const label = catLabel(s.cat, s.sub)
+                              || (s.kind !== "food" && s.kind !== "rest" ? (KIND_META[s.kind]?.label ?? "") : "");
+                            if (!label) return null;
+                            const col = catColor(s.cat || "attraction");
+                            return (
+                              <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                                style={{ background: `color-mix(in srgb, ${col} 14%, var(--surface))`, color: col }}>
+                                {label}
+                              </span>
+                            );
+                          })()}
                           {!!s.score && (
                             <span className="flex items-center gap-1 font-medium text-[var(--accent-ink)]">
                               <Star size={12} fill="currentColor" /><span className="tabular-nums">{s.score}</span>

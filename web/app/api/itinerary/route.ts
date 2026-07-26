@@ -158,6 +158,7 @@ function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set
         if (!s.path) { s.lat = a.lat; s.lng = a.lng; }
         s.tagline = a.tagline_he; s.bestTime = a.best_time_he;
         s.dress = a.dress_he; s.cost = a.cost_level;
+        s.cat = a.category; s.sub = a.subcategory;
         s.ref = a.ref ?? refOf("attr", a.id);
         if (a.path && !s.path) s.path = a.path;
         if (anchorIds) s.anchor = anchorIds.has(a.id);

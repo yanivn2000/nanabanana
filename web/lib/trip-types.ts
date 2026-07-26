@@ -35,6 +35,9 @@ export type Stop = {
   bestTime?: string | null;
   dress?: string | null;
   cost?: number | null;
+  // DB category / subcategory — drives the little "what is this" tag (מוזיאון / פארק…).
+  cat?: string | null;
+  sub?: string | null;
 };
 
 export type Day = {
