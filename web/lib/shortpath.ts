@@ -1,4 +1,5 @@
 import type { Attraction } from "./db";
+import { coarseFits, tasteScore, INTEREST_TASTE } from "./taste";
 
 // The short curated path — "what people like you loved". For a profile, keep the
 // audience-eligible places (fit >= floor), rank by consensus = worthiness × fit,
@@ -57,8 +58,13 @@ export function shortPath(
   const consensus = (a: Attraction) =>
     Math.round(100 * worth(a) * (fitFor(a, profile) / 100)) + bonusFor(a, profile);
   const eligible = withFit.filter((a) => fitFor(a, profile) >= FIT_FLOOR);
+  // The boost keys are GOVERNING_INTERESTS chip keys (Hebrew, shared with the build).
+  // Match a place by its taste-tags OR coarse category — the same signal the build
+  // route uses — so the on-screen list and the built trip agree on what's "on-theme".
+  const boostW: Record<string, number> = {};
+  for (const k of boosts) for (const t of (INTEREST_TASTE[k] ?? [])) boostW[t] = (boostW[t] ?? 0) + 1;
   const boostMatch = (a: Attraction) =>
-    boosts.size > 0 && [...boosts].some((k) => INTERESTS.find((i) => i.key === k)?.match(a));
+    boosts.size > 0 && (tasteScore(a.taste_tags, boostW) > 0 || coarseFits(a.category, a.subcategory, [...boosts]));
   const scored = eligible.map((a) => ({ a, base: consensus(a), boosted: boostMatch(a) }));
   scored.sort((x, y) => (y.base + (y.boosted ? 20 : 0)) - (x.base + (x.boosted ? 20 : 0)));
   return {

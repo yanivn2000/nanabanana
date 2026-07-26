@@ -35,6 +35,9 @@ export type BuildOpts = {
   // City centre — lets a chosen far neighbourhood that's only a half-day get its
   // afternoon filled with central stops ("morning far, metro back to centre").
   center?: { lat: number; lng: number };
+  // Interest/must-see reservation (from the build route): these ids are pinned to
+  // the FRONT of the pool so the family familyFit re-sort can't drop the icons.
+  reservedIds?: Set<number>;
 };
 const isAvoided = (a: Attraction, avoid?: string[]) => !!avoid?.some((t) => stopMatchesType(a, t));
 // Drop stops beyond the per-day cap of a type (keeps the earlier = higher-value ones).
@@ -157,9 +160,14 @@ export function buildHeuristicItinerary(
     .filter((a) => !isAvoided(a, opts?.avoidCats));
   // The input is already taste-ranked; for kids, re-sort by family_score. (An active
   // anchor per family day is enforced by the critic flag + the higher family pace,
-  // NOT by a ranking boost — a boost distorted must-see coverage. v1.2.)
+  // NOT by a ranking boost — a boost distorted must-see coverage. v1.2.) The route's
+  // interest/must-see reservation is pinned first (targeted floor of ~days+K stops),
+  // so the family re-sort keeps the icons in the candidate window without a blanket
+  // must-see boost.
+  const rsv = opts?.reservedIds;
   const pool = isFamily
-    ? [...filtered].sort((a, b) => familyFit(b) - familyFit(a))
+    ? [...filtered].sort((a, b) =>
+        (Number(rsv?.has(b.id) ?? false) - Number(rsv?.has(a.id) ?? false)) || (familyFit(b) - familyFit(a)))
     : filtered;
 
   // Proximity clustering: instead of slicing the ranked list into days (which

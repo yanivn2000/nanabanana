@@ -19,9 +19,9 @@ const RADIUS_HE = ["קרוב מאוד", "עד שעה", "עד שעתיים", "ג�
 const PACES = ["רגוע", "בינוני", "אינטנסיבי"] as const;
 type Pace = (typeof PACES)[number];
 import { PACE_PER_DAY } from "@/lib/trip-types";
-import { deriveTaste, tasteScore, INTEREST_TASTE, INTEREST_CATS } from "@/lib/taste";
+import { deriveTaste, tasteScore, INTEREST_TASTE, INTEREST_CATS, GOVERNING_INTERESTS } from "@/lib/taste";
 import { CategoryTile } from "@/components/CategoryTiles";
-import { shortPath, PROFILES, PROFILE_HE, PROFILE_EMOJI, INTERESTS, type Profile } from "@/lib/shortpath";
+import { shortPath, PROFILES, PROFILE_HE, PROFILE_EMOJI, type Profile } from "@/lib/shortpath";
 import type { Attraction, Destination, Insight, AreaCard, Street } from "@/lib/db";
 
 // Every interest in the profile vocabulary — used as the fallback tile set when
@@ -555,10 +555,13 @@ export function DestinationView({
     for (const [id, c] of Object.entries(choices)) {
       (c === "yes" ? yes : no).push(Number(id));
     }
-    // Mode 3 ("build for <audience>"): anchor on the short path, ignoring stale
-    // marks. Otherwise build from the user's marks (explore mode).
-    const yesFinal = (buildFromSp && sp) ? sp.path.map((x) => x.a.id)
-      : yes.length ? yes : (audience && sp ? sp.path.map((x) => x.a.id) : yes);
+    // Only EXPLICIT card marks become a hard selection. The audience + interest chips
+    // now govern the build (audience_fit ranking + interest reservation), so we no
+    // longer freeze the curated short-path as a selection — that let museums (high
+    // consensus) flood and bypassed the interest governance. A pure "build for
+    // <audience>" with no marks/chips falls through to an audience-ranked, icon-
+    // reserved build.
+    const yesFinal = yes;
     setBuilding(true);
     // Neighbourhoods the traveller chose to tour → one guaranteed day each.
     const chosenAreaList = areas.filter((a) => chosenAreas.has(a.id));
@@ -567,6 +570,14 @@ export function DestinationView({
     // Streets marked "כן" → each becomes a stop with its own dwell.
     const pickedStreetIds = Object.entries(streetChoices)
       .filter(([, c]) => c === "yes").map(([id]) => Number(id));
+    // The chosen interest chips GOVERN the build. In the short/couples flow they live
+    // in `boosts` (which the couple actually clicks); in explore mode they're the
+    // profile interests. Fold their taste weights into the build taste (a couple never
+    // sets profile.interests, so without this the chips wouldn't reach the engine), and
+    // pass the raw keys as `interests` for the route's coarse fallback + reservation.
+    const chosenInterests = boosts.size ? [...boosts] : (profile.interests ?? []);
+    const buildTaste = { ...taste };
+    if (boosts.size) for (const k of boosts) for (const t of (INTEREST_TASTE[k] ?? [])) buildTaste[t] = (buildTaste[t] ?? 0) + 3;
     const trip = create({
       title: `טיול ל${dest.city_he || dest.city}`,
       mode: "preferences",
@@ -576,7 +587,9 @@ export function DestinationView({
       destinationId: dest.id,
       days: buildDays,
       month: new Date().getMonth() + 1,   // a default season; exact dates are set on the trip page
-      profile: { ...profile, pace: buildPace, taste, dailyDriveHours: RADIUS_HOURS[buildRadius] },
+      profile: { ...profile, pace: buildPace, taste: buildTaste, dailyDriveHours: RADIUS_HOURS[buildRadius] },
+      ...(chosenInterests.length ? { interests: chosenInterests } : {}),
+      ...(audience ? { audience } : {}),
       ...(yesFinal.length || no.length ? { selection: { yes: yesFinal, no } } : {}),
       ...(chosenAreaGroups.length ? { areaGroups: chosenAreaGroups, areaIds: chosenAreaIds } : {}),
       ...(pickedStreetIds.length ? { streetIds: pickedStreetIds } : {}),
@@ -677,7 +690,7 @@ export function DestinationView({
                 <div className="flex flex-col gap-2.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[12.5px] text-[var(--text-3)]"><b className="text-[var(--text-2)]">{sp!.path.length}</b> המקומות שהכי אהובים על {PROFILE_HE[audience!]} · כיילו:</span>
-                    {INTERESTS.map((it) => {
+                    {GOVERNING_INTERESTS.map((it) => {
                       const on = boosts.has(it.key);
                       return (
                         <button key={it.key}

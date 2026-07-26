@@ -186,6 +186,8 @@ export type Trip = {
     yes: number[]; no: number[];
   };
   streetIds?: number[];    // recommended streets marked "כן" — each becomes a stop
+  interests?: string[];    // chosen interest chip keys (GOVERNING_INTERESTS) — govern the build
+  audience?: "families" | "adults";  // who the trip is for → audience_fit ranking in the build
   // Chosen-neighbourhood tour: one member-id array per area the traveller picked to
   // tour → the builder makes one guaranteed day per area.
   areaGroups?: number[][];

@@ -15,7 +15,7 @@ import { checkRateLimit } from "@/lib/db";
 import { rateLimit } from "@/lib/ratelimit";
 import * as Sentry from "@sentry/nextjs";
 import { paceToPerDay } from "@/lib/trip-types";
-import { rankByTaste, tasteEmphasis } from "@/lib/taste";
+import { rankByTaste, tasteEmphasis, tasteScore, coarseFits, interestTasteMap, INTEREST_KEYWORDS } from "@/lib/taste";
 import { haversineKm, estimateLeg } from "@/lib/geo";
 import { reachPenalty } from "@/lib/brain/policy";
 import type { Itinerary as ItineraryT } from "@/lib/trip-types";
@@ -188,6 +188,12 @@ export async function POST(req: NextRequest) {
     usedIds?: number[];
     leftOut?: { id: number }[];   // details mode: re-attach coords to these
     taste?: Record<string, number>;
+    // Chosen interest chip keys (GOVERNING_INTERESTS) — enable the coarse category
+    // fallback in ranking (for untagged places) and the theme reservation below.
+    interests?: string[];
+    // Who the trip is for ("adults" = couples/friends) — folds audience_fit into the
+    // ranking so the build is audience-appropriate without a frozen curated selection.
+    audience?: "families" | "adults";
     segments?: { city: string; days: number; hotels?: TripHotel[] }[];
     // Explore build (F1): the traveler's per-trip picks. Drives an anchors-first,
     // "אם יש זמן" fillers plan on the single-city generate path.
@@ -254,9 +260,13 @@ export async function POST(req: NextRequest) {
   const picks = pickIds.length ? await attractionsByIds(pickIds) : [];
   const seen = new Set(base.map((a) => a.id));
   const pool = [...base, ...picks.filter((p) => !seen.has(p.id))];
+  // Chosen interest chips (GOVERNING_INTERESTS keys) — govern the pick alongside
+  // taste, and drive the coarse fallback + theme reservation below.
+  const interests = Array.isArray(body.interests) ? body.interests.filter((s): s is string => typeof s === "string") : [];
+  const audience = body.audience === "families" || body.audience === "adults" ? body.audience : undefined;
   // Wider pool (was 50) so the clusterer has a long tail of minor places to pull
   // in as "free gems" on the walking path (cluster.ts pass B).
-  const rankedByTaste = rankByTaste(pool, body.taste, 90, isFamily);
+  const rankedByTaste = rankByTaste(pool, body.taste, 90, isFamily, interests, audience);
   // Reach demotion (metro only): push far outliers (a 12km-away park) down the ranking
   // by ~penalty/8 positions, so walkable days don't sprawl. Mirrors the eval. car_base
   // is exempt — its far places become car day-trips. (See brain/policy#reachPenalty.)
@@ -278,7 +288,60 @@ export async function POST(req: NextRequest) {
   const streetRows = Array.isArray(body.streetIds) && body.streetIds.length
     ? await streetsByIds(body.streetIds.filter((n) => typeof n === "number")) : [];
   const streetStops = streetRows.map(streetAsStop);
-  const buildList = [...streetStops, ...(sel ? [...sel.anchors, ...sel.fillers] : attractions)];
+  // Interest-governed reservation (single-city, no explicit selection): guarantee
+  // the city's key must-sees (~1 hero/day) AND ≥K stops per chosen interest survive
+  // the top-90 + candidate-window cuts — so a "loves markets" trip actually gets
+  // markets and keeps the icons, while the interest-ranked majority fills the rest.
+  // Front-loading into buildList is the one place that beats BOTH cuts (mirrors the
+  // streetStops prepend). Gated to !sel — the selection path already guarantees
+  // must-sees via its fillers, so it's left untouched.
+  let reservedIds: Set<number> | undefined;
+  let orderedFill: Attraction[] = attractions;
+  if (!sel) {
+    const rDays = body.days ?? 4;
+    const RESERVE_ICONS = Math.max(3, rDays), K = 2;
+    const inRange = new Set(attractions.map((a) => a.id));
+    const chosen = new Set<number>();
+    const reserved: Attraction[] = [];
+    // Icons from DB icon order (`base`, EDITOR_ORDER: must-see first), NOT the
+    // taste-sorted list — so the city's defining must-sees are guaranteed regardless
+    // of the traveller's taste. In-range only (passed the metro reach filter).
+    for (const a of base.filter((x) => x.must_see === 1 && inRange.has(x.id)).slice(0, RESERVE_ICONS)) {
+      if (!chosen.has(a.id)) { chosen.add(a.id); reserved.push(a); }
+    }
+    // Theme guarantee: ≥K matching stops per chosen interest — by taste-tag, by coarse
+    // category, OR by a name keyword (markets are often mis-tagged as generic places).
+    for (const it of interests) {
+      const w = interestTasteMap(it), kws = INTEREST_KEYWORDS[it] ?? [];
+      let k = 0;
+      for (const a of attractions) {
+        if (k >= K) break;
+        if (chosen.has(a.id)) continue;
+        const nm = a.name_he || a.name_en || "";
+        const match = (a.taste_tags && tasteScore(a.taste_tags, w) > 0)
+          || coarseFits(a.category, a.subcategory, [it])
+          || kws.some((kw) => nm.includes(kw));
+        if (match) { chosen.add(a.id); reserved.push(a); k++; }
+      }
+    }
+    // keep interest-ranked fill the majority: cap reserved to ~half the window, but
+    // never below the icon floor, so every reserved item lands in the candidate window.
+    const cap = Math.max(RESERVE_ICONS, Math.floor(0.5 * rDays * perDay));
+    const frontIds = new Set(reserved.slice(0, cap).map((a) => a.id));
+    let ordered = [...reserved.slice(0, cap), ...attractions.filter((a) => !frontIds.has(a.id))];
+    // "1–2 museums": when the traveller stated interests that DON'T include museums,
+    // keep only the two most iconic museums and DROP the rest from the candidate pool
+    // (a reorder isn't enough — the clusterer's free-gems/backfill would pull dense
+    // Museumplein back in). A no-interest build is exempt (shows balanced icons).
+    if (interests.length && !interests.includes("מוזיאונים")) {
+      let seen = 0;
+      ordered = ordered.filter((a) => a.category !== "museum" || ++seen <= 2);
+    }
+    orderedFill = ordered;
+    // pin the surviving reserved set (icons + themes) to the front for the family sort.
+    reservedIds = new Set([...frontIds].filter((id) => ordered.some((a) => a.id === id)));
+  }
+  const buildList = [...streetStops, ...(sel ? [...sel.anchors, ...sel.fillers] : orderedFill)];
   // Only tag tiers when there's a real anchor set — otherwise every stop would
   // read "אם יש זמן" (e.g. a click-through selection with no picks / no must-sees).
   const anchorIds = sel && sel.anchors.length ? sel.anchorIds : undefined;
@@ -302,7 +365,9 @@ export async function POST(req: NextRequest) {
     daytripThresholdKm: r.daytripThresholdKm, daytripPerDays: r.daytripPerDays, daytripMaxStops: r.daytripMaxStops,
     samePlaceMeters: r.samePlaceMeters, freeGemMaxPerDay: r.freeGemMaxPerDay, freeGemDetourMin: r.freeGemDetourMin,
   });
-  const buildOpts = optsFor(dest, rules);
+  // reservedIds pins the interest/must-see reservation at the FRONT even for the
+  // family path, whose familyFit re-sort would otherwise drop the icons.
+  const buildOpts = { ...optsFor(dest, rules), reservedIds };
   const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary =>
     d.mobility === "car_base"
       ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp, buildOpts)
@@ -354,7 +419,7 @@ export async function POST(req: NextRequest) {
     const segAttrs = await Promise.all(
       segs.map(async (x) => ({
         ...x,
-        attractions: rankByTaste(await topAttractions(x.dest.id, 150), body.taste, 90, isFamily),
+        attractions: rankByTaste(await topAttractions(x.dest.id, 150), body.taste, 90, isFamily, interests, audience),
         insights: await insightsForDestination(x.dest.id),
         // each segment's OWN Brain techniques (avoids/dwell/lunch/centre)
         opts: optsFor(x.dest, await brainRulesForDest(x.dest.id)),

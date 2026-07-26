@@ -64,10 +64,15 @@ export function tasteScore(tags: string[] | null, w: Record<string, number>): nu
 export const INTEREST_CATS: Record<string, { cats?: string[]; subs?: string[] }> = {
   "טבע": { cats: ["nature"] },
   "חופים": { subs: ["beach"] },
-  "אוכל": { cats: ["food"] },
+  // food & markets: eateries AND market halls/stalls (markets are often tagged as a
+  // marketplace subcategory rather than the food category).
+  "אוכל": { cats: ["food"], subs: ["market", "marketplace", "deli", "farm"] },
   "תרבות": { cats: ["museum", "historic"] },
   "מוזיאונים": { cats: ["museum"] },
-  "קניות": { cats: ["shopping"] },
+  "קניות": { cats: ["shopping"], subs: ["market", "marketplace"] },
+  // architecture & streets: iconic historic buildings + viewpoints (the streets half
+  // arrives with the Layer-2 area→street auto-include; here it leans historic).
+  "אדריכלות": { cats: ["historic"], subs: ["viewpoint", "attraction"] },
   // וינטג' / יוקרה are FLAVORS of shopping, not all of it — mapping them to the
   // whole shopping category made their tiles clone קניות. Match by the shop-kind
   // subcategory (mirrors pipeline_food.py's VINTAGE_SHOPS / LUXURY_SHOPS) — the
@@ -105,25 +110,77 @@ export function familyFit(a: Attraction): number {
   return a.family_score ?? 0;
 }
 
-// Re-rank attractions by taste (primary), then must-see, and — ONLY for trips
-// with kids — family fit (family_score, overridden by the editor's kids rating).
-// It's gated on `isFamily`; couples'/friends' trips rank by taste + must-see
-// only. Returns the top `n`; falls back to source order when there's no taste.
+// Re-rank attractions so INTERESTS govern the pick, with must-see a permanent
+// (moderate) lean and — ONLY for trips with kids — family fit. Weights are tuned so
+// a single matching taste-tag (weight 3 → ×3 = 9) still outranks a bare must-see
+// (MUST_SEE_LEAN 6): interests lead the FILL, while the city-defining icons get a
+// guaranteed floor via the reservation in the build route (not a big weight here).
+// `interests` (the chip keys) enable a coarse category fallback for the ~half of a
+// city's places that aren't taste-tagged yet. Returns the top `n`; falls back to
+// source order only when there's neither taste nor interests.
+const MUST_SEE_LEAN = 6;   // was 2 — a lean, not a dominator
+const INTEREST_MULT = 3;
+const COARSE_CREDIT = 2;   // pre-mult credit for an untagged place that matches a chosen interest by category
+export type Audience = "families" | "adults";
+// Audience appropriateness (0-100) — the stronger of couples/friends for adults.
+export function audienceFit(a: Attraction, aud: Audience): number {
+  return aud === "families" ? (a.audience_fit?.families ?? 0)
+    : Math.max(a.audience_fit?.couples ?? 0, a.audience_fit?.friends ?? 0);
+}
 export function rankByTaste(
   attractions: Attraction[],
   taste: Record<string, number> | undefined,
   n: number,
-  isFamily = false
+  isFamily = false,
+  interests?: string[],
+  audience?: Audience
 ): Attraction[] {
-  if (!taste || Object.keys(taste).length === 0) return attractions.slice(0, n);
-  const scored = attractions.map((a) => ({
-    a,
-    s: tasteScore(a.taste_tags, taste) * 3
-      + (isFamily ? familyFit(a) : 0)
-      + (a.must_see === 1 ? 2 : 0),
-  }));
+  const hasTaste = taste && Object.keys(taste).length > 0;
+  if (!hasTaste && !interests?.length && !audience) return attractions.slice(0, n);
+  const w = taste ?? {};
+  const scored = attractions.map((a) => {
+    let raw = tasteScore(a.taste_tags, w);
+    if (raw === 0 && interests?.length && coarseFits(a.category, a.subcategory, interests)) raw = COARSE_CREDIT;
+    return {
+      a,
+      s: raw * INTEREST_MULT
+        + (isFamily ? familyFit(a) : 0)
+        + (audience ? audienceFit(a, audience) / 25 : 0)   // 0-4: who ranks appeal, interests govern the mix
+        + (a.must_see === 1 ? MUST_SEE_LEAN : 0),
+    };
+  });
   scored.sort((x, y) => y.s - x.s);
   return scored.map((x) => x.a).slice(0, n);
+}
+
+// The single governing interest set (owner-approved 7 chips). Each chip's `key` is
+// a canonical interest that INTEREST_TASTE + INTEREST_CATS understand, so the same
+// key both weights taste (via deriveTaste) and drives the coarse fallback + the
+// build-route theme reservation. This is the ONE interest input shown to travellers.
+export const GOVERNING_INTERESTS: { key: string; label: string; emoji: string }[] = [
+  { key: "מוזיאונים", label: "מוזיאונים ואמנות", emoji: "🖼️" },
+  { key: "אוכל", label: "אוכל ושווקים", emoji: "🍽️" },
+  { key: "קניות", label: "קניות", emoji: "🛍️" },
+  { key: "טבע", label: "טבע ופארקים", emoji: "🌳" },
+  { key: "חיי לילה", label: "חיי לילה", emoji: "🍸" },
+  { key: "היסטוריה", label: "היסטוריה ותרבות", emoji: "🏛️" },
+  { key: "אדריכלות", label: "אדריכלות ורחובות", emoji: "🏙️" },
+];
+
+// Name-keyword fallback for the theme reservation, for interests whose places are
+// often mis-tagged/mis-categorised in OSM (markets frequently land as a generic
+// "attraction" with no food/shopping tag). name_he is normalised Hebrew across all
+// cities (we name every market "שוק …"), so "שוק" reliably catches them everywhere.
+export const INTEREST_KEYWORDS: Record<string, string[]> = {
+  "אוכל": ["שוק"],
+  "קניות": ["שוק", "קניון", "פסאז'"],
+};
+
+// A per-interest taste-weight map (chip key → {tag: 1}) for scoring a single theme
+// during the build-route reservation. Empty for chips with no dedicated tag
+// (architecture) — those rely on the coarse category fallback.
+export function interestTasteMap(key: string): Record<string, number> {
+  return Object.fromEntries((INTEREST_TASTE[key] ?? []).map((t) => [t, 1]));
 }
 
 // Top-weighted taste tags → a short Hebrew emphasis line for the AI prompt.
