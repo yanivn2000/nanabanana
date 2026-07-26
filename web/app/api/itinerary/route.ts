@@ -61,7 +61,13 @@ async function resolveDestination(city?: string, lat?: number, lng?: number) {
   const dests = await listDestinations();
   if (dests.length === 0) return null;
   if (city) {
-    const match = dests.find((d) => d.city.toLowerCase() === city.toLowerCase());
+    const c = city.toLowerCase().trim();
+    // Exact on the English city, then the Hebrew city, then a contains-match either
+    // way ("London" ↔ "Greater London") — so a slightly-off name never silently
+    // falls through to the WRONG city (dests[0]) and builds someone else's trip.
+    const match = dests.find((d) => d.city.toLowerCase() === c)
+      || dests.find((d) => (d.city_he ?? "").toLowerCase() === c)
+      || dests.find((d) => { const dc = d.city.toLowerCase(); return dc.includes(c) || c.includes(dc); });
     if (match) return match;
   }
   if (lat != null && lng != null) {
@@ -69,7 +75,9 @@ async function resolveDestination(city?: string, lat?: number, lng?: number) {
       .map((d) => ({ d, km: haversineKm(lat, lng, d.lat, d.lng) }))
       .sort((a, b) => a.km - b.km)[0].d;
   }
-  return dests[0];
+  // A named-but-unmatched city with no coords is a caller bug — don't silently
+  // build the top-ranked city's trip; surface it.
+  return city ? null : dests[0];
 }
 
 function normName(s: string): string {
@@ -352,6 +360,7 @@ export async function POST(req: NextRequest) {
   // streetStops prepend). Gated to !sel — the selection path already guarantees
   // must-sees via its fillers, so it's left untouched.
   let reservedIds: Set<number> | undefined;
+  let guaranteeIds: Set<number> | undefined;   // chosen-theme stops the clusterer may drop (scattered)
   let orderedFill: Attraction[] = attractions;
   if (!sel) {
     const rDays = body.days ?? 4;
@@ -408,6 +417,7 @@ export async function POST(req: NextRequest) {
     // taste-tag, by coarse category, OR by a name keyword (markets are often mis-tagged
     // as generic places). A thin interest that can't fill its share just yields fewer
     // (the ranking fill takes the rest) rather than inventing places.
+    const themeIds = new Set<number>();
     for (const it of interests) {
       const w = interestTasteMap(it), kws = INTEREST_KEYWORDS[it] ?? [];
       let k = 0;
@@ -420,9 +430,12 @@ export async function POST(req: NextRequest) {
         const match = (a.taste_tags && tasteScore(a.taste_tags, w) > 0)
           || coarseFits(a.category, a.subcategory, [it])
           || kws.some((kw) => nm.includes(kw));
-        if (match) { chosen.add(a.id); reserved.push(a); k++; }
+        if (match) { chosen.add(a.id); reserved.push(a); themeIds.add(a.id); k++; }
       }
     }
+    // The theme-reserved stops are the ones the guarantee pass protects from the
+    // proximity clusterer dropping them (a scattered bar / peripheral park).
+    guaranteeIds = themeIds;
     // DIVERSITY FLOOR: guarantee ~1 top-ranked stop of each MAJOR category the
     // traveller did NOT choose, so no trip is one-note ("even without picking
     // museums, one museum is good"). Chosen categories get the emphasis instead.
@@ -502,7 +515,7 @@ export async function POST(req: NextRequest) {
   });
   // reservedIds pins the interest/must-see reservation at the FRONT even for the
   // family path, whose familyFit re-sort would otherwise drop the icons.
-  const buildOpts = { ...optsFor(dest, rules), reservedIds };
+  const buildOpts = { ...optsFor(dest, rules), reservedIds, guaranteeIds };
   const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary =>
     d.mobility === "car_base"
       ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp, buildOpts)

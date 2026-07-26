@@ -38,6 +38,11 @@ export type BuildOpts = {
   // Interest/must-see reservation (from the build route): these ids are pinned to
   // the FRONT of the pool so the family familyFit re-sort can't drop the icons.
   reservedIds?: Set<number>;
+  // Chosen-theme stops the proximity clusterer tends to drop because they're
+  // geographically scattered (nightlife bars, peripheral parks). After clustering,
+  // the best few unscheduled ones are force-inserted into their nearest day so a
+  // chosen theme is never absent just because its venues aren't centrally located.
+  guaranteeIds?: Set<number>;
 };
 const isAvoided = (a: Attraction, avoid?: string[]) => !!avoid?.some((t) => stopMatchesType(a, t));
 // Drop stops beyond the per-day cap of a type (keeps the earlier = higher-value ones).
@@ -250,6 +255,29 @@ export function buildHeuristicItinerary(
     };
     fill(FILL_KM);
     if (picks.length < perDay - 1) fill(FILL_KM_FAR);   // thin far cluster → widen once
+  }
+
+  // GUARANTEE PASS: a chosen theme whose venues are geographically scattered
+  // (nightlife bars, peripheral parks) gets skipped by the proximity clusterer — so
+  // "chose nightlife" could yield zero bars. Force the best few unscheduled
+  // guarantee stops into their NEAREST day (≈1 per day), so the theme is present.
+  const gIds = opts?.guaranteeIds;
+  if (gIds?.size) {
+    let budget = 2 * days;   // ~2/day, enough that several chosen themes each land
+    for (const a of pool) {
+      if (budget <= 0) break;
+      if (!gIds.has(a.id) || usedIds.has(a.id)) continue;
+      if (!(Number.isFinite(a.lat) && Number.isFinite(a.lng))) continue;
+      let bestD = -1, bestKm = Infinity;
+      capped.forEach((day, di) => {
+        if (!day.length) return;
+        const km = nearAnyKm(a, day);
+        if (km < bestKm) { bestKm = km; bestD = di; }
+      });
+      if (bestD < 0 || bestKm > 8) continue;   // too far from any day → leave in the bank (needs a day-trip)
+      if (capped[bestD].length >= perDay + 2) continue;   // don't bloat a day
+      capped[bestD].push(a); usedIds.add(a.id); budget--;
+    }
   }
 
   const dayList = capped.map((pickFinal, d) => {
