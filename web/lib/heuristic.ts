@@ -170,10 +170,25 @@ export function buildHeuristicItinerary(
   // so the family re-sort keeps the icons in the candidate window without a blanket
   // must-see boost.
   const rsv = opts?.reservedIds;
-  const pool = isFamily
+  const poolAll = isFamily
     ? [...filtered].sort((a, b) =>
         (Number(rsv?.has(b.id) ?? false) - Number(rsv?.has(a.id) ?? false)) || (familyFit(b) - familyFit(a)))
     : filtered;
+
+  // Nightlife is an EVENING activity — it must NOT compete with markets/museums for
+  // daytime proximity slots. Pull the CHOSEN nightlife venues out of the day pool and
+  // schedule them as an evening slot per day (below), so "food + nightlife" gets both:
+  // markets by day, a bar by night. Only when nightlife was actually chosen (in
+  // guaranteeIds) — otherwise a stray bar never appears.
+  const NIGHTLIFE_SUBS = new Set(["bar", "pub", "nightclub", "cocktail", "wine_bar",
+    "biergarten", "brewery", "jazz_club", "music_venue", "lounge", "nightlife", "disco"]);
+  // A bar/club is never a DAYTIME stop → keep every nightlife venue out of the day
+  // pool. Only the CHOSEN ones (in guaranteeIds) become evening slots below.
+  const isNightSubcat = (a: Attraction) => !!a.subcategory && NIGHTLIFE_SUBS.has(a.subcategory)
+    && Number.isFinite(a.lat) && Number.isFinite(a.lng);
+  const anyNight = poolAll.some(isNightSubcat);
+  const nightVenues = poolAll.filter((a) => isNightSubcat(a) && !!opts?.guaranteeIds?.has(a.id));
+  const pool = anyNight ? poolAll.filter((a) => !isNightSubcat(a)) : poolAll;
 
   // Proximity clustering: instead of slicing the ranked list into days (which
   // scatters each day across the city), group geographically so every day is a
@@ -280,6 +295,7 @@ export function buildHeuristicItinerary(
     }
   }
 
+  const usedNight = new Set<number>();   // chosen nightlife venues already placed as an evening slot
   const dayList = capped.map((pickFinal, d) => {
     // Order each day by PROXIMITY (NN + 2-opt) after cap+backfill, then ORIENT the
     // whole route so morning-leaning stops fall earlier and evening / day-ender ones
@@ -331,6 +347,27 @@ export function buildHeuristicItinerary(
           : travelMinutes(a, picks[i + 1]);
       }
     });
+
+    // EVENING nightlife slot: after the day's sightseeing, add the nearest un-used
+    // chosen bar/club as a night stop (≥ ~20:30) — so nightlife lands at night and
+    // never competes with daytime markets/museums for a proximity slot.
+    if (nightVenues.length && picks.length) {
+      const last = picks[picks.length - 1];
+      const cand = nightVenues
+        .filter((v) => !usedNight.has(v.id))
+        .map((v) => ({ v, km: haversineKm(last.lat as number, last.lng as number, v.lat as number, v.lng as number) }))
+        .sort((x, y) => x.km - y.km)[0];
+      if (cand) {
+        usedNight.add(cand.v.id);
+        const v = cand.v;
+        const nightClock = Math.max(round30(clock) + 60, 20 * 60 + 30);   // after the day, ≥ 20:30
+        stops.push({
+          name: v.name_he || v.name_en, kind: kindOf(v), time: fmtClock(nightClock),
+          duration: durationHe(dwellMinutes(v, dwell)), note: v.tips_he || descriptor(v),
+          id: v.id, lat: v.lat, lng: v.lng, image: v.image_url, tagline: v.tagline_he,
+        });
+      }
+    }
 
     const kinds = new Set(picks.map((a) => kindOf(a)));
     const mix = kinds.has("nature") && kinds.has("culture")

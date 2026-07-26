@@ -287,12 +287,17 @@ export async function POST(req: NextRequest) {
   // pool, so an explicitly chosen thin interest would surface NOTHING. Fetch the best
   // matches directly (union across chosen interests, quality-first) and guarantee them
   // as candidates below — the theme reservation then reserves its share of them.
-  const interestRows = interests.length ? await interestCandidates(dest.id, {
-    tags: [...new Set(interests.flatMap((k) => INTEREST_TASTE[k] ?? []))],
-    cats: [...new Set(interests.flatMap((k) => INTEREST_CATS[k]?.cats ?? []))],
-    subs: [...new Set(interests.flatMap((k) => INTEREST_CATS[k]?.subs ?? []))],
-    kws:  [...new Set(interests.flatMap((k) => INTEREST_KEYWORDS[k] ?? []))],
-  }, Math.max(16, 4 * (body.days ?? 4))) : [];
+  // Fetch PER interest (not one union query with a shared limit) — otherwise in a
+  // multi-interest build a dense theme (museums) eats the whole limit and a thin one
+  // (nightlife) fetches nothing. Each interest gets its own slice; then dedup.
+  const interestRows = interests.length
+    ? Object.values(Object.fromEntries(
+        (await Promise.all(interests.map((k) => interestCandidates(dest.id, {
+          tags: INTEREST_TASTE[k] ?? [], cats: INTEREST_CATS[k]?.cats ?? [],
+          subs: INTEREST_CATS[k]?.subs ?? [], kws: INTEREST_KEYWORDS[k] ?? [],
+        }, Math.max(10, 3 * (body.days ?? 4))))))
+        .flat().map((a) => [a.id, a] as const)))
+    : [];
   // Wider pool (was 50) so the clusterer has a long tail of minor places to pull
   // in as "free gems" on the walking path (cluster.ts pass B).
   const rankedByTaste = rankByTaste(pool, body.taste, 90, isFamily, interests, audience);
