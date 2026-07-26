@@ -363,6 +363,17 @@ export async function POST(req: NextRequest) {
     // fills the icon backbone too, so the ~2/day themed layer sits on top of the icons.
     const themeBudget = 2 * rDays;
     const perInterest = interests.length ? Math.max(1, Math.round(themeBudget / interests.length)) : 0;
+    // Each chosen interest → the DB category bucket(s) it emphasises. Drives the
+    // diversity floor + balance caps below (so the fill can't flood one category).
+    const INT_CATS: Record<string, string[]> = {
+      "מוזיאונים": ["museum"], "אוכל": ["food", "shopping"], "טבע": ["nature"],
+      // "attraction" is a catch-all where many cities file monuments/landmarks
+      // (Lisbon tags its historic sites there), so history/architecture claim it too.
+      "חיי לילה": ["food"], "היסטוריה": ["historic", "attraction"], "אדריכלות": ["historic", "attraction"],
+      "וינטג'": ["shopping"], "פארקי שעשועים": ["nature"], "חופים": ["nature"],
+    };
+    const chosenCats = new Set(interests.flatMap((it) => INT_CATS[it] ?? []));
+    const catBucket = (a: Attraction) => (a.category === "tourism" ? "historic" : (a.category ?? "attraction"));
     const inRange = new Set(attractions.map((a) => a.id));
     const chosen = new Set<number>();
     const reserved: Attraction[] = [];
@@ -412,29 +423,52 @@ export async function POST(req: NextRequest) {
         if (match) { chosen.add(a.id); reserved.push(a); k++; }
       }
     }
-    // keep interest-ranked fill the majority: cap reserved to ~half the window, but
-    // never below the icon floor. When neighbourhoods are chosen they ARE the explicit
-    // intent, so allow more of the window (icons+areas first, interest themes last).
-    // The front-load cap must fit the whole theme budget + the icon backbone + any
-    // ❤ picks — otherwise a deep single-interest trip would get its themed stops
-    // trimmed right back off. Never exceeds the day's real capacity.
-    const cap = areaMemberIds.length
-      ? Math.min(reserved.length, Math.round(rDays * perDay * 0.85))
-      : Math.min(rDays * perDay,
-          Math.max(Math.floor(0.5 * rDays * perDay), RESERVE_ICONS + themeBudget + pickSet.size));
-    const frontIds = new Set(reserved.slice(0, cap).map((a) => a.id));
-    let ordered = [...reserved.slice(0, cap), ...attractions.filter((a) => !frontIds.has(a.id))];
-    // "1–2 museums": when the traveller stated interests that DON'T include museums,
-    // keep only the two most iconic museums and DROP the rest from the candidate pool
-    // (a reorder isn't enough — the clusterer's free-gems/backfill would pull dense
-    // Museumplein back in). A no-interest build is exempt (shows balanced icons).
-    if (interests.length && !interests.includes("מוזיאונים")) {
-      let seen = 0;
-      ordered = ordered.filter((a) => a.category !== "museum" || pickSet.has(a.id) || ++seen <= 2);
+    // DIVERSITY FLOOR: guarantee ~1 top-ranked stop of each MAJOR category the
+    // traveller did NOT choose, so no trip is one-note ("even without picking
+    // museums, one museum is good"). Chosen categories get the emphasis instead.
+    const MAJOR = ["nature", "museum", "historic", "food"];
+    for (const cat of MAJOR) {
+      if (chosenCats.has(cat)) continue;
+      const a = attractions.find((x) => !chosen.has(x.id) && catBucket(x) === cat);
+      if (a) { chosen.add(a.id); reserved.push(a); }
     }
-    orderedFill = ordered;
-    // pin the surviving reserved set (icons + themes) to the front for the family sort.
-    reservedIds = new Set([...frontIds].filter((id) => ordered.some((a) => a.id === id)));
+    // Keep the whole reserved backbone (icons + theme emphasis + diversity floor +
+    // picks/areas) up to capacity; the category-capped fill tops it up.
+    const capReserve = areaMemberIds.length
+      ? Math.min(reserved.length, Math.round(rDays * perDay * 0.85))
+      : Math.min(rDays * perDay, reserved.length);
+    const front = reserved.slice(0, capReserve);
+    const frontIds = new Set(front.map((a) => a.id));
+    // PER-CATEGORY BALANCE CAP on the ranking fill so no single theme floods the trip
+    // (Lisbon nature 13 → ~cap). A chosen category gets a generous cap (emphasis, split
+    // when several are chosen); others get a small one. The reserved backbone is kept
+    // but COUNTS toward the cap, so the TOTAL per category is bounded either way.
+    const nCats = Math.max(1, chosenCats.size);
+    const capChosen = Math.min(2 * rDays, Math.round((2 * rDays) / nCats) + 1);
+    const capOther = Math.max(1, Math.round(rDays / 2));
+    const catN = new Map<string, number>();
+    for (const a of front) { const c = catBucket(a); catN.set(c, (catN.get(c) ?? 0) + 1); }
+    // SOFT cap: the balanced set (within cap) leads, the over-cap remainder trails.
+    // The whole pool stays available so the proximity clusterer can still build dense
+    // days — but it fills from the diverse head first, so the trip is balanced and
+    // only dips into an over-represented category when a day genuinely needs it nearby.
+    // A HARD ceiling above the soft cap bounds even the dense catch-all categories
+    // (Lisbon has 195 nature / 160 attraction) so nothing monopolises the trip; the
+    // slack keeps enough density for the proximity clusterer to still build full days.
+    const slack = Math.max(2, Math.round(rDays * perDay * 0.15));
+    const capped: Attraction[] = [], overflow: Attraction[] = [];
+    for (const a of attractions) {
+      if (frontIds.has(a.id)) continue;
+      const c = catBucket(a);
+      const lim = chosenCats.has(c) ? capChosen : capOther;
+      const cur = catN.get(c) ?? 0;
+      if (pickSet.has(a.id) || cur < lim) { catN.set(c, cur + 1); capped.push(a); }
+      else if (cur < lim + slack) { catN.set(c, cur + 1); overflow.push(a); }
+      // else: over the hard ceiling — dropped, so no category floods the trip.
+    }
+    orderedFill = [...front, ...capped, ...overflow];
+    // pin the reserved set (icons + themes + floor) to the front for the family sort.
+    reservedIds = new Set(frontIds);
   }
   const buildList = [...streetStops, ...(sel ? [...sel.anchors, ...sel.fillers] : orderedFill)];
   // Only tag tiers when there's a real anchor set — otherwise every stop would
