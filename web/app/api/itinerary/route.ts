@@ -452,19 +452,25 @@ export async function POST(req: NextRequest) {
     // The whole pool stays available so the proximity clusterer can still build dense
     // days — but it fills from the diverse head first, so the trip is balanced and
     // only dips into an over-represented category when a day genuinely needs it nearby.
-    // A HARD ceiling above the soft cap bounds even the dense catch-all categories
-    // (Lisbon has 195 nature / 160 attraction) so nothing monopolises the trip; the
-    // slack keeps enough density for the proximity clusterer to still build full days.
-    const slack = Math.max(2, Math.round(rDays * perDay * 0.15));
+    // Absolute ceiling per category (as a FRACTION of trip size, so it barely touches
+    // a balanced big city like London — keeping the pool dense for the clusterer —
+    // while cutting extreme floods in a lopsided-data city like Lisbon). A CHOSEN
+    // theme gets a high ceiling (it should lead); an unchosen catch-all (Lisbon files
+    // landmarks under "attraction") gets a lower one, so it never out-weighs the theme.
+    const cap = rDays * perDay;
+    const capHardChosen = Math.max(capChosen, Math.round(cap * 0.5));
+    const capHardOther = Math.max(capOther + 1, Math.round(cap * 0.3));
     const capped: Attraction[] = [], overflow: Attraction[] = [];
     for (const a of attractions) {
       if (frontIds.has(a.id)) continue;
       const c = catBucket(a);
-      const lim = chosenCats.has(c) ? capChosen : capOther;
+      const isCat = chosenCats.has(c);
+      const lim = isCat ? capChosen : capOther;
+      const hard = isCat ? capHardChosen : capHardOther;
       const cur = catN.get(c) ?? 0;
       if (pickSet.has(a.id) || cur < lim) { catN.set(c, cur + 1); capped.push(a); }
-      else if (cur < lim + slack) { catN.set(c, cur + 1); overflow.push(a); }
-      // else: over the hard ceiling — dropped, so no category floods the trip.
+      else if (cur < hard) { catN.set(c, cur + 1); overflow.push(a); }
+      // else: over the absolute ceiling — dropped.
     }
     orderedFill = [...front, ...capped, ...overflow];
     // pin the reserved set (icons + themes + floor) to the front for the family sort.
