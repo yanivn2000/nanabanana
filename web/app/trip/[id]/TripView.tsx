@@ -1343,11 +1343,11 @@ export function TripView({ tripId }: { tripId: string }) {
             <div data-drop-bank
               className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 transition-colors"
               style={overBank ? { borderColor: "var(--brand)", boxShadow: "inset 0 0 0 2px var(--brand)" } : undefined}>
-              <p className="serif text-[15px] font-bold text-[var(--text)]">לא נכנסו ליומן · {trip?.leftOut?.length ?? 0}</p>
+              <p className="serif text-[15px] font-bold text-[var(--text)]">בנק המקומות — לפי חשיבות · {trip?.leftOut?.length ?? 0}</p>
               <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--text-2)]">
                 {drag?.kind === "stop"
                   ? "שחררו כאן כדי להוציא את העצירה מהיומן."
-                  : "גררו כרטיס למעלה אל היום — למקום המדויק שתרצו. כדי להוציא עצירה, גררו אותה לכאן."}
+                  : "מה שלא נכנס ליומן, מסודר לפי חשיבות (⭐ = חובה). גררו כרטיס אל היום כדי להוסיף — או גררו עצירה לכאן כדי להוציא."}
               </p>
               <div className="mt-3 flex flex-col gap-2">
                 {(trip?.leftOut ?? []).map((p) => {
@@ -1372,7 +1372,10 @@ export function TripView({ tripId }: { tripId: string }) {
                       ) : (
                         <div className="grid size-11 shrink-0 place-items-center rounded-[8px] bg-[var(--surface-2)] text-[var(--text-3)]"><MapPin size={16} /></div>
                       )}
-                      <span className="min-w-0 flex-1 truncate text-[14px] font-semibold">{p.name_he || p.name_en}</span>
+                      <span className="min-w-0 flex-1 truncate text-[14px] font-semibold">
+                        {p.must_see === 1 && <span className="ml-1 align-middle text-[var(--accent-ink)]" title="אתר חובה">⭐</span>}
+                        {p.name_he || p.name_en}
+                      </span>
                       <span className="grid w-4 shrink-0 place-items-center">
                         {bHasDetails && <ChevronDown size={16} className={`text-[var(--text-3)] transition-transform ${bOpen ? "rotate-180" : ""}`} />}
                       </span>

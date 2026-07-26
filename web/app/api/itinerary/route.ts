@@ -416,7 +416,7 @@ export async function POST(req: NextRequest) {
     d.mobility === "car_base"
       ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp, buildOpts)
       : buildHeuristicItinerary(d.city, d.country, ndays, list, fam, pd, wp, undefined, buildOpts);
-  const detailOf = (a: Attraction) => ({ id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category, lat: a.lat, lng: a.lng, tagline_he: a.tagline_he, tips_he: a.tips_he, best_time_he: a.best_time_he, dress_he: a.dress_he, cost_level: a.cost_level, website: a.website });
+  const detailOf = (a: Attraction) => ({ id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category, lat: a.lat, lng: a.lng, tagline_he: a.tagline_he, tips_he: a.tips_he, best_time_he: a.best_time_he, dress_he: a.dress_he, cost_level: a.cost_level, website: a.website, must_see: a.must_see });
   // `opts.list` overrides the match list (neighbourhood builds pass the full area
   // pool so every area member resolves); `opts.surfaceIds`/`detailRows` say which
   // un-scheduled places land in "לא נכנסו ליומן" (default: the traveller's "כן").
@@ -430,9 +430,21 @@ export async function POST(req: NextRequest) {
     if (dest.mobility === "car_base") withDetails.days.forEach((d) => { d.carBase = true; });
     const surfaceIds = opts?.surfaceIds ?? new Set<number>([...yesSet, ...areaMemberIds, ...streetStops.map((s) => s.id)]);
     const detailRows = opts?.detailRows ?? [...picks, ...areaMemberRows, ...streetStops];
-    const leftOut = (body.selection || streetStops.length || areaMemberIds.length || opts?.surfaceIds)
-      ? detailRows.filter((a) => surfaceIds.has(a.id) && !scheduled.has(a.id)).map(detailOf)
+    // The transparent BANK (Layer 4): what didn't get into the plan. The traveller's
+    // OWN surfaced picks that didn't fit lead it (so a "כן" never just vanishes), then
+    // the worthy UNSCHEDULED attractions, must-see FIRST — so the trip page can always
+    // show "here's what's in reserve" (not just for explicit-pick builds). Streets are
+    // excluded (isRealAttraction), as are already-scheduled stops.
+    const explicit = (body.selection || streetStops.length || areaMemberIds.length || opts?.surfaceIds)
+      ? detailRows.filter((a) => surfaceIds.has(a.id) && !scheduled.has(a.id))
       : [];
+    const inBank = new Set(explicit.map((a) => a.id));
+    const extra = (opts?.list ?? buildList)
+      .filter((a) => isRealAttraction(a.id) && a.lat != null && a.lng != null && !scheduled.has(a.id) && !inBank.has(a.id))
+      .map((a, i) => ({ a, i }))
+      .sort((x, y) => (y.a.must_see === 1 ? 1 : 0) - (x.a.must_see === 1 ? 1 : 0) || x.i - y.i)
+      .map((z) => z.a);
+    const leftOut = [...explicit, ...extra].slice(0, 24).map(detailOf);
     return NextResponse.json({ itinerary: withDetails, ...(engine ? { engine } : {}), leftOut });
   };
 
