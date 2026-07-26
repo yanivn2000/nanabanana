@@ -253,13 +253,23 @@ export async function POST(req: NextRequest) {
   const rules = await brainRulesForDest(dest.id);
   // heuristic stops/day. Families get at least their pace-rule floor (fuller day).
   const perDay = isFamily ? Math.max(paceToPerDay(body.pace), rules.paceStops.families) : paceToPerDay(body.pace);
-  // Base pool = top 150; then fold in the traveler's exact picks (even ones
-  // ranked below 150) so a chosen place is always a real build candidate.
+  // Base pool = top 150; then fold in the traveler's exact picks AND the members of
+  // any chosen neighbourhoods (even ones ranked below 150) so a chosen place / area
+  // member is always a real build candidate.
   const base = await topAttractions(dest.id, 150);
   const pickIds = body.selection ? [...body.selection.yes] : [];
   const picks = pickIds.length ? await attractionsByIds(pickIds) : [];
+  // Layer 2 (additive areas): the members of chosen neighbourhoods. They no longer
+  // define the DAYS (one-day-per-area) — they're reserved into the interest-governed
+  // build so the clusterer composes them into day-PARTS by proximity (area A morning,
+  // area B / centre afternoon), keeping the traveller's own day count.
+  const noSet0 = new Set(body.selection?.no ?? []);
+  const areaMemberIds = body.areaGroups?.length
+    ? [...new Set(body.areaGroups.flat())].filter((id): id is number => typeof id === "number" && !noSet0.has(id))
+    : [];
+  const areaMemberRows = areaMemberIds.length ? await attractionsByIds(areaMemberIds) : [];
   const seen = new Set(base.map((a) => a.id));
-  const pool = [...base, ...picks.filter((p) => !seen.has(p.id))];
+  const pool = [...base, ...[...picks, ...areaMemberRows].filter((p) => { if (seen.has(p.id)) return false; seen.add(p.id); return true; })];
   // Chosen interest chips (GOVERNING_INTERESTS keys) — govern the pick alongside
   // taste, and drive the coarse fallback + theme reservation below.
   const interests = Array.isArray(body.interests) ? body.interests.filter((s): s is string => typeof s === "string") : [];
@@ -274,12 +284,18 @@ export async function POST(req: NextRequest) {
   // mis-catalogued to Amsterdam) from a metro walking trip — a metro day can't reach it
   // and it otherwise ate a whole day. User's explicit picks are exempt.
   const METRO_MAX_KM = 35;
-  const attractions = dest.mobility === "car_base" ? rankedByTaste
+  const rankedReach = dest.mobility === "car_base" ? rankedByTaste
     : rankedByTaste
         .filter((a) => a.lat == null || a.lng == null || pickIds.includes(a.id) || haversineKm(dest.lat, dest.lng, a.lat, a.lng) <= METRO_MAX_KM)
         .map((a, i) => ({ a, k: i + (a.lat != null && a.lng != null ? reachPenalty(haversineKm(dest.lat, dest.lng, a.lat, a.lng), true) / 8 : 0) }))
         .sort((x, y) => x.k - y.k)
         .map((z) => z.a);
+  // Chosen-area members are guaranteed candidates even past the 90-cap / reach filter
+  // (the reservation front-loads them regardless of their rank position here).
+  const haveA = new Set(rankedReach.map((a) => a.id));
+  const attractions = areaMemberRows.length
+    ? [...rankedReach, ...areaMemberRows.filter((a) => !haveA.has(a.id) && a.lat != null && a.lng != null)]
+    : rankedReach;
   // Explore build (F1): split into anchors + "אם יש זמן" fillers. Only used by
   // the single-city generate path below (details/revise/multi ignore it).
   const sel = body.selection ? partitionBySelection(pool, body.taste, body.selection, isFamily) : null;
@@ -319,6 +335,21 @@ export async function POST(req: NextRequest) {
     for (const a of base.filter((x) => x.must_see === 1 && inRange.has(x.id)).slice(0, RESERVE_ICONS)) {
       if (!chosen.has(a.id)) { chosen.add(a.id); reserved.push(a); }
     }
+    // Additive neighbourhoods: reserve the chosen areas' members (must-sees first,
+    // then top-ranked) — about a day-part's worth per area — so the interest build
+    // COVERS each chosen area and the clusterer composes them into day-parts by
+    // proximity (area A morning, area B / centre afternoon), keeping the user's days.
+    if (areaMemberIds.length && body.areaGroups) {
+      const areaSet = new Set(areaMemberIds);
+      const mem = attractions.filter((a) => areaSet.has(a.id));
+      const areaOrdered = [...mem.filter((a) => a.must_see === 1), ...mem.filter((a) => a.must_see !== 1)];
+      const budget = (perDay + 1) * body.areaGroups.length;
+      let cnt = 0;
+      for (const a of areaOrdered) {
+        if (cnt >= budget) break;
+        if (!chosen.has(a.id)) { chosen.add(a.id); reserved.push(a); cnt++; }
+      }
+    }
     // Theme guarantee: ≥K matching stops per chosen interest — by taste-tag, by coarse
     // category, OR by a name keyword (markets are often mis-tagged as generic places).
     for (const it of interests) {
@@ -335,8 +366,11 @@ export async function POST(req: NextRequest) {
       }
     }
     // keep interest-ranked fill the majority: cap reserved to ~half the window, but
-    // never below the icon floor, so every reserved item lands in the candidate window.
-    const cap = Math.max(RESERVE_ICONS, Math.floor(0.5 * rDays * perDay));
+    // never below the icon floor. When neighbourhoods are chosen they ARE the explicit
+    // intent, so allow more of the window (icons+areas first, interest themes last).
+    const cap = areaMemberIds.length
+      ? Math.min(reserved.length, Math.round(rDays * perDay * 0.85))
+      : Math.max(RESERVE_ICONS, Math.floor(0.5 * rDays * perDay));
     const frontIds = new Set(reserved.slice(0, cap).map((a) => a.id));
     let ordered = [...reserved.slice(0, cap), ...attractions.filter((a) => !frontIds.has(a.id))];
     // "1–2 museums": when the traveller stated interests that DON'T include museums,
@@ -394,9 +428,9 @@ export async function POST(req: NextRequest) {
     annotateDaysWithAreas(withDetails.days, areas, { lat: dest.lat, lng: dest.lng });
     // car_base city → the whole trip is a rental-car trip; legs read as driving.
     if (dest.mobility === "car_base") withDetails.days.forEach((d) => { d.carBase = true; });
-    const surfaceIds = opts?.surfaceIds ?? new Set<number>([...yesSet, ...streetStops.map((s) => s.id)]);
-    const detailRows = opts?.detailRows ?? [...picks, ...streetStops];
-    const leftOut = (body.selection || streetStops.length || opts?.surfaceIds)
+    const surfaceIds = opts?.surfaceIds ?? new Set<number>([...yesSet, ...areaMemberIds, ...streetStops.map((s) => s.id)]);
+    const detailRows = opts?.detailRows ?? [...picks, ...areaMemberRows, ...streetStops];
+    const leftOut = (body.selection || streetStops.length || areaMemberIds.length || opts?.surfaceIds)
       ? detailRows.filter((a) => surfaceIds.has(a.id) && !scheduled.has(a.id)).map(detailOf)
       : [];
     return NextResponse.json({ itinerary: withDetails, ...(engine ? { engine } : {}), leftOut });
@@ -501,71 +535,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ itinerary: attachDetails(r.itinerary, attractions), engine: "heuristic", ...(r.note ? { note: r.note } : {}) });
   }
 
-  // Chosen-neighbourhood tour — DETERMINISTIC and must take priority: the traveller
-  // picked areas, so build one guaranteed day per area (seedGroups). Placed BEFORE the
-  // AI-vs-heuristic branching so it isn't swallowed by the no-AI generic fallback.
-  if (body.mode !== "revise" && body.areaGroups?.length) {
-    const noSet = new Set(body.selection?.no ?? []);
-    // Every attraction in the chosen areas is part of the trip. Pull ALL member
-    // rows (even ones ranked past the pool cap) so none are silently lost, and
-    // build an uncapped pool the seedGroups resolve against.
-    const memberIds = [...new Set(body.areaGroups.flat())].filter((id) => !noSet.has(id));
-    const memberRows = await attractionsByIds(memberIds);
-    const areaSeen = new Set<number>();
-    const areaList: Attraction[] = [];
-    for (const a of [...memberRows, ...picks, ...pool]) {
-      if (noSet.has(a.id) || areaSeen.has(a.id)) continue;
-      areaSeen.add(a.id); areaList.push(a);
-    }
-    // Order each area's members so the day fills by the traveller's intent:
-    // "כן" first, then must-sees, then the rest (the day budget trims the tail).
-    const mustSet = new Set(memberRows.filter((a) => a.must_see === 1).map((a) => a.id));
-    const rankId = (id: number) => (yesSet.has(id) ? 2 : mustSet.has(id) ? 1 : 0);
-    const orderedGroups = body.areaGroups.map((g) =>
-      g.filter((id) => !noSet.has(id)).map((id, i) => ({ id, i }))
-        .sort((x, y) => rankId(y.id) - rankId(x.id) || x.i - y.i).map((z) => z.id));
-    const nAreas = orderedGroups.length;
-    // Picked STREETS join the neighbourhood build too: each street is slotted into
-    // its own area's day (by street.area_id ↔ the parallel areaIds), else the
-    // geographically nearest chosen area. Prepended so the seed schedules it first.
-    if (streetRows.length && nAreas) {
-      const areaIds = Array.isArray(body.areaIds) ? body.areaIds : [];
-      const centroid = orderedGroups.map((g) => {
-        const pts = g.map((id) => areaList.find((a) => a.id === id)).filter((a): a is Attraction => !!a && a.lat != null);
-        return pts.length ? [pts.reduce((t, a) => t + (a.lat as number), 0) / pts.length, pts.reduce((t, a) => t + (a.lng as number), 0) / pts.length] as [number, number] : null;
-      });
-      for (const st of streetRows) {
-        let gi = st.area_id != null ? areaIds.indexOf(st.area_id) : -1;
-        if (gi < 0 && st.lat != null) {           // no chosen-area match → nearest group
-          let bd = Infinity;
-          centroid.forEach((c, i) => { if (c) { const d = haversineKm(st.lat as number, st.lng as number, c[0], c[1]); if (d < bd) { bd = d; gi = i; } } });
-        }
-        if (gi < 0) gi = 0;
-        const synth = synthId("street", st.id);
-        orderedGroups[gi].unshift(synth);
-        areaList.unshift(streetAsStop(st));
-      }
-    }
-    const itin = buildHeuristicItinerary(dest.city, dest.country, nAreas, areaList,
-      isFamily, perDay, body.walkPref ?? 3, orderedGroups, buildOpts);
-    // Requested more days than areas → central day(s) for the "כן" picks OUTSIDE
-    // the chosen areas (plus area must-sees), so an explicit pick never just vanishes.
-    const requested = body.days ?? nAreas;
-    const memberSet = new Set(memberIds);
-    if (requested > nAreas) {
-      // real attractions only — streets already live in their area's day (streetAsStop
-      // carries must_see=1, which would otherwise re-pull them into a central day).
-      const central = areaList.filter((a) => isRealAttraction(a.id) && !memberSet.has(a.id) && (yesSet.has(a.id) || a.must_see === 1));
-      if (central.length)
-        itin.days.push(...buildHeuristicItinerary(dest.city, dest.country, requested - nAreas,
-          central, isFamily, perDay, body.walkPref ?? 3, undefined, buildOpts).days);
-    }
-    itin.days.forEach((d, i) => { d.label = `יום ${i + 1}`; });
-    // Bank = every chosen-area member + every "כן" that didn't make a day.
-    const surfaceIds = new Set<number>([...memberIds, ...yesSet, ...streetStops.map((s) => s.id)]);
-    return respondGenerate(itin, "neighbourhoods",
-      { list: areaList, surfaceIds, detailRows: [...memberRows, ...picks, ...streetStops] });
-  }
+  // Chosen neighbourhoods are now ADDITIVE (Layer 2): their members are folded into
+  // the pool and reserved above, and their streets auto-included — so they fall
+  // through to the normal interest-governed build below, which composes them into
+  // day-PARTS by proximity while keeping the traveller's day count. (The old
+  // one-day-per-area seedGroups branch — which overrode the day count — is retired.)
 
   // Generate works without a key via the heuristic builder; AI upgrades it.
   // buildList puts anchors first so the heuristic schedules them first too.
