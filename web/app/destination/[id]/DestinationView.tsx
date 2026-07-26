@@ -19,9 +19,14 @@ const RADIUS_HE = ["קרוב מאוד", "עד שעה", "עד שעתיים", "ג�
 const PACES = ["רגוע", "בינוני", "אינטנסיבי"] as const;
 type Pace = (typeof PACES)[number];
 import { PACE_PER_DAY } from "@/lib/trip-types";
-import { deriveTaste, tasteScore, INTEREST_TASTE, INTEREST_CATS, GOVERNING_INTERESTS } from "@/lib/taste";
+import { deriveTaste, tasteScore, coarseFits, audienceFit, INTEREST_TASTE, INTEREST_CATS, GOVERNING_INTERESTS } from "@/lib/taste";
 import { CategoryTile } from "@/components/CategoryTiles";
-import { shortPath, PROFILES, PROFILE_HE, PROFILE_EMOJI, type Profile } from "@/lib/shortpath";
+import { PROFILES, PROFILE_HE, PROFILE_EMOJI, type Profile } from "@/lib/shortpath";
+
+// Below this audience-fit (0-100) a place is "less relevant" for the chosen
+// audience → it drops BELOW the divider (still markable), never hidden. Mirrors
+// the old shortPath FIT_FLOOR so the cut is the same, just soft instead of hard.
+const AUDIENCE_FIT_FLOOR = 35;
 import type { Attraction, Destination, Insight, AreaCard } from "@/lib/db";
 
 // Every interest in the profile vocabulary — used as the fallback tile set when
@@ -344,7 +349,6 @@ export function DestinationView({
   const [audience, setAudience] = useState<Profile | null>(null);
   const [boosts, setBoosts] = useState<Set<string>>(new Set());
   const [exploreAll, setExploreAll] = useState(false);
-  const [shortLimit, setShortLimit] = useState(24);  // short-path "load more"
   const goExplore = () => { setAudience(null); setBoosts(new Set()); setExploreAll(true); };
   const goChoose = () => { setAudience(null); setBoosts(new Set()); setExploreAll(false); };
   const [mapOnly, setMapOnly] = useState(false);
@@ -369,7 +373,6 @@ export function DestinationView({
   const [buildOpen, setBuildOpen] = useState(false);
   // mode 3: "build for <audience>" anchors on the short path, ignoring any
   // stale per-city marks; the explore-mode bottom bar builds from marks.
-  const [buildFromSp, setBuildFromSp] = useState(false);
   const [buildDays, setBuildDays] = useState(4);
   const [buildRadius, setBuildRadius] = useState(1);
   const [buildPace, setBuildPace] = useState<Pace>("בינוני");
@@ -457,41 +460,54 @@ export function DestinationView({
   // Within each group, places WITH a photo come before the (still under-enriched)
   // image-less long tail, so the browse never opens on empty cards. The chosen
   // sort then orders within those sub-groups.
+  // The audience topic chips ("כיילו") — a taste tilt that LEADS matching places
+  // within the matched set (they no longer hard-filter to a curated 24).
+  const boostMatch = useMemo(() => {
+    if (!boosts.size) return null;
+    const w: Record<string, number> = {};
+    for (const k of boosts) for (const t of (INTEREST_TASTE[k] ?? [])) w[t] = (w[t] ?? 0) + 1;
+    return (a: Attraction) => tasteScore(a.taste_tags, w) > 0 || coarseFits(a.category, a.subcategory, [...boosts]);
+  }, [boosts]);
+
   const { sortedItems, dimmedIds, matchedIds } = useMemo(() => {
     const img = (a: Attraction) => (a.image_url ? 1 : 0);
     // Editor importance tier: "ממש לא" floors it (0); effective must-see leads
     // (4); "אולי" is a real mid boost (3); everything else normal (2).
     const tier = (a: Attraction) =>
       a.editor_rank === "no" ? 0 : a.must_see === 1 ? 4 : a.editor_rank === "maybe" ? 3 : 2;
+    // Within a tier, a chosen topic chip leads (the audience-flow calibration).
+    const boostTier = (a: Attraction) => (boostMatch && boostMatch(a) ? 1 : 0);
     const within = (a: Attraction, b: Attraction) => {
       if (sort === "name") return (a.name_he || a.name_en).localeCompare(b.name_he || b.name_en, "he");
       if (sort === "match" && cityTasteTagged) return tasteScore(b.taste_tags, taste) - tasteScore(a.taste_tags, taste);
       return (b.family_score ?? 0) - (a.family_score ?? 0);
     };
-    const cmp = (a: Attraction, b: Attraction) => tier(b) - tier(a) || img(b) - img(a) || within(a, b);
-    // Matches lead; the profile-cut tail is dimmed below (still markable). In
-    // "selected only" mode there's no dimming — every pick shows in full.
+    const cmp = (a: Attraction, b: Attraction) =>
+      tier(b) - tier(a) || boostTier(b) - boostTier(a) || img(b) - img(a) || within(a, b);
+    // "matched" = fits the traveller's interests AND the chosen audience
+    // (couples/friends or families). What doesn't fit drops BELOW the divider —
+    // still fully markable, never hidden and never greyed.
+    const audienceOk = (a: Attraction) => !audience || audienceFit(a, audience) >= AUDIENCE_FIT_FLOOR;
+    const isMatch = (a: Attraction) => profileMatch(a) && audienceOk(a);
     const matched: Attraction[] = [], dimmed: Attraction[] = [];
-    for (const a of listItems) ((selectedOnly || soloInterest || profileMatch(a)) ? matched : dimmed).push(a);
+    for (const a of listItems) ((selectedOnly || soloInterest || isMatch(a)) ? matched : dimmed).push(a);
     matched.sort(cmp); dimmed.sort(cmp);
     return { sortedItems: [...matched, ...dimmed], dimmedIds: new Set(dimmed.map((a) => a.id)), matchedIds: matched.map((a) => a.id) };
-  }, [listItems, sort, cityTasteTagged, taste, profileMatch, selectedOnly, soloInterest]);
+  }, [listItems, sort, cityTasteTagged, taste, profileMatch, selectedOnly, soloInterest, audience, boostMatch]);
 
   // Paginate: show PAGE at a time; reset to page 1 on any change.
-  useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, selectedOnly, soloInterest, profile.interests, profile.dislikes]);
+  useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, selectedOnly, soloInterest, profile.interests, profile.dislikes, audience, boosts]);
   // Never leave the traveler stranded in an empty "selected only" view.
   useEffect(() => { if (selectedOnly && yesCount === 0) setSelectedOnly(false); }, [selectedOnly, yesCount]);
   const visible = sortedItems.slice(0, visibleCount);
   const firstDimId = visible.find((a) => dimmedIds.has(a.id))?.id;
-  // Short-path override: when an audience is chosen, the map + grid show the
-  // curated ~12 ("people like you loved") instead of the full browse.
-  const sp = useMemo(
-    () => audience ? shortPath(attractions, (id) => insights[id]?.length ?? 0, audience, boosts, shortLimit) : null,
-    [audience, boosts, attractions, insights, shortLimit]);
-  // reset "load more" when switching audience
-  useEffect(() => { setShortLimit(24); }, [audience]);
-  const displayItems = sp ? sp.path.map((x) => x.a) : visible;
+  // One unified list in every mode — audience is folded into the matched split
+  // above (no separate curated screen).
+  const displayItems = visible;
   const mode: "choose" | "short" | "explore" = audience ? "short" : exploreAll ? "explore" : "choose";
+  const belowLabel = audience
+    ? `פחות מתאים ל${PROFILE_HE[audience]} — אפשר בכל זאת לסמן`
+    : "מחוץ להעדפות שלכם — אפשר בכל זאת לסמן";
   // Bulk marks over the matched set (the primary view).
   const viewIds = matchedIds;
   const viewSelected = viewIds.filter((id) => choices[id]).length;
@@ -507,6 +523,11 @@ export function DestinationView({
   // Neighbourhoods chosen to tour — a SEPARATE selection from the attraction
   // yes/maybe marks, so picking an area never silently floods the attraction picks.
   const [chosenAreas, setChosenAreas] = useState<Set<number>>(() => new Set());
+  // Members of a CHOSEN neighbourhood are guaranteed into the trip regardless of
+  // likes → we badge them "בשכונה שבחרת" so an un-liked one doesn't read as "forgot".
+  const chosenAreaMemberIds = useMemo(
+    () => new Set(areas.filter((a) => chosenAreas.has(a.id)).flatMap((a) => a.member_ids)),
+    [areas, chosenAreas]);
   const toggleArea = (id: number) => setChosenAreas((s) => {
     const next = new Set(s); if (next.has(id)) next.delete(id); else next.add(id); return next;
   });
@@ -580,14 +601,12 @@ export function DestinationView({
     for (const [id, c] of Object.entries(choices)) {
       (c === "yes" ? yes : no).push(Number(id));
     }
-    // Card marks (כן/לא) are the deliberate act of the EXPLORE ("הכל") flow, and they
-    // persist per-city in localStorage. In the audience/interest (short) flow they'd
-    // be STALE leftovers from a past visit — and any selection silently sends the
-    // build down the selection path, bypassing the interest governance (reservation,
-    // museum cap, additive areas). So marks only drive the build in explore mode; the
-    // interest flow stays interest-governed regardless of old marks. (Layer 4 will
-    // unify these — marks as refinements ON the interest build.)
-    const useMarks = mode === "explore";
+    // The ❤ likes are now ADDITIVE refinements on the governed build (Layer 4):
+    // they always travel to the server, and route.ts folds them into the
+    // interest/audience/neighbourhood reservation (guaranteed in, but governance —
+    // reservation, museum cap, additive areas — stays on). Only a pure explore
+    // build with NO audience/areas falls back to the old marks-drive-everything path.
+    const useMarks = true;
     const yesFinal = useMarks ? yes : [];
     const noFinal = useMarks ? no : [];
     setBuilding(true);
@@ -715,7 +734,7 @@ export function DestinationView({
               {mode === "short" && (
                 <div className="flex flex-col gap-2.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[12.5px] text-[var(--text-3)]"><b className="text-[var(--text-2)]">{sp!.path.length}</b> המקומות שהכי אהובים על {PROFILE_HE[audience!]} · כיילו:</span>
+                    <span className="text-[12.5px] text-[var(--text-3)]"><b className="text-[var(--text-2)]">{matchedIds.length}</b> מקומות שמתאימים ל{PROFILE_HE[audience!]} · כיילו:</span>
                     {GOVERNING_INTERESTS.map((it) => {
                       const on = boosts.has(it.key);
                       return (
@@ -729,7 +748,7 @@ export function DestinationView({
                       );
                     })}
                   </div>
-                  <button onClick={() => { setBuildFromSp(true); openBuild(); }}
+                  <button onClick={() => openBuild()}
                     className="flex items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-2.5 text-[14.5px] font-semibold text-white transition hover:opacity-90 sm:self-start sm:px-8">
                     ✨ בנו לי טיול ל{PROFILE_HE[audience!]}
                   </button>
@@ -782,7 +801,7 @@ export function DestinationView({
         onToggle={toggleArea}
         onBuild={() => {
           if (chosenAreas.size) setBuildDays(Math.min(7, Math.max(2, chosenAreas.size)));
-          setBuildFromSp(false); openBuild();
+          openBuild();
         }} />
 
       {/* (The manual "רחובות מומלצים" picker was removed — streets now enter
@@ -1058,6 +1077,13 @@ export function DestinationView({
             </div>
           </div>
 
+          {/* Transparency line — kills the "must I like everything?" worry: the trip
+              is composed automatically; ❤ is an optional "make sure this one's in". */}
+          <p className="mt-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2 text-[12.5px] leading-relaxed text-[var(--text-2)]">
+            הטיול נבנה אוטומטית מהנושאים, השכונות שבחרתם ואתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> — הם נכנסים גם בלי סימון.
+            {" "}<span className="inline-flex items-center gap-0.5 font-medium text-[var(--brand-ink)]"><Heart size={12} fill="currentColor" /> הלייק</span> הוא רק כדי לוודא שמקום מסוים ייכנס — לא חובה.
+          </p>
+
           {/* LIST view — compact rows in the trip-page design language; a row expands
               DOWN with the image on the right and all its info laid out across. */}
           {listView ? (
@@ -1070,20 +1096,18 @@ export function DestinationView({
               const insList = insights[a.id] ?? [];
               const tip = insList[0]?.text_he || a.tips_he;
               const choice = choices[a.id];
-              const dim = dimmedIds.has(a.id);
               return (
                 <Fragment key={a.id}>
                 {a.id === firstDimId && (
                   <div className="mt-1 flex items-center gap-3 pb-1 pt-2">
                     <div className="h-px flex-1 bg-[var(--border)]" />
-                    <span className="shrink-0 text-[12.5px] text-[var(--text-3)]">מחוץ להעדפות שלכם — אפשר בכל זאת לסמן</span>
+                    <span className="shrink-0 text-[12.5px] text-[var(--text-3)]">{belowLabel}</span>
                     <div className="h-px flex-1 bg-[var(--border)]" />
                   </div>
                 )}
                 <div onMouseEnter={() => setHoveredId(a.id)} onMouseLeave={() => setHoveredId((h) => (h === a.id ? null : h))}
                   className="overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] shadow-[var(--shadow)] transition"
-                  style={{ borderColor: choice === "yes" || isSel ? "var(--brand)" : "var(--border)",
-                           opacity: choice === "no" ? 0.5 : dim ? 0.6 : 1 }}>
+                  style={{ borderColor: choice === "yes" || isSel ? "var(--brand)" : "var(--border)" }}>
                   {/* header row — click to expand + fly the map. The heart lives on
                       the frame (its own button); the tagline fills the empty space
                       to the LEFT of the name (RTL) instead of sitting inside the body. */}
@@ -1107,6 +1131,7 @@ export function DestinationView({
                           {dur && <span>🕐 {dur}</span>}
                           {cost && <span className="text-[var(--brand-ink)]">{cost}</span>}
                           {covered.has(a.id) && <span className="text-[var(--brand-ink)]">💳 בכרטיס</span>}
+                          {chosenAreaMemberIds.has(a.id) && a.must_see !== 1 && <span className="text-[var(--brand-ink)]">✓ בשכונה שבחרת</span>}
                         </div>
                       </div>
                       {a.tagline_he && (
@@ -1166,7 +1191,6 @@ export function DestinationView({
               const insList = insights[a.id] ?? [];
               const tip = insList[0]?.text_he || a.tips_he;
               const choice = choices[a.id];
-              const dim = dimmedIds.has(a.id);
               return (
                 <Fragment key={a.id}>
                 {a.id === firstDimId && (
@@ -1174,8 +1198,8 @@ export function DestinationView({
                     <div className="h-px flex-1 bg-[var(--border)]" />
                     <span className="shrink-0 text-[12.5px] text-[var(--text-3)]">
                       {matchedIds.length === 0
-                        ? "כל התוצאות כאן מחוץ להעדפות שסימנתם (✕) — לכן הן מעומעמות. אפשר בכל זאת לסמן, או לשחרר ✕ בנושאים למעלה"
-                        : "מחוץ להעדפות שלכם — אפשר בכל זאת לסמן"}
+                        ? `כל התוצאות כאן ${belowLabel}`
+                        : belowLabel}
                     </span>
                     <div className="h-px flex-1 bg-[var(--border)]" />
                   </div>
@@ -1184,8 +1208,7 @@ export function DestinationView({
                   onMouseEnter={() => setHoveredId(a.id)} onMouseLeave={() => setHoveredId((h) => (h === a.id ? null : h))}
                   className="group flex flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition hover:-translate-y-0.5"
                   style={{ borderColor: choice === "yes" || isSel ? "var(--brand)" : "var(--border)",
-                           boxShadow: isSel ? "0 0 0 1.5px var(--brand)" : undefined,
-                           opacity: choice === "no" ? 0.5 : dim ? 0.6 : 1 }}>
+                           boxShadow: isSel ? "0 0 0 1.5px var(--brand)" : undefined }}>
                   {/* clickable body — selects the place and flies the map */}
                   <button onClick={() => setSelected(a)} className="flex flex-1 flex-col text-right">
                     <div className="relative aspect-[16/10] w-full overflow-hidden bg-[var(--surface-2)]">
@@ -1208,6 +1231,9 @@ export function DestinationView({
                       </span>
                       {a.must_see === 1 && (
                         <span className="absolute left-2 top-2 rounded-full bg-[var(--accent)] px-2 py-0.5 text-[11px] font-medium text-white shadow-sm">⭐ חובה</span>
+                      )}
+                      {chosenAreaMemberIds.has(a.id) && a.must_see !== 1 && (
+                        <span className="absolute left-2 top-2 rounded-full bg-[var(--brand)] px-2 py-0.5 text-[11px] font-medium text-white shadow-sm">✓ בשכונה שבחרת</span>
                       )}
                       {/* editor reference — what OSM flagged, regardless of the
                           current curated pick, so the editor curates informed */}
@@ -1276,20 +1302,12 @@ export function DestinationView({
           </div>
           )}
 
-          {mode === "explore" && visibleCount < sortedItems.length && (
+          {/* one unified paginator for every mode (the list is one browse now) */}
+          {visibleCount < sortedItems.length && (
             <div className="mt-6 flex justify-center pb-4">
               <button onClick={() => setVisibleCount((v) => v + PAGE)}
                 className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-6 py-2.5 text-[14px] font-medium text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:border-[var(--brand)]">
                 הצג עוד · נותרו {sortedItems.length - visibleCount}
-              </button>
-            </div>
-          )}
-          {/* short-path "load more" — reveal the next audience-appropriate places by consensus */}
-          {mode === "short" && sp && sp.eligible > sp.path.length && (
-            <div className="mt-6 flex justify-center pb-4">
-              <button onClick={() => setShortLimit((v) => v + 24)}
-                className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-6 py-2.5 text-[14px] font-medium text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:border-[var(--brand)]">
-                הצג עוד מקומות אהובים · נותרו {sp.eligible - sp.path.length}
               </button>
             </div>
           )}
@@ -1334,7 +1352,7 @@ export function DestinationView({
                   </button>
                 </>
               )}
-              <button onClick={() => { setBuildFromSp(false); tryBuild(); }}
+              <button onClick={() => tryBuild()}
                 className="flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition"
                 style={canBuild
                   ? { background: "var(--brand)", color: "#fff", boxShadow: "0 6px 16px rgba(14,107,94,.3)" }

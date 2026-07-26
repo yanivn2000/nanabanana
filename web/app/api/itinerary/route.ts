@@ -292,13 +292,25 @@ export async function POST(req: NextRequest) {
         .map((z) => z.a);
   // Chosen-area members are guaranteed candidates even past the 90-cap / reach filter
   // (the reservation front-loads them regardless of their rank position here).
+  // Chosen-area members AND the traveller's explicit ❤ picks are guaranteed
+  // candidates even past the 90-cap / reach filter (the reservation front-loads
+  // them regardless of rank position). Deduped, coords required.
   const haveA = new Set(rankedReach.map((a) => a.id));
-  const attractions = areaMemberRows.length
-    ? [...rankedReach, ...areaMemberRows.filter((a) => !haveA.has(a.id) && a.lat != null && a.lng != null)]
-    : rankedReach;
+  const guaranteedExtra: Attraction[] = [];
+  for (const a of [...areaMemberRows, ...picks]) {
+    if (a.lat == null || a.lng == null || haveA.has(a.id)) continue;
+    haveA.add(a.id); guaranteedExtra.push(a);
+  }
+  const attractions = guaranteedExtra.length ? [...rankedReach, ...guaranteedExtra] : rankedReach;
   // Explore build (F1): split into anchors + "אם יש זמן" fillers. Only used by
   // the single-city generate path below (details/revise/multi ignore it).
-  const sel = body.selection ? partitionBySelection(pool, body.taste, body.selection, isFamily) : null;
+  // ❤ likes are ADDITIVE refinements when the funnel is driving (an audience or
+  // neighbourhoods were chosen): keep the interest/audience-governed path and fold
+  // the picks into its reservation (guaranteed in, museum-cap-exempt) rather than
+  // handing the whole build to the marks. Only a PURE explore build (no audience,
+  // no areas) lets the marks drive everything via partitionBySelection.
+  const governed = !!audience || areaMemberIds.length > 0;
+  const sel = (body.selection && !governed) ? partitionBySelection(pool, body.taste, body.selection, isFamily) : null;
   // Streets the traveller picked lead the build list, so the clusterer treats
   // them as the day's top candidates (they were an explicit "כן").
   const streetRows = Array.isArray(body.streetIds) && body.streetIds.length
@@ -336,6 +348,12 @@ export async function POST(req: NextRequest) {
     const inRange = new Set(attractions.map((a) => a.id));
     const chosen = new Set<number>();
     const reserved: Attraction[] = [];
+    // Explicit ❤ likes lead the reservation — a refinement the traveller made ON
+    // the governed build, so it's guaranteed in (and museum-cap-exempt below).
+    const pickSet = new Set(pickIds);
+    for (const a of attractions.filter((x) => pickSet.has(x.id))) {
+      if (!chosen.has(a.id)) { chosen.add(a.id); reserved.push(a); }
+    }
     // Icons from DB icon order (`base`, EDITOR_ORDER: must-see first), NOT the
     // taste-sorted list — so the city's defining must-sees are guaranteed regardless
     // of the traveller's taste. In-range only (passed the metro reach filter).
@@ -386,7 +404,7 @@ export async function POST(req: NextRequest) {
     // Museumplein back in). A no-interest build is exempt (shows balanced icons).
     if (interests.length && !interests.includes("מוזיאונים")) {
       let seen = 0;
-      ordered = ordered.filter((a) => a.category !== "museum" || ++seen <= 2);
+      ordered = ordered.filter((a) => a.category !== "museum" || pickSet.has(a.id) || ++seen <= 2);
     }
     orderedFill = ordered;
     // pin the surviving reserved set (icons + themes) to the front for the family sort.
