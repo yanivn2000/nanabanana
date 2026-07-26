@@ -1220,10 +1220,15 @@ export function TripView({ tripId }: { tripId: string }) {
                             // "what is this" tag — the specific subcategory (מוזיאון / פארק /
                             // טירה / שוק…) when we have it, else the broad category. Skips
                             // logistical break stops (lunch / hotel rest).
-                            const label = catLabel(s.cat, s.sub)
+                            // A street is a LINE (has a path) / carries a "street:" ref — it
+                            // isn't a DB attraction, so label it "רחוב" directly (older trips
+                            // never get its cat from the details re-attach, which is points-only).
+                            const isStreet = (s.ref?.startsWith("street") ?? false) || (!!s.path && s.kind !== "nature");
+                            const label = isStreet ? "רחוב"
+                              : catLabel(s.cat, s.sub)
                               || (s.kind !== "food" && s.kind !== "rest" ? (KIND_META[s.kind]?.label ?? "") : "");
                             if (!label) return null;
-                            const col = catColor(s.cat || "attraction");
+                            const col = isStreet ? "var(--brand-ink)" : catColor(s.cat || "attraction");
                             return (
                               <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium"
                                 style={{ background: `color-mix(in srgb, ${col} 14%, var(--surface))`, color: col }}>

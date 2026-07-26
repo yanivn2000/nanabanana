@@ -17,6 +17,12 @@ const SUB_HE: Record<string, string> = {
   park: "פארק",
   nature_reserve: "שמורת טבע",
   attraction: "אטרקציה",
+  street: "רחוב",
+  canal: "תעלה",
+  cluster: "אזור רחובות",
+  bar: "בר", pub: "פאב", nightclub: "מועדון", cocktail: "בר קוקטיילים",
+  wine_bar: "בר יין", music_venue: "מוזיקה חיה", jazz_club: "מועדון ג'אז",
+  market: "שוק", marketplace: "שוק",
 };
 
 const CAT_HE: Record<string, string> = {
