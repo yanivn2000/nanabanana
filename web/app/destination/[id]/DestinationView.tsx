@@ -143,6 +143,19 @@ function LikeBtn({ liked, onClick }: { liked: boolean; onClick: () => void }) {
   );
 }
 
+// Compact like — a heart that lives ON the card frame (list rows), so a row
+// costs no extra full-width strip of air. Filled + brand when liked.
+function HeartToggle({ liked, onClick }: { liked: boolean; onClick: () => void }) {
+  return (
+    <button onClick={(e) => { e.stopPropagation(); onClick(); }} aria-pressed={liked}
+      aria-label={liked ? "אהבתי" : "לייק"} title={liked ? "אהבתי" : "לייק"}
+      className="grid shrink-0 place-items-center self-stretch px-3.5 transition hover:bg-[var(--surface-2)]"
+      style={{ color: liked ? "var(--brand)" : "var(--text-3)" }}>
+      <Heart size={20} fill={liked ? "currentColor" : "none"} />
+    </button>
+  );
+}
+
 // Headline neighbourhoods as first-class experiences — a strip above the
 // attractions. A "vibe" area's draw is the area itself (markets, streets); a
 // "landmark" area is a dense cluster of must-sees. Tapping the body flies the map;
@@ -1071,31 +1084,41 @@ export function DestinationView({
                   className="overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] shadow-[var(--shadow)] transition"
                   style={{ borderColor: choice === "yes" || isSel ? "var(--brand)" : "var(--border)",
                            opacity: choice === "no" ? 0.5 : dim ? 0.6 : 1 }}>
-                  {/* header row — click to expand + fly the map */}
-                  <button onClick={() => setSelected(isSel ? null : a)} className="flex w-full items-center gap-3 p-2.5 text-right">
-                    {a.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={bigImage(a.image_url, 200)} alt="" loading="lazy" className="size-14 shrink-0 rounded-[10px] object-cover" />
-                    ) : (
-                      <div className="grid size-14 shrink-0 place-items-center rounded-[10px]" style={{ background: `color-mix(in srgb, ${catColor(cat)} 16%, var(--surface-2))` }}>
-                        <MapPin size={20} style={{ color: catColor(cat) }} />
+                  {/* header row — click to expand + fly the map. The heart lives on
+                      the frame (its own button); the tagline fills the empty space
+                      to the LEFT of the name (RTL) instead of sitting inside the body. */}
+                  <div className="flex items-stretch">
+                    <button onClick={() => setSelected(isSel ? null : a)} className="flex min-w-0 flex-1 items-center gap-3 p-2.5 text-right">
+                      {a.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={bigImage(a.image_url, 200)} alt="" loading="lazy" className="size-14 shrink-0 rounded-[10px] object-cover" />
+                      ) : (
+                        <div className="grid size-14 shrink-0 place-items-center rounded-[10px]" style={{ background: `color-mix(in srgb, ${catColor(cat)} 16%, var(--surface-2))` }}>
+                          <MapPin size={20} style={{ color: catColor(cat) }} />
+                        </div>
+                      )}
+                      <div className="min-w-0 shrink-0 max-w-[52%]">
+                        <p className="serif truncate text-[16px] font-bold leading-tight">
+                          {a.must_see === 1 && <span className="ml-1 align-middle text-[var(--accent-ink)]">⭐</span>}
+                          {a.name_he || a.name_en}
+                        </p>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] text-[var(--text-3)]">
+                          <span>{CAT_HE[cat] ?? a.category}</span>
+                          {dur && <span>🕐 {dur}</span>}
+                          {cost && <span className="text-[var(--brand-ink)]">{cost}</span>}
+                          {covered.has(a.id) && <span className="text-[var(--brand-ink)]">💳 בכרטיס</span>}
+                        </div>
                       </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="serif truncate text-[16px] font-bold leading-tight">
-                        {a.must_see === 1 && <span className="ml-1 align-middle text-[var(--accent-ink)]">⭐</span>}
-                        {a.name_he || a.name_en}
-                      </p>
-                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] text-[var(--text-3)]">
-                        <span>{CAT_HE[cat] ?? a.category}</span>
-                        {dur && <span>🕐 {dur}</span>}
-                        {cost && <span className="text-[var(--brand-ink)]">{cost}</span>}
-                        {covered.has(a.id) && <span className="text-[var(--brand-ink)]">💳 בכרטיס</span>}
-                      </div>
-                    </div>
-                    <ChevronDown size={18} className={`shrink-0 text-[var(--text-3)] transition-transform ${isSel ? "rotate-180" : ""}`} />
-                  </button>
-                  {/* expand — image on the RIGHT (first child, RTL), info across the left */}
+                      {a.tagline_he && (
+                        <p className="hidden min-w-0 flex-1 truncate text-[13.5px] italic text-[var(--text-3)] sm:block">{a.tagline_he}</p>
+                      )}
+                      <ChevronDown size={18} className={`ms-auto shrink-0 text-[var(--text-3)] transition-transform ${isSel ? "rotate-180" : ""}`} />
+                    </button>
+                    <HeartToggle liked={choice === "yes"} onClick={() => setChoice(a.id, "yes")} />
+                  </div>
+                  {/* expand — image on the RIGHT (first child, RTL); only the detail
+                      text + when-to-go + dress remain (tagline, tip source & official
+                      link were pulled out / dropped to keep this lean). */}
                   {isSel && (
                     <div className="border-t border-[var(--border)] p-3">
                       <div className="flex flex-col gap-3 sm:flex-row">
@@ -1106,8 +1129,8 @@ export function DestinationView({
                             className="aspect-[4/3] w-full shrink-0 rounded-[10px] object-cover sm:w-[38%] sm:self-start" />
                         )}
                         <div className="min-w-0 flex-1">
-                          {a.tagline_he && <p className="text-[14px] italic text-[var(--text-2)]">{a.tagline_he}</p>}
-                          {a.description_he && <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--text-2)]">{a.description_he}</p>}
+                          {a.tagline_he && <p className="mb-1.5 text-[14px] italic text-[var(--text-2)] sm:hidden">{a.tagline_he}</p>}
+                          {a.description_he && <p className="text-[13.5px] leading-relaxed text-[var(--text-2)]">{a.description_he}</p>}
                           {tip && <p className="mt-1.5 flex items-start gap-1 text-[13px] leading-snug text-[var(--brand-ink)]"><span className="shrink-0">💡</span><span>טיפ מטיילים: {tip}</span></p>}
                           {insList.length > 1 && (
                             <div className="mt-1.5 flex flex-col gap-1">
@@ -1122,17 +1145,12 @@ export function DestinationView({
                               {a.dress_he && <span><span className="text-[var(--text-3)]">לבוש: </span>{a.dress_he}</span>}
                             </div>
                           )}
-                          {a.website && (
-                            <a href={a.website} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--blue)]">אתר רשמי ↗</a>
-                          )}
                         </div>
                       </div>
                     </div>
                   )}
-                  {/* editor rating rows are intentionally hidden in LIST mode (kept in tiles). */}
-                  <div className="border-t border-[var(--border)] p-2">
-                    <LikeBtn liked={choice === "yes"} onClick={() => setChoice(a.id, "yes")} />
-                  </div>
+                  {/* editor rating rows + full-width like are intentionally hidden in
+                      LIST mode — the heart on the frame replaces the strip. */}
                 </div>
                 </Fragment>
               );
