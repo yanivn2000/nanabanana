@@ -6,7 +6,8 @@ import type { Attraction } from "./db";
 // are tagged with. #63
 export const INTEREST_TASTE: Record<string, string[]> = {
   "טבע": ["nature"],
-  "אוכל": ["food"],
+  // "אוכל" is the merged food+shopping governing chip → spans both taste families.
+  "אוכל": ["food", "vintage_shopping", "luxury_shopping"],
   "תרבות": ["art", "theatre", "classical_opera", "culture"],
   "קניות": ["vintage_shopping", "luxury_shopping"],
   "ספורט": ["sports"],
@@ -66,7 +67,7 @@ export const INTEREST_CATS: Record<string, { cats?: string[]; subs?: string[] }>
   "חופים": { subs: ["beach"] },
   // food & markets: eateries AND market halls/stalls (markets are often tagged as a
   // marketplace subcategory rather than the food category).
-  "אוכל": { cats: ["food"], subs: ["market", "marketplace", "deli", "farm"] },
+  "אוכל": { cats: ["food", "shopping"], subs: ["market", "marketplace", "deli", "farm"] },
   "תרבות": { cats: ["museum", "historic"] },
   "מוזיאונים": { cats: ["museum"] },
   "קניות": { cats: ["shopping"], subs: ["market", "marketplace"] },
@@ -159,8 +160,10 @@ export function rankByTaste(
 // build-route theme reservation. This is the ONE interest input shown to travellers.
 export const GOVERNING_INTERESTS: { key: string; label: string; emoji: string }[] = [
   { key: "מוזיאונים", label: "מוזיאונים ואמנות", emoji: "🖼️" },
-  { key: "אוכל", label: "אוכל ושווקים", emoji: "🍽️" },
-  { key: "קניות", label: "קניות", emoji: "🛍️" },
+  // Food & shopping were bit-for-bit identical builds (both only surfaced the 2
+  // markets) — merged into one governing chip. The "אוכל" key now spans food +
+  // shopping in the maps below.
+  { key: "אוכל", label: "אוכל, שווקים וקניות", emoji: "🍽️" },
   { key: "טבע", label: "טבע ופארקים", emoji: "🌳" },
   { key: "חיי לילה", label: "חיי לילה", emoji: "🍸" },
   { key: "היסטוריה", label: "היסטוריה ותרבות", emoji: "🏛️" },
@@ -172,7 +175,7 @@ export const GOVERNING_INTERESTS: { key: string; label: string; emoji: string }[
 // "attraction" with no food/shopping tag). name_he is normalised Hebrew across all
 // cities (we name every market "שוק …"), so "שוק" reliably catches them everywhere.
 export const INTEREST_KEYWORDS: Record<string, string[]> = {
-  "אוכל": ["שוק"],
+  "אוכל": ["שוק", "קניון", "פסאז'"],
   "קניות": ["שוק", "קניון", "פסאז'"],
 };
 

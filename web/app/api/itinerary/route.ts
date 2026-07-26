@@ -344,7 +344,14 @@ export async function POST(req: NextRequest) {
   let orderedFill: Attraction[] = attractions;
   if (!sel) {
     const rDays = body.days ?? 4;
-    const RESERVE_ICONS = Math.max(3, rDays), K = 2;
+    const RESERVE_ICONS = Math.max(3, rDays);
+    // THEME BUDGET: guarantee ~2 themed stops per day, SPLIT across the chosen
+    // interests — so fewer interests = deeper focus on each (a single-interest trip
+    // leans hard into that one topic instead of a token 2), and more interests share
+    // the same budget. The overlap with the city's must-sees (a museum-lover's MNAC)
+    // fills the icon backbone too, so the ~2/day themed layer sits on top of the icons.
+    const themeBudget = 2 * rDays;
+    const perInterest = interests.length ? Math.max(1, Math.round(themeBudget / interests.length)) : 0;
     const inRange = new Set(attractions.map((a) => a.id));
     const chosen = new Set<number>();
     const reserved: Attraction[] = [];
@@ -375,13 +382,15 @@ export async function POST(req: NextRequest) {
         if (!chosen.has(a.id)) { chosen.add(a.id); reserved.push(a); cnt++; }
       }
     }
-    // Theme guarantee: ≥K matching stops per chosen interest — by taste-tag, by coarse
-    // category, OR by a name keyword (markets are often mis-tagged as generic places).
+    // Theme guarantee: up to `perInterest` matching stops per chosen interest — by
+    // taste-tag, by coarse category, OR by a name keyword (markets are often mis-tagged
+    // as generic places). A thin interest that can't fill its share just yields fewer
+    // (the ranking fill takes the rest) rather than inventing places.
     for (const it of interests) {
       const w = interestTasteMap(it), kws = INTEREST_KEYWORDS[it] ?? [];
       let k = 0;
       for (const a of attractions) {
-        if (k >= K) break;
+        if (k >= perInterest) break;
         if (chosen.has(a.id)) continue;
         const nm = a.name_he || a.name_en || "";
         const match = (a.taste_tags && tasteScore(a.taste_tags, w) > 0)
@@ -393,9 +402,13 @@ export async function POST(req: NextRequest) {
     // keep interest-ranked fill the majority: cap reserved to ~half the window, but
     // never below the icon floor. When neighbourhoods are chosen they ARE the explicit
     // intent, so allow more of the window (icons+areas first, interest themes last).
+    // The front-load cap must fit the whole theme budget + the icon backbone + any
+    // ❤ picks — otherwise a deep single-interest trip would get its themed stops
+    // trimmed right back off. Never exceeds the day's real capacity.
     const cap = areaMemberIds.length
       ? Math.min(reserved.length, Math.round(rDays * perDay * 0.85))
-      : Math.max(RESERVE_ICONS, Math.floor(0.5 * rDays * perDay));
+      : Math.min(rDays * perDay,
+          Math.max(Math.floor(0.5 * rDays * perDay), RESERVE_ICONS + themeBudget + pickSet.size));
     const frontIds = new Set(reserved.slice(0, cap).map((a) => a.id));
     let ordered = [...reserved.slice(0, cap), ...attractions.filter((a) => !frontIds.has(a.id))];
     // "1–2 museums": when the traveller stated interests that DON'T include museums,
