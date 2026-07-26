@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds } from "@/lib/db";
+import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds, approvedStreetsForCity } from "@/lib/db";
 import { annotateDaysWithAreas } from "@/lib/cluster";
 import type { Attraction, Destination, Street } from "@/lib/db";
 import { refOf, synthId, isRealAttraction } from "@/lib/place";
@@ -287,6 +287,16 @@ export async function POST(req: NextRequest) {
   // them as the day's top candidates (they were an explicit "כן").
   const streetRows = Array.isArray(body.streetIds) && body.streetIds.length
     ? await streetsByIds(body.streetIds.filter((n) => typeof n === "number")) : [];
+  // Layer 2: a chosen neighbourhood AUTO-INCLUDES its own streets — "I'm already in
+  // the area, of course I'll walk its main streets" (independent of interests). Merged
+  // with any explicitly-picked streets (deduped), so they schedule into the trip too.
+  const chosenAreaIds = Array.isArray(body.areaIds) ? body.areaIds.filter((n): n is number => typeof n === "number") : [];
+  if (chosenAreaIds.length) {
+    const have = new Set(streetRows.map((s) => s.id));
+    const areaStreets = (await approvedStreetsForCity(dest.id))
+      .filter((s) => s.area_id != null && chosenAreaIds.includes(s.area_id) && !have.has(s.id));
+    streetRows.push(...areaStreets);
+  }
   const streetStops = streetRows.map(streetAsStop);
   // Interest-governed reservation (single-city, no explicit selection): guarantee
   // the city's key must-sees (~1 hero/day) AND ≥K stops per chosen interest survive
@@ -543,7 +553,9 @@ export async function POST(req: NextRequest) {
     const requested = body.days ?? nAreas;
     const memberSet = new Set(memberIds);
     if (requested > nAreas) {
-      const central = areaList.filter((a) => !memberSet.has(a.id) && (yesSet.has(a.id) || a.must_see === 1));
+      // real attractions only — streets already live in their area's day (streetAsStop
+      // carries must_see=1, which would otherwise re-pull them into a central day).
+      const central = areaList.filter((a) => isRealAttraction(a.id) && !memberSet.has(a.id) && (yesSet.has(a.id) || a.must_see === 1));
       if (central.length)
         itin.days.push(...buildHeuristicItinerary(dest.city, dest.country, requested - nAreas,
           central, isFamily, perDay, body.walkPref ?? 3, undefined, buildOpts).days);
