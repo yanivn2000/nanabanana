@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, Fragment } from "react";
 import Link from "next/link";
-import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin, X, Loader2, LayoutGrid, List } from "lucide-react";
+import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin, X, Loader2, LayoutGrid, List, Heart } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
 import { CityPoster } from "@/components/CityPoster";
 import { descriptor, catColor, bigImage, mergeCat, countryFlag } from "@/lib/labels";
@@ -125,6 +125,20 @@ function ChoiceBtn({ tone, active, onClick, icon, label }: {
       style={{ background: active ? t.on : "var(--surface)", color: active ? t.ink : t.off,
                borderColor: active ? t.on : "var(--border)" }}>
       {icon} {label}
+    </button>
+  );
+}
+
+// A single LIKE toggle replaces the כן/לא pair: liked = the place is "in" (choice
+// "yes"); un-liked = simply unmarked (no preference), so the builder just ignores it.
+function LikeBtn({ liked, onClick }: { liked: boolean; onClick: () => void }) {
+  return (
+    <button onClick={(e) => { e.stopPropagation(); onClick(); }}
+      aria-pressed={liked}
+      className="flex w-full items-center justify-center gap-1.5 rounded-full border py-1.5 text-[13px] font-medium transition"
+      style={{ background: liked ? "var(--brand)" : "var(--surface)", color: liked ? "#fff" : "var(--text-2)",
+               borderColor: liked ? "var(--brand)" : "var(--border)" }}>
+      <Heart size={14} fill={liked ? "currentColor" : "none"} /> {liked ? "אהבתי" : "לייק"}
     </button>
   );
 }
@@ -625,7 +639,7 @@ export function DestinationView({
                 <span className="text-[16px] font-bold text-[var(--brand-ink)]">איך בונים טיול?</span>
                 <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">1</b> בחרו נושאים שאתם אוהבים</span>
                 <ChevronRight size={16} className="text-[var(--text-3)]" />
-                <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">2</b> סמנו “כן” על אטרקציות שאהבתם</span>
+                <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">2</b> תנו ❤ לייק לאטרקציות שאהבתם</span>
                 <ChevronRight size={16} className="text-[var(--text-3)]" />
                 <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">3</b> נרכיב לכם את הטיול</span>
               </div>
@@ -1088,7 +1102,8 @@ export function DestinationView({
                         {a.image_url && (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={bigImage(a.image_url, 640)} alt="" loading="lazy"
-                            className="w-full rounded-[10px] object-cover sm:w-2/5 sm:max-w-[360px] sm:self-start" />
+                            onError={(e) => { const t = e.currentTarget; if (a.image_url && t.src !== a.image_url) t.src = a.image_url; }}
+                            className="aspect-[4/3] w-full shrink-0 rounded-[10px] object-cover sm:w-[38%] sm:self-start" />
                         )}
                         <div className="min-w-0 flex-1">
                           {a.tagline_he && <p className="text-[14px] italic text-[var(--text-2)]">{a.tagline_he}</p>}
@@ -1114,17 +1129,9 @@ export function DestinationView({
                       </div>
                     </div>
                   )}
-                  {isEditor && (
-                    <div className="flex flex-col gap-1.5 border-t border-[var(--border)] bg-[var(--surface-2)] py-2">
-                      <EditorRateRow label="דירוג" value={a.editor_rank} onPick={(v) => setRating(a, "rank", v)}
-                        options={[{ v: "must", t: "חובה", bg: "var(--brand)", ink: "#fff" }, { v: "maybe", t: "אולי", bg: "var(--amber-fill)", ink: "#3d2c0a" }, { v: "no", t: "ממש לא", bg: "#c0453f", ink: "#fff" }]} />
-                      <EditorRateRow label="ילדים" value={a.editor_kids} onPick={(v) => setRating(a, "kids", v)}
-                        options={[{ v: "yes", t: "מתאים", bg: "var(--brand)", ink: "#fff" }, { v: "maybe", t: "אולי", bg: "var(--amber-fill)", ink: "#3d2c0a" }, { v: "no", t: "ממש לא", bg: "#c0453f", ink: "#fff" }]} />
-                    </div>
-                  )}
-                  <div className="grid grid-cols-2 gap-1.5 border-t border-[var(--border)] p-2">
-                    <ChoiceBtn tone="yes" active={choice === "yes"} onClick={() => setChoice(a.id, "yes")} icon={<Check size={13} />} label="כן" />
-                    <ChoiceBtn tone="no" active={choice === "no"} onClick={() => setChoice(a.id, "no")} icon={<X size={13} />} label="לא" />
+                  {/* editor rating rows are intentionally hidden in LIST mode (kept in tiles). */}
+                  <div className="border-t border-[var(--border)] p-2">
+                    <LikeBtn liked={choice === "yes"} onClick={() => setChoice(a.id, "yes")} />
                   </div>
                 </div>
                 </Fragment>
@@ -1241,9 +1248,8 @@ export function DestinationView({
                   )}
                   {/* yes / no marks — the traveler's picks for this city.
                       RTL order: כן first (right), then לא. */}
-                  <div className="grid grid-cols-2 gap-1.5 border-t border-[var(--border)] p-2">
-                    <ChoiceBtn tone="yes" active={choice === "yes"} onClick={() => setChoice(a.id, "yes")} icon={<Check size={13} />} label="כן" />
-                    <ChoiceBtn tone="no" active={choice === "no"} onClick={() => setChoice(a.id, "no")} icon={<X size={13} />} label="לא" />
+                  <div className="border-t border-[var(--border)] p-2">
+                    <LikeBtn liked={choice === "yes"} onClick={() => setChoice(a.id, "yes")} />
                   </div>
                 </div>
                 </Fragment>
@@ -1288,7 +1294,7 @@ export function DestinationView({
                 {canBuild ? (
                   <><span className="font-semibold text-[var(--text)]">{yesCount} אטרקציות</span> נבחרו — מוכנים לבנות!</>
                 ) : yesCount === 0 ? (
-                  <>סמנו אטרקציות שאהבתם <span className="font-medium text-[var(--brand-ink)]">(כן 👍)</span> — לפחות {minPicks} — ונרכיב לכם טיול</>
+                  <>תנו <span className="font-medium text-[var(--brand-ink)]">❤ לייק</span> לאטרקציות שאהבתם — לפחות {minPicks} — ונרכיב לכם טיול</>
                 ) : (
                   <><span className="font-semibold text-[var(--text)]">{yesCount}/{minPicks}</span> — בחרו עוד {minPicks - yesCount} כדי לבנות טיול</>
                 )}
@@ -1321,7 +1327,7 @@ export function DestinationView({
           </div>
           {buildHint && !canBuild && (
             <p className="mt-2 rounded-[var(--radius-sm)] bg-[var(--amber-soft)] px-3 py-1.5 text-[12.5px] text-[var(--amber)]">
-              כדי לבנות טיול מותאם, סמנו לפחות {minPicks} אטרקציות שאהבתם בכפתור “כן” 👍 מהרשימה{yesCount ? ` (בחרתם ${yesCount} עד כה)` : ""}.
+              כדי לבנות טיול מותאם, תנו ❤ לייק ללפחות {minPicks} אטרקציות שאהבתם מהרשימה{yesCount ? ` (${yesCount} עד כה)` : ""}.
             </p>
           )}
         </div>
