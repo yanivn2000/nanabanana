@@ -12,6 +12,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import pg from "pg";
 
 const DRY = process.argv.includes("--dry");
+const LOOSE = process.argv.includes("--loose");
 const ONLY = (process.argv.find((a) => a.startsWith("--only=")) || "").slice(7)
   .split(",").filter(Boolean).map(Number);
 const DIR = new URL("./streets_data/", import.meta.url);
@@ -138,6 +139,49 @@ function matchStreet(st, byName) {
   return { path, ...stats, osmId: use[0].id };
 }
 
+// Fold a street name to a comparable core: lowercase, strip Latin diacritics, drop
+// generic street-words (any script), keep only letters/digits as tokens.
+const GENERIC = new RegExp("\\b(via|viale|corso|rue|calle|carrer|rua|strada|str|strasse|straße|ulica|ul|avenue|ave|street|st|road|boulevard|blvd|fondamenta|riva|salizada|ruga|merceria|piazza|plaza|calea|strada|bulevardul|soseaua|şoseaua|leoforos|λεωφόρος|οδός|οδος|gamziri|გამზირი|ქუჩა|kucha|sderot|rechov|שדרות|רחוב|טיילת)\\b", "giu");
+function norm(s) {
+  return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(GENERIC, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+// Fallback for a street the strict batched pass missed: pull every named highway
+// within 350m of its approx point and fuzzy-match the name (contains / token
+// overlap), so "Via Veneto"→"Via Vittorio Veneto", "רוטשילד"→"שדרות רוטשילד".
+async function looseMatch(st) {
+  const at = [st.approx_lat, st.approx_lng];
+  const j = await overpass(`[out:json][timeout:60];way["highway"]["name"](around:350,${at[0]},${at[1]});(._;>;);out body;`);
+  await sleep(700);
+  if (!j?.elements?.length) return null;
+  const nodes = new Map();
+  for (const e of j.elements) if (e.type === "node") nodes.set(e.id, [e.lat, e.lon]);
+  const cand = new Map();
+  for (const e of j.elements) {
+    if (e.type !== "way" || !e.nodes || !e.tags?.name) continue;
+    const coords = e.nodes.map((id) => nodes.get(id)).filter(Boolean);
+    if (coords.length < 2) continue;
+    if (!cand.has(e.tags.name)) cand.set(e.tags.name, []);
+    cand.get(e.tags.name).push(coords);
+  }
+  const target = norm(st.name_local), tset = new Set(target.split(" ").filter(Boolean));
+  let best = null;
+  for (const [nm, ways] of cand) {
+    const n = norm(nm), nset = new Set(n.split(" ").filter(Boolean));
+    if (!n || !target) continue;
+    const contains = n.includes(target) || target.includes(n);
+    const overlap = [...tset].filter((t) => nset.has(t)).length / Math.max(1, tset.size);
+    if (!contains && overlap < 0.6) continue;
+    const path = stitch(ways);
+    if (path.length < 2) continue;
+    const stats = pathStats(path);
+    if (hav([stats.clat, stats.clng], at) > 1500) continue;
+    const score = contains ? 1 + overlap : overlap;
+    if (!best || score > best.score) best = { path, ...stats, osmId: null, score, matchedName: nm };
+  }
+  return best;
+}
+
 const files = readdirSync(DIR).filter((f) => f.endsWith(".json"));
 let inserted = 0, failed = 0, skipped = 0;
 const failReport = [];
@@ -155,7 +199,11 @@ for (const f of files.sort()) {
   await sleep(1200); // be gentle between cities
   let cityIns = 0, cityFail = 0;
   for (const st of pending) {
-    const geo = matchStreet(st, byName);
+    let geo = matchStreet(st, byName);
+    if (!geo && LOOSE) {
+      geo = await looseMatch(st);
+      if (geo) console.log(`   ~loose ${data.city}: ${st.name_local} → OSM "${geo.matchedName}"`);
+    }
     if (!geo) { failed++; cityFail++; failReport.push(`${data.city}: ${st.name_local}`); continue; }
     if (!DRY) {
       // area link: nearest area whose centroid is within its radius of the street.
