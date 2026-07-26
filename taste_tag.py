@@ -49,6 +49,11 @@ def structural(a):
         tags.add("landmark")
     if sub in ("zoo", "aquarium"):
         tags.add("family")
+    # A market is both an eat-and-shop destination. NOTE: markets mis-categorised as
+    # generic "attraction" (Albert Cuyp, Chelsea Market…) are NOT caught here — they're
+    # handled by web/scripts/tag_markets.mjs, which must be re-run after a full re-tag.
+    if sub in ("market", "marketplace"):
+        tags |= {"food", "vintage_shopping"}
     return tags
 
 
