@@ -281,11 +281,27 @@ export async function POST(req: NextRequest) {
     : [];
   const areaMemberRows = areaMemberIds.length ? await attractionsByIds(areaMemberIds) : [];
   const seen = new Set(base.map((a) => a.id));
-  const pool = [...base, ...[...picks, ...areaMemberRows].filter((p) => { if (seen.has(p.id)) return false; seen.add(p.id); return true; })];
+  let pool = [...base, ...[...picks, ...areaMemberRows].filter((p) => { if (seen.has(p.id)) return false; seen.add(p.id); return true; })];
   // Chosen interest chips (GOVERNING_INTERESTS keys) — govern the pick alongside
   // taste, and drive the coarse fallback + theme reservation below.
   const interests = Array.isArray(body.interests) ? body.interests.filter((s): s is string => typeof s === "string") : [];
   const audience = body.audience === "families" || body.audience === "adults" ? body.audience : undefined;
+  // A couples/friends trip should NOT include clearly kid-only places — a theme park /
+  // zoo / aquarium / water-park, or a heavily family-skewed audience_fit (families ≫
+  // couples). These are FAMILY must-sees, not adults ones, so drop them from an adults
+  // build — unless the traveller explicitly picked the place or chose the kids/amusement
+  // theme. (Families keep them via the family_score sort.)
+  const KID_SUBS = new Set(["theme_park", "water_park", "playground", "zoo", "aquarium"]);
+  const isKidOnly = (a: Attraction) => {
+    if (a.subcategory && KID_SUBS.has(a.subcategory)) return true;
+    const af = a.audience_fit as { couples?: number; friends?: number; families?: number } | null;
+    if (!af) return false;
+    const fam = af.families ?? 0, adu = Math.max(af.couples ?? 0, af.friends ?? 0);
+    return fam >= 75 && fam - adu >= 30;
+  };
+  if (audience === "adults" && !interests.includes("פארקי שעשועים") && !interests.includes("ילדים")) {
+    pool = pool.filter((a) => pickIds.includes(a.id) || !isKidOnly(a));
+  }
   // Thin-interest rescue: nightlife/niche-shop venues rank too low to reach the base
   // pool, so an explicitly chosen thin interest would surface NOTHING. Fetch the best
   // matches directly (union across chosen interests, quality-first) and guarantee them
