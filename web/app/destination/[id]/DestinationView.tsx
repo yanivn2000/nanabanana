@@ -316,9 +316,9 @@ export function DestinationView({
   const [soloInterest, setSoloInterest] = useState<string | null>(null);
   const [selectedOnly, setSelectedOnly] = useState(false);  // "הצג רק נבחרים" — mutually exclusive with solo
   const toggleSelectedOnly = () => { setSoloInterest(null); setSelectedOnly((v) => !v); };
-  // How the attraction list renders: image-top TILES (default) or a compact LIST in
-  // the trip-page design language (row → expands down, image on the right, info across).
-  const [listView, setListView] = useState(false);
+  // How the attraction list renders: a compact LIST in the trip-page design language
+  // (default — row → expands down, image on the right, info across) or image-top TILES.
+  const [listView, setListView] = useState(true);
   const interestState = (v: string): "yes" | "no" | "none" | "solo" =>
     soloInterest === v ? "solo"
       : profile.interests.includes(v) ? "yes"
@@ -424,7 +424,9 @@ export function DestinationView({
           // ✕ interests hide entirely — e.g. "ילדים" on a couples' trip removes
           // every kid place, not even dimmed. An explicit כן/אולי keeps it.
           if (!choices[a.id] && profile.dislikes.some((it) => matchesInterest(a, it))) return false;
-          if (mustOnly && a.must_see !== 1) return false;
+          // "רק אתרי חובה" narrows the BROWSE — but an active search must find any
+          // place by name, not only must-sees, so a query bypasses the must-see gate.
+          if (mustOnly && !query && a.must_see !== 1) return false;
         }
         if (flags.free && a.cost_level !== 0) return false;
         if (flags.indoor && !(a.indoor_outdoor === "indoor" || a.indoor_outdoor === "both")) return false;
@@ -1060,10 +1062,24 @@ export function DestinationView({
           )}
 
           {/* toolbar above the list — visible in EVERY mode (the sticky desktop
-              toolbar only shows in explore). The "רק אתרי חובה" facet lives here as
-              a clickable tag (pressed by default) instead of buried in the filters
-              popover, so travellers can always broaden past the must-sees. */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-3">
+              toolbar only shows in explore). Holds a live search, the "רק אתרי חובה"
+              facet as a clickable tag (pressed by default, instead of buried in the
+              filters popover), and the list/tiles view toggle. */}
+          {/* Live search — filters as you type (every keystroke). Hidden only where
+              the sticky explore toolbar already shows its own search (lg + explore),
+              so there's never a duplicate; shown everywhere else incl. mobile explore. */}
+          <div className={`flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 mt-3 ${mode === "explore" ? "lg:hidden" : ""}`}>
+            <Search size={16} className="shrink-0 text-[var(--text-3)]" />
+            <input value={query} onChange={(e) => setQuery(e.target.value)}
+              placeholder="חיפוש אטרקציה, שכונה או סוג מקום…"
+              className="flex-1 bg-transparent text-[14.5px] outline-none placeholder:text-[var(--text-3)]" />
+            {query && (
+              <button onClick={() => setQuery("")} aria-label="נקה חיפוש" className="shrink-0 text-[var(--text-3)] transition hover:text-[var(--text)]">
+                <X size={16} />
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
             {!soloInterest && !selectedOnly ? (
               <button onClick={() => setMustOnly((v) => !v)} aria-pressed={mustOnly}
                 className="inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition"
