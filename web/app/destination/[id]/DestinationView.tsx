@@ -449,7 +449,7 @@ export function DestinationView({
     return (a: Attraction) => tasteScore(a.taste_tags, w) > 0 || coarseFits(a.category, a.subcategory, [...boosts]);
   }, [boosts]);
 
-  const { sortedItems, dimmedIds, matchedIds } = useMemo(() => {
+  const { sortedItems, dimmedIds, matchedIds, emphCount } = useMemo(() => {
     const img = (a: Attraction) => (a.image_url ? 1 : 0);
     // Editor importance tier: "ממש לא" floors it (0); effective must-see leads
     // (4); "אולי" is a real mid boost (3); everything else normal (2).
@@ -476,7 +476,10 @@ export function DestinationView({
     const matched: Attraction[] = [], dimmed: Attraction[] = [];
     for (const a of listItems) ((selectedOnly || soloInterest || isMatch(a)) ? matched : dimmed).push(a);
     matched.sort(cmp); dimmed.sort(cmp);
-    return { sortedItems: [...matched, ...dimmed], dimmedIds: new Set(dimmed.map((a) => a.id)), matchedIds: matched.map((a) => a.id) };
+    // How many of the audience-fit pool also match the chosen topic chips — the
+    // number the topics actually move (they emphasise within the pool, don't shrink it).
+    const emphCount = boostMatch ? matched.filter((a) => boostMatch(a)).length : 0;
+    return { sortedItems: [...matched, ...dimmed], dimmedIds: new Set(dimmed.map((a) => a.id)), matchedIds: matched.map((a) => a.id), emphCount };
   }, [listItems, sort, cityTasteTagged, taste, profile.dislikes, selectedOnly, soloInterest, audience, boostMatch]);
 
   // Paginate: show PAGE at a time; reset to page 1 on any change.
@@ -742,7 +745,12 @@ export function DestinationView({
               {mode === "short" && (
                 <div className="flex flex-col gap-2.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[12.5px] text-[var(--text-3)]"><b className="text-[var(--text-2)]">{matchedIds.length}</b> מקומות שמתאימים ל{PROFILE_HE[audience!]} · כיילו:</span>
+                    <span className="text-[12.5px] text-[var(--text-3)]" title="הצ'יפים מדגישים ומקדמים מה שאתם אוהבים בתוך המאגר — הם לא מסתירים כלום. לייקים ושכונות מוסיפים חידודים על גבי המאגר הזה.">
+                      <b className="text-[var(--text-2)]">{matchedIds.length}</b> מקומות מתאימים ל{PROFILE_HE[audience!]}
+                      {boosts.size > 0
+                        ? <> · <b className="text-[var(--accent-ink)]">{emphCount}</b> בהדגשת הבחירה שלכם</>
+                        : <> · הדגישו מה שאוהבים:</>}
+                    </span>
                     {govInterests.map((it) => {
                       const on = boosts.has(it.key);
                       return (
