@@ -521,6 +521,19 @@ export function DestinationView({
   // Neighbourhoods chosen to tour — a SEPARATE selection from the attraction
   // yes/maybe marks, so picking an area never silently floods the attraction picks.
   const [chosenAreas, setChosenAreas] = useState<Set<number>>(() => new Set());
+  // Preview deselect: places the traveller removed from the live preview strip → they
+  // drop to the bank and the next candidate fills the slot. Reset when the audience
+  // changes (a fresh preview). Add-from-bank reuses the ❤ like (a real, build-fed pick).
+  const [previewRemoved, setPreviewRemoved] = useState<Set<number>>(new Set());
+  useEffect(() => { setPreviewRemoved(new Set()); }, [audience]);
+  const removeFromPreview = (id: number) => {
+    setPreviewRemoved((s) => new Set(s).add(id));
+    if (choices[id] === "yes") setChoice(id, "yes");   // un-like (self-clearing) so it fully drops
+  };
+  const addFromBank = (id: number) => {
+    if (previewRemoved.has(id)) setPreviewRemoved((s) => { const n = new Set(s); n.delete(id); return n; });
+    else if (choices[id] !== "yes") setChoice(id, "yes");   // like → reserved pick → enters the trip
+  };
   // Members of a CHOSEN neighbourhood are guaranteed into the trip regardless of
   // likes → we badge them "בשכונה שבחרת" so an un-liked one doesn't read as "forgot".
   const chosenAreaMemberIds = useMemo(
@@ -555,14 +568,21 @@ export function DestinationView({
       ? ranked.filter((a) => interestsSel.some((it) => matchesInterest(a, it))).slice(0, 30) : [];
     const { orderedFill } = selectTrip({ attractions: ranked, base: attractions, interestRows,
       interests: interestsSel, days, perDay: per, pickIds, areaMemberIds: [...chosenAreaMemberIds], areaGroupsLen: chosenAreas.size });
-    const selected = orderedFill.slice(0, days * per);
+    // Removed places drop OUT of the selected set (the next candidate fills the slot)
+    // and into the bank — re-addable.
+    const selected = orderedFill.filter((a) => !previewRemoved.has(a.id)).slice(0, days * per);
+    const selectedIds = new Set(selected.map((a) => a.id));
     const counts: Record<string, number> = {};
     for (const a of selected) counts[catBucket(a)] = (counts[catBucket(a)] ?? 0) + 1;
-    // must-see first within the preview list (mirrors the trip's own priority), so the
-    // icons lead the "here's your trip" strip.
+    // must-see first within the preview list (mirrors the trip's own priority).
     const list = [...selected].sort((a, b) => (b.must_see === 1 ? 1 : 0) - (a.must_see === 1 ? 1 : 0));
-    return { total: selected.length, days, counts, list };
-  }, [attractions, audience, boosts, chosenAreas, chosenAreaMemberIds, choices, buildDays, buildPace, taste]);
+    // BANK = the best worthy places that didn't make the cut (removed ones lead so they
+    // can be restored), then the next candidates by priority.
+    const bank = orderedFill.filter((a) => !selectedIds.has(a.id))
+      .sort((a, b) => (previewRemoved.has(b.id) ? 1 : 0) - (previewRemoved.has(a.id) ? 1 : 0))
+      .slice(0, 12);
+    return { total: selected.length, days, counts, list, bank };
+  }, [attractions, audience, boosts, chosenAreas, chosenAreaMemberIds, choices, buildDays, buildPace, taste, previewRemoved]);
   const toggleArea = (id: number) => setChosenAreas((s) => {
     const next = new Set(s); if (next.has(id)) next.delete(id); else next.add(id); return next;
   });
@@ -795,29 +815,61 @@ export function DestinationView({
                         })}
                       </div>
                       {/* the actual places — a horizontal strip that reshapes live as you
-                          choose. Tap one to fly the map to it. ⭐ = must-see. */}
+                          choose. Tap to fly the map; ✕ removes it (bank fills the slot). */}
                       <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1">
                         {tripPreview.list.map((a) => (
-                          <button key={a.id} onClick={() => setSelected(a)}
-                            title={a.name_he || a.name_en}
-                            className="group flex w-[104px] shrink-0 flex-col overflow-hidden rounded-[10px] border border-[var(--border)] bg-[var(--surface)] text-right transition hover:border-[var(--brand)]">
-                            <div className="relative aspect-[4/3] w-full bg-[var(--surface-2)]">
-                              {a.image_url ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={bigImage(a.image_url, 200)} alt="" loading="lazy"
-                                  onError={(e) => { const t = e.currentTarget; if (a.image_url && t.src !== a.image_url) t.src = a.image_url; }}
-                                  className="size-full object-cover" />
-                              ) : (
-                                <div className="grid size-full place-items-center" style={{ background: `color-mix(in srgb, ${catColor(a.category)} 16%, var(--surface-2))` }}>
-                                  <MapPin size={16} style={{ color: catColor(a.category) }} />
-                                </div>
-                              )}
-                              {a.must_see === 1 && <span className="absolute right-1 top-1 rounded-full bg-[var(--accent)] px-1 text-[10px] text-white">⭐</span>}
-                            </div>
-                            <span className="line-clamp-2 px-1.5 py-1 text-[11px] leading-tight text-[var(--text-2)]">{a.name_he || a.name_en}</span>
-                          </button>
+                          <div key={a.id} className="group relative w-[104px] shrink-0">
+                            <button onClick={() => setSelected(a)} title={a.name_he || a.name_en}
+                              className="flex w-full flex-col overflow-hidden rounded-[10px] border border-[var(--border)] bg-[var(--surface)] text-right transition hover:border-[var(--brand)]">
+                              <div className="relative aspect-[4/3] w-full bg-[var(--surface-2)]">
+                                {a.image_url ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={bigImage(a.image_url, 200)} alt="" loading="lazy"
+                                    onError={(e) => { const t = e.currentTarget; if (a.image_url && t.src !== a.image_url) t.src = a.image_url; }}
+                                    className="size-full object-cover" />
+                                ) : (
+                                  <div className="grid size-full place-items-center" style={{ background: `color-mix(in srgb, ${catColor(a.category)} 16%, var(--surface-2))` }}>
+                                    <MapPin size={16} style={{ color: catColor(a.category) }} />
+                                  </div>
+                                )}
+                                {a.must_see === 1 && <span className="absolute right-1 top-1 rounded-full bg-[var(--accent)] px-1 text-[10px] text-white">⭐</span>}
+                              </div>
+                              <span className="line-clamp-2 px-1.5 py-1 text-[11px] leading-tight text-[var(--text-2)]">{a.name_he || a.name_en}</span>
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); removeFromPreview(a.id); }} aria-label="הסר מהטיול" title="הסר מהטיול"
+                              className="absolute left-1 top-1 grid size-5 place-items-center rounded-full bg-black/55 text-white opacity-0 transition group-hover:opacity-100">
+                              <X size={12} />
+                            </button>
+                          </div>
                         ))}
                       </div>
+                      {/* BANK — worthy places that didn't fit; + adds one (bumps a lower one out). */}
+                      {tripPreview.bank.length > 0 && (
+                        <div className="mt-2 border-t border-[var(--border)] pt-2">
+                          <p className="mb-1.5 text-[12px] text-[var(--text-3)]">בנק — עוד מקומות שאפשר להוסיף:</p>
+                          <div className="flex gap-2 overflow-x-auto pb-1">
+                            {tripPreview.bank.map((a) => (
+                              <button key={a.id} onClick={() => addFromBank(a.id)} title={`הוסף: ${a.name_he || a.name_en}`}
+                                className="flex w-[104px] shrink-0 flex-col overflow-hidden rounded-[10px] border border-dashed border-[var(--border)] bg-[var(--surface)] text-right opacity-80 transition hover:border-[var(--brand)] hover:opacity-100">
+                                <div className="relative aspect-[4/3] w-full bg-[var(--surface-2)]">
+                                  {a.image_url ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={bigImage(a.image_url, 200)} alt="" loading="lazy"
+                                      onError={(e) => { const t = e.currentTarget; if (a.image_url && t.src !== a.image_url) t.src = a.image_url; }}
+                                      className="size-full object-cover" />
+                                  ) : (
+                                    <div className="grid size-full place-items-center" style={{ background: `color-mix(in srgb, ${catColor(a.category)} 16%, var(--surface-2))` }}>
+                                      <MapPin size={16} style={{ color: catColor(a.category) }} />
+                                    </div>
+                                  )}
+                                  <span className="absolute left-1 top-1 grid size-5 place-items-center rounded-full bg-[var(--brand)] text-white">+</span>
+                                </div>
+                                <span className="line-clamp-2 px-1.5 py-1 text-[11px] leading-tight text-[var(--text-2)]">{a.name_he || a.name_en}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   <button onClick={() => openBuild()}
