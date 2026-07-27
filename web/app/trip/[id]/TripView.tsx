@@ -187,6 +187,9 @@ export function TripView({ tripId }: { tripId: string }) {
   const [mobileTab, setMobileTab] = useState<"plan" | "map">("plan");
   const [datesOpen, setDatesOpen] = useState(false);         // dates aren't permanent — a popover
   const [focus, setFocus] = useState<{ lat: number; lng: number; n: number } | null>(null);
+  // A bank ("לא נכנסו") card the user is pointing at — highlight its marker on the map,
+  // exactly like hovering a scheduled stop lights up its pin.
+  const [hoverBankId, setHoverBankId] = useState<number | null>(null);
   // The stop the user is pointing at — hovered in the list or clicked on the map.
   // Indexed in "located stop" space (matches the numbered map markers).
   const [active, setActive] = useState<number | null>(null);
@@ -531,6 +534,14 @@ export function TripView({ tripId }: { tripId: string }) {
   const nearbyExtras = ((trip?.leftOut ?? []) as unknown as Attraction[]).filter((l) =>
     Number.isFinite(l.lat) && Number.isFinite(l.lng) &&
     mapStops.some((s) => haversineKm(s.lat as number, s.lng as number, l.lat as number, l.lng as number) <= NEAR_KM));
+  // The hovered bank pick always gets a marker to light up — even a far one that the
+  // NEAR_KM filter would otherwise drop (we fly the map to it, see the card handlers).
+  const hoverBankItem = hoverBankId != null
+    ? ((trip?.leftOut ?? []) as unknown as Attraction[]).find(
+        (l) => l.id === hoverBankId && Number.isFinite(l.lat) && Number.isFinite(l.lng))
+    : undefined;
+  const mapExtras = hoverBankItem && !nearbyExtras.some((e) => e.id === hoverBankItem.id)
+    ? [...nearbyExtras, hoverBankItem] : nearbyExtras;
 
   // --- manual editing: apply a transform to a clone, relabel days, save ---
   function mutate(fn: (it: Itinerary) => void) {
@@ -1095,7 +1106,7 @@ export function TripView({ tripId }: { tripId: string }) {
             <div className="mt-3 h-[420px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)] lg:hidden">
               <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
                 hotels={hotelPoints} focus={focus} colors={stopColors} activeIdx={active}
-                extras={nearbyExtras} pendingAddIds={pendAdd} pendingRemoveLocated={pendingRemoveLocated}
+                extras={mapExtras} hoveredId={hoverBankId} pendingAddIds={pendAdd} pendingRemoveLocated={pendingRemoveLocated}
                 onToggleExtra={toggleExtra} onToggleRemove={toggleRemoveLocated}
                 onStopClick={(li) => { const si = locatedToStop[li]; if (si == null) return;
                   setExpanded(`${curIdx}-${si}`); setActive(li); setMobileTab("plan"); }} />
@@ -1383,7 +1394,16 @@ export function TripView({ tripId }: { tripId: string }) {
                   const bHasDetails = !!(p.image_url || p.website || p.best_time_he || p.dress_he ||
                     p.cost_level != null || p.tips_he || (p.tagline_he && p.tagline_he !== p.tips_he));
                   return (
-                  <div key={p.id} className={`shrink-0 overflow-hidden rounded-[10px] border border-[var(--border)] bg-[var(--surface-2)] ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
+                  <div key={p.id}
+                    onMouseEnter={() => {
+                      setHoverBankId(p.id);
+                      // near picks are already on-screen (highlight in place, like a day
+                      // stop); fly only to a far pick so it comes into view lit up.
+                      if (p.lat != null && p.lng != null && !nearbyExtras.some((e) => e.id === p.id))
+                        setFocus({ lat: p.lat, lng: p.lng, n: Date.now() });
+                    }}
+                    onMouseLeave={() => setHoverBankId(null)}
+                    className={`shrink-0 overflow-hidden rounded-[10px] border border-[var(--border)] bg-[var(--surface-2)] transition-colors ${hoverBankId === p.id ? "border-[var(--brand)]" : ""} ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
                     {/* tap to read (expand), drag to move — a small move threshold in
                         startPointerDrag tells them apart */}
                     <div
@@ -1458,7 +1478,7 @@ export function TripView({ tripId }: { tripId: string }) {
                 <div className="h-[calc(100dvh-265px)] max-h-[700px] min-h-[440px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
                   <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
                     hotels={hotelPoints} focus={focus} colors={stopColors} activeIdx={active}
-                extras={nearbyExtras} pendingAddIds={pendAdd} pendingRemoveLocated={pendingRemoveLocated}
+                extras={mapExtras} hoveredId={hoverBankId} pendingAddIds={pendAdd} pendingRemoveLocated={pendingRemoveLocated}
                 onToggleExtra={toggleExtra} onToggleRemove={toggleRemoveLocated}
                     onStopClick={(li) => { const si = locatedToStop[li]; if (si == null) return;
                       setExpanded(`${curIdx}-${si}`); setActive(li);

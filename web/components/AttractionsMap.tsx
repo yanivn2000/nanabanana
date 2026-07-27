@@ -355,10 +355,13 @@ export default function AttractionsMap({
           green). They let the traveller see un-placed picks near the planned route. */}
       {ordered && extras.filter((a) => Number.isFinite(a.lat) && Number.isFinite(a.lng)).map((a) => {
         const marked = pendingAddIds?.has(a.id);
+        const hot = hoveredId === a.id;   // its bank card is hovered — light it up
         return (
           <CircleMarker key={"x" + a.id} center={[a.lat as number, a.lng as number]}
-            radius={marked ? 8 : 6}
-            pathOptions={{ color: "#fff", weight: 2, fillColor: marked ? "#0e6b5e" : "#9aa0a6", fillOpacity: 0.9 }}>
+            radius={hot ? 11 : marked ? 8 : 6}
+            ref={(m) => { if (m && hot) m.bringToFront(); }}
+            pathOptions={{ color: "#fff", weight: hot ? 3 : 2,
+              fillColor: hot || marked ? "#0e6b5e" : "#9aa0a6", fillOpacity: hot ? 1 : 0.9 }}>
             <AttractionPopup a={a} action={onToggleExtra ? {
               label: marked ? "✓ יתווסף ליום · בטל" : "➕ הוסף ליום זה",
               onClick: () => onToggleExtra(a.id), active: marked } : undefined} />
