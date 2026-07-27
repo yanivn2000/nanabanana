@@ -165,27 +165,22 @@ function HeartToggle({ liked, onClick }: { liked: boolean; onClick: () => void }
 // "landmark" area is a dense cluster of must-sees. Tapping the body flies the map;
 // "רוצה לתייר כאן" chooses the area to tour (a separate selection from the
 // attraction marks) so the builder gives it its own day.
-function NeighbourhoodStrip({ areas, chosenIds, attrById, onFocus, onToggle, onBuild }: {
+function NeighbourhoodStrip({ areas, chosenIds, attrById, onFocus, onToggle }: {
   areas: AreaCard[]; chosenIds: Set<number>;
   attrById: Map<number, { name_he: string | null; name_en: string; must_see: number | null }>;
-  onFocus: (a: AreaCard) => void; onToggle: (id: number) => void; onBuild: () => void;
+  onFocus: (a: AreaCard) => void; onToggle: (id: number) => void;
 }) {
   const [openId, setOpenId] = useState<number | null>(null);
   if (!areas.length) return null;
-  const chosen = areas.filter((a) => chosenIds.has(a.id));
   return (
     <section className="mx-auto max-w-[1600px] px-5 pt-4 lg:px-8">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-baseline gap-2">
           <h2 className="text-[17px] font-bold">שכונות שאסור לפספס</h2>
-          <span className="text-[13px] text-[var(--text-3)]">בחרו לתייר — ונרכיב יום לכל שכונה</span>
+          {/* a chosen neighbourhood is just a rich (half/full-day) pick — it folds into
+              the same "בנו לי טיול" build; no separate neighbourhoods trip. */}
+          <span className="text-[13px] text-[var(--text-3)]">בחרו לתייר — הן נכנסות לטיול שלכם</span>
         </div>
-        {chosen.length > 0 && (
-          <button onClick={onBuild}
-            className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-1.5 text-[13.5px] font-semibold text-white shadow-[0_4px_12px_rgba(14,107,94,.25)]">
-            <Sparkles size={14} /> בנו טיול · {chosen.length} שכונות
-          </button>
-        )}
       </div>
       <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:thin]">
         {areas.map((a) => {
@@ -731,10 +726,12 @@ export function DestinationView({
                     className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-3)]">
                     <X size={13} /> נקה
                   </button>
+                  {/* THE primary action — accent (terracotta) so it stands apart from
+                      every green control on the page as the one thing to do next. */}
                   <button onClick={() => openBuild()} disabled={!audience}
                     className="flex items-center gap-1.5 rounded-full px-5 py-1.5 text-[13.5px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
                     style={audience
-                      ? { background: "var(--brand)" }
+                      ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" }
                       : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
                     <Sparkles size={15} /> בנו לי טיול{yesCount ? ` · ${yesCount}` : ""}
                   </button>
@@ -772,11 +769,7 @@ export function DestinationView({
       {/* headline neighbourhoods — first-class experiences above the attractions */}
       <NeighbourhoodStrip areas={areas} chosenIds={chosenAreas} attrById={attrById}
         onFocus={(a) => { setAreaFocus({ lat: a.lat, lng: a.lng, n: Date.now() }); if (!mapOpen) setMapOpen(true); }}
-        onToggle={toggleArea}
-        onBuild={() => {
-          if (chosenAreas.size) setBuildDays(Math.min(7, Math.max(2, chosenAreas.size)));
-          openBuild();
-        }} />
+        onToggle={toggleArea} />
 
       {/* (The manual "רחובות מומלצים" picker was removed — streets now enter
           AUTOMATICALLY: a chosen neighbourhood pulls its own streets, and the
@@ -1300,11 +1293,11 @@ export function DestinationView({
                   </button>
                 </>
               )}
-              {/* mirrors the top build button — active whenever an audience is chosen
-                  (this bar only shows in short mode), so it never looks disabled. */}
+              {/* mirrors the top build button — the accent primary action, always
+                  active whenever an audience is chosen (this bar only shows then). */}
               <button onClick={() => openBuild()}
                 className="flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold text-white transition hover:opacity-90"
-                style={{ background: "var(--brand)", boxShadow: "0 6px 16px rgba(14,107,94,.3)" }}>
+                style={{ background: "var(--accent)", boxShadow: "0 6px 16px rgba(198,79,38,.32)" }}>
                 <Sparkles size={16} /> בנו לי טיול{yesCount ? ` · ${yesCount}` : ""}
               </button>
             </div>
