@@ -759,7 +759,7 @@ export function DestinationView({
                     className="rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
                     style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)",
                              color: selectedOnly ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
-                    {selectedOnly ? "הצג הכל" : `הצג נבחרים${yesCount ? ` · ${yesCount}` : ""}`}
+                    {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
                   </button>
                   <button onClick={clearAllChoices} disabled={!audience || yesCount === 0}
                     title="נקה את כל הסימונים ששמורים לעיר"
