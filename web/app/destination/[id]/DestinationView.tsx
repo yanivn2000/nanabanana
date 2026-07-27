@@ -186,28 +186,37 @@ function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea,
         const active = toured || pickedInside > 0;
         return (
           <div key={area.id}
-            className="overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] shadow-[var(--shadow)] transition"
-            style={{ borderColor: active ? "var(--brand)" : "var(--border)" }}>
+            className="overflow-hidden rounded-[var(--radius-card)] border-2 shadow-[var(--shadow)] transition"
+            style={{ borderColor: active ? "var(--brand)" : "var(--brand-soft)",
+                     background: "color-mix(in srgb, var(--brand-soft) 45%, var(--surface))" }}>
+            {/* a distinct tinted banner so a neighbourhood never reads as a plain place */}
+            <div className="flex items-center gap-2 px-2.5 pt-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--brand)] px-2.5 py-0.5 text-[11px] font-bold text-white">
+                🏘️ שכונה
+              </span>
+              <span className="text-[11.5px] text-[var(--brand-ink)]">אזור שלם — {members.length} מקומות ביחד</span>
+            </div>
             <div className="flex items-stretch">
               <button onClick={() => { setOpenId(open ? null : area.id); onFocus(area); }}
                 className="flex min-w-0 flex-1 items-center gap-3 p-2.5 text-right">
                 {heroImg ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={bigImage(heroImg, 200)} alt="" loading="lazy" className="size-14 shrink-0 rounded-[10px] object-cover" />
+                  <span className="relative size-14 shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={bigImage(heroImg, 200)} alt="" loading="lazy" className="size-14 rounded-[10px] object-cover ring-2 ring-[var(--brand-soft)]" />
+                    <span className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full bg-[var(--brand)] text-[12px] shadow-sm">🏘️</span>
+                  </span>
                 ) : (
-                  <div className="grid size-14 shrink-0 place-items-center rounded-[10px] bg-[var(--brand-soft)] text-[22px]">🏘️</div>
+                  <div className="grid size-14 shrink-0 place-items-center rounded-[10px] bg-[var(--brand)] text-[24px]">🏘️</div>
                 )}
                 <div className="min-w-0 shrink-0 max-w-[52%]">
-                  <p className="serif truncate text-[16px] font-bold leading-tight">🏘️ {area.name_he || area.name_en}</p>
+                  <p className="serif truncate text-[16px] font-bold leading-tight">{area.name_he || area.name_en}</p>
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] text-[var(--text-3)]">
-                    <span className="font-medium text-[var(--brand-ink)]">שכונה</span>
-                    <span>{members.length} מקומות</span>
-                    {area.must_count > 0 && <span>⭐ {area.must_count}</span>}
-                    {pickedInside > 0 && <span className="text-[var(--brand-ink)]">✓ {pickedInside} סומנו</span>}
+                    {area.must_count > 0 && <span>⭐ {area.must_count} חובה</span>}
+                    {pickedInside > 0 && <span className="font-medium text-[var(--brand-ink)]">✓ {pickedInside} סומנו</span>}
                   </div>
                 </div>
-                {area.vibe_he && <p className="hidden min-w-0 flex-1 truncate text-[13.5px] italic text-[var(--text-3)] sm:block">{area.vibe_he}</p>}
-                <ChevronDown size={18} className={`ms-auto shrink-0 text-[var(--text-3)] transition-transform ${open ? "rotate-180" : ""}`} />
+                {area.vibe_he && <p className="hidden min-w-0 flex-1 truncate text-[13.5px] italic text-[var(--text-2)] sm:block">{area.vibe_he}</p>}
+                <ChevronDown size={18} className={`ms-auto shrink-0 text-[var(--brand-ink)] transition-transform ${open ? "rotate-180" : ""}`} />
               </button>
               {/* the container's "heart" — tour the WHOLE neighbourhood */}
               <button onClick={() => onToggleArea(area.id)} aria-pressed={toured}
@@ -764,7 +773,7 @@ export function DestinationView({
                     style={audience
                       ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" }
                       : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
-                    <Sparkles size={15} /> בנו לי טיול{yesCount ? ` · ${yesCount}` : ""}
+                    <Sparkles size={15} /> בנו לי טיול
                   </button>
                 </div>
               </div>
@@ -773,8 +782,10 @@ export function DestinationView({
               {mode === "short" && (
                 <div className="flex flex-col gap-2.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[12.5px] text-[var(--text-3)]" title="הצ'יפים מדגישים ומקדמים מה שאתם אוהבים בתוך המאגר — הם לא מסתירים כלום. לייקים ושכונות מוסיפים חידודים על גבי המאגר הזה.">
-                      <b className="text-[var(--text-2)]">{matchedIds.length}</b> מקומות מתאימים ל{PROFILE_HE[audience!]}
+                    <span className="text-[12.5px] text-[var(--text-3)]" title={`המקומות הבודדים מחוץ לשכונות. עוד עשרות מקומות מקובצים בתוך ${areas.length} השכונות למעלה (שכל אחת היא אזור שלם). הצ'יפים מדגישים בתוך המאגר, לא מצמצמים אותו.`}>
+                      <b className="text-[var(--text-2)]">{matchedIds.length}</b> מקומות בודדים
+                      {areas.length > 0 && <> {"+ "}<b className="text-[var(--brand-ink)]">{areas.length}</b> שכונות</>}
+                      {" "}מתאימים ל{PROFILE_HE[audience!]}
                       {boosts.size > 0
                         ? <> · <b className="text-[var(--accent-ink)]">{emphCount}</b> בהדגשת הבחירה שלכם</>
                         : <> · הדגישו מה שאוהבים:</>}
@@ -1329,7 +1340,7 @@ export function DestinationView({
               <button onClick={() => openBuild()}
                 className="flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold text-white transition hover:opacity-90"
                 style={{ background: "var(--accent)", boxShadow: "0 6px 16px rgba(198,79,38,.32)" }}>
-                <Sparkles size={16} /> בנו לי טיול{yesCount ? ` · ${yesCount}` : ""}
+                <Sparkles size={16} /> בנו לי טיול
               </button>
             </div>
           </div>
