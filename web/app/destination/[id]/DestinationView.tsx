@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, Fragment } from "react";
+import { useMemo, useState, useEffect, useRef, Fragment } from "react";
 import Link from "next/link";
 import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin, X, Loader2, LayoutGrid, List, Heart } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
@@ -337,6 +337,22 @@ export function DestinationView({
   // הכל" deep-editor mode was retired; its filters live next to the search now.
   const [audience, setAudience] = useState<Profile | null>(null);
   const [boosts, setBoosts] = useState<Set<string>>(new Set());
+  // The primary action group lives on the "בשביל מי הטיול?" line; the fixed bottom
+  // bar is only its scroll fallback — shown once this top group leaves the viewport.
+  const topCtaRef = useRef<HTMLDivElement>(null);
+  const [topCtaVisible, setTopCtaVisible] = useState(true);
+  useEffect(() => {
+    const el = topCtaRef.current;
+    if (!el) return;
+    const check = () => {
+      const r = el.getBoundingClientRect();
+      setTopCtaVisible(r.bottom > 0 && r.top < window.innerHeight);
+    };
+    check();
+    window.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check);
+    return () => { window.removeEventListener("scroll", check); window.removeEventListener("resize", check); };
+  }, []);
   const [mapOnly, setMapOnly] = useState(false);
   const [bounds, setBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
   // Desktop tags row: sort order + the "more filters" popover.
@@ -698,7 +714,9 @@ export function DestinationView({
                 )}
               </div>
 
-              {/* audience tabs — pick who the trip is for (families / couples&friends). */}
+              {/* audience tabs — pick who the trip is for (families / couples&friends).
+                  The primary actions (show-selected · clear · build) sit at the FAR
+                  side of this same line — disabled until an audience is chosen. */}
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[13.5px] font-semibold text-[var(--text-2)]">בשביל מי הטיול?</span>
                 {PROFILES.map((p) => {
@@ -712,6 +730,26 @@ export function DestinationView({
                     </button>
                   );
                 })}
+                <div ref={topCtaRef} className="flex items-center gap-2 ms-auto">
+                  <button onClick={toggleSelectedOnly} disabled={!audience || yesCount === 0}
+                    className="rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
+                    style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)",
+                             color: selectedOnly ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
+                    {selectedOnly ? "הצג הכל" : `הצג נבחרים${yesCount ? ` · ${yesCount}` : ""}`}
+                  </button>
+                  <button onClick={clearAllChoices} disabled={!audience || yesCount === 0}
+                    title="נקה את כל הסימונים ששמורים לעיר"
+                    className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-3)]">
+                    <X size={13} /> נקה
+                  </button>
+                  <button onClick={() => openBuild()} disabled={!audience}
+                    className="flex items-center gap-1.5 rounded-full px-5 py-1.5 text-[13.5px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
+                    style={audience
+                      ? { background: "var(--brand)" }
+                      : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
+                    <Sparkles size={15} /> בנו לי טיול{yesCount ? ` · ${yesCount}` : ""}
+                  </button>
+                </div>
               </div>
 
               {/* short mode — taste calibration + one-tap build, transparent (no card) */}
@@ -732,10 +770,6 @@ export function DestinationView({
                       );
                     })}
                   </div>
-                  <button onClick={() => openBuild()}
-                    className="flex items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-2.5 text-[14.5px] font-semibold text-white transition hover:opacity-90 sm:self-start sm:px-8">
-                    ✨ בנו לי טיול ל{PROFILE_HE[audience!]}
-                  </button>
                 </div>
               )}
               {mode === "choose" && (
@@ -759,26 +793,11 @@ export function DestinationView({
           AUTOMATICALLY: a chosen neighbourhood pulls its own streets, and the
           "אדריכלות ורחובות" interest pulls the city's top streets. No street chore.) */}
 
-      {/* always-visible selection control — so marks (incl. ones saved from a past
-          visit) are never a mystery: see the count, show only them, or clear all */}
-      {yesCount > 0 && (
+      {/* the show/clear/build controls moved onto the "בשביל מי הטיול?" line (and the
+          fixed bottom bar on scroll); only the "showing selected" hint stays here. */}
+      {selectedOnly && yesCount > 0 && (
         <div className="mx-auto max-w-[1600px] px-5 pt-3 lg:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--brand)] bg-[var(--brand-soft)] px-3.5 py-2">
-            <span className="text-[13.5px] font-medium text-[var(--brand-ink)]">
-              ✓ {yesCount} אטרקציות שסימנתם
-            </span>
-            <div className="flex items-center gap-2">
-              <button onClick={toggleSelectedOnly}
-                className="rounded-full border border-[var(--brand)] bg-[var(--surface)] px-3 py-1 text-[12.5px] font-medium text-[var(--brand-ink)]">
-                {selectedOnly ? "הצג הכל" : "הצג רק נבחרים"}
-              </button>
-              <button onClick={clearAllChoices}
-                className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f]">
-                <X size={13} /> נקה הכל
-              </button>
-            </div>
-          </div>
-          {selectedOnly && <p className="mt-1 text-[12px] text-[var(--text-3)]">מציג רק את מה שסימנתם — לחצו שוב על 👍 בכרטיס כדי להסיר אותו.</p>}
+          <p className="text-[12px] text-[var(--text-3)]">מציג רק את {yesCount} המקומות שסימנתם — לחצו שוב על 👍 בכרטיס כדי להסיר אותו.</p>
         </div>
       )}
 
@@ -1259,7 +1278,7 @@ export function DestinationView({
       {/* persistent build bar — the flow's finish line, always visible so the
           goal is unmistakable: mark attractions, then build. Progress fills
           toward the minimum; the CTA activates once there are enough picks. */}
-      <div className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 shadow-[0_-8px_20px_rgba(16,29,43,0.08)] lg:px-8 ${mode === "short" && yesCount > 0 ? "" : "hidden"}`}>
+      <div className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 shadow-[0_-8px_20px_rgba(16,29,43,0.08)] lg:px-8 ${mode === "short" && !topCtaVisible ? "" : "hidden"}`}>
         <div className="mx-auto max-w-[1600px]">
           <div className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
