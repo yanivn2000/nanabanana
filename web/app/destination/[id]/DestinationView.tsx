@@ -19,8 +19,7 @@ const RADIUS_HE = ["קרוב מאוד", "עד שעה", "עד שעתיים", "ג�
 const PACES = ["רגוע", "בינוני", "אינטנסיבי"] as const;
 type Pace = (typeof PACES)[number];
 import { PACE_PER_DAY } from "@/lib/trip-types";
-import { deriveTaste, tasteScore, coarseFits, audienceFit, rankByTaste, INTEREST_TASTE, INTEREST_CATS, GOVERNING_INTERESTS } from "@/lib/taste";
-import { selectTrip, catBucket } from "@/lib/select";
+import { deriveTaste, tasteScore, coarseFits, audienceFit, INTEREST_TASTE, INTEREST_CATS, GOVERNING_INTERESTS } from "@/lib/taste";
 import { PROFILES, PROFILE_HE, PROFILE_EMOJI, type Profile } from "@/lib/shortpath";
 
 // Below this audience-fit (0-100) a place is "less relevant" for the chosen
@@ -29,13 +28,6 @@ import { PROFILES, PROFILE_HE, PROFILE_EMOJI, type Profile } from "@/lib/shortpa
 const AUDIENCE_FIT_FLOOR = 35;
 import type { Attraction, Destination, Insight, AreaCard } from "@/lib/db";
 
-// Category → Hebrew label + emoji for the live funnel-preview breakdown chips.
-const CAT_PREVIEW: Record<string, { he: string; emoji: string }> = {
-  museum: { he: "מוזיאונים", emoji: "🖼️" }, nature: { he: "טבע", emoji: "🌳" },
-  historic: { he: "היסטוריה", emoji: "🏛️" }, food: { he: "אוכל", emoji: "🍽️" },
-  shopping: { he: "קניות", emoji: "🛍️" }, attraction: { he: "אתרים", emoji: "📍" },
-  sport: { he: "ספורט", emoji: "⚽" }, leisure: { he: "פנאי", emoji: "🎡" },
-};
 // Every interest in the profile vocabulary — used as the fallback tile set when
 // the traveler hasn't set profile interests yet.
 const ALL_INTERESTS = Object.keys(INTEREST_TASTE);
@@ -521,68 +513,11 @@ export function DestinationView({
   // Neighbourhoods chosen to tour — a SEPARATE selection from the attraction
   // yes/maybe marks, so picking an area never silently floods the attraction picks.
   const [chosenAreas, setChosenAreas] = useState<Set<number>>(() => new Set());
-  // Preview deselect: places the traveller removed from the live preview strip → they
-  // drop to the bank and the next candidate fills the slot. Reset when the audience
-  // changes (a fresh preview). Add-from-bank reuses the ❤ like (a real, build-fed pick).
-  const [previewRemoved, setPreviewRemoved] = useState<Set<number>>(new Set());
-  useEffect(() => { setPreviewRemoved(new Set()); }, [audience]);
-  const removeFromPreview = (id: number) => {
-    setPreviewRemoved((s) => new Set(s).add(id));
-    if (choices[id] === "yes") setChoice(id, "yes");   // un-like (self-clearing) so it fully drops
-  };
-  const addFromBank = (id: number) => {
-    if (previewRemoved.has(id)) setPreviewRemoved((s) => { const n = new Set(s); n.delete(id); return n; });
-    else if (choices[id] !== "yes") setChoice(id, "yes");   // like → reserved pick → enters the trip
-  };
   // Members of a CHOSEN neighbourhood are guaranteed into the trip regardless of
   // likes → we badge them "בשכונה שבחרת" so an un-liked one doesn't read as "forgot".
   const chosenAreaMemberIds = useMemo(
     () => new Set(areas.filter((a) => chosenAreas.has(a.id)).flatMap((a) => a.member_ids)),
     [areas, chosenAreas]);
-  // LIVE funnel preview — runs the SAME selectTrip core the server build uses, on the
-  // already-loaded attractions, so the traveller sees ROUGHLY what their trip will hold
-  // (by category) and it updates INSTANTLY as they change audience / topics / areas.
-  // Directional only (no clustering/timing); one source of truth with the real build.
-  const tripPreview = useMemo(() => {
-    if (!audience) return null;
-    const interestsSel = [...boosts];
-    const isFam = audience === "families";
-    const per = PACE_PER_DAY[buildPace], days = buildDays;
-    const t: Record<string, number> = { ...taste };
-    for (const k of boosts) for (const tg of (INTEREST_TASTE[k] ?? [])) t[tg] = (t[tg] ?? 0) + 3;
-    const KID = new Set(["theme_park", "water_park", "playground", "zoo", "aquarium"]);
-    const isKid = (a: Attraction) => {
-      if (a.subcategory && KID.has(a.subcategory)) return true;
-      const af = a.audience_fit as { couples?: number; friends?: number; families?: number } | null;
-      if (!af) return false;
-      const fam = af.families ?? 0, adu = Math.max(af.couples ?? 0, af.friends ?? 0);
-      return fam >= 75 && fam - adu >= 30;
-    };
-    const dropKids = audience === "adults" && !boosts.has("פארקי שעשועים");
-    const pickIds = Object.entries(choices).filter(([, c]) => c === "yes").map(([id]) => Number(id));
-    const pickSet = new Set(pickIds);
-    let pool = attractions.filter((a) => a.lat != null && a.lng != null);
-    if (dropKids) pool = pool.filter((a) => pickSet.has(a.id) || !isKid(a));
-    const ranked = rankByTaste(pool, t, 150, isFam, interestsSel, audience);
-    const interestRows = interestsSel.length
-      ? ranked.filter((a) => interestsSel.some((it) => matchesInterest(a, it))).slice(0, 30) : [];
-    const { orderedFill } = selectTrip({ attractions: ranked, base: attractions, interestRows,
-      interests: interestsSel, days, perDay: per, pickIds, areaMemberIds: [...chosenAreaMemberIds], areaGroupsLen: chosenAreas.size });
-    // Removed places drop OUT of the selected set (the next candidate fills the slot)
-    // and into the bank — re-addable.
-    const selected = orderedFill.filter((a) => !previewRemoved.has(a.id)).slice(0, days * per);
-    const selectedIds = new Set(selected.map((a) => a.id));
-    const counts: Record<string, number> = {};
-    for (const a of selected) counts[catBucket(a)] = (counts[catBucket(a)] ?? 0) + 1;
-    // must-see first within the preview list (mirrors the trip's own priority).
-    const list = [...selected].sort((a, b) => (b.must_see === 1 ? 1 : 0) - (a.must_see === 1 ? 1 : 0));
-    // BANK = the best worthy places that didn't make the cut (removed ones lead so they
-    // can be restored), then the next candidates by priority.
-    const bank = orderedFill.filter((a) => !selectedIds.has(a.id))
-      .sort((a, b) => (previewRemoved.has(b.id) ? 1 : 0) - (previewRemoved.has(a.id) ? 1 : 0))
-      .slice(0, 12);
-    return { total: selected.length, days, counts, list, bank };
-  }, [attractions, audience, boosts, chosenAreas, chosenAreaMemberIds, choices, buildDays, buildPace, taste, previewRemoved]);
   const toggleArea = (id: number) => setChosenAreas((s) => {
     const next = new Set(s); if (next.has(id)) next.delete(id); else next.add(id); return next;
   });
@@ -797,81 +732,6 @@ export function DestinationView({
                       );
                     })}
                   </div>
-                  {/* LIVE funnel preview — the mix your trip will lean toward, updating
-                      instantly as you toggle audience / topics / neighbourhoods. */}
-                  {tripPreview && tripPreview.total > 0 && (
-                    <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2.5">
-                      <p className="mb-1.5 text-[12.5px] text-[var(--text-3)]">
-                        👀 תצוגה מקדימה — טיול ל-{tripPreview.days} ימים יכלול בערך <b className="text-[var(--text-2)]">{tripPreview.total}</b> מקומות, בתמהיל:
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {Object.entries(tripPreview.counts).sort((a, b) => b[1] - a[1]).map(([c, n]) => {
-                          const m = CAT_PREVIEW[c] ?? { he: c, emoji: "•" };
-                          return (
-                            <span key={c} className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[12px] text-[var(--text-2)]">
-                              {m.emoji} {m.he} <b className="text-[var(--text)]">{n}</b>
-                            </span>
-                          );
-                        })}
-                      </div>
-                      {/* the actual places — a horizontal strip that reshapes live as you
-                          choose. Tap to fly the map; ✕ removes it (bank fills the slot). */}
-                      <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1">
-                        {tripPreview.list.map((a) => (
-                          <div key={a.id} className="group relative w-[104px] shrink-0">
-                            <button onClick={() => setSelected(a)} title={a.name_he || a.name_en}
-                              className="flex w-full flex-col overflow-hidden rounded-[10px] border border-[var(--border)] bg-[var(--surface)] text-right transition hover:border-[var(--brand)]">
-                              <div className="relative aspect-[4/3] w-full bg-[var(--surface-2)]">
-                                {a.image_url ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={bigImage(a.image_url, 200)} alt="" loading="lazy"
-                                    onError={(e) => { const t = e.currentTarget; if (a.image_url && t.src !== a.image_url) t.src = a.image_url; }}
-                                    className="size-full object-cover" />
-                                ) : (
-                                  <div className="grid size-full place-items-center" style={{ background: `color-mix(in srgb, ${catColor(a.category)} 16%, var(--surface-2))` }}>
-                                    <MapPin size={16} style={{ color: catColor(a.category) }} />
-                                  </div>
-                                )}
-                                {a.must_see === 1 && <span className="absolute right-1 top-1 rounded-full bg-[var(--accent)] px-1 text-[10px] text-white">⭐</span>}
-                              </div>
-                              <span className="line-clamp-2 px-1.5 py-1 text-[11px] leading-tight text-[var(--text-2)]">{a.name_he || a.name_en}</span>
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); removeFromPreview(a.id); }} aria-label="הסר מהטיול" title="הסר מהטיול"
-                              className="absolute left-1 top-1 grid size-5 place-items-center rounded-full bg-black/55 text-white opacity-0 transition group-hover:opacity-100">
-                              <X size={12} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      {/* BANK — worthy places that didn't fit; + adds one (bumps a lower one out). */}
-                      {tripPreview.bank.length > 0 && (
-                        <div className="mt-2 border-t border-[var(--border)] pt-2">
-                          <p className="mb-1.5 text-[12px] text-[var(--text-3)]">בנק — עוד מקומות שאפשר להוסיף:</p>
-                          <div className="flex gap-2 overflow-x-auto pb-1">
-                            {tripPreview.bank.map((a) => (
-                              <button key={a.id} onClick={() => addFromBank(a.id)} title={`הוסף: ${a.name_he || a.name_en}`}
-                                className="flex w-[104px] shrink-0 flex-col overflow-hidden rounded-[10px] border border-dashed border-[var(--border)] bg-[var(--surface)] text-right opacity-80 transition hover:border-[var(--brand)] hover:opacity-100">
-                                <div className="relative aspect-[4/3] w-full bg-[var(--surface-2)]">
-                                  {a.image_url ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={bigImage(a.image_url, 200)} alt="" loading="lazy"
-                                      onError={(e) => { const t = e.currentTarget; if (a.image_url && t.src !== a.image_url) t.src = a.image_url; }}
-                                      className="size-full object-cover" />
-                                  ) : (
-                                    <div className="grid size-full place-items-center" style={{ background: `color-mix(in srgb, ${catColor(a.category)} 16%, var(--surface-2))` }}>
-                                      <MapPin size={16} style={{ color: catColor(a.category) }} />
-                                    </div>
-                                  )}
-                                  <span className="absolute left-1 top-1 grid size-5 place-items-center rounded-full bg-[var(--brand)] text-white">+</span>
-                                </div>
-                                <span className="line-clamp-2 px-1.5 py-1 text-[11px] leading-tight text-[var(--text-2)]">{a.name_he || a.name_en}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
                   <button onClick={() => openBuild()}
                     className="flex items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-2.5 text-[14.5px] font-semibold text-white transition hover:opacity-90 sm:self-start sm:px-8">
                     ✨ בנו לי טיול ל{PROFILE_HE[audience!]}

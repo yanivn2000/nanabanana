@@ -16,7 +16,6 @@ import { rateLimit } from "@/lib/ratelimit";
 import * as Sentry from "@sentry/nextjs";
 import { paceToPerDay } from "@/lib/trip-types";
 import { rankByTaste, tasteEmphasis, tasteScore, coarseFits, interestTasteMap, INTEREST_KEYWORDS, INTEREST_TASTE, INTEREST_CATS } from "@/lib/taste";
-import { selectTrip } from "@/lib/select";
 import { haversineKm, estimateLeg } from "@/lib/geo";
 import { reachPenalty } from "@/lib/brain/policy";
 import type { Itinerary as ItineraryT } from "@/lib/trip-types";
@@ -300,8 +299,9 @@ export async function POST(req: NextRequest) {
     const fam = af.families ?? 0, adu = Math.max(af.couples ?? 0, af.friends ?? 0);
     return fam >= 75 && fam - adu >= 30;
   };
-  const dropKids = audience === "adults" && !interests.includes("פארקי שעשועים") && !interests.includes("ילדים");
-  if (dropKids) pool = pool.filter((a) => pickIds.includes(a.id) || !isKidOnly(a));
+  if (audience === "adults" && !interests.includes("פארקי שעשועים") && !interests.includes("ילדים")) {
+    pool = pool.filter((a) => pickIds.includes(a.id) || !isKidOnly(a));
+  }
   // Thin-interest rescue: nightlife/niche-shop venues rank too low to reach the base
   // pool, so an explicitly chosen thin interest would surface NOTHING. Fetch the best
   // matches directly (union across chosen interests, quality-first) and guarantee them
@@ -316,9 +316,6 @@ export async function POST(req: NextRequest) {
           subs: INTEREST_CATS[k]?.subs ?? [], kws: INTEREST_KEYWORDS[k] ?? [],
         }, Math.max(10, 3 * (body.days ?? 4))))))
         .flat().map((a) => [a.id, a] as const)))
-      // the kid filter runs on `pool`, not these injected venues — apply it here too
-      // so an adults trip never gets a zoo/aquarium slipped in via a chosen theme.
-      .filter((a) => !dropKids || pickIds.includes(a.id) || !isKidOnly(a))
     : [];
   // Wider pool (was 50) so the clusterer has a long tail of minor places to pull
   // in as "free gems" on the walking path (cluster.ts pass B).
@@ -390,12 +387,131 @@ export async function POST(req: NextRequest) {
   let guaranteeIds: Set<number> | undefined;   // chosen-theme stops the clusterer may drop (scattered)
   let orderedFill: Attraction[] = attractions;
   if (!sel) {
-    // The pure selection core (shared with the client-side funnel preview).
-    const r = selectTrip({
-      attractions, base, interestRows, interests, days: body.days ?? 4, perDay,
-      pickIds, areaMemberIds, areaGroupsLen: body.areaGroups?.length ?? 0,
-    });
-    orderedFill = r.orderedFill; reservedIds = r.reservedIds; guaranteeIds = r.guaranteeIds;
+    const rDays = body.days ?? 4;
+    const RESERVE_ICONS = Math.max(3, rDays);
+    // THEME BUDGET: guarantee ~2 themed stops per day, SPLIT across the chosen
+    // interests — so fewer interests = deeper focus on each (a single-interest trip
+    // leans hard into that one topic instead of a token 2), and more interests share
+    // the same budget. The overlap with the city's must-sees (a museum-lover's MNAC)
+    // fills the icon backbone too, so the ~2/day themed layer sits on top of the icons.
+    const themeBudget = 2 * rDays;
+    const perInterest = interests.length ? Math.max(1, Math.round(themeBudget / interests.length)) : 0;
+    // Each chosen interest → the DB category bucket(s) it emphasises. Drives the
+    // diversity floor + balance caps below (so the fill can't flood one category).
+    const INT_CATS: Record<string, string[]> = {
+      "מוזיאונים": ["museum"], "אוכל": ["food", "shopping"], "טבע": ["nature"],
+      // "attraction" is a catch-all where many cities file monuments/landmarks
+      // (Lisbon tags its historic sites there), so history/architecture claim it too.
+      "חיי לילה": ["food"], "היסטוריה": ["historic", "attraction"], "אדריכלות": ["historic", "attraction"],
+      "וינטג'": ["shopping"], "פארקי שעשועים": ["nature"], "חופים": ["nature"],
+    };
+    const chosenCats = new Set(interests.flatMap((it) => INT_CATS[it] ?? []));
+    const catBucket = (a: Attraction) => (a.category === "tourism" ? "historic" : (a.category ?? "attraction"));
+    const inRange = new Set(attractions.map((a) => a.id));
+    const chosen = new Set<number>();
+    const reserved: Attraction[] = [];
+    // Explicit ❤ likes lead the reservation — a refinement the traveller made ON
+    // the governed build, so it's guaranteed in (and museum-cap-exempt below).
+    const pickSet = new Set(pickIds);
+    for (const a of attractions.filter((x) => pickSet.has(x.id))) {
+      if (!chosen.has(a.id)) { chosen.add(a.id); reserved.push(a); }
+    }
+    // Icons from DB icon order (`base`, EDITOR_ORDER: must-see first), NOT the
+    // taste-sorted list — so the city's defining must-sees are guaranteed regardless
+    // of the traveller's taste. In-range only (passed the metro reach filter).
+    for (const a of base.filter((x) => x.must_see === 1 && inRange.has(x.id)).slice(0, RESERVE_ICONS)) {
+      if (!chosen.has(a.id)) { chosen.add(a.id); reserved.push(a); }
+    }
+    // Additive neighbourhoods: reserve the chosen areas' members (must-sees first,
+    // then top-ranked) — about a day-part's worth per area — so the interest build
+    // COVERS each chosen area and the clusterer composes them into day-parts by
+    // proximity (area A morning, area B / centre afternoon), keeping the user's days.
+    if (areaMemberIds.length && body.areaGroups) {
+      const areaSet = new Set(areaMemberIds);
+      const mem = attractions.filter((a) => areaSet.has(a.id));
+      const areaOrdered = [...mem.filter((a) => a.must_see === 1), ...mem.filter((a) => a.must_see !== 1)];
+      const budget = (perDay + 1) * body.areaGroups.length;
+      let cnt = 0;
+      for (const a of areaOrdered) {
+        if (cnt >= budget) break;
+        if (!chosen.has(a.id)) { chosen.add(a.id); reserved.push(a); cnt++; }
+      }
+    }
+    // Theme guarantee: up to `perInterest` matching stops per chosen interest — by
+    // taste-tag, by coarse category, OR by a name keyword (markets are often mis-tagged
+    // as generic places). A thin interest that can't fill its share just yields fewer
+    // (the ranking fill takes the rest) rather than inventing places.
+    const themeIds = new Set<number>();
+    for (const it of interests) {
+      const w = interestTasteMap(it), kws = INTEREST_KEYWORDS[it] ?? [];
+      let k = 0;
+      // interestRows first (quality-ordered thin-interest venues), then the ranked
+      // pool — so a chosen thin interest reserves its best venues before generic fill.
+      for (const a of [...interestRows, ...attractions]) {
+        if (k >= perInterest) break;
+        if (chosen.has(a.id)) continue;
+        const nm = a.name_he || a.name_en || "";
+        const match = (a.taste_tags && tasteScore(a.taste_tags, w) > 0)
+          || coarseFits(a.category, a.subcategory, [it])
+          || kws.some((kw) => nm.includes(kw));
+        if (match) { chosen.add(a.id); reserved.push(a); themeIds.add(a.id); k++; }
+      }
+    }
+    // The theme-reserved stops are the ones the guarantee pass protects from the
+    // proximity clusterer dropping them (a scattered bar / peripheral park).
+    guaranteeIds = themeIds;
+    // DIVERSITY FLOOR: guarantee ~1 top-ranked stop of each MAJOR category the
+    // traveller did NOT choose, so no trip is one-note ("even without picking
+    // museums, one museum is good"). Chosen categories get the emphasis instead.
+    const MAJOR = ["nature", "museum", "historic", "food"];
+    for (const cat of MAJOR) {
+      if (chosenCats.has(cat)) continue;
+      const a = attractions.find((x) => !chosen.has(x.id) && catBucket(x) === cat);
+      if (a) { chosen.add(a.id); reserved.push(a); }
+    }
+    // Keep the whole reserved backbone (icons + theme emphasis + diversity floor +
+    // picks/areas) up to capacity; the category-capped fill tops it up.
+    const capReserve = areaMemberIds.length
+      ? Math.min(reserved.length, Math.round(rDays * perDay * 0.85))
+      : Math.min(rDays * perDay, reserved.length);
+    const front = reserved.slice(0, capReserve);
+    const frontIds = new Set(front.map((a) => a.id));
+    // PER-CATEGORY BALANCE CAP on the ranking fill so no single theme floods the trip
+    // (Lisbon nature 13 → ~cap). A chosen category gets a generous cap (emphasis, split
+    // when several are chosen); others get a small one. The reserved backbone is kept
+    // but COUNTS toward the cap, so the TOTAL per category is bounded either way.
+    const nCats = Math.max(1, chosenCats.size);
+    const capChosen = Math.min(2 * rDays, Math.round((2 * rDays) / nCats) + 1);
+    const capOther = Math.max(1, Math.round(rDays / 2));
+    const catN = new Map<string, number>();
+    for (const a of front) { const c = catBucket(a); catN.set(c, (catN.get(c) ?? 0) + 1); }
+    // SOFT cap: the balanced set (within cap) leads, the over-cap remainder trails.
+    // The whole pool stays available so the proximity clusterer can still build dense
+    // days — but it fills from the diverse head first, so the trip is balanced and
+    // only dips into an over-represented category when a day genuinely needs it nearby.
+    // Absolute ceiling per category (as a FRACTION of trip size, so it barely touches
+    // a balanced big city like London — keeping the pool dense for the clusterer —
+    // while cutting extreme floods in a lopsided-data city like Lisbon). A CHOSEN
+    // theme gets a high ceiling (it should lead); an unchosen catch-all (Lisbon files
+    // landmarks under "attraction") gets a lower one, so it never out-weighs the theme.
+    const cap = rDays * perDay;
+    const capHardChosen = Math.max(capChosen, Math.round(cap * 0.5));
+    const capHardOther = Math.max(capOther + 1, Math.round(cap * 0.3));
+    const capped: Attraction[] = [], overflow: Attraction[] = [];
+    for (const a of attractions) {
+      if (frontIds.has(a.id)) continue;
+      const c = catBucket(a);
+      const isCat = chosenCats.has(c);
+      const lim = isCat ? capChosen : capOther;
+      const hard = isCat ? capHardChosen : capHardOther;
+      const cur = catN.get(c) ?? 0;
+      if (pickSet.has(a.id) || cur < lim) { catN.set(c, cur + 1); capped.push(a); }
+      else if (cur < hard) { catN.set(c, cur + 1); overflow.push(a); }
+      // else: over the absolute ceiling — dropped.
+    }
+    orderedFill = [...front, ...capped, ...overflow];
+    // pin the reserved set (icons + themes + floor) to the front for the family sort.
+    reservedIds = new Set(frontIds);
   }
   const buildList = [...streetStops, ...(sel ? [...sel.anchors, ...sel.fillers] : orderedFill)];
   // Only tag tiers when there's a real anchor set — otherwise every stop would
