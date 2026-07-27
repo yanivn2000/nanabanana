@@ -19,7 +19,8 @@ const RADIUS_HE = ["קרוב מאוד", "עד שעה", "עד שעתיים", "ג�
 const PACES = ["רגוע", "בינוני", "אינטנסיבי"] as const;
 type Pace = (typeof PACES)[number];
 import { PACE_PER_DAY } from "@/lib/trip-types";
-import { deriveTaste, tasteScore, coarseFits, audienceFit, INTEREST_TASTE, INTEREST_CATS, GOVERNING_INTERESTS } from "@/lib/taste";
+import { deriveTaste, tasteScore, coarseFits, audienceFit, rankByTaste, INTEREST_TASTE, INTEREST_CATS, GOVERNING_INTERESTS } from "@/lib/taste";
+import { selectTrip, catBucket } from "@/lib/select";
 import { PROFILES, PROFILE_HE, PROFILE_EMOJI, type Profile } from "@/lib/shortpath";
 
 // Below this audience-fit (0-100) a place is "less relevant" for the chosen
@@ -28,6 +29,13 @@ import { PROFILES, PROFILE_HE, PROFILE_EMOJI, type Profile } from "@/lib/shortpa
 const AUDIENCE_FIT_FLOOR = 35;
 import type { Attraction, Destination, Insight, AreaCard } from "@/lib/db";
 
+// Category → Hebrew label + emoji for the live funnel-preview breakdown chips.
+const CAT_PREVIEW: Record<string, { he: string; emoji: string }> = {
+  museum: { he: "מוזיאונים", emoji: "🖼️" }, nature: { he: "טבע", emoji: "🌳" },
+  historic: { he: "היסטוריה", emoji: "🏛️" }, food: { he: "אוכל", emoji: "🍽️" },
+  shopping: { he: "קניות", emoji: "🛍️" }, attraction: { he: "אתרים", emoji: "📍" },
+  sport: { he: "ספורט", emoji: "⚽" }, leisure: { he: "פנאי", emoji: "🎡" },
+};
 // Every interest in the profile vocabulary — used as the fallback tile set when
 // the traveler hasn't set profile interests yet.
 const ALL_INTERESTS = Object.keys(INTEREST_TASTE);
@@ -518,6 +526,40 @@ export function DestinationView({
   const chosenAreaMemberIds = useMemo(
     () => new Set(areas.filter((a) => chosenAreas.has(a.id)).flatMap((a) => a.member_ids)),
     [areas, chosenAreas]);
+  // LIVE funnel preview — runs the SAME selectTrip core the server build uses, on the
+  // already-loaded attractions, so the traveller sees ROUGHLY what their trip will hold
+  // (by category) and it updates INSTANTLY as they change audience / topics / areas.
+  // Directional only (no clustering/timing); one source of truth with the real build.
+  const tripPreview = useMemo(() => {
+    if (!audience) return null;
+    const interestsSel = [...boosts];
+    const isFam = audience === "families";
+    const per = PACE_PER_DAY[buildPace], days = buildDays;
+    const t: Record<string, number> = { ...taste };
+    for (const k of boosts) for (const tg of (INTEREST_TASTE[k] ?? [])) t[tg] = (t[tg] ?? 0) + 3;
+    const KID = new Set(["theme_park", "water_park", "playground", "zoo", "aquarium"]);
+    const isKid = (a: Attraction) => {
+      if (a.subcategory && KID.has(a.subcategory)) return true;
+      const af = a.audience_fit as { couples?: number; friends?: number; families?: number } | null;
+      if (!af) return false;
+      const fam = af.families ?? 0, adu = Math.max(af.couples ?? 0, af.friends ?? 0);
+      return fam >= 75 && fam - adu >= 30;
+    };
+    const dropKids = audience === "adults" && !boosts.has("פארקי שעשועים");
+    const pickIds = Object.entries(choices).filter(([, c]) => c === "yes").map(([id]) => Number(id));
+    const pickSet = new Set(pickIds);
+    let pool = attractions.filter((a) => a.lat != null && a.lng != null);
+    if (dropKids) pool = pool.filter((a) => pickSet.has(a.id) || !isKid(a));
+    const ranked = rankByTaste(pool, t, 150, isFam, interestsSel, audience);
+    const interestRows = interestsSel.length
+      ? ranked.filter((a) => interestsSel.some((it) => matchesInterest(a, it))).slice(0, 30) : [];
+    const { orderedFill } = selectTrip({ attractions: ranked, base: attractions, interestRows,
+      interests: interestsSel, days, perDay: per, pickIds, areaMemberIds: [...chosenAreaMemberIds], areaGroupsLen: chosenAreas.size });
+    const selected = orderedFill.slice(0, days * per);
+    const counts: Record<string, number> = {};
+    for (const a of selected) counts[catBucket(a)] = (counts[catBucket(a)] ?? 0) + 1;
+    return { total: selected.length, days, counts };
+  }, [attractions, audience, boosts, chosenAreas, chosenAreaMemberIds, choices, buildDays, buildPace, taste]);
   const toggleArea = (id: number) => setChosenAreas((s) => {
     const next = new Set(s); if (next.has(id)) next.delete(id); else next.add(id); return next;
   });
@@ -732,6 +774,25 @@ export function DestinationView({
                       );
                     })}
                   </div>
+                  {/* LIVE funnel preview — the mix your trip will lean toward, updating
+                      instantly as you toggle audience / topics / neighbourhoods. */}
+                  {tripPreview && tripPreview.total > 0 && (
+                    <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2.5">
+                      <p className="mb-1.5 text-[12.5px] text-[var(--text-3)]">
+                        👀 תצוגה מקדימה — טיול ל-{tripPreview.days} ימים יכלול בערך <b className="text-[var(--text-2)]">{tripPreview.total}</b> מקומות, בתמהיל:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(tripPreview.counts).sort((a, b) => b[1] - a[1]).map(([c, n]) => {
+                          const m = CAT_PREVIEW[c] ?? { he: c, emoji: "•" };
+                          return (
+                            <span key={c} className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[12px] text-[var(--text-2)]">
+                              {m.emoji} {m.he} <b className="text-[var(--text)]">{n}</b>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                   <button onClick={() => openBuild()}
                     className="flex items-center justify-center gap-2 rounded-full bg-[var(--brand)] py-2.5 text-[14.5px] font-semibold text-white transition hover:opacity-90 sm:self-start sm:px-8">
                     ✨ בנו לי טיול ל{PROFILE_HE[audience!]}
