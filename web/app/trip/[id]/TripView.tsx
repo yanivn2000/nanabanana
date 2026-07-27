@@ -167,10 +167,6 @@ export function TripView({ tripId }: { tripId: string }) {
   const { hotels } = useHotels();
   const [busy, setBusy] = useState<null | "generate" | "revise">(null);
   const [error, setError] = useState<string | null>(null);
-  // Map day-editing: DB ids of left-out picks marked to ADD, and stops marked to
-  // REMOVE, for the day on screen. Committed together via "סדר את היום".
-  const [pendAdd, setPendAdd] = useState<Set<number>>(new Set());
-  const [pendRemove, setPendRemove] = useState<Set<number>>(new Set());
   // Unified drag (pointer-based → works with mouse AND touch): a stop dragged within
   // the day (kind:"stop") OR a left-out pick dragged in from the bank (kind:"bank").
   // Drop onto a stop row inserts there / reorders; drop onto the bank sends a stop out.
@@ -251,12 +247,6 @@ export function TripView({ tripId }: { tripId: string }) {
   const locatedToStop: number[] = [];
   colorIdxByStop.forEach((ci, si) => { if (ci != null) locatedToStop[ci] = si; });
   const stopColors = mapStops.map((_, i) => stopColor(i));
-  // Day-editing: DB ids marked-remove → their located marker indices (turn red).
-  const pendingRemoveLocated = new Set<number>();
-  locatedToStop.forEach((si, li) => { const sid = day?.stops[si]?.id; if (sid != null && pendRemove.has(sid)) pendingRemoveLocated.add(li); });
-  const pendingCount = pendAdd.size + pendRemove.size;
-  // Reset map marks when switching to another day (marks are per-day).
-  useEffect(() => { setPendAdd(new Set()); setPendRemove(new Set()); }, [curIdx]);
 
   // How to get between consecutive located stops: walk vs public transport,
   // decided by the traveler's walk tolerance (walkPref). An honest estimate (not
@@ -380,50 +370,34 @@ export function TripView({ tripId }: { tripId: string }) {
         })) }
       : {}),
   }, "generate");
-  // ---- Map day-editing: mark adds/removes, then "סדר את היום" rebuilds the day via
-  // the deterministic engine (mode:arrange — never AI). ----
-  const toggleExtra = (id: number) =>
-    setPendAdd((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const toggleRemoveLocated = (li: number) => {
-    const sid = day?.stops[locatedToStop[li]]?.id;
-    if (sid == null) return;
-    setPendRemove((p) => { const n = new Set(p); n.has(sid) ? n.delete(sid) : n.add(sid); return n; });
-  };
-  const clearPending = () => { setPendAdd(new Set()); setPendRemove(new Set()); };
-  async function arrangeDayNow() {
-    if (!itinerary || !pendingCount || busy) return;
+  // ---- Day-editing: add / remove ONE stop, then IMMEDIATELY re-arrange the day via
+  // the deterministic engine (mode:arrange — never AI). One click = added & re-sorted;
+  // no batch, no separate "סדר את היום" step. ----
+  async function arrangeDay(addIds: number[], removeIds: number[]) {
+    if (!itinerary || busy || (!addIds.length && !removeIds.length)) return;
     setBusy("revise"); setError(null);
     try {
       const res = await fetch("/api/itinerary", { method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mode: "arrange", city, current: itinerary, dayIndex: curIdx, addIds: [...pendAdd], removeIds: [...pendRemove] }) });
+        body: JSON.stringify({ mode: "arrange", city, current: itinerary, dayIndex: curIdx, addIds, removeIds }) });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.itinerary) { setError(data?.error || "אירעה שגיאה"); return; }
       // leftOut: drop the ones we added; add back the stops we removed (so they can be re-added).
-      const removedAsLeftOut = (day?.stops ?? []).filter((s) => s.id != null && pendRemove.has(s.id)).map((s) => ({
+      const removedAsLeftOut = (day?.stops ?? []).filter((s) => s.id != null && removeIds.includes(s.id)).map((s) => ({
         id: s.id as number, name_he: s.name, name_en: s.name, lat: s.lat ?? null, lng: s.lng ?? null,
         image_url: s.image ?? null, category: KIND_TO_CAT[s.kind] ?? "attraction", tagline_he: s.tagline ?? null,
       })) as unknown as NonNullable<typeof trip>["leftOut"];
-      const newLeftOut = [...(trip?.leftOut ?? []).filter((l) => !pendAdd.has(l.id)), ...(removedAsLeftOut ?? [])];
+      const newLeftOut = [...(trip?.leftOut ?? []).filter((l) => !addIds.includes(l.id)), ...(removedAsLeftOut ?? [])];
       update(tripId, { itinerary: data.itinerary, engine: "heuristic", leftOut: newLeftOut });
-      clearPending();
     } catch { setError("שגיאת רשת"); } finally { setBusy(null); }
   }
-  const arrangeBar = pendingCount > 0 ? (
-    <div className="mt-2 flex items-center justify-between gap-2 rounded-[12px] border border-[var(--brand)] bg-[var(--surface)] p-2.5 text-[13px] shadow-[var(--shadow)]">
-      <span className="font-medium">
-        {pendAdd.size > 0 ? `${pendAdd.size} להוספה` : ""}
-        {pendAdd.size > 0 && pendRemove.size > 0 ? " · " : ""}
-        {pendRemove.size > 0 ? `${pendRemove.size} להסרה` : ""}
-      </span>
-      <div className="flex gap-2">
-        <button onClick={clearPending} className="rounded-full px-3 py-1.5 text-[12.5px] text-[var(--text-2)] hover:bg-[var(--surface-2)]">בטל</button>
-        <button onClick={arrangeDayNow} disabled={!!busy}
-          className="rounded-full bg-[var(--brand)] px-4 py-1.5 text-[12.5px] font-medium text-white disabled:opacity-50">
-          {busy ? "מסדר…" : "סדר את היום"}
-        </button>
-      </div>
-    </div>
-  ) : null;
+  // Add a bank / left-out pick to the day on screen (map-pin action OR bank-card button),
+  // then let the engine slot it in and re-time everything.
+  const addToDay = (id: number) => arrangeDay([id], []);
+  const toggleExtra = (id: number) => addToDay(id);
+  const toggleRemoveLocated = (li: number) => {
+    const sid = day?.stops[locatedToStop[li]]?.id;
+    if (sid != null) arrangeDay([], [sid]);
+  };
 
   // Arrived from the city page with ?build=1 → start building immediately, once.
   const autoBuild = useSearchParams().get("build") === "1";
@@ -1106,11 +1080,10 @@ export function TripView({ tripId }: { tripId: string }) {
             <div className="mt-3 h-[420px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)] lg:hidden">
               <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
                 hotels={hotelPoints} focus={focus} colors={stopColors} activeIdx={active}
-                extras={mapExtras} hoveredId={hoverBankId} pendingAddIds={pendAdd} pendingRemoveLocated={pendingRemoveLocated}
+                extras={mapExtras} hoveredId={hoverBankId}
                 onToggleExtra={toggleExtra} onToggleRemove={toggleRemoveLocated}
                 onStopClick={(li) => { const si = locatedToStop[li]; if (si == null) return;
                   setExpanded(`${curIdx}-${si}`); setActive(li); setMobileTab("plan"); }} />
-              {arrangeBar}
             </div>
           )}
 
@@ -1384,7 +1357,7 @@ export function TripView({ tripId }: { tripId: string }) {
               <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--text-2)]">
                 {drag?.kind === "stop"
                   ? "שחררו כאן כדי להוציא את העצירה מהיומן."
-                  : "מה שלא נכנס ליומן, מסודר לפי חשיבות (⭐ = חובה). גררו כרטיס אל היום כדי להוסיף — או גררו עצירה לכאן כדי להוציא."}
+                  : "מה שלא נכנס ליומן, מסודר לפי חשיבות (⭐ = חובה). לחצו \"הוסף ליום זה\" (או גררו כרטיס אל היום) — או גררו עצירה לכאן כדי להוציא."}
               </p>
               <div className="mt-3 flex flex-col gap-2">
                 {(trip?.leftOut ?? []).map((p) => {
@@ -1422,6 +1395,16 @@ export function TripView({ tripId }: { tripId: string }) {
                         {p.must_see === 1 && <span className="ml-1 align-middle text-[var(--accent-ink)]" title="אתר חובה">⭐</span>}
                         {p.name_he || p.name_en}
                       </span>
+                      {/* one-click add to the day on screen — the engine then slots it in
+                          and re-times the day (same as the map pin's "הוסף ליום זה"). */}
+                      <button
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); addToDay(p.id); }}
+                        disabled={!!busy}
+                        className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--brand-soft)] px-2.5 py-1 text-[12px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand)] hover:text-white disabled:opacity-40"
+                        title="הוסף ליום זה">
+                        <Plus size={13} /> הוסף ליום זה
+                      </button>
                       <span className="grid w-4 shrink-0 place-items-center">
                         {bHasDetails && <ChevronDown size={16} className={`text-[var(--text-3)] transition-transform ${bOpen ? "rotate-180" : ""}`} />}
                       </span>
@@ -1478,17 +1461,15 @@ export function TripView({ tripId }: { tripId: string }) {
                 <div className="h-[calc(100dvh-265px)] max-h-[700px] min-h-[440px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
                   <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
                     hotels={hotelPoints} focus={focus} colors={stopColors} activeIdx={active}
-                extras={mapExtras} hoveredId={hoverBankId} pendingAddIds={pendAdd} pendingRemoveLocated={pendingRemoveLocated}
+                extras={mapExtras} hoveredId={hoverBankId}
                 onToggleExtra={toggleExtra} onToggleRemove={toggleRemoveLocated}
                     onStopClick={(li) => { const si = locatedToStop[li]; if (si == null) return;
                       setExpanded(`${curIdx}-${si}`); setActive(li);
                       requestAnimationFrame(() => stopRefs.current[si]?.scrollIntoView({ behavior: "smooth", block: "center" })); }} />
                 </div>
-                {arrangeBar}
 
-                {/* legend — a collapsible floating card tying numbers to names. Hidden
-                    while editing on the map (pending marks) so it can't cover markers. */}
-                {stopPoints.length > 0 && pendingCount === 0 && (
+                {/* legend — a collapsible floating card tying numbers to names. */}
+                {stopPoints.length > 0 && (
                   <div className="absolute bottom-3 left-3 z-[1000] w-[210px] overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)] shadow-[var(--shadow)]"
                        style={{ background: "var(--surface)" }}>
                     <button onClick={() => setLegendOpen((o) => !o)}
