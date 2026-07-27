@@ -379,10 +379,9 @@ export function DestinationView({
   const PAGE = 200;
   const [visibleCount, setVisibleCount] = useState(PAGE);
   const yesCount = Object.values(choices).filter((c) => c === "yes").length;
-  // Likes are optional refinements now (the governed build works from audience +
-  // topics alone), so building is always available once an audience is chosen. The
-  // progress track just shows how many likes tune the trip toward a soft target.
-  const minPicks = Math.min(7, attractions.length || 7);
+  // Likes are optional refinements now — the governed build works from audience +
+  // topics alone, so building is always available once an audience is chosen (no
+  // pick-minimum, no progress meter).
   // Capacity follows the chosen pace, so the estimate matches what the builder
   // will actually schedule (רגוע ~4/day, בינוני ~5, אינטנסיבי ~6).
   const buildCapacity = buildDays * PACE_PER_DAY[buildPace];
@@ -1270,21 +1269,7 @@ export function DestinationView({
           toward the minimum; the CTA activates once there are enough picks. */}
       <div className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 shadow-[0_-8px_20px_rgba(16,29,43,0.08)] lg:px-8 ${mode === "short" && !topCtaVisible ? "" : "hidden"}`}>
         <div className="mx-auto max-w-[1600px]">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-              {/* progress track toward the minimum */}
-              <div className="hidden h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-[var(--surface-2)] sm:block lg:w-32">
-                <div className="h-full rounded-full bg-[var(--brand)] transition-all duration-300"
-                  style={{ width: `${Math.min(100, (yesCount / minPicks) * 100)}%` }} />
-              </div>
-              <p className="min-w-0 truncate text-[13.5px] text-[var(--text-2)]">
-                {yesCount > 0 ? (
-                  <><span className="font-semibold text-[var(--text)]">{yesCount} אטרקציות</span> סומנו — מוכנים לבנות!</>
-                ) : (
-                  <>תנו <span className="font-medium text-[var(--brand-ink)]">❤ לייק</span> למקומות שאהבתם כדי לדייק — או בנו טיול חכם עכשיו</>
-                )}
-              </p>
-            </div>
+          <div className="flex items-center justify-end gap-3">
             <div className="flex shrink-0 items-center gap-2">
               {yesCount > 0 && (
                 <>
