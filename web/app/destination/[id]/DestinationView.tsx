@@ -352,7 +352,7 @@ export function DestinationView({
   const [query, setQuery] = useState("");
   const [showPlaces, setShowPlaces] = useState(false);
   const [showPasses, setShowPasses] = useState(false);
-  const [mustOnly, setMustOnly] = useState(true);   // "רק אתרי חובה" — default ON
+  const [mustOnly, setMustOnly] = useState(false);   // "רק אתרי חובה" — default OFF (show all)
   const [flags, setFlags] = useState({
     free: false, indoor: false, top: false, withInsights: false,
   });
@@ -1039,18 +1039,20 @@ export function DestinationView({
                 </div>
               )}
             </div>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-            {!soloInterest && !selectedOnly ? (
+            {/* "רק אתרי חובה" sits with the sort/filters controls; default OFF so the
+                browse opens on ALL attractions once an audience is picked. */}
+            {!soloInterest && !selectedOnly && (
               <button onClick={() => setMustOnly((v) => !v)} aria-pressed={mustOnly}
-                className="inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition"
+                className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] font-medium transition"
                 style={{ background: mustOnly ? "var(--brand)" : "var(--surface)", color: mustOnly ? "#fff" : "var(--text-2)",
                          borderColor: mustOnly ? "var(--brand)" : "var(--border)" }}>
                 <span>⭐ רק אתרי חובה</span>
                 <span className={mustOnly ? "text-white/80" : "text-[var(--text-3)]"}>{mustSeeCount}</span>
                 {mustOnly && <Check size={14} />}
               </button>
-            ) : <span />}
+            )}
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
             <div className="inline-flex rounded-full border border-[var(--border)] bg-[var(--surface)] p-0.5 text-[13px] font-medium">
               <button onClick={() => setListView(false)} aria-pressed={!listView}
                 className="flex items-center gap-1.5 rounded-full px-3 py-1 transition"
