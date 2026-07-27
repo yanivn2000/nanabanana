@@ -558,7 +558,10 @@ export function DestinationView({
     const selected = orderedFill.slice(0, days * per);
     const counts: Record<string, number> = {};
     for (const a of selected) counts[catBucket(a)] = (counts[catBucket(a)] ?? 0) + 1;
-    return { total: selected.length, days, counts };
+    // must-see first within the preview list (mirrors the trip's own priority), so the
+    // icons lead the "here's your trip" strip.
+    const list = [...selected].sort((a, b) => (b.must_see === 1 ? 1 : 0) - (a.must_see === 1 ? 1 : 0));
+    return { total: selected.length, days, counts, list };
   }, [attractions, audience, boosts, chosenAreas, chosenAreaMemberIds, choices, buildDays, buildPace, taste]);
   const toggleArea = (id: number) => setChosenAreas((s) => {
     const next = new Set(s); if (next.has(id)) next.delete(id); else next.add(id); return next;
@@ -790,6 +793,30 @@ export function DestinationView({
                             </span>
                           );
                         })}
+                      </div>
+                      {/* the actual places — a horizontal strip that reshapes live as you
+                          choose. Tap one to fly the map to it. ⭐ = must-see. */}
+                      <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1">
+                        {tripPreview.list.map((a) => (
+                          <button key={a.id} onClick={() => setSelected(a)}
+                            title={a.name_he || a.name_en}
+                            className="group flex w-[104px] shrink-0 flex-col overflow-hidden rounded-[10px] border border-[var(--border)] bg-[var(--surface)] text-right transition hover:border-[var(--brand)]">
+                            <div className="relative aspect-[4/3] w-full bg-[var(--surface-2)]">
+                              {a.image_url ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={bigImage(a.image_url, 200)} alt="" loading="lazy"
+                                  onError={(e) => { const t = e.currentTarget; if (a.image_url && t.src !== a.image_url) t.src = a.image_url; }}
+                                  className="size-full object-cover" />
+                              ) : (
+                                <div className="grid size-full place-items-center" style={{ background: `color-mix(in srgb, ${catColor(a.category)} 16%, var(--surface-2))` }}>
+                                  <MapPin size={16} style={{ color: catColor(a.category) }} />
+                                </div>
+                              )}
+                              {a.must_see === 1 && <span className="absolute right-1 top-1 rounded-full bg-[var(--accent)] px-1 text-[10px] text-white">⭐</span>}
+                            </div>
+                            <span className="line-clamp-2 px-1.5 py-1 text-[11px] leading-tight text-[var(--text-2)]">{a.name_he || a.name_en}</span>
+                          </button>
+                        ))}
                       </div>
                     </div>
                   )}
