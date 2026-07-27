@@ -384,21 +384,10 @@ export function DestinationView({
   const PAGE = 200;
   const [visibleCount, setVisibleCount] = useState(PAGE);
   const yesCount = Object.values(choices).filter((c) => c === "yes").length;
-  // The trip needs enough anchors to be worth building. Gate the CTA on a soft
-  // minimum of "כן" marks (fewer in a tiny city) so the flow reads clearly:
-  // pick topics → mark attractions → build. Clicking early nudges + explains.
+  // Likes are optional refinements now (the governed build works from audience +
+  // topics alone), so building is always available once an audience is chosen. The
+  // progress track just shows how many likes tune the trip toward a soft target.
   const minPicks = Math.min(7, attractions.length || 7);
-  const canBuild = yesCount >= minPicks;
-  const [buildHint, setBuildHint] = useState(false);
-  const tryBuild = () => {
-    if (!canBuild) {
-      setBuildHint(true);
-      document.getElementById("picks")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      window.setTimeout(() => setBuildHint(false), 4500);
-      return;
-    }
-    openBuild();
-  };
   // Capacity follows the chosen pace, so the estimate matches what the builder
   // will actually schedule (רגוע ~4/day, בינוני ~5, אינטנסיבי ~6).
   const buildCapacity = buildDays * PACE_PER_DAY[buildPace];
@@ -1288,12 +1277,10 @@ export function DestinationView({
                   style={{ width: `${Math.min(100, (yesCount / minPicks) * 100)}%` }} />
               </div>
               <p className="min-w-0 truncate text-[13.5px] text-[var(--text-2)]">
-                {canBuild ? (
-                  <><span className="font-semibold text-[var(--text)]">{yesCount} אטרקציות</span> נבחרו — מוכנים לבנות!</>
-                ) : yesCount === 0 ? (
-                  <>תנו <span className="font-medium text-[var(--brand-ink)]">❤ לייק</span> לאטרקציות שאהבתם — לפחות {minPicks} — ונרכיב לכם טיול</>
+                {yesCount > 0 ? (
+                  <><span className="font-semibold text-[var(--text)]">{yesCount} אטרקציות</span> סומנו — מוכנים לבנות!</>
                 ) : (
-                  <><span className="font-semibold text-[var(--text)]">{yesCount}/{minPicks}</span> — בחרו עוד {minPicks - yesCount} כדי לבנות טיול</>
+                  <>תנו <span className="font-medium text-[var(--brand-ink)]">❤ לייק</span> למקומות שאהבתם כדי לדייק — או בנו טיול חכם עכשיו</>
                 )}
               </p>
             </div>
@@ -1313,20 +1300,15 @@ export function DestinationView({
                   </button>
                 </>
               )}
-              <button onClick={() => tryBuild()}
-                className="flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold transition"
-                style={canBuild
-                  ? { background: "var(--brand)", color: "#fff", boxShadow: "0 6px 16px rgba(14,107,94,.3)" }
-                  : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
-                <Sparkles size={16} /> {canBuild ? `בנו לי טיול · ${yesCount}` : "בנו לי טיול"}
+              {/* mirrors the top build button — active whenever an audience is chosen
+                  (this bar only shows in short mode), so it never looks disabled. */}
+              <button onClick={() => openBuild()}
+                className="flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold text-white transition hover:opacity-90"
+                style={{ background: "var(--brand)", boxShadow: "0 6px 16px rgba(14,107,94,.3)" }}>
+                <Sparkles size={16} /> בנו לי טיול{yesCount ? ` · ${yesCount}` : ""}
               </button>
             </div>
           </div>
-          {buildHint && !canBuild && (
-            <p className="mt-2 rounded-[var(--radius-sm)] bg-[var(--amber-soft)] px-3 py-1.5 text-[12.5px] text-[var(--amber)]">
-              כדי לבנות טיול מותאם, תנו ❤ לייק ללפחות {minPicks} אטרקציות שאהבתם מהרשימה{yesCount ? ` (${yesCount} עד כה)` : ""}.
-            </p>
-          )}
         </div>
       </div>
 
