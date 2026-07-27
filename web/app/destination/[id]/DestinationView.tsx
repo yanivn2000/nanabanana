@@ -160,85 +160,108 @@ function HeartToggle({ liked, onClick }: { liked: boolean; onClick: () => void }
   );
 }
 
-// Headline neighbourhoods as first-class experiences — a strip above the
-// attractions. A "vibe" area's draw is the area itself (markets, streets); a
-// "landmark" area is a dense cluster of must-sees. Tapping the body flies the map;
-// "רוצה לתייר כאן" chooses the area to tour (a separate selection from the
-// attraction marks) so the builder gives it its own day.
-function NeighbourhoodStrip({ areas, chosenIds, attrById, onFocus, onToggle }: {
+// Headline neighbourhoods, IN the attractions list, in the same row design — but a
+// neighbourhood is "an attraction that contains attractions": its own frame-heart
+// tours the WHOLE area (a half/full-day block the builder composes), and expanding
+// reveals its member places, each likeable on its own. Members are deduped OUT of
+// the flat list (they live only inside their neighbourhood).
+function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea, onToggleMember, onFocus }: {
   areas: AreaCard[]; chosenIds: Set<number>;
-  attrById: Map<number, { name_he: string | null; name_en: string; must_see: number | null }>;
-  onFocus: (a: AreaCard) => void; onToggle: (id: number) => void;
+  attrById: Map<number, Attraction>;
+  isPicked: (id: number) => boolean;
+  onToggleArea: (id: number) => void;
+  onToggleMember: (id: number) => void;
+  onFocus: (a: AreaCard) => void;
 }) {
   const [openId, setOpenId] = useState<number | null>(null);
   if (!areas.length) return null;
   return (
-    <section className="mx-auto max-w-[1600px] px-5 pt-4 lg:px-8">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-baseline gap-2">
-          <h2 className="text-[17px] font-bold">שכונות שאסור לפספס</h2>
-          {/* a chosen neighbourhood is just a rich (half/full-day) pick — it folds into
-              the same "בנו לי טיול" build; no separate neighbourhoods trip. */}
-          <span className="text-[13px] text-[var(--text-3)]">בחרו לתייר — הן נכנסות לטיול שלכם</span>
-        </div>
-      </div>
-      <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:thin]">
-        {areas.map((a) => {
-          const vibe = a.kind === "vibe";
-          const sel = chosenIds.has(a.id);
-          return (
-            <div key={a.id}
-              className="flex w-[248px] shrink-0 flex-col rounded-[var(--radius-card)] border bg-[var(--surface)] p-3.5 shadow-[var(--shadow)] transition"
-              style={{ borderColor: sel ? "var(--brand)" : "var(--border)", boxShadow: sel ? "0 0 0 1.5px var(--brand)" : undefined }}>
-              <button onClick={() => onFocus(a)} className="flex flex-1 flex-col text-right">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <span className="rounded-full px-2 py-0.5 text-[11px] font-bold"
-                    style={vibe ? { background: "var(--accent-soft)", color: "var(--accent-ink)" } : { background: "var(--brand-soft)", color: "var(--brand-ink)" }}>
-                    {vibe ? "✨ חוויית שכונה" : "⭐ חובה"}
-                  </span>
-                  <span className="text-[11.5px] text-[var(--text-3)]">{a.name_en}</span>
-                </div>
-                <h3 className="text-[16.5px] font-bold leading-tight">{a.name_he}</h3>
-                {a.vibe_he && <p className="mt-1 line-clamp-3 text-[13px] leading-snug text-[var(--text-2)]">{a.vibe_he}</p>}
-                {!!a.best_for?.length && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {a.best_for.slice(0, 3).map((t) => (
-                      <span key={t} className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] text-[var(--text-2)]">{t}</span>
-                    ))}
-                  </div>
+    <div className="flex flex-col gap-2.5 pt-3">
+      {areas.map((area) => {
+        const members = area.member_ids.map((id) => attrById.get(id)).filter((m): m is Attraction => !!m);
+        const toured = chosenIds.has(area.id);
+        const open = openId === area.id;
+        const heroImg = members.find((m) => m.image_url)?.image_url ?? null;
+        const pickedInside = members.filter((m) => isPicked(m.id)).length;
+        const active = toured || pickedInside > 0;
+        return (
+          <div key={area.id}
+            className="overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] shadow-[var(--shadow)] transition"
+            style={{ borderColor: active ? "var(--brand)" : "var(--border)" }}>
+            <div className="flex items-stretch">
+              <button onClick={() => { setOpenId(open ? null : area.id); onFocus(area); }}
+                className="flex min-w-0 flex-1 items-center gap-3 p-2.5 text-right">
+                {heroImg ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={bigImage(heroImg, 200)} alt="" loading="lazy" className="size-14 shrink-0 rounded-[10px] object-cover" />
+                ) : (
+                  <div className="grid size-14 shrink-0 place-items-center rounded-[10px] bg-[var(--brand-soft)] text-[22px]">🏘️</div>
                 )}
-              </button>
-              <button onClick={() => setOpenId((v) => (v === a.id ? null : a.id))}
-                className="mt-2.5 flex items-center justify-between gap-2 border-t border-[var(--border)] pt-2 text-[12px] text-[var(--text-3)]">
-                <span>
-                  {vibe
-                    ? <>השכונה עצמה היא החוויה · {a.attraction_count} מקומות</>
-                    : <><b className="text-[var(--text-2)]">{a.must_count} אתרי חובה</b> כאן · {a.attraction_count} מקומות</>}
-                </span>
-                <ChevronDown size={14} className={`shrink-0 transition-transform ${openId === a.id ? "rotate-180" : ""}`} />
-              </button>
-              {openId === a.id && (
-                <div className="mt-1.5 flex max-h-44 flex-wrap gap-1 overflow-y-auto">
-                  {a.member_ids.map((id) => attrById.get(id)).filter(Boolean).map((m) => (
-                    <span key={m!.name_en + m!.name_he} className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 text-[11.5px] text-[var(--text-2)]">
-                      {m!.must_see === 1 && <span className="text-[var(--accent-ink)]">⭐</span>}
-                      {m!.name_he || m!.name_en}
-                    </span>
-                  ))}
+                <div className="min-w-0 shrink-0 max-w-[52%]">
+                  <p className="serif truncate text-[16px] font-bold leading-tight">🏘️ {area.name_he || area.name_en}</p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] text-[var(--text-3)]">
+                    <span className="font-medium text-[var(--brand-ink)]">שכונה</span>
+                    <span>{members.length} מקומות</span>
+                    {area.must_count > 0 && <span>⭐ {area.must_count}</span>}
+                    {pickedInside > 0 && <span className="text-[var(--brand-ink)]">✓ {pickedInside} סומנו</span>}
+                  </div>
                 </div>
-              )}
-              <button onClick={() => onToggle(a.id)}
-                className="mt-2 flex items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-medium transition"
-                style={sel
-                  ? { background: "var(--brand)", color: "#fff", borderColor: "var(--brand)" }
-                  : { background: "var(--surface)", color: "var(--brand-ink)", borderColor: "var(--brand)" }}>
-                {sel ? "✓ בטיול" : "רוצה לתייר כאן 🚶"}
+                {area.vibe_he && <p className="hidden min-w-0 flex-1 truncate text-[13.5px] italic text-[var(--text-3)] sm:block">{area.vibe_he}</p>}
+                <ChevronDown size={18} className={`ms-auto shrink-0 text-[var(--text-3)] transition-transform ${open ? "rotate-180" : ""}`} />
+              </button>
+              {/* the container's "heart" — tour the WHOLE neighbourhood */}
+              <button onClick={() => onToggleArea(area.id)} aria-pressed={toured}
+                aria-label={toured ? "מטיילים בכל השכונה" : "טיילו בכל השכונה"} title={toured ? "מטיילים בכל השכונה" : "טיילו בכל השכונה"}
+                className="grid shrink-0 place-items-center self-stretch px-3.5 transition hover:bg-[var(--surface-2)]"
+                style={{ color: toured ? "var(--brand)" : "var(--text-3)" }}>
+                <Heart size={20} fill={toured ? "currentColor" : "none"} />
               </button>
             </div>
-          );
-        })}
-      </div>
-    </section>
+            {open && (
+              <div className="border-t border-[var(--border)] bg-[var(--surface-2)] p-2.5">
+                <p className="px-0.5 pb-2 text-[12px] text-[var(--text-3)]">
+                  סמנו ❤ למעלה כדי לטייל בכל השכונה — או בחרו מקומות ספציפיים מתוכה:
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {members.map((m) => {
+                    const picked = isPicked(m.id);
+                    const cat = mergeCat(m.category);
+                    return (
+                      <div key={m.id} className="flex items-center gap-2.5 rounded-[10px] border bg-[var(--surface)] p-1.5"
+                        style={{ borderColor: picked ? "var(--brand)" : "var(--border)" }}>
+                        {m.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={bigImage(m.image_url, 120)} alt="" loading="lazy" className="size-11 shrink-0 rounded-[8px] object-cover" />
+                        ) : (
+                          <div className="grid size-11 shrink-0 place-items-center rounded-[8px]" style={{ background: `color-mix(in srgb, ${catColor(cat)} 16%, var(--surface-2))` }}>
+                            <MapPin size={16} style={{ color: catColor(cat) }} />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[13.5px] font-semibold">
+                            {m.must_see === 1 && <span className="text-[var(--accent-ink)]">⭐ </span>}
+                            {m.name_he || m.name_en}
+                          </p>
+                          <p className="truncate text-[12px] text-[var(--text-3)]">
+                            {CAT_HE[cat] ?? m.category}{m.tagline_he ? ` · ${m.tagline_he}` : ""}
+                          </p>
+                        </div>
+                        <button onClick={() => onToggleMember(m.id)} aria-pressed={picked}
+                          aria-label={picked ? "אהבתי" : "לייק"} title={picked ? "אהבתי" : "לייק"}
+                          className="grid size-9 shrink-0 place-items-center rounded-full transition hover:bg-[var(--surface-2)]"
+                          style={{ color: picked || toured ? "var(--brand)" : "var(--text-3)" }}>
+                          <Heart size={18} fill={picked || toured ? "currentColor" : "none"} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -394,12 +417,18 @@ export function DestinationView({
   // The visible list: must-see by default (the "רק אתרי חובה" toggle), narrowed
   // to the active interest tile + the popover filters. Search runs over the
   // whole loaded city.
+  // Every attraction that belongs to a headline neighbourhood — deduped OUT of the
+  // flat list (they live inside their neighbourhood card), except while searching.
+  const allAreaMemberIds = useMemo(() => new Set(areas.flatMap((a) => a.member_ids)), [areas]);
   const filtered = useMemo(
     () =>
       attractions.filter((a) => {
         // "הצג רק נבחרים" overrides the other filters: show exactly the places
         // the traveler marked (כן/אולי), so a lone pick is always findable.
         if (selectedOnly) return choices[a.id] === "yes";
+        // a neighbourhood member isn't listed standalone — it shows inside its
+        // neighbourhood row. A search query bypasses this so any place stays findable.
+        if (!query && allAreaMemberIds.has(a.id)) return false;
         // solo focus: show ALL of the focused topic (matching its tile count),
         // still respecting search / map / popover flags below. It deliberately
         // bypasses the must-see toggle — otherwise soloing "אוכל 1" could show 0
@@ -423,7 +452,7 @@ export function DestinationView({
         }
         return true;
       }),
-    [attractions, mustOnly, query, flags, insights, selectedOnly, choices, profile.dislikes, soloInterest]
+    [attractions, mustOnly, query, flags, insights, selectedOnly, choices, profile.dislikes, soloInterest, allAreaMemberIds]
   );
 
   // The list shows the filtered set, optionally narrowed to the map viewport.
@@ -773,10 +802,8 @@ export function DestinationView({
         </div>
       </header>
 
-      {/* headline neighbourhoods — first-class experiences above the attractions */}
-      <NeighbourhoodStrip areas={areas} chosenIds={chosenAreas} attrById={attrById}
-        onFocus={(a) => { setAreaFocus({ lat: a.lat, lng: a.lng, n: Date.now() }); if (!mapOpen) setMapOpen(true); }}
-        onToggle={toggleArea} />
+      {/* neighbourhoods now render INSIDE the attractions list (as container rows) —
+          see <NeighbourhoodRows> just above the list. */}
 
       {/* (The manual "רחובות מומלצים" picker was removed — streets now enter
           AUTOMATICALLY: a chosen neighbourhood pulls its own streets, and the
@@ -1033,6 +1060,17 @@ export function DestinationView({
             הטיול נבנה אוטומטית מהנושאים, השכונות שבחרתם ואתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> — הם נכנסים גם בלי סימון.
             {" "}<span className="inline-flex items-center gap-0.5 font-medium text-[var(--brand-ink)]"><Heart size={12} fill="currentColor" /> הלייק</span> הוא רק כדי לוודא שמקום מסוים ייכנס — לא חובה.
           </p>
+
+          {/* neighbourhoods lead the list as "container" rows (same row design) — a
+              whole-area heart tours it, expand to like specific members. Hidden while
+              searching (then their members surface as normal flat results). */}
+          {!query && (
+            <NeighbourhoodRows areas={areas} chosenIds={chosenAreas} attrById={attrById}
+              isPicked={(id) => choices[id] === "yes"}
+              onToggleArea={toggleArea}
+              onToggleMember={(id) => setChoice(id, "yes")}
+              onFocus={(a) => { setAreaFocus({ lat: a.lat, lng: a.lng, n: Date.now() }); if (!mapOpen) setMapOpen(true); }} />
+          )}
 
           {/* LIST view — compact rows in the trip-page design language; a row expands
               DOWN with the image on the right and all its info laid out across. */}
