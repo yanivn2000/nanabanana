@@ -858,9 +858,9 @@ export function DestinationView({
               the far right spanning it, and the interests as a full-width row
               below — no divider between the image and the info to its left. */}
           <div className="p-3.5 lg:relative lg:p-4">
-            {/* destination image — floats to the far right, spanning the name + meta row
-                (sized to the compact identity block so it clears the ① row below it) */}
-            <div className="hidden overflow-hidden rounded-[var(--radius-sm)] lg:absolute lg:top-4 lg:block lg:h-[98px] lg:w-[210px]"
+            {/* destination image — floats to the far right, same 160×105 landscape treatment
+                as the trip page (the pr below reserves room so nothing runs under it) */}
+            <div className="hidden overflow-hidden rounded-[var(--radius-sm)] lg:absolute lg:top-3 lg:block lg:h-[105px] lg:w-[160px]"
                  style={{ insetInlineStart: "16px" }}>
               <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
                 orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
@@ -869,13 +869,13 @@ export function DestinationView({
               {/* identity block (cleared of the floated image via pr): breadcrumb, big city
                   NAME, then a meta row — the mode toggle on the right (under the name) and the
                   "N places" count + pass/community badges pushed to the left. */}
-              <div className="flex flex-col gap-2 lg:pr-[240px]">
+              <div className="flex flex-col gap-2 lg:pr-[188px]">
                 {/* breadcrumb + city name on ONE line */}
                 <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
                   <Link href="/" className="eyebrow inline-flex items-center gap-1 text-[var(--text-2)]">
                     <ChevronRight size={14} /> בית
                   </Link>
-                  <span className="h-4 w-px bg-[var(--border)]" />
+                  <span className="h-3.5 w-px bg-[var(--border)]" />
                   <h1 className="serif flex items-center gap-1.5 text-[26px] font-bold leading-tight lg:text-[30px]">
                     <span className="text-[0.72em]">{countryFlag(dest.country)}</span>
                     {dest.city_he || dest.city}
