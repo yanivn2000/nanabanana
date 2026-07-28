@@ -28,23 +28,6 @@ import { PROFILES, PROFILE_HE, PROFILE_EMOJI, type Profile } from "@/lib/shortpa
 const AUDIENCE_FIT_FLOOR = 35;
 import type { Attraction, Destination, Insight, AreaCard } from "@/lib/db";
 
-// The server-preview's auto-marked ❤ are the SYSTEM's picks, not the traveller's — we
-// remember which ids they were (per city) so re-entering the city without re-choosing
-// an audience clears last session's system marks instead of leaving them as if picked.
-const AUTOPICK_KEY = "nanabanana.autopick.v1";
-function readAutoPicks(destId: number): number[] {
-  if (typeof window === "undefined") return [];
-  try { return (JSON.parse(localStorage.getItem(AUTOPICK_KEY) || "{}")[destId] as number[]) || []; } catch { return []; }
-}
-function writeAutoPicks(destId: number, ids: number[]) {
-  if (typeof window === "undefined") return;
-  try {
-    const m = JSON.parse(localStorage.getItem(AUTOPICK_KEY) || "{}");
-    if (ids.length) m[destId] = ids; else delete m[destId];
-    localStorage.setItem(AUTOPICK_KEY, JSON.stringify(m));
-  } catch { /* storage unavailable */ }
-}
-
 // Every interest in the profile vocabulary — used as the fallback tile set when
 // the traveler hasn't set profile interests yet.
 const ALL_INTERESTS = Object.keys(INTEREST_TASTE);
@@ -405,7 +388,7 @@ export function DestinationView({
   const [filtersOpen, setFiltersOpen] = useState(false);
   // Per-city yes/maybe/no marks (the "city profile") + the build modal.
   const { create } = useTrips();
-  const { choices, setChoice, setMany, clear } = useCitySelection(dest.id);
+  const { choices, setChoice, setMany, clear, loaded: selLoaded } = useCitySelection(dest.id);
   // Selections persist across visits (by design) — so give a way to wipe them
   // all, not just the current view. Confirm first: it kills the whole city's
   // marks, including ones hidden by the active filters.
@@ -621,13 +604,20 @@ export function DestinationView({
   const [previewing, setPreviewing] = useState(false);
   const boostsKey = [...boosts].sort().join(",");
   const areasKey = [...chosenAreas].sort().join(",");
-  // On (re)entering the city, adopt last session's auto-marks into the ref so the
-  // effect below can clear them when no audience is chosen (declared BEFORE it so it
-  // runs first on mount).
-  useEffect(() => { autoPickRef.current = new Set(readAutoPicks(dest.id)); }, [dest.id]);
   useEffect(() => {
-    if (!audience || boosts.size === 0) {
-      if (autoPickRef.current.size) { setMany([...autoPickRef.current], null); autoPickRef.current = new Set(); writeAutoPicks(dest.id, []); }
+    if (!selLoaded) return;   // wait for the saved marks to load before touching them
+    if (!audience) {
+      // Fresh / "choose" mode: wipe ALL of this city's marks. They only exist because
+      // of an audience-driven auto-pick — nothing legit is marked before an audience is
+      // picked — so a new visit (or refresh) always starts clean, incl. old orphans.
+      if (Object.values(choices).some((c) => c === "yes")) clear();
+      autoPickRef.current = new Set();
+      setPreviewing(false);
+      return;
+    }
+    if (boosts.size === 0) {
+      // audience but no topics → drop just the system's auto-marks, keep manual ones.
+      if (autoPickRef.current.size) { setMany([...autoPickRef.current], null); autoPickRef.current = new Set(); }
       setPreviewing(false);
       return;
     }
@@ -653,12 +643,11 @@ export function DestinationView({
         if (stale.length) setMany(stale, null);
         if (ids.size) setMany([...ids], "yes");
         autoPickRef.current = ids;
-        writeAutoPicks(dest.id, [...ids]);
       } catch { /* preview is best-effort */ } finally { if (!cancelled) setPreviewing(false); }
     }, 500);
     return () => { cancelled = true; clearTimeout(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [audience, boostsKey, areasKey, buildDays, dest.city]);
+  }, [audience, boostsKey, areasKey, buildDays, dest.city, selLoaded]);
   // Mobile: the 240px sticky map strip eats most of the screen — let the
   // traveler collapse it. Desktop always shows the map rail. A window resize
   // event after the toggle makes Leaflet re-measure its container.
