@@ -1152,8 +1152,8 @@ export function DestinationView({
           {/* Transparency line — explains the pre-marked ❤: they ARE the trip's places
               (the system chose them for you), and you add/remove to shape it. */}
           <p className="mt-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2 text-[12.5px] leading-relaxed text-[var(--text-2)]">
-            המקומות המסומנים <span className="inline-flex items-center gap-0.5 font-medium text-[var(--brand-ink)]"><Heart size={12} fill="currentColor" /></span> הם מה שייכנס לטיול — בחרנו לכם אותם לפי הקהל, הנושאים והשכונות.
-            {" "}הוסיפו מקומות שאהבתם או הסירו, ואז "בנו לי טיול". אתרי חובה <span className="text-[var(--accent-ink)]">⭐</span> נכנסים בכל מקרה.
+            המקומות המסומנים <span className="inline-flex items-center gap-0.5 font-medium text-[var(--brand-ink)]"><Heart size={12} fill="currentColor" /></span> הם בדיוק מה שייכנס לטיול — בחרנו לכם אותם לפי הקהל, הנושאים והשכונות (כולל אתרי חובה <span className="text-[var(--accent-ink)]">⭐</span>).
+            {" "}הוסיפו מקומות שאהבתם או הסירו כל אחד מהם, ואז "בנו לי טיול".
           </p>
 
           {/* the whole list fades out → in while the preview re-chooses, so a topic
