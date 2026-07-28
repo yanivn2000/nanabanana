@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useRef, Fragment } from "react";
 import Link from "next/link";
-import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin, X, Loader2, LayoutGrid, List, Heart } from "lucide-react";
+import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin, X, Loader2, Heart } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
 import { CityPoster } from "@/components/CityPoster";
 import { descriptor, catColor, bigImage, mergeCat, countryFlag } from "@/lib/labels";
@@ -344,7 +344,7 @@ export function DestinationView({
   const toggleSelectedOnly = () => { setSoloInterest(null); setSelectedOnly((v) => !v); };
   // How the attraction list renders: a compact LIST in the trip-page design language
   // (default — row → expands down, image on the right, info across) or image-top TILES.
-  const [listView, setListView] = useState(true);
+  const [listView] = useState(true);   // list is the only view now (tiles retired)
   // (The interest ✓/✕/solo cycler + editor were retired with the "הכל" mode;
   // soloInterest state stays as a harmless no-op the list filter still reads.)
   const [selected, setSelected] = useState<Attraction | null>(null);
@@ -383,8 +383,7 @@ export function DestinationView({
   const [mapOnly, setMapOnly] = useState(false);
   const [bounds, setBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
   // Desktop tags row: sort order + the "more filters" popover.
-  const [sort, setSort] = useState<SortKey>("match");
-  const [sortOpen, setSortOpen] = useState(false);
+  const [sort] = useState<SortKey>("match");   // default sort; the picker was removed
   const [filtersOpen, setFiltersOpen] = useState(false);
   // Per-city yes/maybe/no marks (the "city profile") + the build modal.
   const { create } = useTrips();
@@ -989,28 +988,9 @@ export function DestinationView({
                 </button>
               )}
             </div>
-            {/* sort */}
-            <div className="relative shrink-0">
-              <button onClick={() => { setSortOpen((o) => !o); setFiltersOpen(false); }}
-                className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-[13.5px] text-[var(--text-2)]">
-                מיון: <span className="font-medium text-[var(--text)]">{SORT_HE[sort]}</span>
-                <ChevronDown size={14} className={sortOpen ? "rotate-180" : ""} />
-              </button>
-              {sortOpen && (
-                <div className="absolute z-40 mt-1 w-44 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)]">
-                  {(Object.keys(SORT_HE) as SortKey[]).map((k) => (
-                    <button key={k} onClick={() => { setSort(k); setSortOpen(false); }}
-                      className="block w-full px-3 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]"
-                      style={{ color: sort === k ? "var(--brand-ink)" : "var(--text-2)", fontWeight: sort === k ? 600 : 400 }}>
-                      {SORT_HE[k]}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
             {/* filters popover */}
             <div className="relative shrink-0">
-              <button onClick={() => { setFiltersOpen((o) => !o); setSortOpen(false); }}
+              <button onClick={() => { setFiltersOpen((o) => !o); }}
                 className="flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] transition"
                 style={{ borderColor: moreFilterCount ? "var(--brand)" : "var(--border)",
                          background: moreFilterCount ? "var(--brand-soft)" : "var(--surface)",
@@ -1051,20 +1031,6 @@ export function DestinationView({
                 {mustOnly && <Check size={14} />}
               </button>
             )}
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
-            <div className="inline-flex rounded-full border border-[var(--border)] bg-[var(--surface)] p-0.5 text-[13px] font-medium">
-              <button onClick={() => setListView(false)} aria-pressed={!listView}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1 transition"
-                style={{ background: !listView ? "var(--brand)" : "transparent", color: !listView ? "#fff" : "var(--text-2)" }}>
-                <LayoutGrid size={14} /> משבצות
-              </button>
-              <button onClick={() => setListView(true)} aria-pressed={listView}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1 transition"
-                style={{ background: listView ? "var(--brand)" : "transparent", color: listView ? "#fff" : "var(--text-2)" }}>
-                <List size={14} /> רשימה
-              </button>
-            </div>
           </div>
 
           {/* Transparency line — kills the "must I like everything?" worry: the trip
