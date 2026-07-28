@@ -9,23 +9,6 @@ const INTERESTS = ["טבע", "אוכל", "תרבות", "קניות", "ספורט
   "מוזיקה", "חיי לילה", "מחזמר ותיאטרון", "בלט ואופרה", "וינטג'", "יוקרה", "מוזיאונים"];
 const PACES = ["רגוע", "בינוני", "אינטנסיבי"] as const;
 const BUDGETS = ["חסכוני", "בינוני", "מפנק"] as const;
-const LODGINGS = ["מלון", "אירבנב", "צימר", "מעורב"];
-const ACCESSIBILITY = ["כיסא גלגלים", "ללא מדרגות", "נגיש לעגלה", "שמיעה/ראייה"];
-const DIETARY = ["ללא גלוטן", "צמחוני", "טבעוני", "כשר", "ללא לקטוז"];
-
-function Chip({ on, children, onClick }: { on: boolean; children: React.ReactNode; onClick: () => void }) {
-  return (
-    <button onClick={onClick}
-      className="rounded-full px-3.5 py-1.5 text-[14px] transition"
-      style={{
-        background: on ? "var(--brand)" : "var(--surface)",
-        color: on ? "#fff" : "var(--text-2)",
-        border: `1px solid ${on ? "var(--brand)" : "var(--border)"}`,
-      }}>
-      {children}
-    </button>
-  );
-}
 
 function Seg<T extends string>({ value, options, onChange }: { value: T; options: readonly T[]; onChange: (v: T) => void }) {
   return (
@@ -52,8 +35,6 @@ export function ProfileEditor({ value: p, onChange: save }: {
   value: FamilyProfile;
   onChange: (p: FamilyProfile) => void;
 }) {
-  const toggle = (list: string[], v: string) =>
-    list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
   // One tri-state preference list (no more separate likes/dislikes):
   // ניטרלי → מעוניין → לא מעוניין → ניטרלי.
   const catState = (v: string): "yes" | "no" | "none" =>
@@ -145,17 +126,6 @@ export function ProfileEditor({ value: p, onChange: save }: {
 
       <section>
         <div className="mb-1 flex items-center justify-between">
-          <label className="text-[15px] font-medium">זמן נסיעה לכל כיוון</label>
-          <span className="text-[14px] text-[var(--brand-ink)]">עד {p.dailyDriveHours} שעות</span>
-        </div>
-        <p className="mb-2 text-[13px] text-[var(--text-3)]">עד כמה רחוק מהבסיס מוכנים לנסוע לטיול-יום (כיוון אחד)</p>
-        <input type="range" min={0.5} max={5} step={0.5} value={p.dailyDriveHours}
-          onChange={(e) => save({ ...p, dailyDriveHours: Number(e.target.value) })}
-          className="w-full accent-[var(--brand)]" />
-      </section>
-
-      <section>
-        <div className="mb-1 flex items-center justify-between">
           <label className="text-[15px] font-medium">כמה ללכת ברגל בין מקומות</label>
           <span className="text-[14px] text-[var(--brand-ink)]">{WALK_PREF_LABEL_HE[p.walkPref ?? DEFAULT_WALK_PREF]}</span>
         </div>
@@ -167,35 +137,6 @@ export function ProfileEditor({ value: p, onChange: save }: {
           className="w-full accent-[var(--brand)]" />
         <div className="mt-1 flex justify-between px-0.5 text-[11px] text-[var(--text-3)]">
           <span>🚌 פחות</span><span>🚶 יותר</span>
-        </div>
-      </section>
-
-      <section>
-        <label className="mb-2 block text-[15px] font-medium">סגנון לינה</label>
-        <div className="flex flex-wrap gap-2">
-          {LODGINGS.map((v) => (
-            <Chip key={v} on={p.lodging === v} onClick={() => save({ ...p, lodging: v })}>{v}</Chip>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <label className="mb-2 block text-[15px] font-medium">נגישות</label>
-        <div className="flex flex-wrap gap-2">
-          {ACCESSIBILITY.map((v) => (
-            <Chip key={v} on={(p.accessibility ?? []).includes(v)}
-              onClick={() => save({ ...p, accessibility: toggle(p.accessibility ?? [], v) })}>{v}</Chip>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <label className="mb-2 block text-[15px] font-medium">תזונה</label>
-        <div className="flex flex-wrap gap-2">
-          {DIETARY.map((v) => (
-            <Chip key={v} on={(p.dietary ?? []).includes(v)}
-              onClick={() => save({ ...p, dietary: toggle(p.dietary ?? [], v) })}>{v}</Chip>
-          ))}
         </div>
       </section>
     </div>
