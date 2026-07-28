@@ -165,13 +165,14 @@ function HeartToggle({ liked, onClick, disabled }: { liked: boolean; onClick: ()
 // tours the WHOLE area (a half/full-day block the builder composes), and expanding
 // reveals its member places, each likeable on its own. Members are deduped OUT of
 // the flat list (they live only inside their neighbourhood).
-function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea, onToggleMember, onFocus, locked, insights = {} }: {
+function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea, onToggleMember, onFocus, onMemberFocus, locked, insights = {} }: {
   areas: AreaCard[]; chosenIds: Set<number>;
   attrById: Map<number, Attraction>;
   isPicked: (id: number) => boolean;
   onToggleArea: (id: number) => void;
   onToggleMember: (id: number) => void;
   onFocus: (a: AreaCard) => void;
+  onMemberFocus?: (m: Attraction) => void;   // fly the map to a clicked member (like a flat card)
   locked?: boolean;
   insights?: Record<number, Insight[]>;
 }) {
@@ -252,8 +253,8 @@ function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea,
                       <div key={m.id} className="overflow-hidden rounded-[10px] border bg-[var(--surface)]"
                         style={{ borderColor: picked ? "var(--brand)" : "var(--border)" }}>
                         <div className="flex items-center gap-2.5 p-1.5">
-                          <button onClick={() => canExpand && setOpenMemberId(openM ? null : m.id)} disabled={!canExpand}
-                            className="flex min-w-0 flex-1 items-center gap-2.5 text-right disabled:cursor-default">
+                          <button onClick={() => { onMemberFocus?.(m); if (canExpand) setOpenMemberId(openM ? null : m.id); }}
+                            className="flex min-w-0 flex-1 items-center gap-2.5 text-right">
                             {m.image_url ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img src={bigImage(m.image_url, 120)} alt="" loading="lazy" className="size-11 shrink-0 rounded-[8px] object-cover" />
@@ -1284,6 +1285,7 @@ export function DestinationView({
               onToggleArea={manual ? toggleAreaManual : toggleArea}
               onToggleMember={(id) => setChoice(id, "yes")}
               onFocus={(a) => { setAreaFocus({ lat: a.lat, lng: a.lng, n: Date.now() }); if (!mapOpen) setMapOpen(true); }}
+              onMemberFocus={(m) => { setSelected(m); if (!mapOpen) setMapOpen(true); }}
               locked={!heartsEnabled} insights={insights} />
           )}
 
