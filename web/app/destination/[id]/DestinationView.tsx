@@ -714,9 +714,11 @@ export function DestinationView({
               )}
             </div>
 
-            {/* identity row — breadcrumb | title · places · badges, all inline */}
-            <div className="flex flex-col gap-3 lg:pr-[176px]">
-              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            {/* identity row — breadcrumb | title · places · badges, all inline. Only the
+                breadcrumb clears the image (pr); the ①/② step rows below the image align
+                flush right, right under it. */}
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 lg:pr-[176px]">
                 <Link href="/" className="eyebrow inline-flex items-center gap-1 text-[var(--text-2)]">
                   <ChevronRight size={14} /> בית
                 </Link>
@@ -797,6 +799,18 @@ export function DestinationView({
                       <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-bold text-white">2</span>
                       הדגישו מה שאוהבים:
                     </span>
+                    {/* select-all shortcut — leads the row: pick everything in one tap */}
+                    {(() => {
+                      const allOn = govInterests.length > 0 && govInterests.every((it) => boosts.has(it.key));
+                      return (
+                        <button onClick={() => setBoosts(allOn ? new Set() : new Set(govInterests.map((it) => it.key)))}
+                          className="rounded-full border px-3 py-1 text-[12.5px] font-semibold transition"
+                          style={{ background: allOn ? "var(--brand)" : "var(--surface)",
+                                   color: allOn ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
+                          {allOn ? "✓ הכל" : "הכל"}
+                        </button>
+                      );
+                    })()}
                     {govInterests.map((it) => {
                       const on = boosts.has(it.key);
                       return (
@@ -809,18 +823,6 @@ export function DestinationView({
                         </button>
                       );
                     })}
-                    {/* select-all shortcut — pick everything you like in one tap */}
-                    {(() => {
-                      const allOn = govInterests.length > 0 && govInterests.every((it) => boosts.has(it.key));
-                      return (
-                        <button onClick={() => setBoosts(allOn ? new Set() : new Set(govInterests.map((it) => it.key)))}
-                          className="rounded-full border px-3 py-1 text-[12.5px] font-semibold transition"
-                          style={{ background: allOn ? "var(--brand)" : "var(--surface)",
-                                   color: allOn ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
-                          {allOn ? "✓ הכל" : "הכל"}
-                        </button>
-                      );
-                    })()}
                   </div>
                 </div>
               )}
