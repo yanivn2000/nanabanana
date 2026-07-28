@@ -857,16 +857,10 @@ export function DestinationView({
               (breadcrumb | title · places · badges) with the destination image on
               the far right spanning it, and the interests as a full-width row
               below — no divider between the image and the info to its left. */}
-          <div className="p-3.5 lg:relative lg:p-4">
-            {/* destination image — far right, spans the header (like the trip) */}
-            <div className="hidden overflow-hidden rounded-[var(--radius-sm)] lg:absolute lg:top-4 lg:block lg:h-[76px] lg:w-[150px]"
-                 style={{ insetInlineStart: "16px" }}>
-              <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
-                orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
-            </div>
+          <div className="p-3.5 lg:p-4">
             {/* flow toggle row — the "איך בונים טיול?" explainer was removed; the numbered
                 ①②③ steps live inline with the controls below. Keeps only the mode toggle. */}
-            <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[var(--border)] pb-3 lg:pr-[176px]">
+            <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[var(--border)] pb-3">
               {/* flow toggle — GUIDED (system picks, you adjust) vs MANUAL (you pick everything) */}
               <div className="ms-auto flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
                 <button onClick={() => setManual(false)}
@@ -882,34 +876,43 @@ export function DestinationView({
               </div>
             </div>
 
-            {/* identity row — breadcrumb | title · places · badges, all inline. Only the
-                breadcrumb clears the image (pr); the ①/② step rows below the image align
-                flush right, right under it. */}
+            {/* identity — a thin breadcrumb on top, then the city NAME aligned with the top
+                of the destination image (floated right), and the "N places" count + badges
+                on their own line beneath the name. */}
             <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 lg:pr-[176px]">
-                <Link href="/" className="eyebrow inline-flex items-center gap-1 text-[var(--text-2)]">
-                  <ChevronRight size={14} /> בית
-                </Link>
-                <span className="h-3.5 w-px bg-[var(--border)]" />
-                <h1 className="serif flex items-center gap-1.5 text-[25px] font-bold leading-tight lg:text-[29px]">
-                  <span className="text-[0.72em]">{countryFlag(dest.country)}</span>
-                  {dest.city_he || dest.city}
-                </h1>
-                <span className="text-[13px] font-semibold text-[var(--text-2)]">
-                  · {dest.attraction_count.toLocaleString("he")} מקומות לגלות בעיר
-                </span>
-                {passes.length > 0 && (
-                  <button onClick={() => setShowPasses((v) => !v)}
-                    className="inline-flex items-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
-                    💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
-                  </button>
-                )}
-                {communityCount > 0 && (
-                  <Link href={`/destination/${dest.id}/trips`}
-                    className="inline-flex items-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-2 py-0.5 text-[11.5px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
-                    ❤️ {communityCount} טיולים של מטיילים
-                  </Link>
-                )}
+              <Link href="/" className="eyebrow inline-flex items-center gap-1 self-start text-[var(--text-2)]">
+                <ChevronRight size={14} /> בית
+              </Link>
+              <div className="lg:relative">
+                {/* destination image — floats to the far right, its TOP aligned with the name */}
+                <div className="hidden overflow-hidden rounded-[var(--radius-sm)] lg:absolute lg:top-0 lg:block lg:h-[76px] lg:w-[150px]"
+                     style={{ insetInlineStart: "0" }}>
+                  <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
+                    orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
+                </div>
+                <div className="flex flex-col gap-1 lg:pr-[176px]">
+                  <h1 className="serif flex items-center gap-1.5 text-[25px] font-bold leading-tight lg:text-[29px]">
+                    <span className="text-[0.72em]">{countryFlag(dest.country)}</span>
+                    {dest.city_he || dest.city}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                    <span className="text-[13px] font-semibold text-[var(--text-2)]">
+                      {dest.attraction_count.toLocaleString("he")} מקומות לגלות בעיר
+                    </span>
+                    {passes.length > 0 && (
+                      <button onClick={() => setShowPasses((v) => !v)}
+                        className="inline-flex items-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
+                        💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
+                      </button>
+                    )}
+                    {communityCount > 0 && (
+                      <Link href={`/destination/${dest.id}/trips`}
+                        className="inline-flex items-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-2 py-0.5 text-[11.5px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
+                        ❤️ {communityCount} טיולים של מטיילים
+                      </Link>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* audience tabs — pick who the trip is for (families / couples&friends).
