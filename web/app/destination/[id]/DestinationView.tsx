@@ -741,7 +741,10 @@ export function DestinationView({
                   The primary actions (show-selected · clear · build) sit at the FAR
                   side of this same line — disabled until an audience is chosen. */}
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[13.5px] font-semibold text-[var(--text-2)]">בשביל מי הטיול?</span>
+                <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--text-2)]">
+                  <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-bold text-white">1</span>
+                  בשביל מי הטיול?
+                </span>
                 {PROFILES.map((p) => {
                   const on = audience === p;
                   return (
@@ -781,13 +784,9 @@ export function DestinationView({
               {mode === "short" && (
                 <div className="flex flex-col gap-2.5">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[12.5px] text-[var(--text-3)]" title={`המקומות הבודדים מחוץ לשכונות. עוד עשרות מקומות מקובצים בתוך ${areas.length} השכונות למעלה (שכל אחת היא אזור שלם). הצ'יפים מדגישים בתוך המאגר, לא מצמצמים אותו.`}>
-                      <b className="text-[var(--text-2)]">{matchedIds.length}</b> מקומות בודדים
-                      {areas.length > 0 && <> {"+ "}<b className="text-[var(--brand-ink)]">{areas.length}</b> שכונות</>}
-                      {" "}מתאימים ל{PROFILE_HE[audience!]}
-                      {boosts.size > 0
-                        ? <> · <b className="text-[var(--accent-ink)]">{emphCount}</b> בהדגשת הבחירה שלכם</>
-                        : <> · הדגישו מה שאוהבים:</>}
+                    <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--text-2)]">
+                      <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-bold text-white">2</span>
+                      הדגישו מה שאוהבים:
                     </span>
                     {govInterests.map((it) => {
                       const on = boosts.has(it.key);
@@ -1033,9 +1032,19 @@ export function DestinationView({
             )}
           </div>
 
+          {/* the audience-fit count lives down here (not next to the step labels) */}
+          {audience && (
+            <p className="mt-3 text-[13px] text-[var(--text-2)]" title={`המקומות הבודדים מחוץ לשכונות. עוד עשרות מקומות מקובצים בתוך ${areas.length} השכונות (שכל אחת היא אזור שלם). הצ'יפים מדגישים בתוך המאגר, לא מצמצמים אותו.`}>
+              <b className="text-[var(--text)]">{matchedIds.length}</b> מקומות בודדים
+              {areas.length > 0 && <> {"+ "}<b className="text-[var(--brand-ink)]">{areas.length}</b> שכונות</>}
+              {" "}מתאימים ל{PROFILE_HE[audience]}
+              {boosts.size > 0 && <> · <b className="text-[var(--accent-ink)]">{emphCount}</b> בהדגשת הבחירה שלכם</>}
+            </p>
+          )}
+
           {/* Transparency line — kills the "must I like everything?" worry: the trip
               is composed automatically; ❤ is an optional "make sure this one's in". */}
-          <p className="mt-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2 text-[12.5px] leading-relaxed text-[var(--text-2)]">
+          <p className="mt-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2 text-[12.5px] leading-relaxed text-[var(--text-2)]">
             הטיול נבנה אוטומטית מהנושאים, השכונות שבחרתם ואתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> — הם נכנסים גם בלי סימון.
             {" "}<span className="inline-flex items-center gap-0.5 font-medium text-[var(--brand-ink)]"><Heart size={12} fill="currentColor" /> הלייק</span> הוא רק כדי לוודא שמקום מסוים ייכנס — לא חובה.
           </p>
