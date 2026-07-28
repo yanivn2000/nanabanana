@@ -932,7 +932,7 @@ export function DestinationView({
                 {!manual && (
                   <>
                     <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--text-2)]">
-                      <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-bold text-white">1</span>
+                      <span className={`grid size-5 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-bold text-white ${!audience ? "pulse-attn" : ""}`}>1</span>
                       בשביל מי הטיול?
                     </span>
                     {PROFILES.map((p) => {
@@ -983,7 +983,7 @@ export function DestinationView({
                 <div className="flex flex-col gap-2.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--text-2)]">
-                      <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-bold text-white">2</span>
+                      <span className={`grid size-5 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-bold text-white ${boosts.size === 0 ? "pulse-attn" : ""}`}>2</span>
                       הדגישו מה שאוהבים:
                     </span>
                     {/* select-all shortcut — leads the row: pick everything in one tap */}
