@@ -519,6 +519,23 @@ export function DestinationView({
     return { sortedItems: [...matched, ...dimmed], dimmedIds: new Set(dimmed.map((a) => a.id)), matchedIds: matched.map((a) => a.id), emphCount };
   }, [listItems, sort, cityTasteTagged, taste, profile.dislikes, selectedOnly, soloInterest, audience, boostMatch]);
 
+  // Header counts = the audience-fit POOL, computed straight from all attractions —
+  // deliberately IGNORING the view filters (רק אתרי חובה / search / flags) so toggling
+  // a display filter never moves the number (it's "how many fit you", not "how many are
+  // shown"). Standalone only (area members are counted inside their neighbourhood).
+  const poolStats = useMemo(() => {
+    if (!audience) return { total: 0, emph: 0 };
+    let total = 0, emph = 0;
+    for (const a of attractions) {
+      if (allAreaMemberIds.has(a.id)) continue;
+      if (audienceFit(a, audience) < AUDIENCE_FIT_FLOOR) continue;
+      if (profile.dislikes.some((it) => matchesInterest(a, it))) continue;
+      total++;
+      if (boostMatch && boostMatch(a)) emph++;
+    }
+    return { total, emph };
+  }, [attractions, audience, profile.dislikes, boostMatch, allAreaMemberIds]);
+
   // Paginate: show PAGE at a time; reset to page 1 on any change.
   useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, selectedOnly, soloInterest, profile.interests, profile.dislikes, audience, boosts]);
   // Never leave the traveler stranded in an empty "selected only" view.
@@ -1104,10 +1121,10 @@ export function DestinationView({
           {/* the audience-fit count lives down here (not next to the step labels) */}
           {audience && (
             <p className="mt-3 text-[13px] text-[var(--text-2)]" title={`המקומות הבודדים מחוץ לשכונות. עוד עשרות מקומות מקובצים בתוך ${areas.length} השכונות (שכל אחת היא אזור שלם). הצ'יפים מדגישים בתוך המאגר, לא מצמצמים אותו.`}>
-              <b className="text-[var(--text)]">{matchedIds.length}</b> מקומות בודדים
+              <b className="text-[var(--text)]">{poolStats.total}</b> מקומות בודדים
               {areas.length > 0 && <> {"+ "}<b className="text-[var(--brand-ink)]">{areas.length}</b> שכונות</>}
               {" "}מתאימים ל{PROFILE_HE[audience]}
-              {boosts.size > 0 && <> · <b className="text-[var(--accent-ink)]">{emphCount}</b> בהדגשת הבחירה שלכם</>}
+              {boosts.size > 0 && <> · <b className="text-[var(--accent-ink)]">{poolStats.emph}</b> בהדגשת הבחירה שלכם</>}
             </p>
           )}
 
