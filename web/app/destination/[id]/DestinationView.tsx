@@ -442,9 +442,9 @@ export function DestinationView({
         // the traveler marked (כן/אולי), so a lone pick is always findable.
         if (selectedOnly) return choices[a.id] === "yes";
         // a neighbourhood member isn't listed standalone — it shows inside its
-        // neighbourhood row. A search query bypasses this so any place stays findable.
-        // Manual mode has no neighbourhood rows, so members stay in the flat list.
-        if (!query && !manual && allAreaMemberIds.has(a.id)) return false;
+        // neighbourhood row (in BOTH flows). A search query bypasses this so any
+        // place stays findable.
+        if (!query && allAreaMemberIds.has(a.id)) return false;
         // solo focus: show ALL of the focused topic (matching its tile count),
         // still respecting search / map / popover flags below. It deliberately
         // bypasses the must-see toggle — otherwise soloing "אוכל 1" could show 0
@@ -468,7 +468,7 @@ export function DestinationView({
         }
         return true;
       }),
-    [attractions, mustOnly, query, flags, insights, selectedOnly, choices, profile.dislikes, soloInterest, allAreaMemberIds, manual]
+    [attractions, mustOnly, query, flags, insights, selectedOnly, choices, profile.dislikes, soloInterest, allAreaMemberIds]
   );
 
   // The list shows the filtered set, optionally narrowed to the map viewport.
@@ -608,6 +608,16 @@ export function DestinationView({
   const toggleArea = (id: number) => setChosenAreas((s) => {
     const next = new Set(s); if (next.has(id)) next.delete(id); else next.add(id); return next;
   });
+  // MANUAL flow: a neighbourhood has no "guaranteed day" (that's a governed area-group,
+  // which would break WYSIWYG) — its ❤ just bulk-marks every member as an individual pick
+  // (toggle: all-picked → clear all, else mark all). So the trip stays exactly the marks.
+  const toggleAreaManual = (id: number) => {
+    const area = areas.find((a) => a.id === id);
+    if (!area) return;
+    const ids = area.member_ids.filter((mid) => attrById.has(mid));   // only the members actually shown
+    const allPicked = ids.length > 0 && ids.every((mid) => choices[mid] === "yes");
+    setMany(ids, allPicked ? null : "yes");
+  };
 
   // ── Server preview: once an audience + topics are set, ask the engine which
   // attractions it would actually put in the trip and pre-mark their ❤ — so the
@@ -1220,10 +1230,10 @@ export function DestinationView({
           {/* neighbourhoods lead the list as "container" rows (same row design) — a
               whole-area heart tours it, expand to like specific members. Hidden while
               searching (then their members surface as normal flat results). */}
-          {!manual && !query && (
+          {!query && (
             <NeighbourhoodRows areas={areas} chosenIds={chosenAreas} attrById={attrById}
               isPicked={(id) => choices[id] === "yes"}
-              onToggleArea={toggleArea}
+              onToggleArea={manual ? toggleAreaManual : toggleArea}
               onToggleMember={(id) => setChoice(id, "yes")}
               onFocus={(a) => { setAreaFocus({ lat: a.lat, lng: a.lng, n: Date.now() }); if (!mapOpen) setMapOpen(true); }}
               locked={!heartsEnabled} />
