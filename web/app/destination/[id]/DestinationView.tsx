@@ -652,18 +652,24 @@ export function DestinationView({
   const chosenAreaMemberIds = useMemo(
     () => new Set(areas.filter((a) => chosenAreas.has(a.id)).flatMap((a) => a.member_ids)),
     [areas, chosenAreas]);
-  const toggleArea = (id: number) => setChosenAreas((s) => {
-    const next = new Set(s); if (next.has(id)) next.delete(id); else next.add(id); return next;
-  });
-  // MANUAL flow: a neighbourhood has no "guaranteed day" (that's a governed area-group,
-  // which would break WYSIWYG) — its ❤ just bulk-marks every member as an individual pick
-  // (toggle: all-picked → clear all, else mark all). So the trip stays exactly the marks.
-  const toggleAreaManual = (id: number) => {
+  // The neighbourhood ❤ is ONE clear on/off toggle. "On" = the area is chosen (guided
+  // area-day) OR any of its members is picked — the same signal the filled heart shows.
+  // Clicking a FILLED heart therefore turns EVERYTHING off (clears the member picks AND
+  // un-chooses the area), so it never stays stuck lit; clicking an empty one marks all
+  // members (and, in guided, also gives the area its guaranteed day). WYSIWYG-safe: in
+  // manual the picks ARE the trip; chosenAreas is only touched in guided.
+  const toggleAreaHeart = (id: number) => {
     const area = areas.find((a) => a.id === id);
     if (!area) return;
     const ids = area.member_ids.filter((mid) => attrById.has(mid));   // only the members actually shown
-    const allPicked = ids.length > 0 && ids.every((mid) => choices[mid] === "yes");
-    setMany(ids, allPicked ? null : "yes");
+    const on = chosenAreas.has(id) || ids.some((mid) => choices[mid] === "yes");
+    if (on) {
+      if (ids.length) setMany(ids, null);
+      setChosenAreas((s) => { if (!s.has(id)) return s; const n = new Set(s); n.delete(id); return n; });
+    } else {
+      if (ids.length) setMany(ids, "yes");
+      if (!manual) setChosenAreas((s) => new Set(s).add(id));
+    }
   };
 
   // ── Server preview: once an audience + topics are set, ask the engine which
@@ -1282,7 +1288,7 @@ export function DestinationView({
           {!query && (
             <NeighbourhoodRows areas={areas} chosenIds={chosenAreas} attrById={attrById}
               isPicked={(id) => choices[id] === "yes"}
-              onToggleArea={manual ? toggleAreaManual : toggleArea}
+              onToggleArea={toggleAreaHeart}
               onToggleMember={(id) => setChoice(id, "yes")}
               onFocus={(a) => { setAreaFocus({ lat: a.lat, lng: a.lng, n: Date.now() }); if (!mapOpen) setMapOpen(true); }}
               onMemberFocus={(m) => { setSelected(m); if (!mapOpen) setMapOpen(true); }}
