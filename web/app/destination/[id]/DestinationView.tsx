@@ -895,29 +895,54 @@ export function DestinationView({
                       ✍️ בנייה חופשית
                     </button>
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 ms-auto">
-                    <span className="text-[13px] font-semibold text-[var(--text-2)]">
-                      {dest.attraction_count.toLocaleString("he")} מקומות לגלות בעיר
-                    </span>
-                    {passes.length > 0 && (
-                      <button onClick={() => setShowPasses((v) => !v)}
-                        className="inline-flex items-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
-                        💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
+                  {/* actions — build (prominent) + show-selected + clear, pushed left,
+                      ABOVE the places-count / badges meta row below. */}
+                  <div ref={topCtaRef} className="flex items-center gap-2 ms-auto">
+                    <button onClick={toggleSelectedOnly} disabled={yesCount === 0}
+                      className="rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
+                      style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)",
+                               color: selectedOnly ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
+                      {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
+                    </button>
+                    <button onClick={clearAllChoices} disabled={yesCount === 0}
+                      title="נקה את כל הסימונים ששמורים לעיר"
+                      className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-3)]">
+                      <X size={13} /> נקה
+                    </button>
+                    <span className={`inline-flex rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
+                      <button onClick={() => openBuild()} disabled={!canBuild}
+                        title={manual ? (canBuild ? "" : `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`) : !audience ? "קודם בחרו בשביל מי הטיול" : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : ""}
+                        className="flex items-center gap-1.5 rounded-full px-5 py-1.5 text-[13.5px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
+                        style={canBuild
+                          ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" }
+                          : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
+                        <Sparkles size={15} /> בנו לי טיול{manual && !canBuild ? ` · ${yesCount}/${MANUAL_MIN}` : ""}
                       </button>
-                    )}
-                    {communityCount > 0 && (
-                      <Link href={`/destination/${dest.id}/trips`}
-                        className="inline-flex items-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-2 py-0.5 text-[11.5px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
-                        ❤️ {communityCount} טיולים של מטיילים
-                      </Link>
-                    )}
+                    </span>
                   </div>
+                </div>
+                {/* meta — places count + pass/community badges, on their own line below the actions */}
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                  <span className="text-[13px] font-semibold text-[var(--text-2)]">
+                    {dest.attraction_count.toLocaleString("he")} מקומות לגלות בעיר
+                  </span>
+                  {passes.length > 0 && (
+                    <button onClick={() => setShowPasses((v) => !v)}
+                      className="inline-flex items-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
+                      💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
+                    </button>
+                  )}
+                  {communityCount > 0 && (
+                    <Link href={`/destination/${dest.id}/trips`}
+                      className="inline-flex items-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-2 py-0.5 text-[11.5px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
+                      ❤️ {communityCount} טיולים של מטיילים
+                    </Link>
+                  )}
                 </div>
               </div>
 
-              {/* audience tabs — pick who the trip is for (families / couples&friends).
-                  Extra top margin on desktop gives air below the floated city image. */}
-              <div className="flex flex-wrap items-center gap-2 lg:mt-3">
+              {/* audience tabs — pick who the trip is for (families / couples&friends). */}
+              <div className="flex flex-wrap items-center gap-2">
                 {!manual && (
                   <>
                     <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--text-2)]">
@@ -982,32 +1007,6 @@ export function DestinationView({
               {!manual && mode === "choose" && (
                 <p className="text-[13px] text-[var(--text-3)]">בחרו למי הטיול — ונראה לכם את המקומות שהכי אהובים על אנשים כמוכם.</p>
               )}
-
-              {/* actions — "הצג נבחרים · נקה" on the right, the build CTA pushed to the left */}
-              <div ref={topCtaRef} className="flex flex-wrap items-center gap-2 pt-0.5">
-                <button onClick={toggleSelectedOnly} disabled={yesCount === 0}
-                  className="rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
-                  style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)",
-                           color: selectedOnly ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
-                  {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
-                </button>
-                <button onClick={clearAllChoices} disabled={yesCount === 0}
-                  title="נקה את כל הסימונים ששמורים לעיר"
-                  className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-3)]">
-                  <X size={13} /> נקה
-                </button>
-                {/* THE primary action — accent (terracotta) so it stands apart as the one thing to do next. */}
-                <span className={`ms-auto inline-flex rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
-                  <button onClick={() => openBuild()} disabled={!canBuild}
-                    title={manual ? (canBuild ? "" : `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`) : !audience ? "קודם בחרו בשביל מי הטיול" : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : ""}
-                    className="flex items-center gap-1.5 rounded-full px-6 py-2 text-[14px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
-                    style={canBuild
-                      ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" }
-                      : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
-                    <Sparkles size={15} /> בנו לי טיול{manual && !canBuild ? ` · ${yesCount}/${MANUAL_MIN}` : ""}
-                  </button>
-                </span>
-              </div>
             </div>
           </div>
         </div>
