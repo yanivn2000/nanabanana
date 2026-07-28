@@ -531,6 +531,7 @@ export function DestinationView({
   // Require at least one "אוהבים" topic before building — otherwise everyone with the
   // same audience gets the identical trip. Gates the build CTA + reveals step ③.
   const readyToBuild = !!audience && boosts.size > 0;
+
   const belowLabel = audience
     ? `פחות מתאים ל${PROFILE_HE[audience]} — אפשר בכל זאת לסמן`
     : "מחוץ להעדפות שלכם — אפשר בכל זאת לסמן";
@@ -563,6 +564,45 @@ export function DestinationView({
   const toggleArea = (id: number) => setChosenAreas((s) => {
     const next = new Set(s); if (next.has(id)) next.delete(id); else next.add(id); return next;
   });
+
+  // ── Server preview: once an audience + topics are set, ask the engine which
+  // attractions it would actually put in the trip and pre-mark their ❤ — so the
+  // traveller SEES the system's picks and can add/remove before building. Debounced;
+  // runs a real (throwaway) build so the marks match exactly what "בנו לי טיול" picks.
+  const autoPickRef = useRef<Set<number>>(new Set());
+  const boostsKey = [...boosts].sort().join(",");
+  const areasKey = [...chosenAreas].sort().join(",");
+  useEffect(() => {
+    if (!audience || boosts.size === 0) {
+      if (autoPickRef.current.size) { setMany([...autoPickRef.current], null); autoPickRef.current = new Set(); }
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const buildTaste: Record<string, number> = { ...taste };
+        for (const k of boosts) for (const tg of (INTEREST_TASTE[k] ?? [])) buildTaste[tg] = (buildTaste[tg] ?? 0) + 3;
+        const areaList = areas.filter((a) => chosenAreas.has(a.id));
+        const res = await fetch("/api/itinerary", { method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ mode: "generate", city: dest.city, days: buildDays, month: new Date().getMonth() + 1,
+            taste: buildTaste, isFamily: profile.kids.length > 0 || audience === "families",
+            pace: buildPace, walkPref: profile.walkPref, interests: [...boosts], audience,
+            ...(areaList.length ? { areaGroups: areaList.map((a) => a.member_ids), areaIds: areaList.map((a) => a.id) } : {}) }) });
+        const data = await res.json().catch(() => null);
+        if (cancelled || !data?.itinerary) return;
+        const ids = new Set<number>();
+        for (const d of data.itinerary.days ?? [])
+          for (const s of d.stops ?? [])
+            if (s.id != null && attrById.has(s.id)) ids.add(s.id);
+        const stale = [...autoPickRef.current].filter((id) => !ids.has(id));
+        if (stale.length) setMany(stale, null);
+        if (ids.size) setMany([...ids], "yes");
+        autoPickRef.current = ids;
+      } catch { /* preview is best-effort */ }
+    }, 500);
+    return () => { cancelled = true; clearTimeout(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audience, boostsKey, areasKey, buildDays, dest.city]);
   // Mobile: the 240px sticky map strip eats most of the screen — let the
   // traveler collapse it. Desktop always shows the map rail. A window resize
   // event after the toggle makes Leaflet re-measure its container.
