@@ -49,7 +49,6 @@ export default function RecommendPage() {
         <span className="flex items-center gap-2 text-[14px] text-[var(--text-2)]">
           <Users size={15} /> {profileSummary(profile)}
         </span>
-        <Link href="/profile" className="text-[13px] text-[var(--accent-ink)]">ערוך פרופיל</Link>
       </div>
 
       <div className="mt-4">

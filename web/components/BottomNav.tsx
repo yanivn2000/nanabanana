@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Briefcase, User } from "lucide-react";
+import { Home, Briefcase } from "lucide-react";
 import { FeedbackWidget } from "./FeedbackWidget";
+import { AuthButton } from "./AuthButton";
 
 const ITEMS = [
   { href: "/", label: "בית", Icon: Home },
   { href: "/trips", label: "הטיולים שלי", Icon: Briefcase },
-  { href: "/profile", label: "פרופיל", Icon: User },
 ];
 
 export function BottomNav() {
@@ -33,6 +33,11 @@ export function BottomNav() {
           );
         })}
         <FeedbackWidget variant="tab" />
+        {/* login / account — the top bar is desktop-only, so mobile sign-in lives here
+            (it was on the removed /profile page before). */}
+        <div className="flex items-center">
+          <AuthButton showEmail />
+        </div>
       </div>
     </nav>
   );

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Briefcase, User } from "lucide-react";
+import { Home, Briefcase } from "lucide-react";
 import { AuthButton } from "./AuthButton";
 import { FeedbackWidget } from "./FeedbackWidget";
 import { YalleMark } from "./YalleMark";
@@ -10,7 +10,6 @@ import { YalleMark } from "./YalleMark";
 const ITEMS = [
   { href: "/", label: "בית", Icon: Home },
   { href: "/trips", label: "הטיולים שלי", Icon: Briefcase },
-  { href: "/profile", label: "פרופיל", Icon: User },
 ];
 
 // Desktop-only top navigation bar (mobile uses BottomNav).
