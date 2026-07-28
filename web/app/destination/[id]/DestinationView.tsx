@@ -536,6 +536,17 @@ export function DestinationView({
     return { total, emph };
   }, [attractions, audience, profile.dislikes, boostMatch, allAreaMemberIds]);
 
+  // How many of the attractions the system actually put IN the trip (the pre-marked
+  // ❤) match the chosen topics — the honest "your emphasis added N places" number,
+  // NOT how many such places exist city-wide. Includes ones pulled beyond the browse
+  // list (interest venues), as long as they were marked.
+  const emphInTrip = useMemo(() => {
+    if (!boostMatch) return 0;
+    let n = 0;
+    for (const a of attractions) if (choices[a.id] === "yes" && boostMatch(a)) n++;
+    return n;
+  }, [attractions, choices, boostMatch]);
+
   // Paginate: show PAGE at a time; reset to page 1 on any change.
   useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, selectedOnly, soloInterest, profile.interests, profile.dislikes, audience, boosts]);
   // Never leave the traveler stranded in an empty "selected only" view.
@@ -1121,7 +1132,7 @@ export function DestinationView({
               <b className="text-[var(--text)]">{poolStats.total}</b> מקומות בודדים
               {areas.length > 0 && <> {"+ "}<b className="text-[var(--brand-ink)]">{areas.length}</b> שכונות</>}
               {" "}מתאימים ל{PROFILE_HE[audience]}
-              {boosts.size > 0 && <> · <b className="text-[var(--accent-ink)]">{poolStats.emph}</b> בהדגשת הבחירה שלכם</>}
+              {boosts.size > 0 && <> · <b className="text-[var(--accent-ink)]">{emphInTrip}</b> מודגשים בטיול לפי הבחירה שלכם</>}
             </p>
           )}
 
