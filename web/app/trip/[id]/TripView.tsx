@@ -182,7 +182,7 @@ export function TripView({ tripId }: { tripId: string }) {
   const [dayIdx, setDayIdx] = useState(0);                 // one day on screen — pager
   const [mobileTab, setMobileTab] = useState<"plan" | "map">("plan");
   const [datesOpen, setDatesOpen] = useState(false);         // dates aren't permanent — a popover
-  const [focus, setFocus] = useState<{ lat: number; lng: number; n: number } | null>(null);
+  const [focus, setFocus] = useState<{ lat: number; lng: number; n: number; keepZoom?: boolean } | null>(null);
   // A bank ("לא נכנסו") card the user is pointing at — highlight its marker on the map,
   // exactly like hovering a scheduled stop lights up its pin.
   const [hoverBankId, setHoverBankId] = useState<number | null>(null);
@@ -1136,7 +1136,10 @@ export function TripView({ tripId }: { tripId: string }) {
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
                     <div className={`group/row -mx-2 flex gap-2 rounded-[12px] px-2 transition-colors lg:gap-3 ${hasDetails ? "cursor-pointer" : ""}`}
                          style={{ background: isActive ? `color-mix(in srgb, ${col} 12%, transparent)` : "transparent" }}
-                         onMouseEnter={() => ci != null && setActive(ci)}
+                         onMouseEnter={() => { if (ci != null) { setActive(ci);
+                           // slide the map toward the hovered stop (keeping the day
+                           // overview) — same idea as a bank card centring its place.
+                           if (s.lat != null && s.lng != null) setFocus({ lat: s.lat, lng: s.lng, n: Date.now(), keepZoom: true }); } }}
                          onMouseLeave={() => setActive(null)}
                          onClick={() => hasDetails && setExpanded(isOpen ? null : key)}>
                       {/* leading controls — both appear on row hover, side by side with a

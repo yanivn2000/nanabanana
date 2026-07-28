@@ -83,16 +83,18 @@ function FitBounds({
 }
 
 // Flies to a focused point (e.g. a hotel clicked in the list). The nonce
-// retriggers the fly even when the same hotel is clicked again.
-function FlyTo({ focus }: { focus: { lat: number; lng: number; n: number } | null }) {
+// retriggers the fly even when the same hotel is clicked again. `keepZoom` pans
+// without zooming in — used when hovering an itinerary stop (keep the day overview).
+function FlyTo({ focus }: { focus: { lat: number; lng: number; n: number; keepZoom?: boolean } | null }) {
   const map = useMap();
   useEffect(() => {
     if (!focus || !Number.isFinite(focus.lat) || !Number.isFinite(focus.lng)) return;
     const to: [number, number] = [focus.lat, focus.lng];
+    const z = focus.keepZoom ? map.getZoom() : 15;
     // flyTo reads map.getCenter() (throws if the current view is NaN); fall back to
     // a non-animated setView so a not-yet-sized map can't crash the click.
-    try { map.flyTo(to, 15, { duration: 0.7 }); }
-    catch { map.setView(to, 15, { animate: false }); }
+    try { map.flyTo(to, z, { duration: focus.keepZoom ? 0.4 : 0.7 }); }
+    catch { map.setView(to, z, { animate: false }); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus?.n]);
   return null;
@@ -241,7 +243,7 @@ export default function AttractionsMap({
   selected: Attraction | null;
   ordered?: boolean;
   hotels?: MapHotel[];
-  focus?: { lat: number; lng: number; n: number } | null;
+  focus?: { lat: number; lng: number; n: number; keepZoom?: boolean } | null;
   segIdx?: number[];
   colorBySegment?: boolean;
   colors?: string[];              // explicit per-stop colour (trip view: the day palette)
