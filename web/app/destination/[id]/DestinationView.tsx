@@ -1137,8 +1137,10 @@ export function DestinationView({
             )}
           </div>
 
-          {/* the audience-fit count lives down here (not next to the step labels) */}
-          {audience && (
+          {/* the audience-fit count lives down here (not next to the step labels). Shown
+              only once the flow is complete (audience + ≥1 topic) so clearing the topics
+              hides it too — same as clearing the audience. */}
+          {readyToBuild && (
             <p className="mt-3 text-[13px] text-[var(--text-2)]" title={`המקומות הבודדים מחוץ לשכונות. עוד עשרות מקומות מקובצים בתוך ${areas.length} השכונות (שכל אחת היא אזור שלם). הצ'יפים מדגישים בתוך המאגר, לא מצמצמים אותו.`}>
               <b className="text-[var(--text)]">{poolStats.total}</b> מקומות בודדים
               {areas.length > 0 && <> {"+ "}<b className="text-[var(--brand-ink)]">{areas.length}</b> שכונות</>}
@@ -1147,11 +1149,11 @@ export function DestinationView({
             </p>
           )}
 
-          {/* Transparency line — kills the "must I like everything?" worry: the trip
-              is composed automatically; ❤ is an optional "make sure this one's in". */}
+          {/* Transparency line — explains the pre-marked ❤: they ARE the trip's places
+              (the system chose them for you), and you add/remove to shape it. */}
           <p className="mt-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2 text-[12.5px] leading-relaxed text-[var(--text-2)]">
-            הטיול נבנה אוטומטית מהנושאים, השכונות שבחרתם ואתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> — הם נכנסים גם בלי סימון.
-            {" "}<span className="inline-flex items-center gap-0.5 font-medium text-[var(--brand-ink)]"><Heart size={12} fill="currentColor" /> הלייק</span> הוא רק כדי לוודא שמקום מסוים ייכנס — לא חובה.
+            המקומות המסומנים <span className="inline-flex items-center gap-0.5 font-medium text-[var(--brand-ink)]"><Heart size={12} fill="currentColor" /></span> הם מה שייכנס לטיול — בחרנו לכם אותם לפי הקהל, הנושאים והשכונות.
+            {" "}הוסיפו מקומות שאהבתם או הסירו, ואז "בנו לי טיול". אתרי חובה <span className="text-[var(--accent-ink)]">⭐</span> נכנסים בכל מקרה.
           </p>
 
           {/* the whole list fades out → in while the preview re-chooses, so a topic
