@@ -864,29 +864,9 @@ export function DestinationView({
               <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
                 orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
             </div>
-            {/* the flow overview — ALWAYS visible (so picking an audience doesn't make
-                the whole header jump), matching the numbered steps below. */}
-            <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[var(--border)] pb-3 text-[15px] text-[var(--text-2)] lg:pr-[176px]">
-              <span className="text-[16px] font-bold text-[var(--brand-ink)]">איך בונים טיול?</span>
-              {manual ? (
-                <span className="inline-flex items-center gap-1.5">
-                  סמנו <Heart size={13} className="text-[var(--brand-ink)]" fill="currentColor" /> לפחות {MANUAL_MIN} מקומות שתרצו בטיול, ואז &quot;בנו לי טיול&quot;
-                  <span className="font-semibold text-[var(--brand-ink)]">· {yesCount}/{MANUAL_MIN}</span>
-                </span>
-              ) : (
-                <>
-                  <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">1</b> בחרו בשביל מי הטיול</span>
-                  <ChevronRight size={16} className="text-[var(--text-3)]" />
-                  <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">2</b> הדגישו מה שאוהבים</span>
-                  {/* step ③ appears only once a topic is picked — the nudge to not leave it empty */}
-                  {boosts.size > 0 && (
-                    <>
-                      <ChevronRight size={16} className="text-[var(--text-3)]" />
-                      <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--accent)] text-[12px] font-bold text-white">3</b> לחצו על &quot;בנו לי טיול&quot;</span>
-                    </>
-                  )}
-                </>
-              )}
+            {/* flow toggle row — the "איך בונים טיול?" explainer was removed; the numbered
+                ①②③ steps live inline with the controls below. Keeps only the mode toggle. */}
+            <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[var(--border)] pb-3 lg:pr-[176px]">
               {/* flow toggle — GUIDED (system picks, you adjust) vs MANUAL (you pick everything) */}
               <div className="ms-auto flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
                 <button onClick={() => setManual(false)}
@@ -911,7 +891,7 @@ export function DestinationView({
                   <ChevronRight size={14} /> בית
                 </Link>
                 <span className="h-3.5 w-px bg-[var(--border)]" />
-                <h1 className="serif flex items-center gap-1.5 text-[20px] font-bold leading-tight lg:text-[22px]">
+                <h1 className="serif flex items-center gap-1.5 text-[25px] font-bold leading-tight lg:text-[29px]">
                   <span className="text-[0.72em]">{countryFlag(dest.country)}</span>
                   {dest.city_he || dest.city}
                 </h1>
