@@ -695,16 +695,16 @@ export function DestinationView({
               <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
                 orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
             </div>
-            {mode === "short" && yesCount === 0 && (
-              <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[var(--border)] pb-3 text-[15px] text-[var(--text-2)] lg:pr-[176px]">
-                <span className="text-[16px] font-bold text-[var(--brand-ink)]">איך בונים טיול?</span>
-                <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">1</b> בחרו נושאים שאתם אוהבים</span>
-                <ChevronRight size={16} className="text-[var(--text-3)]" />
-                <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">2</b> תנו ❤ לייק לאטרקציות שאהבתם</span>
-                <ChevronRight size={16} className="text-[var(--text-3)]" />
-                <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">3</b> נרכיב לכם את הטיול</span>
-              </div>
-            )}
+            {/* the flow overview — ALWAYS visible (so picking an audience doesn't make
+                the whole header jump), matching the numbered steps below. */}
+            <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[var(--border)] pb-3 text-[15px] text-[var(--text-2)] lg:pr-[176px]">
+              <span className="text-[16px] font-bold text-[var(--brand-ink)]">איך בונים טיול?</span>
+              <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">1</b> בחרו בשביל מי הטיול</span>
+              <ChevronRight size={16} className="text-[var(--text-3)]" />
+              <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">2</b> הדגישו מה שאוהבים</span>
+              <ChevronRight size={16} className="text-[var(--text-3)]" />
+              <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">3</b> לחצו על &quot;בנו לי טיול&quot;</span>
+            </div>
 
             {/* identity row — breadcrumb | title · places · badges, all inline */}
             <div className="flex flex-col gap-3 lg:pr-[176px]">
