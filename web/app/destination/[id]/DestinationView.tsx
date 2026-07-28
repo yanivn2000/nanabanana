@@ -793,9 +793,6 @@ export function DestinationView({
                 <span className="text-[13px] font-semibold text-[var(--text-2)]">
                   · {dest.attraction_count.toLocaleString("he")} מקומות לגלות בעיר
                 </span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--brand-ink)]">
-                  <Sparkles size={11} /> מותאם לפרופיל שלכם
-                </span>
                 {passes.length > 0 && (
                   <button onClick={() => setShowPasses((v) => !v)}
                     className="inline-flex items-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
