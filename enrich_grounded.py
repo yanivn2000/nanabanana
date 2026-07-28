@@ -116,6 +116,9 @@ def _he_intro_text(ht):
 def _para(text, target=700, floor=260):
     """One encyclopedic paragraph: accumulate lead paragraphs until ~floor chars,
     then stop; hard-cap near target, trimmed back to a sentence boundary."""
+    # strip Hebrew-Wikipedia editorial markers that survive plaintext extraction
+    # ([דרוש מקור] = "citation needed", [עריכה] = "edit", [1] refs, etc.)
+    text=re.sub(r"\s*\[(?:דרוש מקור|דרושה הבהרה|מקור|עריכה|\d+)\]", "", text)
     paras=[p.strip() for p in re.split(r"\n+", text.strip()) if p.strip()]
     out=""
     for p in paras:
