@@ -135,11 +135,11 @@ function ChoiceBtn({ tone, active, onClick, icon, label }: {
 
 // A single LIKE toggle replaces the כן/לא pair: liked = the place is "in" (choice
 // "yes"); un-liked = simply unmarked (no preference), so the builder just ignores it.
-function LikeBtn({ liked, onClick }: { liked: boolean; onClick: () => void }) {
+function LikeBtn({ liked, onClick, disabled }: { liked: boolean; onClick: () => void; disabled?: boolean }) {
   return (
-    <button onClick={(e) => { e.stopPropagation(); onClick(); }}
-      aria-pressed={liked}
-      className="flex w-full items-center justify-center gap-1.5 rounded-full border py-1.5 text-[13px] font-medium transition"
+    <button onClick={(e) => { e.stopPropagation(); onClick(); }} disabled={disabled}
+      aria-pressed={liked} title={disabled ? "בחרו קהל ותחום כדי לבחור מקומות" : undefined}
+      className="flex w-full items-center justify-center gap-1.5 rounded-full border py-1.5 text-[13px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
       style={{ background: liked ? "var(--brand)" : "var(--surface)", color: liked ? "#fff" : "var(--text-2)",
                borderColor: liked ? "var(--brand)" : "var(--border)" }}>
       <Heart size={14} fill={liked ? "currentColor" : "none"} /> {liked ? "אהבתי" : "לייק"}
@@ -149,11 +149,11 @@ function LikeBtn({ liked, onClick }: { liked: boolean; onClick: () => void }) {
 
 // Compact like — a heart that lives ON the card frame (list rows), so a row
 // costs no extra full-width strip of air. Filled + brand when liked.
-function HeartToggle({ liked, onClick }: { liked: boolean; onClick: () => void }) {
+function HeartToggle({ liked, onClick, disabled }: { liked: boolean; onClick: () => void; disabled?: boolean }) {
   return (
-    <button onClick={(e) => { e.stopPropagation(); onClick(); }} aria-pressed={liked}
-      aria-label={liked ? "אהבתי" : "לייק"} title={liked ? "אהבתי" : "לייק"}
-      className="grid shrink-0 place-items-center self-stretch px-3.5 transition hover:bg-[var(--surface-2)]"
+    <button onClick={(e) => { e.stopPropagation(); onClick(); }} aria-pressed={liked} disabled={disabled}
+      aria-label={liked ? "אהבתי" : "לייק"} title={disabled ? "בחרו קהל ותחום כדי לבחור מקומות" : liked ? "אהבתי" : "לייק"}
+      className="grid shrink-0 place-items-center self-stretch px-3.5 transition hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
       style={{ color: liked ? "var(--brand)" : "var(--text-3)" }}>
       <Heart size={20} fill={liked ? "currentColor" : "none"} />
     </button>
@@ -165,13 +165,14 @@ function HeartToggle({ liked, onClick }: { liked: boolean; onClick: () => void }
 // tours the WHOLE area (a half/full-day block the builder composes), and expanding
 // reveals its member places, each likeable on its own. Members are deduped OUT of
 // the flat list (they live only inside their neighbourhood).
-function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea, onToggleMember, onFocus }: {
+function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea, onToggleMember, onFocus, locked }: {
   areas: AreaCard[]; chosenIds: Set<number>;
   attrById: Map<number, Attraction>;
   isPicked: (id: number) => boolean;
   onToggleArea: (id: number) => void;
   onToggleMember: (id: number) => void;
   onFocus: (a: AreaCard) => void;
+  locked?: boolean;
 }) {
   const [openId, setOpenId] = useState<number | null>(null);
   if (!areas.length) return null;
@@ -220,9 +221,9 @@ function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea,
               </button>
               {/* the container's "heart" — tour the WHOLE neighbourhood. Filled solid
                   whenever the area is toured OR has ≥1 picked member inside. */}
-              <button onClick={() => onToggleArea(area.id)} aria-pressed={toured}
-                aria-label={toured ? "מטיילים בכל השכונה" : "טיילו בכל השכונה"} title={toured ? "מטיילים בכל השכונה" : "טיילו בכל השכונה"}
-                className="grid shrink-0 place-items-center self-stretch px-3.5 transition hover:bg-[var(--surface-2)]"
+              <button onClick={() => onToggleArea(area.id)} aria-pressed={toured} disabled={locked}
+                aria-label={toured ? "מטיילים בכל השכונה" : "טיילו בכל השכונה"} title={locked ? "בחרו קהל ותחום כדי לבחור מקומות" : toured ? "מטיילים בכל השכונה" : "טיילו בכל השכונה"}
+                className="grid shrink-0 place-items-center self-stretch px-3.5 transition hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                 style={{ color: active ? "var(--brand)" : "var(--text-3)" }}>
                 <Heart size={20} fill={active ? "currentColor" : "none"} />
               </button>
@@ -256,9 +257,9 @@ function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea,
                             {CAT_HE[cat] ?? m.category}{m.tagline_he ? ` · ${m.tagline_he}` : ""}
                           </p>
                         </div>
-                        <button onClick={() => onToggleMember(m.id)} aria-pressed={picked}
-                          aria-label={picked ? "אהבתי" : "לייק"} title={picked ? "אהבתי" : "לייק"}
-                          className="grid size-9 shrink-0 place-items-center rounded-full transition hover:bg-[var(--surface-2)]"
+                        <button onClick={() => onToggleMember(m.id)} aria-pressed={picked} disabled={locked}
+                          aria-label={picked ? "אהבתי" : "לייק"} title={locked ? "בחרו קהל ותחום כדי לבחור מקומות" : picked ? "אהבתי" : "לייק"}
+                          className="grid size-9 shrink-0 place-items-center rounded-full transition hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                           style={{ color: picked || toured ? "var(--brand)" : "var(--text-3)" }}>
                           <Heart size={18} fill={picked || toured ? "currentColor" : "none"} />
                         </button>
@@ -365,6 +366,11 @@ export function DestinationView({
   // הכל" deep-editor mode was retired; its filters live next to the search now.
   const [audience, setAudience] = useState<Profile | null>(null);
   const [boosts, setBoosts] = useState<Set<string>>(new Set());
+  // Two flows: GUIDED (default — audience → topics → the system pre-marks → you
+  // adjust) and MANUAL/"בנייה חופשית" (steps ①② off — you pick every place yourself
+  // from a blank slate; the trip is EXACTLY your ❤, and the bank holds all ⭐ must-sees).
+  const [manual, setManual] = useState(false);
+  const MANUAL_MIN = 7;   // manual build unlocks once this many places are marked
   // The primary action group lives on the "בשביל מי הטיול?" line; the fixed bottom
   // bar is only its scroll fallback — shown once this top group leaves the viewport.
   const topCtaRef = useRef<HTMLDivElement>(null);
@@ -437,7 +443,8 @@ export function DestinationView({
         if (selectedOnly) return choices[a.id] === "yes";
         // a neighbourhood member isn't listed standalone — it shows inside its
         // neighbourhood row. A search query bypasses this so any place stays findable.
-        if (!query && allAreaMemberIds.has(a.id)) return false;
+        // Manual mode has no neighbourhood rows, so members stay in the flat list.
+        if (!query && !manual && allAreaMemberIds.has(a.id)) return false;
         // solo focus: show ALL of the focused topic (matching its tile count),
         // still respecting search / map / popover flags below. It deliberately
         // bypasses the must-see toggle — otherwise soloing "אוכל 1" could show 0
@@ -461,7 +468,7 @@ export function DestinationView({
         }
         return true;
       }),
-    [attractions, mustOnly, query, flags, insights, selectedOnly, choices, profile.dislikes, soloInterest, allAreaMemberIds]
+    [attractions, mustOnly, query, flags, insights, selectedOnly, choices, profile.dislikes, soloInterest, allAreaMemberIds, manual]
   );
 
   // The list shows the filtered set, optionally narrowed to the map viewport.
@@ -560,6 +567,14 @@ export function DestinationView({
   // Require at least one "אוהבים" topic before building — otherwise everyone with the
   // same audience gets the identical trip. Gates the build CTA + reveals step ③.
   const readyToBuild = !!audience && boosts.size > 0;
+  // MANUAL flow: the build unlocks once ≥MANUAL_MIN places are marked (we don't know
+  // the trip length yet, so a flat floor). GUIDED: audience + a topic.
+  const canBuild = manual ? yesCount >= MANUAL_MIN : readyToBuild;
+  // Hearts are interactive only when picking makes sense: always in manual, and in
+  // guided ONLY after the system has something to pre-mark (audience + a topic).
+  const heartsEnabled = manual || readyToBuild;
+  // The list + map show in manual too (guided keeps them hidden until an audience is set).
+  const showBrowse = manual || mode === "short";
 
   const belowLabel = audience
     ? `פחות מתאים ל${PROFILE_HE[audience]} — אפשר בכל זאת לסמן`
@@ -606,6 +621,7 @@ export function DestinationView({
   const areasKey = [...chosenAreas].sort().join(",");
   useEffect(() => {
     if (!selLoaded) return;   // wait for the saved marks to load before touching them
+    if (manual) { setPreviewing(false); return; }   // manual: the user owns every mark — never auto-clear/pre-mark
     if (!audience) {
       // Fresh / "choose" mode: wipe ALL of this city's marks. They only exist because
       // of an audience-driven auto-pick — nothing legit is marked before an audience is
@@ -647,7 +663,7 @@ export function DestinationView({
     }, 500);
     return () => { cancelled = true; clearTimeout(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [audience, boostsKey, areasKey, buildDays, dest.city, selLoaded]);
+  }, [audience, boostsKey, areasKey, buildDays, dest.city, selLoaded, manual]);
   // Mobile: the 240px sticky map strip eats most of the screen — let the
   // traveler collapse it. Desktop always shows the map rail. A window resize
   // event after the toggle makes Leaflet re-measure its container.
@@ -738,7 +754,9 @@ export function DestinationView({
     // profile interests. Fold their taste weights into the build taste (a couple never
     // sets profile.interests, so without this the chips wouldn't reach the engine), and
     // pass the raw keys as `interests` for the route's coarse fallback + reservation.
-    const chosenInterests = boosts.size ? [...boosts] : (profile.interests ?? []);
+    // Manual build = the marks ARE the trip; send no interests/audience so the server
+    // takes the strict WYSIWYG selection path (governed=false) and nothing un-picked enters.
+    const chosenInterests = manual ? [] : (boosts.size ? [...boosts] : (profile.interests ?? []));
     const buildTaste = { ...taste };
     if (boosts.size) for (const k of boosts) for (const t of (INTEREST_TASTE[k] ?? [])) buildTaste[t] = (buildTaste[t] ?? 0) + 3;
     const trip = create({
@@ -787,16 +805,38 @@ export function DestinationView({
                 the whole header jump), matching the numbered steps below. */}
             <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[var(--border)] pb-3 text-[15px] text-[var(--text-2)] lg:pr-[176px]">
               <span className="text-[16px] font-bold text-[var(--brand-ink)]">איך בונים טיול?</span>
-              <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">1</b> בחרו בשביל מי הטיול</span>
-              <ChevronRight size={16} className="text-[var(--text-3)]" />
-              <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">2</b> הדגישו מה שאוהבים</span>
-              {/* step ③ appears only once a topic is picked — the nudge to not leave it empty */}
-              {boosts.size > 0 && (
+              {manual ? (
+                <span className="inline-flex items-center gap-1.5">
+                  סמנו <Heart size={13} className="text-[var(--brand-ink)]" fill="currentColor" /> לפחות {MANUAL_MIN} מקומות שתרצו בטיול, ואז &quot;בנו לי טיול&quot;
+                  <span className="font-semibold text-[var(--brand-ink)]">· {yesCount}/{MANUAL_MIN}</span>
+                </span>
+              ) : (
                 <>
+                  <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">1</b> בחרו בשביל מי הטיול</span>
                   <ChevronRight size={16} className="text-[var(--text-3)]" />
-                  <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--accent)] text-[12px] font-bold text-white">3</b> לחצו על &quot;בנו לי טיול&quot;</span>
+                  <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">2</b> הדגישו מה שאוהבים</span>
+                  {/* step ③ appears only once a topic is picked — the nudge to not leave it empty */}
+                  {boosts.size > 0 && (
+                    <>
+                      <ChevronRight size={16} className="text-[var(--text-3)]" />
+                      <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--accent)] text-[12px] font-bold text-white">3</b> לחצו על &quot;בנו לי טיול&quot;</span>
+                    </>
+                  )}
                 </>
               )}
+              {/* flow toggle — GUIDED (system picks, you adjust) vs MANUAL (you pick everything) */}
+              <div className="ms-auto flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
+                <button onClick={() => setManual(false)}
+                  className="rounded-full px-3 py-1 text-[12.5px] font-semibold transition"
+                  style={{ background: !manual ? "var(--brand)" : "transparent", color: !manual ? "#fff" : "var(--text-2)" }}>
+                  🧭 מודרך
+                </button>
+                <button onClick={() => setManual(true)}
+                  className="rounded-full px-3 py-1 text-[12.5px] font-semibold transition"
+                  style={{ background: manual ? "var(--accent)" : "transparent", color: manual ? "#fff" : "var(--text-2)" }}>
+                  ✍️ בנייה חופשית
+                </button>
+              </div>
             </div>
 
             {/* identity row — breadcrumb | title · places · badges, all inline. Only the
@@ -833,48 +873,57 @@ export function DestinationView({
                   The primary actions (show-selected · clear · build) sit at the FAR
                   side of this same line — disabled until an audience is chosen. */}
               <div className="flex flex-wrap items-center gap-2">
-                <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--text-2)]">
-                  <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-bold text-white">1</span>
-                  בשביל מי הטיול?
-                </span>
-                {PROFILES.map((p) => {
-                  const on = audience === p;
-                  return (
-                    <button key={p} onClick={() => { setAudience(on ? null : p); setBoosts(new Set()); }}
-                      className="rounded-full border px-3.5 py-1.5 text-[13.5px] font-semibold transition"
-                      style={{ background: on ? "var(--brand)" : "var(--surface)", color: on ? "#fff" : "var(--text-2)",
-                               borderColor: on ? "var(--brand)" : "var(--border)" }}>
-                      {PROFILE_EMOJI[p]} {PROFILE_HE[p]}
-                    </button>
-                  );
-                })}
+                {!manual && (
+                  <>
+                    <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--text-2)]">
+                      <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-bold text-white">1</span>
+                      בשביל מי הטיול?
+                    </span>
+                    {PROFILES.map((p) => {
+                      const on = audience === p;
+                      return (
+                        <button key={p} onClick={() => { setAudience(on ? null : p); setBoosts(new Set()); }}
+                          className="rounded-full border px-3.5 py-1.5 text-[13.5px] font-semibold transition"
+                          style={{ background: on ? "var(--brand)" : "var(--surface)", color: on ? "#fff" : "var(--text-2)",
+                                   borderColor: on ? "var(--brand)" : "var(--border)" }}>
+                          {PROFILE_EMOJI[p]} {PROFILE_HE[p]}
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+                {manual && (
+                  <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--accent-ink)]">
+                    ✍️ בנייה חופשית — הטיול ייבנה בדיוק מהמקומות שתסמנו
+                  </span>
+                )}
                 <div ref={topCtaRef} className="flex items-center gap-2 ms-auto">
-                  <button onClick={toggleSelectedOnly} disabled={!audience || yesCount === 0}
+                  <button onClick={toggleSelectedOnly} disabled={yesCount === 0}
                     className="rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
                     style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)",
                              color: selectedOnly ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
                     {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
                   </button>
-                  <button onClick={clearAllChoices} disabled={!audience || yesCount === 0}
+                  <button onClick={clearAllChoices} disabled={yesCount === 0}
                     title="נקה את כל הסימונים ששמורים לעיר"
                     className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-3)]">
                     <X size={13} /> נקה
                   </button>
                   {/* THE primary action — accent (terracotta) so it stands apart from
                       every green control on the page as the one thing to do next. */}
-                  <button onClick={() => openBuild()} disabled={!readyToBuild}
-                    title={!audience ? "קודם בחרו בשביל מי הטיול" : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : ""}
+                  <button onClick={() => openBuild()} disabled={!canBuild}
+                    title={manual ? (canBuild ? "" : `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`) : !audience ? "קודם בחרו בשביל מי הטיול" : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : ""}
                     className="flex items-center gap-1.5 rounded-full px-5 py-1.5 text-[13.5px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
-                    style={readyToBuild
+                    style={canBuild
                       ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" }
                       : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
-                    <Sparkles size={15} /> בנו לי טיול
+                    <Sparkles size={15} /> בנו לי טיול{manual && !canBuild ? ` · ${yesCount}/${MANUAL_MIN}` : ""}
                   </button>
                 </div>
               </div>
 
               {/* short mode — taste calibration + one-tap build, transparent (no card) */}
-              {mode === "short" && (
+              {!manual && mode === "short" && (
                 <div className="flex flex-col gap-2.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--text-2)]">
@@ -908,7 +957,7 @@ export function DestinationView({
                   </div>
                 </div>
               )}
-              {mode === "choose" && (
+              {!manual && mode === "choose" && (
                 <p className="text-[13px] text-[var(--text-3)]">בחרו למי הטיול — ונראה לכם את המקומות שהכי אהובים על אנשים כמוכם.</p>
               )}
             </div>
@@ -1004,7 +1053,7 @@ export function DestinationView({
         </section>
       )}
 
-      <div className={`lg:flex lg:items-start lg:pe-8 ${mode === "choose" ? "hidden" : ""}`}>
+      <div className={`lg:flex lg:items-start lg:pe-8 ${showBrowse ? "" : "hidden"}`}>
         {/* map — a narrow sticky rail on desktop; full-width strip on mobile */}
         <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-2 lg:!h-[calc(100dvh-164px)] lg:top-[72px] lg:w-[380px] lg:shrink-0 lg:border-y-0 lg:border-s`}>
           <MapClient attractions={displayItems} center={[dest.lat, dest.lng]} selected={selected}
@@ -1140,7 +1189,7 @@ export function DestinationView({
           {/* the audience-fit count lives down here (not next to the step labels). Shown
               only once the flow is complete (audience + ≥1 topic) so clearing the topics
               hides it too — same as clearing the audience. */}
-          {readyToBuild && (
+          {!manual && readyToBuild && (
             <p className="mt-3 text-[13px] text-[var(--text-2)]" title={`המקומות הבודדים מחוץ לשכונות. עוד עשרות מקומות מקובצים בתוך ${areas.length} השכונות (שכל אחת היא אזור שלם). הצ'יפים מדגישים בתוך המאגר, לא מצמצמים אותו.`}>
               <b className="text-[var(--text)]">{poolStats.total}</b> מקומות בודדים
               {areas.length > 0 && <> {"+ "}<b className="text-[var(--brand-ink)]">{areas.length}</b> שכונות</>}
@@ -1149,11 +1198,20 @@ export function DestinationView({
             </p>
           )}
 
-          {/* Transparency line — explains the pre-marked ❤: they ARE the trip's places
-              (the system chose them for you), and you add/remove to shape it. */}
+          {/* Transparency line — explains the ❤: in guided the system pre-marks them;
+              in manual you mark them yourself. Either way they ARE the trip. */}
           <p className="mt-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2 text-[12.5px] leading-relaxed text-[var(--text-2)]">
-            המקומות המסומנים <span className="inline-flex items-center gap-0.5 font-medium text-[var(--brand-ink)]"><Heart size={12} fill="currentColor" /></span> הם בדיוק מה שייכנס לטיול — בחרנו לכם אותם לפי הקהל, הנושאים והשכונות (כולל אתרי חובה <span className="text-[var(--accent-ink)]">⭐</span>).
-            {" "}הוסיפו מקומות שאהבתם או הסירו כל אחד מהם, ואז "בנו לי טיול".
+            {manual ? (
+              <>
+                בבנייה חופשית סמנו <span className="inline-flex items-center gap-0.5 font-medium text-[var(--brand-ink)]"><Heart size={12} fill="currentColor" /></span> את המקומות שתרצו בטיול (לפחות {MANUAL_MIN}). היומן ייבנה <b>בדיוק</b> מהם — שום מקום לא-מסומן לא ייכנס.
+                {" "}בבנק שבדף הטיול תמצאו את כל אתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> להוספה בכל רגע.
+              </>
+            ) : (
+              <>
+                המקומות המסומנים <span className="inline-flex items-center gap-0.5 font-medium text-[var(--brand-ink)]"><Heart size={12} fill="currentColor" /></span> הם בדיוק מה שייכנס לטיול — בחרנו לכם אותם לפי הקהל, הנושאים והשכונות (כולל אתרי חובה <span className="text-[var(--accent-ink)]">⭐</span>).
+                {" "}הוסיפו מקומות שאהבתם או הסירו כל אחד מהם, ואז "בנו לי טיול".
+              </>
+            )}
           </p>
 
           {/* the whole list fades out → in while the preview re-chooses, so a topic
@@ -1162,12 +1220,13 @@ export function DestinationView({
           {/* neighbourhoods lead the list as "container" rows (same row design) — a
               whole-area heart tours it, expand to like specific members. Hidden while
               searching (then their members surface as normal flat results). */}
-          {!query && (
+          {!manual && !query && (
             <NeighbourhoodRows areas={areas} chosenIds={chosenAreas} attrById={attrById}
               isPicked={(id) => choices[id] === "yes"}
               onToggleArea={toggleArea}
               onToggleMember={(id) => setChoice(id, "yes")}
-              onFocus={(a) => { setAreaFocus({ lat: a.lat, lng: a.lng, n: Date.now() }); if (!mapOpen) setMapOpen(true); }} />
+              onFocus={(a) => { setAreaFocus({ lat: a.lat, lng: a.lng, n: Date.now() }); if (!mapOpen) setMapOpen(true); }}
+              locked={!heartsEnabled} />
           )}
 
           {/* LIST view — compact rows in the trip-page design language; a row expands
@@ -1225,7 +1284,7 @@ export function DestinationView({
                       )}
                       <ChevronDown size={18} className={`ms-auto shrink-0 text-[var(--text-3)] transition-transform ${isSel ? "rotate-180" : ""}`} />
                     </button>
-                    <HeartToggle liked={choice === "yes"} onClick={() => setChoice(a.id, "yes")} />
+                    <HeartToggle liked={choice === "yes"} onClick={() => setChoice(a.id, "yes")} disabled={!heartsEnabled} />
                   </div>
                   {/* expand — image on the RIGHT (first child, RTL); only the detail
                       text + when-to-go + dress remain (tagline, tip source & official
@@ -1379,7 +1438,7 @@ export function DestinationView({
                   {/* yes / no marks — the traveler's picks for this city.
                       RTL order: כן first (right), then לא. */}
                   <div className="border-t border-[var(--border)] p-2">
-                    <LikeBtn liked={choice === "yes"} onClick={() => setChoice(a.id, "yes")} />
+                    <LikeBtn liked={choice === "yes"} onClick={() => setChoice(a.id, "yes")} disabled={!heartsEnabled} />
                   </div>
                 </div>
                 </Fragment>
@@ -1404,7 +1463,7 @@ export function DestinationView({
       {/* persistent build bar — the flow's finish line, always visible so the
           goal is unmistakable: mark attractions, then build. Progress fills
           toward the minimum; the CTA activates once there are enough picks. */}
-      <div className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 shadow-[0_-8px_20px_rgba(16,29,43,0.08)] lg:px-8 ${mode === "short" && !topCtaVisible ? "" : "hidden"}`}>
+      <div className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 shadow-[0_-8px_20px_rgba(16,29,43,0.08)] lg:px-8 ${showBrowse && !topCtaVisible ? "" : "hidden"}`}>
         <div className="mx-auto max-w-[1600px]">
           <div className="flex items-center justify-end gap-3">
             <div className="flex shrink-0 items-center gap-2">
@@ -1425,13 +1484,13 @@ export function DestinationView({
               )}
               {/* mirrors the top build button — active once an audience AND at least one
                   topic are chosen. */}
-              <button onClick={() => openBuild()} disabled={!readyToBuild}
-                title={boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : ""}
+              <button onClick={() => openBuild()} disabled={!canBuild}
+                title={manual ? (canBuild ? "" : `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`) : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : ""}
                 className="flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
-                style={readyToBuild
+                style={canBuild
                   ? { background: "var(--accent)", boxShadow: "0 6px 16px rgba(198,79,38,.32)" }
                   : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
-                <Sparkles size={16} /> בנו לי טיול
+                <Sparkles size={16} /> בנו לי טיול{manual && !canBuild ? ` · ${yesCount}/${MANUAL_MIN}` : ""}
               </button>
             </div>
           </div>

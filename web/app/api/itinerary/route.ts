@@ -575,12 +575,24 @@ export async function POST(req: NextRequest) {
       ? detailRows.filter((a) => surfaceIds.has(a.id) && !scheduled.has(a.id))
       : [];
     const inBank = new Set(explicit.map((a) => a.id));
-    const extra = (opts?.list ?? buildList)
+    // Bank source = the build list UNION the full ranked pool (deduped), so an
+    // unscheduled must-see that never entered the build list (e.g. a manual/WYSIWYG
+    // build, where buildList is ONLY the traveller's ❤ picks) still surfaces here.
+    const bankSeen = new Set<number>();
+    const bankCands = (opts?.list ?? [...buildList, ...attractions, ...pool]).filter((a) => {
+      if (a.id == null || bankSeen.has(a.id)) return false; bankSeen.add(a.id); return true;
+    });
+    const extra = bankCands
       .filter((a) => isRealAttraction(a.id) && a.lat != null && a.lng != null && !scheduled.has(a.id) && !inBank.has(a.id))
       .map((a, i) => ({ a, i }))
       .sort((x, y) => (y.a.must_see === 1 ? 1 : 0) - (x.a.must_see === 1 ? 1 : 0) || x.i - y.i)
       .map((z) => z.a);
-    const leftOut = [...explicit, ...extra].slice(0, 24).map(detailOf);
+    // Keep EVERY unscheduled must-see in the bank (the traveller's safety net — esp. in
+    // a manual build where none are pre-picked); cap only the non-must-see tail.
+    const bankMusts = extra.filter((a) => a.must_see === 1);
+    const bankRest = extra.filter((a) => a.must_see !== 1);
+    const bankCap = Math.max(24, explicit.length + bankMusts.length);
+    const leftOut = [...explicit, ...bankMusts, ...bankRest].slice(0, bankCap).map(detailOf);
     return NextResponse.json({ itinerary: withDetails, ...(engine ? { engine } : {}), leftOut });
   };
 
