@@ -114,12 +114,20 @@ body {
   70%  { box-shadow: 0 0 0 7px color-mix(in srgb, var(--brand) 0%, transparent); }
   100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand) 0%, transparent); }
 }
+/* accent (terracotta) variant + a wider ring — for the "בנו לי טיול" CTA halo.
+   Lives on a wrapper so it never fights the button's own drop shadow. */
+@keyframes attn-pulse-accent {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent); }
+  70%  { box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
+}
 
 /* Animation is an enhancement only — content is fully visible without it. */
 @media (prefers-reduced-motion: no-preference) {
   .rise { animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
   .progress-slide { animation: progress-slide 1.6s ease-in-out infinite; }
   .pulse-attn { animation: attn-pulse 2s ease-in-out infinite; border-radius: 9999px; }
+  .pulse-attn-accent { animation: attn-pulse-accent 2s ease-in-out infinite; border-radius: 9999px; }
   .rise-1 { animation-delay: 0.05s; }
   .rise-2 { animation-delay: 0.1s; }
   .rise-3 { animation-delay: 0.15s; }

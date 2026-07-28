@@ -967,6 +967,7 @@ export function DestinationView({
                   </button>
                   {/* THE primary action — accent (terracotta) so it stands apart from
                       every green control on the page as the one thing to do next. */}
+                  <span className={`inline-flex rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
                   <button onClick={() => openBuild()} disabled={!canBuild}
                     title={manual ? (canBuild ? "" : `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`) : !audience ? "קודם בחרו בשביל מי הטיול" : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : ""}
                     className="flex items-center gap-1.5 rounded-full px-5 py-1.5 text-[13.5px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
@@ -975,6 +976,7 @@ export function DestinationView({
                       : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
                     <Sparkles size={15} /> בנו לי טיול{manual && !canBuild ? ` · ${yesCount}/${MANUAL_MIN}` : ""}
                   </button>
+                  </span>
                 </div>
               </div>
 
@@ -1540,6 +1542,7 @@ export function DestinationView({
               )}
               {/* mirrors the top build button — active once an audience AND at least one
                   topic are chosen. */}
+              <span className={`inline-flex rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
               <button onClick={() => openBuild()} disabled={!canBuild}
                 title={manual ? (canBuild ? "" : `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`) : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : ""}
                 className="flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
@@ -1548,6 +1551,7 @@ export function DestinationView({
                   : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
                 <Sparkles size={16} /> בנו לי טיול{manual && !canBuild ? ` · ${yesCount}/${MANUAL_MIN}` : ""}
               </button>
+              </span>
             </div>
           </div>
         </div>
