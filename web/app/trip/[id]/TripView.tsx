@@ -1461,8 +1461,10 @@ export function TripView({ tripId }: { tripId: string }) {
       )}
         </div>
 
-        {/* aside (left on desktop, ~46% wide): the day's map + hotels + trip tools */}
-        <aside className="lg:sticky lg:top-[73px] lg:w-[46%] lg:shrink-0">
+        {/* aside (left on desktop): the day's map + hotels + trip tools. Fixed 380px to
+            match the destination-page map rail — the itinerary column (lg:flex-1) absorbs
+            the freed width. */}
+        <aside className="lg:sticky lg:top-[73px] lg:w-[380px] lg:shrink-0">
           {/* map of the selected day — desktop; mobile uses the מפה tab */}
           {(stopPoints.length > 0 || hotelPoints.length > 0) && (
             <div className="hidden lg:block">
