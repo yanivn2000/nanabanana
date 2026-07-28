@@ -858,39 +858,21 @@ export function DestinationView({
               the far right spanning it, and the interests as a full-width row
               below — no divider between the image and the info to its left. */}
           <div className="p-3.5 lg:p-4">
-            {/* flow toggle row — the "איך בונים טיול?" explainer was removed; the numbered
-                ①②③ steps live inline with the controls below. Keeps only the mode toggle. */}
-            <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-b border-[var(--border)] pb-3">
-              {/* flow toggle — GUIDED (system picks, you adjust) vs MANUAL (you pick everything) */}
-              <div className="ms-auto flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
-                <button onClick={() => setManual(false)}
-                  className="rounded-full px-3 py-1 text-[12.5px] font-semibold transition"
-                  style={{ background: !manual ? "var(--brand)" : "transparent", color: !manual ? "#fff" : "var(--text-2)" }}>
-                  🧭 מודרך
-                </button>
-                <button onClick={() => setManual(true)}
-                  className="rounded-full px-3 py-1 text-[12.5px] font-semibold transition"
-                  style={{ background: manual ? "var(--accent)" : "transparent", color: manual ? "#fff" : "var(--text-2)" }}>
-                  ✍️ בנייה חופשית
-                </button>
-              </div>
-            </div>
-
             {/* identity — a thin breadcrumb on top, then the city NAME aligned with the top
                 of the destination image (floated right), and the "N places" count + badges
-                on their own line beneath the name. */}
-            <div className="flex flex-col gap-3">
+                on their own line beneath the name. The mode toggle sits just above step ①. */}
+            <div className="flex flex-col gap-2.5">
               <Link href="/" className="eyebrow inline-flex items-center gap-1 self-start text-[var(--text-2)]">
                 <ChevronRight size={14} /> בית
               </Link>
               <div className="lg:relative">
                 {/* destination image — floats to the far right, its TOP aligned with the name */}
-                <div className="hidden overflow-hidden rounded-[var(--radius-sm)] lg:absolute lg:top-0 lg:block lg:h-[76px] lg:w-[150px]"
+                <div className="hidden overflow-hidden rounded-[var(--radius-sm)] lg:absolute lg:top-0 lg:block lg:h-[92px] lg:w-[184px]"
                      style={{ insetInlineStart: "0" }}>
                   <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
                     orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
                 </div>
-                <div className="flex flex-col gap-1 lg:pr-[176px]">
+                <div className="flex flex-col gap-1 lg:pr-[200px]">
                   <h1 className="serif flex items-center gap-1.5 text-[25px] font-bold leading-tight lg:text-[29px]">
                     <span className="text-[0.72em]">{countryFlag(dest.country)}</span>
                     {dest.city_he || dest.city}
@@ -912,6 +894,24 @@ export function DestinationView({
                       </Link>
                     )}
                   </div>
+                </div>
+              </div>
+
+              {/* flow toggle — GUIDED (system picks, you adjust) vs MANUAL (you pick
+                  everything). Compact, sits just above step ① (no separate top row); the
+                  pr clears the floated city image so it never sits under it. */}
+              <div className="flex lg:pr-[200px]">
+                <div className="flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
+                  <button onClick={() => setManual(false)}
+                    className="rounded-full px-3 py-1 text-[12.5px] font-semibold transition"
+                    style={{ background: !manual ? "var(--brand)" : "transparent", color: !manual ? "#fff" : "var(--text-2)" }}>
+                    🧭 מודרך
+                  </button>
+                  <button onClick={() => setManual(true)}
+                    className="rounded-full px-3 py-1 text-[12.5px] font-semibold transition"
+                    style={{ background: manual ? "var(--accent)" : "transparent", color: manual ? "#fff" : "var(--text-2)" }}>
+                    ✍️ בנייה חופשית
+                  </button>
                 </div>
               </div>
 
