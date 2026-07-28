@@ -857,27 +857,40 @@ export function DestinationView({
               (breadcrumb | title · places · badges) with the destination image on
               the far right spanning it, and the interests as a full-width row
               below — no divider between the image and the info to its left. */}
-          <div className="p-3.5 lg:p-4">
-            {/* identity — a thin breadcrumb on top, then the city NAME aligned with the top
-                of the destination image (floated right), and the "N places" count + badges
-                on their own line beneath the name. The mode toggle sits just above step ①. */}
+          <div className="p-3.5 lg:relative lg:p-4">
+            {/* destination image — floats to the far right, tall, spanning the name + meta row */}
+            <div className="hidden overflow-hidden rounded-[var(--radius-sm)] lg:absolute lg:top-4 lg:block lg:h-[116px] lg:w-[220px]"
+                 style={{ insetInlineStart: "16px" }}>
+              <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
+                orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
+            </div>
             <div className="flex flex-col gap-2.5">
-              <Link href="/" className="eyebrow inline-flex items-center gap-1 self-start text-[var(--text-2)]">
-                <ChevronRight size={14} /> בית
-              </Link>
-              <div className="lg:relative">
-                {/* destination image — floats to the far right, its TOP aligned with the name */}
-                <div className="hidden overflow-hidden rounded-[var(--radius-sm)] lg:absolute lg:top-0 lg:block lg:h-[92px] lg:w-[184px]"
-                     style={{ insetInlineStart: "0" }}>
-                  <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
-                    orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
-                </div>
-                <div className="flex flex-col gap-1 lg:pr-[200px]">
-                  <h1 className="serif flex items-center gap-1.5 text-[25px] font-bold leading-tight lg:text-[29px]">
-                    <span className="text-[0.72em]">{countryFlag(dest.country)}</span>
-                    {dest.city_he || dest.city}
-                  </h1>
-                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+              {/* identity block (cleared of the floated image via pr): breadcrumb, big city
+                  NAME, then a meta row — the mode toggle on the right (under the name) and the
+                  "N places" count + pass/community badges pushed to the left. */}
+              <div className="flex flex-col gap-2 lg:pr-[240px]">
+                <Link href="/" className="eyebrow inline-flex items-center gap-1 self-start text-[var(--text-2)]">
+                  <ChevronRight size={14} /> בית
+                </Link>
+                <h1 className="serif flex items-center gap-1.5 text-[26px] font-bold leading-tight lg:text-[30px]">
+                  <span className="text-[0.72em]">{countryFlag(dest.country)}</span>
+                  {dest.city_he || dest.city}
+                </h1>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  {/* flow toggle — GUIDED (system picks, you adjust) vs MANUAL (you pick everything) */}
+                  <div className="flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
+                    <button onClick={() => setManual(false)}
+                      className="rounded-full px-3 py-1 text-[12.5px] font-semibold transition"
+                      style={{ background: !manual ? "var(--brand)" : "transparent", color: !manual ? "#fff" : "var(--text-2)" }}>
+                      🧭 מודרך
+                    </button>
+                    <button onClick={() => setManual(true)}
+                      className="rounded-full px-3 py-1 text-[12.5px] font-semibold transition"
+                      style={{ background: manual ? "var(--accent)" : "transparent", color: manual ? "#fff" : "var(--text-2)" }}>
+                      ✍️ בנייה חופשית
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 ms-auto">
                     <span className="text-[13px] font-semibold text-[var(--text-2)]">
                       {dest.attraction_count.toLocaleString("he")} מקומות לגלות בעיר
                     </span>
@@ -894,24 +907,6 @@ export function DestinationView({
                       </Link>
                     )}
                   </div>
-                </div>
-              </div>
-
-              {/* flow toggle — GUIDED (system picks, you adjust) vs MANUAL (you pick
-                  everything). Compact, sits just above step ① (no separate top row); the
-                  pr clears the floated city image so it never sits under it. */}
-              <div className="flex lg:pr-[200px]">
-                <div className="flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
-                  <button onClick={() => setManual(false)}
-                    className="rounded-full px-3 py-1 text-[12.5px] font-semibold transition"
-                    style={{ background: !manual ? "var(--brand)" : "transparent", color: !manual ? "#fff" : "var(--text-2)" }}>
-                    🧭 מודרך
-                  </button>
-                  <button onClick={() => setManual(true)}
-                    className="rounded-full px-3 py-1 text-[12.5px] font-semibold transition"
-                    style={{ background: manual ? "var(--accent)" : "transparent", color: manual ? "#fff" : "var(--text-2)" }}>
-                    ✍️ בנייה חופשית
-                  </button>
                 </div>
               </div>
 
@@ -943,31 +938,6 @@ export function DestinationView({
                     ✍️ בנייה חופשית — הטיול ייבנה בדיוק מהמקומות שתסמנו
                   </span>
                 )}
-                <div ref={topCtaRef} className="flex items-center gap-2 ms-auto">
-                  <button onClick={toggleSelectedOnly} disabled={yesCount === 0}
-                    className="rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
-                    style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)",
-                             color: selectedOnly ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
-                    {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
-                  </button>
-                  <button onClick={clearAllChoices} disabled={yesCount === 0}
-                    title="נקה את כל הסימונים ששמורים לעיר"
-                    className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-3)]">
-                    <X size={13} /> נקה
-                  </button>
-                  {/* THE primary action — accent (terracotta) so it stands apart from
-                      every green control on the page as the one thing to do next. */}
-                  <span className={`inline-flex rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
-                  <button onClick={() => openBuild()} disabled={!canBuild}
-                    title={manual ? (canBuild ? "" : `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`) : !audience ? "קודם בחרו בשביל מי הטיול" : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : ""}
-                    className="flex items-center gap-1.5 rounded-full px-5 py-1.5 text-[13.5px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
-                    style={canBuild
-                      ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" }
-                      : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
-                    <Sparkles size={15} /> בנו לי טיול{manual && !canBuild ? ` · ${yesCount}/${MANUAL_MIN}` : ""}
-                  </button>
-                  </span>
-                </div>
               </div>
 
               {/* short mode — taste calibration + one-tap build, transparent (no card) */}
@@ -1008,6 +978,32 @@ export function DestinationView({
               {!manual && mode === "choose" && (
                 <p className="text-[13px] text-[var(--text-3)]">בחרו למי הטיול — ונראה לכם את המקומות שהכי אהובים על אנשים כמוכם.</p>
               )}
+
+              {/* actions — "הצג נבחרים · נקה" on the right, the build CTA pushed to the left */}
+              <div ref={topCtaRef} className="flex flex-wrap items-center gap-2 pt-0.5">
+                <button onClick={toggleSelectedOnly} disabled={yesCount === 0}
+                  className="rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
+                  style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)",
+                           color: selectedOnly ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
+                  {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
+                </button>
+                <button onClick={clearAllChoices} disabled={yesCount === 0}
+                  title="נקה את כל הסימונים ששמורים לעיר"
+                  className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-3)]">
+                  <X size={13} /> נקה
+                </button>
+                {/* THE primary action — accent (terracotta) so it stands apart as the one thing to do next. */}
+                <span className={`ms-auto inline-flex rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
+                  <button onClick={() => openBuild()} disabled={!canBuild}
+                    title={manual ? (canBuild ? "" : `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`) : !audience ? "קודם בחרו בשביל מי הטיול" : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : ""}
+                    className="flex items-center gap-1.5 rounded-full px-6 py-2 text-[14px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
+                    style={canBuild
+                      ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" }
+                      : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
+                    <Sparkles size={15} /> בנו לי טיול{manual && !canBuild ? ` · ${yesCount}/${MANUAL_MIN}` : ""}
+                  </button>
+                </span>
+              </div>
             </div>
           </div>
         </div>
