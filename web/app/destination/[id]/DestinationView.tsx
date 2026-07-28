@@ -218,12 +218,14 @@ function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea,
                 {area.vibe_he && <p className="hidden min-w-0 flex-1 truncate text-[13.5px] italic text-[var(--text-2)] sm:block">{area.vibe_he}</p>}
                 <ChevronDown size={18} className={`ms-auto shrink-0 text-[var(--brand-ink)] transition-transform ${open ? "rotate-180" : ""}`} />
               </button>
-              {/* the container's "heart" — tour the WHOLE neighbourhood */}
+              {/* the container's "heart" — tour the WHOLE neighbourhood. Highlighted
+                  (brand) whenever the area is toured OR has any picked members inside;
+                  filled solid only when the whole area is toured. */}
               <button onClick={() => onToggleArea(area.id)} aria-pressed={toured}
                 aria-label={toured ? "מטיילים בכל השכונה" : "טיילו בכל השכונה"} title={toured ? "מטיילים בכל השכונה" : "טיילו בכל השכונה"}
                 className="grid shrink-0 place-items-center self-stretch px-3.5 transition hover:bg-[var(--surface-2)]"
-                style={{ color: toured ? "var(--brand)" : "var(--text-3)" }}>
-                <Heart size={20} fill={toured ? "currentColor" : "none"} />
+                style={{ color: active ? "var(--brand)" : "var(--text-3)" }}>
+                <Heart size={20} fill={toured ? "currentColor" : "none"} strokeWidth={active && !toured ? 2.5 : 2} />
               </button>
             </div>
             {open && (
@@ -570,14 +572,19 @@ export function DestinationView({
   // traveller SEES the system's picks and can add/remove before building. Debounced;
   // runs a real (throwaway) build so the marks match exactly what "בנו לי טיול" picks.
   const autoPickRef = useRef<Set<number>>(new Set());
+  // While the preview recomputes, the list below fades out → in, so a topic click
+  // reads as "we're re-choosing your places" rather than an abrupt jump.
+  const [previewing, setPreviewing] = useState(false);
   const boostsKey = [...boosts].sort().join(",");
   const areasKey = [...chosenAreas].sort().join(",");
   useEffect(() => {
     if (!audience || boosts.size === 0) {
       if (autoPickRef.current.size) { setMany([...autoPickRef.current], null); autoPickRef.current = new Set(); }
+      setPreviewing(false);
       return;
     }
     let cancelled = false;
+    setPreviewing(true);   // fade the list out immediately on a topic/audience change
     const t = setTimeout(async () => {
       try {
         const buildTaste: Record<string, number> = { ...taste };
@@ -598,7 +605,7 @@ export function DestinationView({
         if (stale.length) setMany(stale, null);
         if (ids.size) setMany([...ids], "yes");
         autoPickRef.current = ids;
-      } catch { /* preview is best-effort */ }
+      } catch { /* preview is best-effort */ } finally { if (!cancelled) setPreviewing(false); }
     }, 500);
     return () => { cancelled = true; clearTimeout(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1112,6 +1119,9 @@ export function DestinationView({
             {" "}<span className="inline-flex items-center gap-0.5 font-medium text-[var(--brand-ink)]"><Heart size={12} fill="currentColor" /> הלייק</span> הוא רק כדי לוודא שמקום מסוים ייכנס — לא חובה.
           </p>
 
+          {/* the whole list fades out → in while the preview re-chooses, so a topic
+              click reads as an active refresh, not an abrupt reshuffle. */}
+          <div className="transition-opacity duration-300 ease-out" style={{ opacity: previewing ? 0.4 : 1 }}>
           {/* neighbourhoods lead the list as "container" rows (same row design) — a
               whole-area heart tours it, expand to like specific members. Hidden while
               searching (then their members surface as normal flat results). */}
@@ -1340,6 +1350,7 @@ export function DestinationView({
             })}
           </div>
           )}
+          </div>
 
           {/* one unified paginator for every mode (the list is one browse now) */}
           {visibleCount < sortedItems.length && (
