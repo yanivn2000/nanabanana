@@ -96,20 +96,20 @@ function partitionBySelection(
   pool: Attraction[],
   taste: Record<string, number> | undefined,
   selection: { yes: number[]; no: number[] },
-  isFamily: boolean
+  isFamily: boolean,
+  strict = false
 ): { anchors: Attraction[]; fillers: Attraction[]; anchorIds: Set<number> } {
   const yes = new Set(selection.yes);
   const no = new Set(selection.no);
   const avail = pool.filter((a) => !no.has(a.id));
   let anchorPool = avail.filter((a) => yes.has(a.id));
   if (anchorPool.length === 0) anchorPool = avail.filter((a) => a.must_see === 1);
-  const anchors = rankByTaste(anchorPool, taste, 30, isFamily);
+  const anchors = rankByTaste(anchorPool, taste, strict ? 200 : 30, isFamily);
   const anchorIds = new Set(anchors.map((a) => a.id));
-  // Fillers complete the days, but ONLY with must-sees (never an unmarked minor
-  // place): an unmarked attraction enters only if it's a must-see or sits in a
-  // chosen neighbourhood (handled by the area path). So a build never surprises
-  // the traveller with a place they didn't pick and that isn't a headline sight.
-  const fillers = rankByTaste(
+  // strict (WYSIWYG): the ❤ ARE the trip — build ONLY from them, NO fillers, so an
+  // un-liked place (even a must-see) never enters and un-liking one removes it.
+  // Non-strict (legacy explore): fillers top up the days with must-sees ("אם יש זמן").
+  const fillers = strict ? [] : rankByTaste(
     avail.filter((a) => a.must_see === 1 && !anchorIds.has(a.id)), taste, 40, isFamily);
   return { anchors, fillers, anchorIds };
 }
@@ -353,7 +353,15 @@ export async function POST(req: NextRequest) {
   // handing the whole build to the marks. Only a PURE explore build (no audience,
   // no areas) lets the marks drive everything via partitionBySelection.
   const governed = !!audience || areaMemberIds.length > 0;
-  const sel = (body.selection && !governed) ? partitionBySelection(pool, body.taste, body.selection, isFamily) : null;
+  // WYSIWYG: once the traveller has ❤ marks (the pre-marked set they curated on the
+  // destination page), OBEY them exactly — build ONLY from the marks, no auto-fill,
+  // even with an audience/areas. So removing a mark (incl. a must-see) removes it, and
+  // nothing un-marked enters. `attractions` (not `pool`) so interest/area picks past the
+  // top pool are found. Falls back to the governed reservation only if there are no marks.
+  const hasMarks = (body.selection?.yes?.length ?? 0) > 0;
+  const sel = body.selection && (hasMarks || !governed)
+    ? partitionBySelection(hasMarks ? attractions : pool, body.taste, body.selection, isFamily, hasMarks)
+    : null;
   // Streets the traveller picked lead the build list, so the clusterer treats
   // them as the day's top candidates (they were an explicit "כן").
   const streetRows = Array.isArray(body.streetIds) && body.streetIds.length
