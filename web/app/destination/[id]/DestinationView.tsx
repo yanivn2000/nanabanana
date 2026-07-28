@@ -911,9 +911,8 @@ export function DestinationView({
               </div>
 
               {/* audience tabs — pick who the trip is for (families / couples&friends).
-                  The primary actions (show-selected · clear · build) sit at the FAR
-                  side of this same line — disabled until an audience is chosen. */}
-              <div className="flex flex-wrap items-center gap-2">
+                  Extra top margin on desktop gives air below the floated city image. */}
+              <div className="flex flex-wrap items-center gap-2 lg:mt-3">
                 {!manual && (
                   <>
                     <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--text-2)]">
