@@ -218,14 +218,13 @@ function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea,
                 {area.vibe_he && <p className="hidden min-w-0 flex-1 truncate text-[13.5px] italic text-[var(--text-2)] sm:block">{area.vibe_he}</p>}
                 <ChevronDown size={18} className={`ms-auto shrink-0 text-[var(--brand-ink)] transition-transform ${open ? "rotate-180" : ""}`} />
               </button>
-              {/* the container's "heart" — tour the WHOLE neighbourhood. Highlighted
-                  (brand) whenever the area is toured OR has any picked members inside;
-                  filled solid only when the whole area is toured. */}
+              {/* the container's "heart" — tour the WHOLE neighbourhood. Filled solid
+                  whenever the area is toured OR has ≥1 picked member inside. */}
               <button onClick={() => onToggleArea(area.id)} aria-pressed={toured}
                 aria-label={toured ? "מטיילים בכל השכונה" : "טיילו בכל השכונה"} title={toured ? "מטיילים בכל השכונה" : "טיילו בכל השכונה"}
                 className="grid shrink-0 place-items-center self-stretch px-3.5 transition hover:bg-[var(--surface-2)]"
                 style={{ color: active ? "var(--brand)" : "var(--text-3)" }}>
-                <Heart size={20} fill={toured ? "currentColor" : "none"} strokeWidth={active && !toured ? 2.5 : 2} />
+                <Heart size={20} fill={active ? "currentColor" : "none"} />
               </button>
             </div>
             {open && (
