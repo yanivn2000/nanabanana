@@ -528,6 +528,9 @@ export function DestinationView({
   // above (no separate curated screen).
   const displayItems = visible;
   const mode: "choose" | "short" = audience ? "short" : "choose";
+  // Require at least one "אוהבים" topic before building — otherwise everyone with the
+  // same audience gets the identical trip. Gates the build CTA + reveals step ③.
+  const readyToBuild = !!audience && boosts.size > 0;
   const belowLabel = audience
     ? `פחות מתאים ל${PROFILE_HE[audience]} — אפשר בכל זאת לסמן`
     : "מחוץ להעדפות שלכם — אפשר בכל זאת לסמן";
@@ -702,8 +705,13 @@ export function DestinationView({
               <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">1</b> בחרו בשביל מי הטיול</span>
               <ChevronRight size={16} className="text-[var(--text-3)]" />
               <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">2</b> הדגישו מה שאוהבים</span>
-              <ChevronRight size={16} className="text-[var(--text-3)]" />
-              <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--brand)] text-[12px] font-bold text-white">3</b> לחצו על &quot;בנו לי טיול&quot;</span>
+              {/* step ③ appears only once a topic is picked — the nudge to not leave it empty */}
+              {boosts.size > 0 && (
+                <>
+                  <ChevronRight size={16} className="text-[var(--text-3)]" />
+                  <span className="inline-flex items-center gap-1.5"><b className="grid size-[20px] place-items-center rounded-full bg-[var(--accent)] text-[12px] font-bold text-white">3</b> לחצו על &quot;בנו לי טיול&quot;</span>
+                </>
+              )}
             </div>
 
             {/* identity row — breadcrumb | title · places · badges, all inline */}
@@ -770,9 +778,10 @@ export function DestinationView({
                   </button>
                   {/* THE primary action — accent (terracotta) so it stands apart from
                       every green control on the page as the one thing to do next. */}
-                  <button onClick={() => openBuild()} disabled={!audience}
+                  <button onClick={() => openBuild()} disabled={!readyToBuild}
+                    title={!audience ? "קודם בחרו בשביל מי הטיול" : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : ""}
                     className="flex items-center gap-1.5 rounded-full px-5 py-1.5 text-[13.5px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
-                    style={audience
+                    style={readyToBuild
                       ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" }
                       : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
                     <Sparkles size={15} /> בנו לי טיול
@@ -800,6 +809,18 @@ export function DestinationView({
                         </button>
                       );
                     })}
+                    {/* select-all shortcut — pick everything you like in one tap */}
+                    {(() => {
+                      const allOn = govInterests.length > 0 && govInterests.every((it) => boosts.has(it.key));
+                      return (
+                        <button onClick={() => setBoosts(allOn ? new Set() : new Set(govInterests.map((it) => it.key)))}
+                          className="rounded-full border px-3 py-1 text-[12.5px] font-semibold transition"
+                          style={{ background: allOn ? "var(--brand)" : "var(--surface)",
+                                   color: allOn ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
+                          {allOn ? "✓ הכל" : "הכל"}
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
@@ -1312,11 +1333,14 @@ export function DestinationView({
                   </button>
                 </>
               )}
-              {/* mirrors the top build button — the accent primary action, always
-                  active whenever an audience is chosen (this bar only shows then). */}
-              <button onClick={() => openBuild()}
-                className="flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold text-white transition hover:opacity-90"
-                style={{ background: "var(--accent)", boxShadow: "0 6px 16px rgba(198,79,38,.32)" }}>
+              {/* mirrors the top build button — active once an audience AND at least one
+                  topic are chosen. */}
+              <button onClick={() => openBuild()} disabled={!readyToBuild}
+                title={boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : ""}
+                className="flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
+                style={readyToBuild
+                  ? { background: "var(--accent)", boxShadow: "0 6px 16px rgba(198,79,38,.32)" }
+                  : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
                 <Sparkles size={16} /> בנו לי טיול
               </button>
             </div>
