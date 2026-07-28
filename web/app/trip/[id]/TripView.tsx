@@ -425,7 +425,10 @@ export function TripView({ tripId }: { tripId: string }) {
     // back-filled yet on a real attraction stop — so trips built before the tag existed
     // pick it up once. (details mode only attaches fields; it never reorders.)
     const realStops = stops.filter((s) => s.id != null && s.kind !== "food" && s.kind !== "rest");
-    const enriched = stops.some((s) => s.image) && realStops.every((s) => s.cat != null);
+    // Also re-attach once when the fuller description hasn't been attached yet — a
+    // matched stop gets `cat` AND `description` together, so a trip built before the
+    // description existed re-fetches once (the key is then present, string-or-null).
+    const enriched = stops.some((s) => s.image) && realStops.every((s) => s.cat != null && "description" in s);
     if (enriched) return;
     if (detailsTriedRef.current) return;       // already refreshed this mount
     detailsTriedRef.current = true;
@@ -1273,6 +1276,9 @@ export function TripView({ tripId }: { tripId: string }) {
                         )}
                         {s.tagline && s.tagline !== s.note && (
                           <p className="mb-2 text-[14.5px] italic text-[var(--text-2)]">{s.tagline}</p>
+                        )}
+                        {s.description && (
+                          <p className="mb-2.5 text-[13.5px] leading-relaxed text-[var(--text-2)]">{s.description}</p>
                         )}
                         <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[13.5px] text-[var(--text-2)]">
                           {s.bestTime && <span><span className="text-[var(--text-3)]">מתי: </span>{s.bestTime}</span>}

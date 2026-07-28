@@ -164,7 +164,7 @@ function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set
         // A builder-trimmed street carries its own (trimmed) path + centroid;
         // don't clobber it with the full-street geometry from the pool.
         if (!s.path) { s.lat = a.lat; s.lng = a.lng; }
-        s.tagline = a.tagline_he; s.bestTime = a.best_time_he;
+        s.tagline = a.tagline_he; s.description = a.description_he; s.bestTime = a.best_time_he;
         s.dress = a.dress_he; s.cost = a.cost_level;
         s.cat = a.category; s.sub = a.subcategory;
         s.ref = a.ref ?? refOf("attr", a.id);

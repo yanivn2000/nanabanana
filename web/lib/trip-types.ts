@@ -32,6 +32,7 @@ export type Stop = {
   lat?: number | null;
   lng?: number | null;
   tagline?: string | null;
+  description?: string | null;   // fuller encyclopedic paragraph (shown in the expanded stop)
   bestTime?: string | null;
   dress?: string | null;
   cost?: number | null;
