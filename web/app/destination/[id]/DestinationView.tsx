@@ -984,7 +984,7 @@ export function DestinationView({
 
       <div className={`lg:flex lg:items-start lg:pe-8 ${mode === "choose" ? "hidden" : ""}`}>
         {/* map — a narrow sticky rail on desktop; full-width strip on mobile */}
-        <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-2 lg:!h-[calc(100dvh-256px)] lg:top-[164px] lg:w-[380px] lg:shrink-0 lg:border-y-0 lg:border-s`}>
+        <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-2 lg:!h-[calc(100dvh-164px)] lg:top-[72px] lg:w-[380px] lg:shrink-0 lg:border-y-0 lg:border-s`}>
           <MapClient attractions={displayItems} center={[dest.lat, dest.lng]} selected={selected}
             picks={pickedAttractions} fitNonce={fitNonce} onBounds={setBounds} hoveredId={hoveredId} focus={areaFocus} />
           {pickedAttractions.length > 0 && (
