@@ -1518,15 +1518,15 @@ export function DestinationView({
               {yesCount > 0 && (
                 <>
                   <button onClick={toggleSelectedOnly}
-                    className="hidden items-center gap-1.5 rounded-full border px-4 py-2.5 text-[13.5px] font-medium transition sm:flex"
+                    className="hidden items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition sm:flex"
                     style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)",
                              color: selectedOnly ? "#fff" : "var(--brand-ink)",
                              borderColor: selectedOnly ? "var(--brand)" : "var(--brand)" }}>
                     {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
                   </button>
                   <button onClick={clearAllChoices} title="נקה את כל הסימונים ששמורים לעיר"
-                    className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-2.5 text-[13px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f]">
-                    <X size={14} /> נקה
+                    className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f]">
+                    <X size={13} /> נקה
                   </button>
                 </>
               )}
@@ -1535,11 +1535,11 @@ export function DestinationView({
               <span className={`inline-flex rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
               <button onClick={() => openBuild()} disabled={!canBuild}
                 title={manual ? (canBuild ? "" : `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`) : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : ""}
-                className="flex items-center gap-2 rounded-full px-6 py-2.5 text-[14px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 rounded-full px-5 py-1.5 text-[13.5px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
                 style={canBuild
-                  ? { background: "var(--accent)", boxShadow: "0 6px 16px rgba(198,79,38,.32)" }
+                  ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" }
                   : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
-                <Sparkles size={16} /> בנו לי טיול{manual && !canBuild ? ` · ${yesCount}/${MANUAL_MIN}` : ""}
+                <Sparkles size={15} /> בנו לי טיול{manual && !canBuild ? ` · ${yesCount}/${MANUAL_MIN}` : ""}
               </button>
               </span>
             </div>

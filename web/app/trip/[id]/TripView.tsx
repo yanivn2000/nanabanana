@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   ChevronRight, ChevronLeft, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, ChevronDown,
-  Trash2, ExternalLink, Navigation, Map as MapIcon, Route, Users, Luggage, ListChecks, Wallet, CalendarDays,
+  Trash2, ExternalLink, Navigation, Map as MapIcon, Route, Luggage, ListChecks, Wallet, CalendarDays,
   Clock, MapPin, Ruler, Footprints, Copy, Car, Hourglass, GripVertical, Plus, Minus,
 } from "lucide-react";
 
@@ -176,7 +176,9 @@ export function TripView({ tripId }: { tripId: string }) {
   const [ghost, setGhost] = useState<{ x: number; y: number; label: string } | null>(null);
   const dragRef = useRef<typeof drag>(null);
   const overRef = useRef<{ type: "stop"; si: number } | { type: "bank" } | { type: "end" } | null>(null);
-  const [editTravelers, setEditTravelers] = useState(false);
+  // Per-trip travelers editor is opened only for a locationless trip now (the "מי נוסע"
+  // button was removed), so this is a plain constant rather than toggleable state.
+  const editTravelers = false;
   const [tool, setTool] = useState<ToolKey | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [dayIdx, setDayIdx] = useState(0);                 // one day on screen — pager
@@ -833,11 +835,6 @@ export function TripView({ tripId }: { tripId: string }) {
         </div>
         {/* actions pushed to the far side */}
         <div className="flex items-center gap-2 lg:mr-auto">
-          <button onClick={() => generate(false)} disabled={!!busy || !canBuild}
-            className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-3.5 py-1.5 text-[13.5px] font-medium text-white disabled:opacity-50">
-            {busy === "generate" ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-            {busy === "generate" ? "בונה…" : itinerary ? "בנה מחדש" : "בנה לו\"ז"}
-          </button>
           {/* AI upgrade — hidden unless AI is explicitly enabled. With the kill-switch
               off (default) it would just re-run the same deterministic build, so
               showing it is misleading. Flip NEXT_PUBLIC_AI_ENABLED=true to re-enable. */}
@@ -847,11 +844,6 @@ export function TripView({ tripId }: { tripId: string }) {
               <Sparkles size={14} /> שדרגו עם AI
             </button>
           )}
-          <button onClick={() => setEditTravelers((v) => !v)}
-            className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-3 py-1.5 text-[13.5px] font-medium"
-            style={{ background: editTravelers ? "var(--brand-soft)" : "var(--surface)", color: "var(--brand-ink)" }}>
-            <Users size={14} /> מי נוסע
-          </button>
           {trip && (
             <ShareTrip trip={trip} profile={tripProfile}
               onShared={(shared) => update(tripId, { shared })} />
