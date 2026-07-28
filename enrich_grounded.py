@@ -24,6 +24,11 @@ import difflib
 APPLY = "--apply" in sys.argv
 TEST = "--test" in sys.argv
 SET = sys.argv[sys.argv.index("--set")+1] if "--set" in sys.argv else "kept"
+# --city <substr>  limit to one destination (matches city / city_he), e.g. --city London
+CITY = sys.argv[sys.argv.index("--city")+1] if "--city" in sys.argv else None
+# --relong  (set=mustsee) also RE-fetch must-sees that already have a (short) Hebrew
+# description, to lengthen them to a full lead paragraph. Never blanks an existing one.
+RELONG = "--relong" in sys.argv
 H = {"User-Agent": "NanaBanana/0.1 (yaniv@eos-online.com)"}
 LANG = {"Austria":"de","Germany":"de","Switzerland":"de","Greece":"el","Cyprus":"el",
         "Hungary":"hu","Czechia":"cs","Spain":"es","Netherlands":"nl","France":"fr",
@@ -93,13 +98,40 @@ def hebrew_for(lang, title):
     if not q: return None
     ht=_he_title(q)
     if not ht: return None
-    d=_summary("he",ht)
-    ex=(d or {}).get("extract","").strip()
-    if len(ex)<25: return None
-    return ex, f"https://he.wikipedia.org/wiki/{urllib.parse.quote(ht.replace(' ','_'))}"
+    return _he_extract(ht)   # full lead paragraph
+
+def _he_intro_text(ht):
+    """Full Hebrew LEAD section as plain text (TextExtracts exintro) — richer than
+    the truncated REST summary, so we can keep one whole paragraph, not one sentence."""
+    try:
+        r=requests.get("https://he.wikipedia.org/w/api.php",headers=H,timeout=20,params={
+            "action":"query","prop":"extracts","exintro":1,"explaintext":1,"redirects":1,
+            "titles":ht,"format":"json"})
+        for _,p in r.json().get("query",{}).get("pages",{}).items():
+            ex=(p.get("extract") or "").strip()
+            if len(ex)>=25: return ex
+    except Exception: pass
+    return None
+
+def _para(text, target=700, floor=260):
+    """One encyclopedic paragraph: accumulate lead paragraphs until ~floor chars,
+    then stop; hard-cap near target, trimmed back to a sentence boundary."""
+    paras=[p.strip() for p in re.split(r"\n+", text.strip()) if p.strip()]
+    out=""
+    for p in paras:
+        if out and len(out)>=floor: break
+        out=(out+" "+p).strip() if out else p
+        if len(out)>=target: break
+    if len(out)>target:
+        cut=out[:target]; m=list(re.finditer(r"[.!?]\s", cut))
+        out=(cut[:m[-1].end()] if m else cut.rsplit(" ",1)[0]+"…").strip()
+    return out.strip()
 
 def _he_extract(ht):
-    d=_summary("he",ht); ex=(d or {}).get("extract","").strip()
+    # Prefer the full lead paragraph; fall back to the REST summary if extracts fail.
+    ex=_he_intro_text(ht)
+    if not ex:
+        d=_summary("he",ht); ex=(d or {}).get("extract","").strip()
     if len(ex)>=25:
         return ex, f"https://he.wikipedia.org/wiki/{urllib.parse.quote(ht.replace(' ','_'))}"
     return None
@@ -162,10 +194,20 @@ def load(conn):
             AND (a.description_he IS NULL OR a.description_he='')
             AND a.info_sources IS NOT NULL AND a.info_sources::text NOT IN ('[]','null')
             AND a.lat IS NOT NULL ORDER BY d.id""").fetchall()
-    return conn.execute("""SELECT a.id,a.name_he,a.name_en,a.lat,a.lng,d.country,a.info_sources
+    # set=mustsee. RELONG also picks up must-sees that already have a (short) desc,
+    # to lengthen them; CITY scopes to one destination. Never blanks an existing desc
+    # (main() only writes on a Hebrew hit).
+    where=["a.must_see=1", "(a.is_duplicate IS NULL OR a.is_duplicate=0)", "a.lat IS NOT NULL"]
+    params=[]
+    if not RELONG:
+        where.append("(a.description_he IS NULL OR a.description_he='')")
+    if CITY:
+        where.append("(d.city ILIKE %s OR d.city_he ILIKE %s)")
+        params += [f"%{CITY}%", f"%{CITY}%"]
+    sql=(f"""SELECT a.id,a.name_he,a.name_en,a.lat,a.lng,d.country,a.info_sources
       FROM attractions a JOIN destinations d ON d.id=a.destination_id
-      WHERE a.must_see=1 AND (a.is_duplicate IS NULL OR a.is_duplicate=0)
-        AND (a.description_he IS NULL OR a.description_he='') AND a.lat IS NOT NULL ORDER BY d.id""").fetchall()
+      WHERE {' AND '.join(where)} ORDER BY d.id""")
+    return conn.execute(sql, tuple(params)).fetchall()
 
 def main():
     conn=db.get_conn()
@@ -178,7 +220,7 @@ def main():
             # already has a source — go straight to Hebrew, keep the source, never hide
             he=hebrew_from_sources(r["info_sources"])
             if he:
-                hex,heurl=he; desc=hex[:400].rstrip(); tag=first_sentence(hex); he_n+=1
+                hex,heurl=he; desc=_para(hex); tag=first_sentence(hex); he_n+=1
                 if TEST: print(f"  HE  {r['name_he'] or r['name_en']}\n      tag: {tag}\n      desc: {desc[:160]}")
                 if APPLY:
                     conn.execute("""UPDATE attractions SET description_he=%s,
@@ -196,7 +238,7 @@ def main():
             lang,title,ex,url=hit
             he=hebrew_for(lang,title)   # follow Wikidata -> Hebrew article
             if he:
-                hex,heurl=he; desc=hex[:400].rstrip(); tag=first_sentence(hex); he_n+=1
+                hex,heurl=he; desc=_para(hex); tag=first_sentence(hex); he_n+=1
                 if TEST: print(f"  HE  {r['name_he'] or r['name_en']} -> {title}\n      tag: {tag}\n      desc: {desc[:180]}")
                 if APPLY:
                     conn.execute("""UPDATE attractions SET description_he=%s,
