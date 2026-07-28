@@ -165,7 +165,7 @@ function HeartToggle({ liked, onClick, disabled }: { liked: boolean; onClick: ()
 // tours the WHOLE area (a half/full-day block the builder composes), and expanding
 // reveals its member places, each likeable on its own. Members are deduped OUT of
 // the flat list (they live only inside their neighbourhood).
-function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea, onToggleMember, onFocus, locked }: {
+function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea, onToggleMember, onFocus, locked, insights = {} }: {
   areas: AreaCard[]; chosenIds: Set<number>;
   attrById: Map<number, Attraction>;
   isPicked: (id: number) => boolean;
@@ -173,8 +173,10 @@ function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea,
   onToggleMember: (id: number) => void;
   onFocus: (a: AreaCard) => void;
   locked?: boolean;
+  insights?: Record<number, Insight[]>;
 }) {
   const [openId, setOpenId] = useState<number | null>(null);
+  const [openMemberId, setOpenMemberId] = useState<number | null>(null);   // expand a member for its details
   if (!areas.length) return null;
   return (
     <div className="flex flex-col gap-2.5 pt-3">
@@ -237,32 +239,73 @@ function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea,
                   {members.map((m) => {
                     const picked = isPicked(m.id);
                     const cat = mergeCat(m.category);
+                    const openM = openMemberId === m.id;
+                    const insList = insights[m.id] ?? [];
+                    const tip = insList[0]?.text_he || m.tips_he;
+                    // Same detail surface as a flat card — only offer the expand when
+                    // there's something behind it (photo or any tip/description/when/dress).
+                    const canExpand = !!(m.image_url || m.description_he || tip || insList.length > 1 || m.best_time_he || m.dress_he);
                     return (
-                      <div key={m.id} className="flex items-center gap-2.5 rounded-[10px] border bg-[var(--surface)] p-1.5"
+                      <div key={m.id} className="overflow-hidden rounded-[10px] border bg-[var(--surface)]"
                         style={{ borderColor: picked ? "var(--brand)" : "var(--border)" }}>
-                        {m.image_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={bigImage(m.image_url, 120)} alt="" loading="lazy" className="size-11 shrink-0 rounded-[8px] object-cover" />
-                        ) : (
-                          <div className="grid size-11 shrink-0 place-items-center rounded-[8px]" style={{ background: `color-mix(in srgb, ${catColor(cat)} 16%, var(--surface-2))` }}>
-                            <MapPin size={16} style={{ color: catColor(cat) }} />
+                        <div className="flex items-center gap-2.5 p-1.5">
+                          <button onClick={() => canExpand && setOpenMemberId(openM ? null : m.id)} disabled={!canExpand}
+                            className="flex min-w-0 flex-1 items-center gap-2.5 text-right disabled:cursor-default">
+                            {m.image_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={bigImage(m.image_url, 120)} alt="" loading="lazy" className="size-11 shrink-0 rounded-[8px] object-cover" />
+                            ) : (
+                              <div className="grid size-11 shrink-0 place-items-center rounded-[8px]" style={{ background: `color-mix(in srgb, ${catColor(cat)} 16%, var(--surface-2))` }}>
+                                <MapPin size={16} style={{ color: catColor(cat) }} />
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[13.5px] font-semibold">
+                                {m.must_see === 1 && <span className="text-[var(--accent-ink)]">⭐ </span>}
+                                {m.name_he || m.name_en}
+                              </p>
+                              <p className="truncate text-[12px] text-[var(--text-3)]">
+                                {CAT_HE[cat] ?? m.category}{m.tagline_he ? ` · ${m.tagline_he}` : ""}
+                              </p>
+                            </div>
+                            {canExpand && <ChevronDown size={16} className={`ms-auto shrink-0 text-[var(--text-3)] transition-transform ${openM ? "rotate-180" : ""}`} />}
+                          </button>
+                          <button onClick={() => onToggleMember(m.id)} aria-pressed={picked} disabled={locked}
+                            aria-label={picked ? "אהבתי" : "לייק"} title={locked ? "בחרו קהל ותחום כדי לבחור מקומות" : picked ? "אהבתי" : "לייק"}
+                            className="grid size-9 shrink-0 place-items-center rounded-full transition hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                            style={{ color: picked || toured ? "var(--brand)" : "var(--text-3)" }}>
+                            <Heart size={18} fill={picked || toured ? "currentColor" : "none"} />
+                          </button>
+                        </div>
+                        {openM && canExpand && (
+                          <div className="border-t border-[var(--border)] p-2.5">
+                            <div className="flex flex-col gap-2.5 sm:flex-row">
+                              {m.image_url && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={bigImage(m.image_url, 640)} alt="" loading="lazy"
+                                  onError={(e) => { const t = e.currentTarget; if (m.image_url && t.src !== m.image_url) t.src = m.image_url; }}
+                                  className="aspect-[4/3] w-full shrink-0 rounded-[8px] object-cover sm:w-[38%] sm:self-start" />
+                              )}
+                              <div className="min-w-0 flex-1">
+                                {m.description_he && <p className="text-[13px] leading-relaxed text-[var(--text-2)]">{m.description_he}</p>}
+                                {tip && <p className="mt-1.5 flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]"><span className="shrink-0">💡</span><span>טיפ מטיילים: {tip}</span></p>}
+                                {insList.length > 1 && (
+                                  <div className="mt-1.5 flex flex-col gap-1">
+                                    {insList.slice(1).map((ins) => (
+                                      <p key={ins.id} className="flex items-start gap-1 text-[12px] leading-snug text-[var(--brand-ink)]"><span className="shrink-0">{KIND_ICON[ins.kind] ?? "💬"}</span><span>{ins.text_he}</span></p>
+                                    ))}
+                                  </div>
+                                )}
+                                {(m.best_time_he || m.dress_he) && (
+                                  <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[12.5px] text-[var(--text-2)]">
+                                    {m.best_time_he && <span><span className="text-[var(--text-3)]">מתי: </span>{m.best_time_he}</span>}
+                                    {m.dress_he && <span><span className="text-[var(--text-3)]">לבוש: </span>{m.dress_he}</span>}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         )}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13.5px] font-semibold">
-                            {m.must_see === 1 && <span className="text-[var(--accent-ink)]">⭐ </span>}
-                            {m.name_he || m.name_en}
-                          </p>
-                          <p className="truncate text-[12px] text-[var(--text-3)]">
-                            {CAT_HE[cat] ?? m.category}{m.tagline_he ? ` · ${m.tagline_he}` : ""}
-                          </p>
-                        </div>
-                        <button onClick={() => onToggleMember(m.id)} aria-pressed={picked} disabled={locked}
-                          aria-label={picked ? "אהבתי" : "לייק"} title={locked ? "בחרו קהל ותחום כדי לבחור מקומות" : picked ? "אהבתי" : "לייק"}
-                          className="grid size-9 shrink-0 place-items-center rounded-full transition hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-                          style={{ color: picked || toured ? "var(--brand)" : "var(--text-3)" }}>
-                          <Heart size={18} fill={picked || toured ? "currentColor" : "none"} />
-                        </button>
                       </div>
                     );
                   })}
@@ -1236,7 +1279,7 @@ export function DestinationView({
               onToggleArea={manual ? toggleAreaManual : toggleArea}
               onToggleMember={(id) => setChoice(id, "yes")}
               onFocus={(a) => { setAreaFocus({ lat: a.lat, lng: a.lng, n: Date.now() }); if (!mapOpen) setMapOpen(true); }}
-              locked={!heartsEnabled} />
+              locked={!heartsEnabled} insights={insights} />
           )}
 
           {/* LIST view — compact rows in the trip-page design language; a row expands
