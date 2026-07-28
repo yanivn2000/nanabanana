@@ -733,7 +733,7 @@ export function DestinationView({
               below — no divider between the image and the info to its left. */}
           <div className="p-3.5 lg:relative lg:p-4">
             {/* destination image — far right, spans the header (like the trip) */}
-            <div className="hidden overflow-hidden rounded-[var(--radius-sm)] lg:absolute lg:top-4 lg:block lg:h-[105px] lg:w-[160px]"
+            <div className="hidden overflow-hidden rounded-[var(--radius-sm)] lg:absolute lg:top-4 lg:block lg:h-[76px] lg:w-[150px]"
                  style={{ insetInlineStart: "16px" }}>
               <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
                 orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
