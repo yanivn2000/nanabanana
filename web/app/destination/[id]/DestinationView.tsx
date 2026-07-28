@@ -232,6 +232,9 @@ function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea,
             </div>
             {open && (
               <div className="border-t border-[var(--border)] bg-[var(--surface-2)] p-2.5">
+                {/* the neighbourhood's full blurb — truncated to one line in the header,
+                    shown in full here so it never reads as cut off */}
+                {area.vibe_he && <p className="px-0.5 pb-2 text-[13.5px] italic leading-relaxed text-[var(--text-2)]">{area.vibe_he}</p>}
                 <p className="px-0.5 pb-2 text-[12px] text-[var(--text-3)]">
                   סמנו ❤ למעלה כדי לטייל בכל השכונה — או בחרו מקומות ספציפיים מתוכה:
                 </p>
