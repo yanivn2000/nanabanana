@@ -32,6 +32,11 @@ export function googleMapsUrl(lat: number, lng: number): string {
 export function googleMapsPin(lat: number, lng: number): string {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 }
+// Category search centred on a point — e.g. "restaurants around this spot". Opens
+// Google Maps at the coordinate (zoom ~16) with the query's results pinned around it.
+export function googleMapsNearby(lat: number, lng: number, query: string): string {
+  return `https://www.google.com/maps/search/${encodeURIComponent(query)}/@${lat},${lng},16z`;
+}
 // Live navigation between two points, in the traveler's chosen transit mode. This
 // is the "day-of" link (fresh, real-time) that complements our pre-planned leg —
 // deep-linking is allowed where storing directions results is not.

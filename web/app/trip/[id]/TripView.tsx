@@ -27,7 +27,7 @@ function stayHe(d?: string): string | null {
   if (n === 2.5) return "כשעתיים וחצי";
   return `כ-${n} שעות`;
 }
-import { googleMapsUrl, googleMapsPin, googleDirUrl, formatDistance, estimateLeg, haversineKm, travelMinutes, durationHe, round30, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
+import { googleMapsUrl, googleMapsPin, googleMapsNearby, googleDirUrl, formatDistance, estimateLeg, haversineKm, travelMinutes, durationHe, round30, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
 import { stopColor } from "@/lib/labels";
 import { entryExit, type LatLng } from "@/lib/access";
 import { orderFromDepot } from "@/lib/cluster";
@@ -1269,6 +1269,20 @@ export function TripView({ tripId }: { tripId: string }) {
                           )}
                         </div>
                         {s.note && <p className={`mt-1 text-[13.5px] leading-snug text-[var(--text-2)] ${isOpen ? "" : "line-clamp-2"}`}>{s.note}</p>}
+                        {/* A meal break has no place of its own — offer "restaurants nearby",
+                            centred on the last stop before it, so the traveller can pick where
+                            to eat right where they'll be. */}
+                        {s.kind === "food" && (() => {
+                          const near = [...day.stops.slice(0, si)].reverse().find((x) => x.lat != null && x.lng != null);
+                          if (!near) return null;
+                          return (
+                            <a href={googleMapsNearby(near.lat as number, near.lng as number, "מסעדות")}
+                              target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                              className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1 text-[12.5px] text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
+                              <Utensils size={12} /> מסעדות בסביבה
+                            </a>
+                          );
+                        })()}
                       </div>
                       {/* timeline spine — a numbered dot in the stop's own colour */}
                       <div className="flex w-7 shrink-0 flex-col items-center">
