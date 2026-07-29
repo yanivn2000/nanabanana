@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useProfile, profileSummary, useTrips, MONTHS_HE, type Trip } from "@/lib/store";
-import { MapPin, Trash2, Sparkles, BedDouble } from "lucide-react";
+import { MapPin, Trash2, Sparkles, BedDouble, ExternalLink, Link2, Check } from "lucide-react";
 import { SuitcaseArt } from "@/components/Illustrations";
 import { CityPoster } from "@/components/CityPoster";
 
@@ -24,6 +25,16 @@ function periodLabel(t: Trip): string | null {
 export default function TripsPage() {
   const [p, , profileLoaded] = useProfile();
   const { trips, remove, loaded } = useTrips();
+  const [onlyShared, setOnlyShared] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const sharedCount = trips.filter((t) => t.shared).length;
+  const shown = onlyShared ? trips.filter((t) => t.shared) : trips;
+
+  const copyLink = async (slug: string) => {
+    const url = `${typeof window !== "undefined" ? window.location.origin : ""}/t/${slug}`;
+    try { await navigator.clipboard.writeText(url); setCopied(slug); setTimeout(() => setCopied((c) => (c === slug ? null : c)), 1600); } catch { /* clipboard blocked */ }
+  };
 
   return (
     <main className="mx-auto w-full max-w-[440px] px-5 pb-28 pt-8 lg:max-w-[1600px] lg:px-8 lg:pb-12">
@@ -31,6 +42,18 @@ export default function TripsPage() {
         <h1 className="serif text-[32px] font-bold leading-none lg:text-[40px]">הטיולים שלי</h1>
         {profileLoaded && (
           <p className="mt-2 text-[14px] text-[var(--text-2)]">{profileSummary(p)}</p>
+        )}
+        {sharedCount > 0 && (
+          <div className="mt-3 inline-flex rounded-full border border-[var(--border)] bg-[var(--surface)] p-0.5 text-[13px]">
+            <button onClick={() => setOnlyShared(false)}
+              className={`rounded-full px-3 py-1 transition ${!onlyShared ? "bg-[var(--brand)] font-medium text-white" : "text-[var(--text-2)]"}`}>
+              הכול · {trips.length}
+            </button>
+            <button onClick={() => setOnlyShared(true)}
+              className={`flex items-center gap-1 rounded-full px-3 py-1 transition ${onlyShared ? "bg-[var(--brand)] font-medium text-white" : "text-[var(--text-2)]"}`}>
+              🔗 משותפים · {sharedCount}
+            </button>
+          </div>
         )}
       </header>
 
@@ -47,7 +70,7 @@ export default function TripsPage() {
       )}
 
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
-        {trips.map((t) => (
+        {shown.map((t) => (
           <div key={t.id}
             className="group relative aspect-[4/3] overflow-hidden rounded-[var(--radius-card)] shadow-[var(--shadow)] transition hover:-translate-y-0.5">
             {/* the whole card opens the trip; the poster fills it (like the home city tile) */}
@@ -61,12 +84,29 @@ export default function TripsPage() {
             <span className="pointer-events-none absolute start-3 top-3 grid size-8 place-items-center rounded-full bg-[var(--surface)]/90 text-[var(--accent-ink)] shadow-sm backdrop-blur">
               {t.mode === "hotels" ? <BedDouble size={15} /> : <Sparkles size={15} />}
             </span>
-            {/* delete — sits above the link so it captures its own clicks */}
-            <button onClick={() => { if (confirm(`למחוק את "${t.title}"?`)) remove(t.id); }}
-              aria-label="מחק"
-              className="absolute end-3 top-3 grid size-8 place-items-center rounded-full bg-[var(--surface)]/90 text-[var(--text-3)] shadow-sm backdrop-blur transition hover:text-[#c0453f]">
-              <Trash2 size={15} />
-            </button>
+            {/* action cluster — sits above the link so each captures its own clicks.
+                For a shared trip: open the public page + copy its link. Then delete. */}
+            <div className="absolute end-3 top-3 flex items-center gap-1.5">
+              {t.shared && (
+                <>
+                  <a href={`/t/${t.shared.slug}`} target="_blank" rel="noreferrer" aria-label="פתח קישור ציבורי"
+                    title="פתח את הדף הציבורי"
+                    className="grid size-8 place-items-center rounded-full bg-[var(--surface)]/90 text-[var(--brand-ink)] shadow-sm backdrop-blur transition hover:bg-[var(--surface)]">
+                    <ExternalLink size={15} />
+                  </a>
+                  <button onClick={() => copyLink(t.shared!.slug)} aria-label="העתק קישור"
+                    title={copied === t.shared.slug ? "הועתק!" : "העתק קישור לשיתוף"}
+                    className="grid size-8 place-items-center rounded-full bg-[var(--surface)]/90 text-[var(--brand-ink)] shadow-sm backdrop-blur transition hover:bg-[var(--surface)]">
+                    {copied === t.shared.slug ? <Check size={15} className="text-[var(--brand)]" /> : <Link2 size={15} />}
+                  </button>
+                </>
+              )}
+              <button onClick={() => { if (confirm(`למחוק את "${t.title}"?`)) remove(t.id); }}
+                aria-label="מחק"
+                className="grid size-8 place-items-center rounded-full bg-[var(--surface)]/90 text-[var(--text-3)] shadow-sm backdrop-blur transition hover:text-[#c0453f]">
+                <Trash2 size={15} />
+              </button>
+            </div>
             {/* info overlaid on the poster's gradient */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-1.5 p-4 text-white">
               <p className="serif text-[21px] font-bold leading-tight drop-shadow">{t.title}</p>
@@ -78,6 +118,9 @@ export default function TripsPage() {
                   <span className="rounded-full bg-white/20 px-2 py-0.5 backdrop-blur">📅 {periodLabel(t)}</span>
                 )}
                 <span className="rounded-full bg-white/20 px-2 py-0.5 backdrop-blur">👥 {profileSummary(t.profile ?? p)}</span>
+                {t.shared && (
+                  <span className="rounded-full bg-[var(--brand)]/85 px-2 py-0.5 backdrop-blur">🔗 משותף</span>
+                )}
               </div>
             </div>
           </div>
