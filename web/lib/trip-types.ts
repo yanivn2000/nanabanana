@@ -39,6 +39,9 @@ export type Stop = {
   // DB category / subcategory — drives the little "what is this" tag (מוזיאון / פארק…).
   cat?: string | null;
   sub?: string | null;
+  // A place the traveller added by hand (typed / pasted from a Google-Maps link) —
+  // NOT a DB attraction. Carries a synthetic negative id; never re-matched to the pool.
+  manual?: boolean;
 };
 
 export type Day = {

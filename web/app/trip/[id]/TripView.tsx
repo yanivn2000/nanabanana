@@ -56,7 +56,20 @@ const CAT_TO_KIND: Record<string, Stop["kind"]> = {
   nature: "nature", leisure: "nature", sport: "nature",
   museum: "culture", attraction: "culture", historic: "culture", tourism: "culture",
   food: "food", shopping: "shopping",
+  // traveller-added place types (see MANUAL_TYPES) → a stop kind for icon/colour
+  bar: "food", cafe: "rest", fun: "culture", other: "culture",
 };
+
+// Type tags for a traveller-added place. The `key` is stored as the item's category
+// (so CAT_TO_KIND gives it an icon/colour); `he` is the pill label shown on the card.
+const MANUAL_TYPES: { key: string; he: string; emoji: string }[] = [
+  { key: "food", he: "מסעדה", emoji: "🍴" },
+  { key: "bar", he: "בר / חיי לילה", emoji: "🍸" },
+  { key: "cafe", he: "בית קפה", emoji: "☕" },
+  { key: "fun", he: "קזינו / בידור", emoji: "🎰" },
+  { key: "other", he: "אחר", emoji: "📍" },
+];
+const manualTypeLabel = (key: string) => MANUAL_TYPES.find((t) => t.key === key) ?? MANUAL_TYPES[4];
 
 // Re-time a day's stops sequentially (09:30 start, dwell per stop, transit/walk
 // between, one lunch after noon) — the SAME model the builder uses, so after a
@@ -196,6 +209,15 @@ export function TripView({ tripId }: { tripId: string }) {
   const [searchQ, setSearchQ] = useState("");
   const [searchHits, setSearchHits] = useState<SearchHit[]>([]);
   const [searchBusy, setSearchBusy] = useState(false);
+  // "Add a place I was told about" — a manual entry (typed or pasted from a Google-Maps
+  // link) that becomes a draggable item in the "מקומות שהוספתי" bank section.
+  const [addOpen, setAddOpen] = useState(false);
+  const [addName, setAddName] = useState("");
+  const [addLink, setAddLink] = useState("");
+  const [addType, setAddType] = useState("food");
+  const [addCoords, setAddCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [addBusy, setAddBusy] = useState(false);
+  const [addMsg, setAddMsg] = useState<{ ok: boolean; text: string } | null>(null);
   // The stop the user is pointing at — hovered in the list or clicked on the map.
   // Indexed in "located stop" space (matches the numbered map markers).
   const [active, setActive] = useState<number | null>(null);
@@ -599,7 +621,7 @@ export function TripView({ tripId }: { tripId: string }) {
     const stop: Stop = {
       name: p.name_he || p.name_en, kind: CAT_TO_KIND[p.category] ?? "culture", time: "", duration: "",
       id: p.id, lat: p.lat ?? undefined, lng: p.lng ?? undefined, image: p.image_url ?? undefined, tagline: p.tagline_he ?? undefined,
-      cat: p.category,
+      cat: p.category, ...(p.manual ? { manual: true } : {}),
     };
     const it: Itinerary = JSON.parse(JSON.stringify(itinerary));
     const stops = it.days[di].stops;
@@ -623,8 +645,11 @@ export function TripView({ tripId }: { tripId: string }) {
     // food/lunch rows have no id — just drop them (re-time re-adds lunch anyway).
     const patch: Parameters<typeof update>[1] = { itinerary: it };
     if (s.id != null && !(trip?.leftOut ?? []).some((l) => l.id === s.id)) {
+      // a manual place keeps its own type-tag (s.cat) and manual flag so it returns
+      // to the "מקומות שהוספתי" section, not the ranked bank.
       const entry = { id: s.id, name_he: s.name, name_en: s.name, lat: s.lat ?? null, lng: s.lng ?? null,
-        image_url: s.image ?? null, category: KIND_TO_CAT[s.kind] ?? "attraction", tagline_he: s.tagline ?? null };
+        image_url: s.image ?? null, category: s.manual ? (s.cat ?? "other") : (KIND_TO_CAT[s.kind] ?? "attraction"),
+        tagline_he: s.tagline ?? null, ...(s.manual ? { manual: true } : {}) };
       patch.leftOut = [entry as NonNullable<NonNullable<typeof trip>["leftOut"]>[number], ...(trip?.leftOut ?? [])];
     }
     update(tripId, patch);
@@ -676,6 +701,51 @@ export function TripView({ tripId }: { tripId: string }) {
     const at = a.lat != null && a.lng != null ? bestInsertIndex(stops, a.lat, a.lng) : stops.length;
     insertAttraction(curIdx, at, a);
     setSearchQ(""); setSearchHits([]);
+  };
+  // Paste a Google-Maps link → resolve its name + coordinates (server unfurls short
+  // links too). Fills the name if empty and stores the exact location for the pin.
+  const resolvePlace = async (url: string) => {
+    const u = url.trim();
+    if (!u) return;
+    setAddBusy(true); setAddMsg(null);
+    try {
+      const r = await fetch(`/api/attractions/resolve-place?url=${encodeURIComponent(u)}`);
+      const d = await r.json().catch(() => null);
+      if (d?.lat != null && d?.lng != null) {
+        setAddCoords({ lat: d.lat, lng: d.lng });
+        if (d.name && !addName.trim()) setAddName(d.name);
+        setAddMsg({ ok: true, text: d.name ? `✓ נמצא: ${d.name}` : "✓ מיקום נמצא" });
+      } else {
+        setAddMsg({ ok: false, text: "לא הצלחתי לקרוא מיקום מהקישור — אפשר להוסיף לפי שם בלבד." });
+      }
+    } catch {
+      setAddMsg({ ok: false, text: "שגיאת רשת בקריאת הקישור." });
+    } finally { setAddBusy(false); }
+  };
+  // Create a manual place → prepend to the bank as a `manual` item (its own section);
+  // from there it's dragged into any day like a normal bank pick.
+  const addManualPlace = () => {
+    const name = addName.trim();
+    if (!name) return;
+    const id = -Math.floor(Date.now());   // synthetic negative id, never collides with DB ids
+    const entry = {
+      id, name_he: name, name_en: name, image_url: null, category: addType,
+      lat: addCoords?.lat ?? null, lng: addCoords?.lng ?? null,
+      tagline_he: manualTypeLabel(addType).he, must_see: 0, manual: true as const,
+    };
+    update(tripId, { leftOut: [entry as NonNullable<NonNullable<typeof trip>["leftOut"]>[number], ...(trip?.leftOut ?? [])] });
+    setAddName(""); setAddLink(""); setAddType("food"); setAddCoords(null); setAddMsg(null); setAddOpen(false);
+  };
+  const deleteManualPlace = (id: number) =>
+    update(tripId, { leftOut: (trip?.leftOut ?? []).filter((l) => l.id !== id) });
+  // Bank card "הוסף ליום זה": a manual place isn't in the DB, so it can't go through
+  // the server arrange — insert it locally (best geo slot + re-time). Ranked DB picks
+  // keep the server path (re-fits the day).
+  const addBankPickToDay = (p: { id: number; lat?: number | null; lng?: number | null; manual?: boolean }) => {
+    if (p.manual) {
+      const at = p.lat != null && p.lng != null ? bestInsertIndex(day?.stops ?? [], p.lat, p.lng) : (day?.stops.length ?? 0);
+      insertBankAt(curIdx, at, p.id);
+    } else addToDay(p.id);
   };
   // "פחות אטרקציות": drop the least-valuable real stop of the day INTO the bank
   // (least = "אם יש זמן" filler first, then lowest rating). Keeps ≥1 real stop.
@@ -1402,7 +1472,7 @@ export function TripView({ tripId }: { tripId: string }) {
             <div data-drop-bank
               className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 transition-colors"
               style={overBank ? { borderColor: "var(--brand)", boxShadow: "inset 0 0 0 2px var(--brand)" } : undefined}>
-              <p className="serif text-[15px] font-bold text-[var(--text)]">בנק המקומות — לפי חשיבות · {trip?.leftOut?.length ?? 0}</p>
+              <p className="serif text-[15px] font-bold text-[var(--text)]">בנק המקומות — לפי חשיבות · {(trip?.leftOut ?? []).filter((l) => !l.manual).length}</p>
               <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--text-2)]">
                 {drag?.kind === "stop"
                   ? "שחררו כאן כדי להוציא את העצירה מהיומן."
@@ -1464,8 +1534,92 @@ export function TripView({ tripId }: { tripId: string }) {
                   })()}
                 </div>
               )}
+
+              {/* "מקומות שהוספתי" — traveller-added places (a restaurant a friend
+                  recommended, or one picked from our "מסעדות בסביבה" Google-Maps link).
+                  Typed or resolved from a pasted link, tagged, and dragged into any day —
+                  unlike a hotel (which anchors every day), each belongs to one day. */}
+              {drag?.kind !== "stop" && (
+                <div className="mt-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[13px] font-bold text-[var(--text-2)]">
+                      מקומות שהוספתי{(trip?.leftOut ?? []).some((l) => l.manual) ? ` · ${(trip?.leftOut ?? []).filter((l) => l.manual).length}` : ""}
+                    </p>
+                    <button onClick={() => setAddOpen((v) => !v)}
+                      className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
+                      {addOpen ? <X size={13} /> : <Plus size={13} />} {addOpen ? "סגור" : "הוסף מקום"}
+                    </button>
+                  </div>
+
+                  {addOpen && (
+                    <div className="mt-2 rounded-[12px] border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                      <input value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="שם המקום (למשל: מסעדת דישום)"
+                        className="w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13.5px] outline-none focus:border-[var(--brand)]" />
+                      <div className="mt-2 flex items-center gap-2">
+                        <input value={addLink} onChange={(e) => setAddLink(e.target.value)}
+                          onBlur={(e) => e.target.value.trim() && resolvePlace(e.target.value)}
+                          onPaste={(e) => { const v = e.clipboardData.getData("text"); if (v.trim()) setTimeout(() => resolvePlace(v), 0); }}
+                          placeholder="הדביקו קישור מגוגל מפה (לא חובה)"
+                          className="min-w-0 flex-1 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[var(--brand)]" dir="ltr" />
+                        <button onClick={() => resolvePlace(addLink)} disabled={addBusy || !addLink.trim()}
+                          className="shrink-0 rounded-[9px] border border-[var(--border)] px-3 py-2 text-[12.5px] text-[var(--text-2)] transition hover:border-[var(--brand)] disabled:opacity-40">
+                          {addBusy ? "…" : "פענח"}
+                        </button>
+                      </div>
+                      {addMsg && <p className={`mt-1.5 text-[12px] ${addMsg.ok ? "text-[var(--brand-ink)]" : "text-[var(--text-3)]"}`}>{addMsg.text}</p>}
+                      <div className="mt-2.5 flex flex-wrap gap-1.5">
+                        {MANUAL_TYPES.map((t) => (
+                          <button key={t.key} onClick={() => setAddType(t.key)}
+                            className={`rounded-full border px-2.5 py-1 text-[12px] transition ${addType === t.key ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-ink)]" : "border-[var(--border)] text-[var(--text-2)] hover:border-[var(--brand)]"}`}>
+                            {t.emoji} {t.he}
+                          </button>
+                        ))}
+                      </div>
+                      <button onClick={addManualPlace} disabled={!addName.trim()}
+                        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-[13.5px] font-medium text-white transition hover:opacity-90 disabled:opacity-40">
+                        <Plus size={14} /> הוסף לבנק
+                      </button>
+                    </div>
+                  )}
+
+                  {(trip?.leftOut ?? []).filter((p) => p.manual).length > 0 && (
+                    <div className="mt-2 flex flex-col gap-2">
+                      {(trip?.leftOut ?? []).filter((p) => p.manual).map((p) => {
+                        const tag = manualTypeLabel(p.category);
+                        return (
+                          <div key={p.id}
+                            onMouseEnter={() => { setHoverBankId(p.id); if (p.lat != null && p.lng != null) setFocus({ lat: p.lat, lng: p.lng, n: Date.now() }); }}
+                            onMouseLeave={() => setHoverBankId(null)}
+                            className={`flex items-center gap-2 rounded-[10px] border border-[var(--border)] bg-[var(--surface-2)] p-2 transition-colors ${hoverBankId === p.id ? "border-[var(--brand)]" : ""} ${drag?.kind === "bank" && drag.id === p.id ? "opacity-40" : ""}`}>
+                            <span onPointerDown={(e) => startPointerDrag(e, { kind: "bank", id: p.id }, p.name_he || p.name_en)}
+                              style={{ touchAction: "none" }} title="גררו אל היום"
+                              className="grid size-6 shrink-0 cursor-grab touch-none select-none place-items-center text-[var(--text-3)] [-webkit-touch-callout:none] active:cursor-grabbing"><GripVertical size={16} /></span>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[14px] font-semibold">{p.name_he || p.name_en}</p>
+                              <p className="truncate text-[11.5px] text-[var(--text-3)]">
+                                {tag.emoji} {tag.he}{p.lat == null ? " · ללא מיקום" : ""}
+                              </p>
+                            </div>
+                            {p.lat != null && p.lng != null && (
+                              <a href={googleMapsPin(p.lat, p.lng)} target="_blank" rel="noreferrer" title="פתח במפה"
+                                className="grid size-7 shrink-0 place-items-center rounded-full text-[var(--text-3)] transition hover:text-[var(--brand-ink)]"><MapPin size={15} /></a>
+                            )}
+                            <button onClick={() => addBankPickToDay(p)} title="הוסף ליום זה"
+                              className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--brand-soft)] px-2.5 py-1 text-[12px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand)] hover:text-white">
+                              <Plus size={13} /> ליום {curIdx + 1}
+                            </button>
+                            <button onClick={() => deleteManualPlace(p.id)} aria-label="מחק מקום"
+                              className="grid size-7 shrink-0 place-items-center rounded-full text-[var(--text-3)] transition hover:text-[var(--danger,#dc2626)]"><Trash2 size={14} /></button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="mt-3 flex flex-col gap-2">
-                {(trip?.leftOut ?? []).map((p) => {
+                {(trip?.leftOut ?? []).filter((p) => !p.manual).map((p) => {
                   const bKey = `bank-${p.id}`;
                   const bOpen = expanded === bKey;
                   // is there anything worth reading before it goes into the day?

@@ -152,6 +152,7 @@ function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set
   }
   for (const day of it.days) {
     for (const s of day.stops) {
+      if (s.manual) continue;   // traveller-added place — keep as-is, never re-match to the pool
       const key = normName(s.name);
       if (!key) continue;
       let a = exact.get(key);
