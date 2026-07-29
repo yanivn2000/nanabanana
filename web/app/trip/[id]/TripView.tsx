@@ -219,6 +219,7 @@ export function TripView({ tripId }: { tripId: string }) {
   const [addAddress, setAddAddress] = useState("");
   const [addPrice, setAddPrice] = useState("");
   const [addCoords, setAddCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [addFlash, setAddFlash] = useState(false);   // one-shot green flash on the address field
   const [addBusy, setAddBusy] = useState(false);
   const [addMsg, setAddMsg] = useState<{ ok: boolean; text: string } | null>(null);
   // The stop the user is pointing at — hovered in the list or clicked on the map.
@@ -740,7 +741,12 @@ export function TripView({ tripId }: { tripId: string }) {
       if (d?.found && d.lat != null && d.lng != null) {
         setAddCoords({ lat: d.lat, lng: d.lng });
         if (opts?.fillName && !addName.trim()) setAddName(term);
-        setAddMsg({ ok: true, text: `✓ נמצא: ${(d.label || term).split(",").slice(0, 3).join(",")}` });
+        // Drop the resolved address INTO the address field (not a small note below),
+        // and flash the field green once so it's clear it was auto-filled.
+        setAddAddress((d.label || term).split(",").slice(0, 3).join(",").trim());
+        setAddMsg(null);
+        setAddFlash(true);
+        setTimeout(() => setAddFlash(false), 950);
         return d;
       }
       setAddMsg({ ok: false, text: "לא מצאתי מיקום — נסו כתובת מדויקת יותר, או הדביקו קישור." });
@@ -1614,9 +1620,9 @@ export function TripView({ tripId }: { tripId: string }) {
                       {/* Location — TWO ways, either/or: type an address, OR paste a Google-Maps link. */}
                       <p className="mt-2 text-[11.5px] text-[var(--text-3)]">מיקום — כתובת או קישור (או פשוט השם למעלה, וננסה לאתר):</p>
                       <input value={addAddress} onChange={(e) => { setAddAddress(e.target.value); setAddCoords(null); }}
-                        onBlur={(e) => e.target.value.trim() && geocodePlace(e.target.value)}
+                        onBlur={(e) => e.target.value.trim() && !addCoords && geocodePlace(e.target.value)}
                         placeholder={`כתובת / עיר (למשל: דרך ג'אפה 5, ${cityHe || "העיר"})`}
-                        className="mt-1 w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[var(--brand)]" />
+                        className={`mt-1 w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[var(--brand)] ${addFlash ? "field-flash" : ""}`} />
                       <div className="mt-1 flex items-center gap-2">
                         <span className="shrink-0 text-[11px] text-[var(--text-3)]">או</span>
                         <input value={addLink} onChange={(e) => setAddLink(e.target.value)}
