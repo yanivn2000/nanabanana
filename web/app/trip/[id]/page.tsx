@@ -14,7 +14,10 @@ export default async function TripPage({
   // Feature flag: /trip/<id>?v=editorial renders the same TripView inside an
   // .editorial-scope wrapper (a re-skin via scoped tokens/CSS). The default
   // route is untouched — no wrapper, identical markup — so the live page is safe.
-  if (sp.v === "editorial") {
+  // Tolerate a trailing slash / whitespace / array form (?v=editorial/ still works).
+  const vRaw = Array.isArray(sp.v) ? sp.v[0] : sp.v;
+  const v = String(vRaw ?? "").trim().replace(/\/+$/, "").toLowerCase();
+  if (v === "editorial") {
     return (
       <div className="editorial-scope">
         <TripView tripId={id} />
