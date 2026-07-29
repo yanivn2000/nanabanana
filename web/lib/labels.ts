@@ -23,6 +23,9 @@ const SUB_HE: Record<string, string> = {
   bar: "בר", pub: "פאב", nightclub: "מועדון", cocktail: "בר קוקטיילים",
   wine_bar: "בר יין", music_venue: "מוזיקה חיה", jazz_club: "מועדון ג'אז",
   market: "שוק", marketplace: "שוק",
+  // food venues (pipeline_food.py ingests Wikipedia-notable eateries) — show the
+  // specific kind instead of the generic "אוכל" category label.
+  restaurant: "מסעדה", cafe: "בית קפה", food_court: "דוכני אוכל",
 };
 
 const CAT_HE: Record<string, string> = {
