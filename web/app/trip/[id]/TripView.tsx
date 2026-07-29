@@ -1412,7 +1412,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                           <img src={editorial ? (bigImage(s.image, 360) ?? s.image) : s.image} alt="" loading="lazy"
                             onError={editorial ? (e) => { const t = e.currentTarget; if (s.image && t.src !== s.image) t.src = s.image; } : undefined}
                             className={editorial
-                              ? "h-[94px] w-[136px] rounded-[13px] object-cover shadow-[var(--shadow)]"
+                              ? "h-[94px] w-[136px] rounded-[13px] bg-[var(--surface-2)] object-cover shadow-[var(--shadow)]"
                               : "size-12 rounded-[12px] object-cover"} />
                         ) : editorial ? (
                           <div className="grid h-[94px] w-[136px] place-items-center rounded-[13px] border border-[var(--border)] bg-[var(--surface-2)]">
