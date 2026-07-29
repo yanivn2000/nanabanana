@@ -1409,7 +1409,8 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                       <div className={editorial ? "self-center py-2.5" : "py-2.5 pr-1"}>
                         {s.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={editorial ? bigImage(s.image, 360) : s.image} alt="" loading="lazy"
+                          <img src={editorial ? (bigImage(s.image, 360) ?? s.image) : s.image} alt="" loading="lazy"
+                            onError={editorial ? (e) => { const t = e.currentTarget; if (s.image && t.src !== s.image) t.src = s.image; } : undefined}
                             className={editorial
                               ? "h-[94px] w-[136px] rounded-[13px] object-cover shadow-[var(--shadow)]"
                               : "size-12 rounded-[12px] object-cover"} />
