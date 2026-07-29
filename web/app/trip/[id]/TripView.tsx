@@ -1084,11 +1084,27 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
       {/* row 2 — day tabs (thin pills) */}
       {itinerary && allDays.length > 0 && (
         <div className={`mt-1.5 flex items-center gap-2.5 px-5 ${editorial ? "lg:mt-4 lg:px-8" : "lg:pl-8 lg:pr-[204px]"}`}>
-          <span className="hidden shrink-0 text-[12px] font-semibold text-[var(--text-3)] sm:block">ימי הטיול</span>
-          <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 sm:mx-0 sm:px-0" style={{ scrollbarWidth: "none" }}>
+          {!editorial && <span className="hidden shrink-0 text-[12px] font-semibold text-[var(--text-3)] sm:block">ימי הטיול</span>}
+          <div className={`-mx-5 flex overflow-x-auto px-5 sm:mx-0 sm:px-0 ${editorial ? "gap-0 border-b border-[var(--border)]" : "gap-1.5"}`} style={{ scrollbarWidth: "none" }}>
             {allDays.map((d, i) => {
               const on = i === curIdx;
               const today = i === todayIndex;
+              if (editorial) {
+                // Editorial "table of contents": each day as a titled chapter entry
+                // with the neighbourhood as its subtitle and an active accent rule.
+                return (
+                  <button key={i} onClick={() => { setDayIdx(i); setExpanded(null); setActive(null); }}
+                    className="flex shrink-0 flex-col items-start gap-0.5 border-b-2 px-4 py-2.5 text-start transition"
+                    style={{ borderColor: on ? "var(--accent)" : "transparent" }}>
+                    <span className="serif text-[15px] font-bold leading-none" style={{ color: on ? "var(--text)" : "var(--text-3)" }}>
+                      יום {i + 1}{today ? " · היום" : ""}
+                    </span>
+                    <span className="text-[12px] leading-none" style={{ color: on ? "var(--brand-ink)" : "var(--text-3)" }}>
+                      {d.area || `${d.stops.length} עצירות`}
+                    </span>
+                  </button>
+                );
+              }
               return (
                 <button key={i} onClick={() => { setDayIdx(i); setExpanded(null); setActive(null); }}
                   className="flex shrink-0 items-center gap-1.5 rounded-full border-[1.5px] px-3 py-1 text-[13px] font-medium transition"
