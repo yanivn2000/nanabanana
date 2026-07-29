@@ -27,7 +27,7 @@ function stayHe(d?: string): string | null {
   if (n === 2.5) return "כשעתיים וחצי";
   return `כ-${n} שעות`;
 }
-import { googleMapsUrl, googleDirUrl, formatDistance, estimateLeg, haversineKm, travelMinutes, durationHe, round30, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
+import { googleMapsUrl, googleMapsPin, googleDirUrl, formatDistance, estimateLeg, haversineKm, travelMinutes, durationHe, round30, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
 import { stopColor } from "@/lib/labels";
 import { entryExit, type LatLng } from "@/lib/access";
 import { orderFromDepot } from "@/lib/cluster";
@@ -1319,9 +1319,9 @@ export function TripView({ tripId }: { tripId: string }) {
                             </a>
                           )}
                           {s.lat != null && s.lng != null && (
-                            <a href={googleMapsUrl(s.lat, s.lng)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                            <a href={googleMapsPin(s.lat, s.lng)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
                               className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[13.5px] text-[var(--text-2)]">
-                              <Navigation size={13} /> פתח במפה
+                              <MapPin size={13} /> פתח במפה
                             </a>
                           )}
                         </div>
@@ -1524,9 +1524,9 @@ export function TripView({ tripId }: { tripId: string }) {
                             </a>
                           )}
                           {p.lat != null && p.lng != null && (
-                            <a href={googleMapsUrl(p.lat, p.lng)} target="_blank" rel="noreferrer"
+                            <a href={googleMapsPin(p.lat, p.lng)} target="_blank" rel="noreferrer"
                               className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[13.5px] text-[var(--text-2)]">
-                              <Navigation size={13} /> פתח במפה
+                              <MapPin size={13} /> פתח במפה
                             </a>
                           )}
                         </div>

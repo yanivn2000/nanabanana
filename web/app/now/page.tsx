@@ -6,7 +6,7 @@ import { Navigation, MapPin, Compass, Loader2, ChevronRight, Star } from "lucide
 import { MapClient } from "@/components/MapClient";
 import { descriptor } from "@/lib/labels";
 import { useProfile } from "@/lib/store";
-import { formatDistance, wazeUrl, googleMapsUrl } from "@/lib/geo";
+import { formatDistance, wazeUrl, googleMapsPin } from "@/lib/geo";
 import type { Attraction, Destination } from "@/lib/db";
 
 type NearAttraction = Attraction & { distanceKm: number };
@@ -132,7 +132,7 @@ export default function NowPage() {
                       className="flex items-center gap-1 rounded-full bg-[var(--brand)] px-3 py-1.5 text-[13px] font-medium text-white">
                       <Navigation size={13} /> Waze
                     </a>
-                    <a href={googleMapsUrl(a.lat as number, a.lng as number)} target="_blank" rel="noreferrer"
+                    <a href={googleMapsPin(a.lat as number, a.lng as number)} target="_blank" rel="noreferrer"
                       className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--text-2)]">
                       <MapPin size={13} /> Maps
                     </a>

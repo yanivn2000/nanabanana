@@ -27,6 +27,11 @@ export function wazeUrl(lat: number, lng: number): string {
 export function googleMapsUrl(lat: number, lng: number): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 }
+// "Open in map" — just drop a pin at the place (no route). Unlike googleMapsUrl,
+// this does NOT compute directions from the user's current location.
+export function googleMapsPin(lat: number, lng: number): string {
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+}
 // Live navigation between two points, in the traveler's chosen transit mode. This
 // is the "day-of" link (fresh, real-time) that complements our pre-planned leg —
 // deep-linking is allowed where storing directions results is not.
