@@ -395,7 +395,9 @@ export function DestinationView({
   const toggleSelectedOnly = () => { setSoloInterest(null); setSelectedOnly((v) => !v); };
   // How the attraction list renders: a compact LIST in the trip-page design language
   // (default — row → expands down, image on the right, info across) or image-top TILES.
-  const [listView] = useState(true);   // list is the only view now (tiles retired)
+  // List is the default; the editorial variant (M5b) uses the image-top TILE grid
+  // (already built below) for a photo-forward "sell the city" browse.
+  const listView = !editorial;
   // (The interest ✓/✕/solo cycler + editor were retired with the "הכל" mode;
   // soloInterest state stays as a harmless no-op the list filter still reads.)
   const [selected, setSelected] = useState<Attraction | null>(null);
