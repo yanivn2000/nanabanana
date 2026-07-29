@@ -333,6 +333,7 @@ export function DestinationView({
   isEditor = false,
   communityCount = 0,
   areas = [],
+  editorial = false,
 }: {
   dest: Destination;
   attractions: Attraction[];
@@ -343,6 +344,7 @@ export function DestinationView({
   isEditor?: boolean;
   communityCount?: number;
   areas?: AreaCard[];
+  editorial?: boolean;
 }) {
   const covered = new Set(coveredIds);
   // Editor curation: optimistic overrides of the two ratings while the write to
@@ -852,6 +854,29 @@ export function DestinationView({
           are reachable right away */}
       <header className="rise px-5 pt-3 pb-2.5 lg:px-8 lg:pt-4 lg:pb-3">
         <div className="mx-auto max-w-[1600px]">
+          {/* ── Editorial city hero (M5a, flag only) — a cinematic band with the city
+               name in serif, in place of the compact identity line. ── */}
+          {editorial && (
+            <section className="relative mb-3 overflow-hidden rounded-[18px] shadow-[var(--shadow)]">
+              <div className="absolute inset-0">
+                <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
+                  orientation="landscape" position="50% 42%" className="size-full" />
+              </div>
+              <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, rgba(18,14,9,0.74) 0%, rgba(18,14,9,0.28) 46%, rgba(18,14,9,0.12) 100%)" }} />
+              <div className="relative flex min-h-[260px] flex-col justify-end gap-2.5 p-7 lg:min-h-[320px] lg:p-9">
+                <Link href="/" className="inline-flex w-fit items-center gap-1 text-[13px] font-medium text-white/85 transition hover:text-white">
+                  <ChevronRight size={14} /> בית
+                </Link>
+                <h1 className="serif flex items-center gap-2.5 text-[40px] font-bold leading-[0.98] text-white lg:text-[58px]" style={{ textShadow: "0 2px 20px rgba(0,0,0,0.4)" }}>
+                  <span className="text-[0.62em]">{countryFlag(dest.country)}</span>
+                  {dest.city_he || dest.city}
+                </h1>
+                <p className="text-[15px] text-white/90" style={{ textShadow: "0 1px 10px rgba(0,0,0,0.4)" }}>
+                  {dest.country} · גלו את המקומות, השכונות והחוויות — ונרכיב לכם טיול משם.
+                </p>
+              </div>
+            </section>
+          )}
           {/* the top city section sits directly on the cream page background (no
               white card). Structured like the TRIP header: a horizontal identity
               (breadcrumb | title · places · badges) with the destination image on
@@ -860,17 +885,20 @@ export function DestinationView({
           <div className="p-3.5 lg:relative lg:p-4">
             {/* destination image — floats to the far right, same 160×105 landscape treatment
                 as the trip page (the pr below reserves room so nothing runs under it) */}
-            <div className="hidden overflow-hidden rounded-[var(--radius-sm)] lg:absolute lg:top-3 lg:block lg:h-[105px] lg:w-[160px]"
-                 style={{ insetInlineStart: "16px" }}>
-              <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
-                orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
-            </div>
+            {!editorial && (
+              <div className="hidden overflow-hidden rounded-[var(--radius-sm)] lg:absolute lg:top-3 lg:block lg:h-[105px] lg:w-[160px]"
+                   style={{ insetInlineStart: "16px" }}>
+                <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
+                  orientation="landscape" position="50% 45%" className="absolute inset-0 size-full" />
+              </div>
+            )}
             <div className="flex flex-col gap-2.5">
               {/* identity block (cleared of the floated image via pr): breadcrumb, big city
                   NAME, then a meta row — the mode toggle on the right (under the name) and the
                   "N places" count + pass/community badges pushed to the left. */}
-              <div className="flex flex-col gap-2 lg:pr-[188px]">
-                {/* breadcrumb + city name on ONE line */}
+              <div className={`flex flex-col gap-2 ${editorial ? "" : "lg:pr-[188px]"}`}>
+                {/* breadcrumb + city name on ONE line (hidden in editorial — the hero carries them) */}
+                {!editorial && (
                 <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
                   <Link href="/" className="eyebrow inline-flex items-center gap-1 text-[var(--text-2)]">
                     <ChevronRight size={14} /> בית
@@ -881,6 +909,7 @@ export function DestinationView({
                     {dest.city_he || dest.city}
                   </h1>
                 </div>
+                )}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   {/* flow toggle — GUIDED (system picks, you adjust) vs MANUAL (you pick everything) */}
                   <div className="flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-0.5">

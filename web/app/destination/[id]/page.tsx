@@ -8,10 +8,15 @@ export const dynamic = "force-dynamic";
 
 export default async function DestinationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ [k: string]: string | string[] | undefined }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
+  const vRaw = Array.isArray(sp.v) ? sp.v[0] : sp.v;
+  const editorial = String(vRaw ?? "").trim().replace(/\/+$/, "").toLowerCase() === "editorial";
   const dest = await getDestination(Number(id));
   if (!dest) notFound();
   const [attractions, allInsights, editor, communityCount, areas] = await Promise.all([
@@ -49,11 +54,14 @@ export default async function DestinationPage({
     .filter((a) => passes.some((p) => passCovers(p, a.name_en, a.name_he)))
     .map((a) => a.id);
 
-  return (
+  const view = (
     <DestinationView
       dest={dest} attractions={attractions} insights={insights} placeGroups={placeGroups}
       passes={passes} coveredIds={coveredIds} isEditor={editor} communityCount={communityCount}
-      areas={areas}
+      areas={areas} editorial={editorial}
     />
   );
+  // Feature flag: /destination/<id>?v=editorial renders the same view inside an
+  // .editorial-scope wrapper (re-skin via scoped tokens/CSS). Default is untouched.
+  return editorial ? <div className="editorial-scope">{view}</div> : view;
 }
