@@ -944,6 +944,27 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 <ChevronRight size={14} /> הטיולים שלי
               </Link>
               <div className="ms-auto flex items-center gap-2">
+                <div className="relative">
+                  <button onClick={() => setDatesOpen((o) => !o)}
+                    className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--text-2)] transition hover:border-[var(--brand)]">
+                    <CalendarDays size={14} /> {dateRangeText ?? "תאריכים"}
+                  </button>
+                  {datesOpen && (
+                    <>
+                      <div className="fixed inset-0 z-[40]" onClick={() => setDatesOpen(false)} />
+                      <div className="absolute right-0 top-full z-[41] mt-1 flex flex-col gap-1.5 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-2.5 shadow-[var(--shadow)]">
+                        <input type="date" value={trip?.startDate ?? ""} aria-label="תאריך התחלה"
+                          onChange={(e) => { const info = datesToInfo(e.target.value, trip?.endDate);
+                            update(tripId, { startDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) }); }}
+                          className="w-[150px] rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[13px] text-[var(--text)] outline-none" />
+                        <input type="date" value={trip?.endDate ?? ""} min={trip?.startDate} aria-label="תאריך סיום"
+                          onChange={(e) => { const info = datesToInfo(trip?.startDate, e.target.value);
+                            update(tripId, { endDate: e.target.value || undefined, ...(info ? { days: info.days, month: info.month } : {}) }); }}
+                          className="w-[150px] rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1 text-[13px] text-[var(--text)] outline-none" />
+                      </div>
+                    </>
+                  )}
+                </div>
                 {trip && <ShareTrip trip={trip} profile={tripProfile} onShared={(shared) => update(tripId, { shared })} />}
                 {trip && <EditorTools trip={trip} itinerary={itinerary} />}
                 <button onClick={() => { if (confirm("למחוק את הטיול הזה? הפעולה אינה ניתנת לביטול.")) { remove(tripId); window.location.href = "/trips"; } }}
@@ -1137,11 +1158,25 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
         </div>
       )}
 
+      {/* Editorial chapter opener — the day reads as a magazine chapter: an oversized
+          numeral, the neighbourhood as the chapter title, the day's rationale as a
+          one-line intro. (Real day.title/intro come later; area/why are the stopgap.) */}
+      {editorial && itinerary && day && (
+        <div className="mt-7 flex items-start gap-5 px-5 lg:px-8">
+          <div className="serif text-[56px] font-extrabold leading-[0.8] text-[var(--accent)] lg:text-[76px]">{String(curIdx + 1).padStart(2, "0")}</div>
+          <div className="pt-1.5">
+            <p className="eyebrow" style={{ color: "var(--brand-ink)" }}>יום {curIdx + 1}{allDays.length > 1 ? ` · מתוך ${allDays.length}` : ""}</p>
+            <h2 className="serif mt-1 text-[28px] font-bold leading-[1.04] lg:text-[38px]">{day.area || dayLabels[curIdx]}</h2>
+            {day.why && <p className="mt-2 max-w-[58ch] text-[15.5px] leading-relaxed text-[var(--text-2)]">{day.why}</p>}
+          </div>
+        </div>
+      )}
+
       {/* row 3 — day summary (thin strip, no card): day label + edit + stats,
           and an on-demand "why?" toggle (no big AI explanation block) */}
       {itinerary && day && (
-        <div className={`mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--border)] px-5 pb-2 ${editorial ? "lg:px-8" : "lg:pl-8 lg:pr-[204px]"}`}>
-          <h2 className={`serif font-bold leading-tight ${editorial ? "text-[22px] lg:text-[26px]" : "text-[15px] lg:text-[16px]"}`}>{dayLabels[curIdx]}</h2>
+        <div className={`mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--border)] px-5 pb-2 ${editorial ? "lg:mt-3 lg:px-8" : "lg:pl-8 lg:pr-[204px]"}`}>
+          {!editorial && <h2 className="serif text-[15px] font-bold leading-tight lg:text-[16px]">{dayLabels[curIdx]}</h2>}
           {/* move the whole day earlier / later in the trip order. RTL: right
               arrow = earlier day (toward יום 1), left arrow = later. */}
           {allDays.length > 1 && (
@@ -1180,7 +1215,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 </a>
               )}
             </span>
-          ) : day.area && (
+          ) : (!editorial && day.area) && (
             <span className="flex items-center gap-1 rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[12px] font-medium text-[var(--brand-ink)]">
               <MapPin size={11} /> {day.area}
             </span>
