@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Share2, Copy, Check, Loader2, X, Trash2, MessageCircle, Send, LogIn } from "lucide-react";
+import { Share2, Copy, Check, Loader2, X, Trash2, MessageCircle, Send, LogIn, ExternalLink } from "lucide-react";
 import type { Trip, FamilyProfile } from "@/lib/store";
 import { useSessionUser } from "@/lib/auth";
 
@@ -151,6 +151,11 @@ export function ShareTrip({ trip, profile, onShared }: {
                     {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? "הועתק!" : "העתיקו"}
                   </button>
                 </div>
+                {/* view the actual public page (what visitors see) */}
+                <a href={url ?? "#"} target="_blank" rel="noreferrer"
+                  className="mb-3 flex items-center justify-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] py-2 text-[13.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
+                  <ExternalLink size={15} /> צפו בדף הציבורי
+                </a>
                 {/* one-tap share targets. WhatsApp & Telegram carry our text;
                     Facebook's sharer ignores text and just pulls the OG card —
                     still the primary channel for the group-posting flow. */}
