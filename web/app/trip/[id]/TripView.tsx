@@ -1404,12 +1404,19 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                           </button>
                         )}
                       </div>
-                      {/* photo (falls back to the kind icon) */}
-                      <div className="py-2.5 pr-1">
+                      {/* photo (falls back to the kind icon). Editorial: a large landscape
+                          frame so each stop leads with its image (photo-forward, M3a). */}
+                      <div className={editorial ? "self-center py-2.5" : "py-2.5 pr-1"}>
                         {s.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={s.image} alt="" loading="lazy"
-                            className="size-12 rounded-[12px] object-cover" />
+                          <img src={editorial ? bigImage(s.image, 360) : s.image} alt="" loading="lazy"
+                            className={editorial
+                              ? "h-[94px] w-[136px] rounded-[13px] object-cover shadow-[var(--shadow)]"
+                              : "size-12 rounded-[12px] object-cover"} />
+                        ) : editorial ? (
+                          <div className="grid h-[94px] w-[136px] place-items-center rounded-[13px] border border-[var(--border)] bg-[var(--surface-2)]">
+                            <StopIcon kind={s.kind} />
+                          </div>
                         ) : (
                           <StopIcon kind={s.kind} />
                         )}
@@ -1421,7 +1428,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                             drop to the meta line below so the name is never squeezed. */}
                         <div className="flex items-start justify-between gap-1.5">
                           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                            <p className="line-clamp-2 text-[16.5px] font-semibold leading-snug">{s.name}</p>
+                            <p className={`line-clamp-2 font-semibold leading-snug ${editorial ? "serif text-[19px] lg:text-[21px]" : "text-[16.5px]"}`}>{s.name}</p>
                             {fromSelection && s.anchor === true && (
                               <span className="shrink-0 rounded-full bg-[var(--brand-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--brand-ink)]">עוגן</span>
                             )}
