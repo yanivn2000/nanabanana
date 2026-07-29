@@ -216,6 +216,7 @@ export function TripView({ tripId }: { tripId: string }) {
   const [addName, setAddName] = useState("");
   const [addLink, setAddLink] = useState("");
   const [addType, setAddType] = useState("food");
+  const [addAddress, setAddAddress] = useState("");
   const [addPrice, setAddPrice] = useState("");
   const [addCoords, setAddCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [addBusy, setAddBusy] = useState(false);
@@ -724,21 +725,53 @@ export function TripView({ tripId }: { tripId: string }) {
       setAddMsg({ ok: false, text: "שגיאת רשת בקריאת הקישור." });
     } finally { setAddBusy(false); }
   };
+  // Resolve a place by NAME or ADDRESS via the same geocoder the hotel form uses —
+  // biased to the trip's country + city centre so a bare name ("Osteria Ovada")
+  // lands in the right city. Returns the hit (and fills the name if it was blank).
+  const geocodePlace = async (q: string, opts?: { fillName?: boolean }) => {
+    const term = q.trim();
+    if (!term) return null;
+    setAddBusy(true); setAddMsg(null);
+    try {
+      const cc = trip?.country ? `&cc=${encodeURIComponent(trip.country)}` : "";
+      const near = mapCenter[0] !== 0 || mapCenter[1] !== 0 ? `&lat=${mapCenter[0]}&lng=${mapCenter[1]}` : "";
+      const r = await fetch(`/api/geocode?q=${encodeURIComponent(term)}${cc}${near}`);
+      const d = await r.json().catch(() => null);
+      if (d?.found && d.lat != null && d.lng != null) {
+        setAddCoords({ lat: d.lat, lng: d.lng });
+        if (opts?.fillName && !addName.trim()) setAddName(term);
+        setAddMsg({ ok: true, text: `✓ נמצא: ${(d.label || term).split(",").slice(0, 3).join(",")}` });
+        return d;
+      }
+      setAddMsg({ ok: false, text: "לא מצאתי מיקום — נסו כתובת מדויקת יותר, או הדביקו קישור." });
+      return null;
+    } catch {
+      setAddMsg({ ok: false, text: "שגיאת רשת בחיפוש הכתובת." });
+      return null;
+    } finally { setAddBusy(false); }
+  };
   // Create a manual place → prepend to the bank as a `manual` item (its own section);
   // from there it's dragged into any day like a normal bank pick.
-  const addManualPlace = () => {
+  const addManualPlace = async () => {
     const name = addName.trim();
     if (!name) return;
+    // If we still have no coordinates (no link pasted, no blur-geocode), resolve them
+    // now from the address (or the name) — so the pin/re-time work like the hotel flow.
+    let coords = addCoords;
+    if (!coords) {
+      const hit = await geocodePlace(addAddress.trim() || name, { fillName: false });
+      if (hit) coords = { lat: hit.lat, lng: hit.lng };
+    }
     const id = -Math.floor(Date.now());   // synthetic negative id, never collides with DB ids
     const price = addPrice.trim() ? Number(addPrice) : null;
     const entry = {
       id, name_he: name, name_en: name, image_url: null, category: addType,
-      lat: addCoords?.lat ?? null, lng: addCoords?.lng ?? null,
+      lat: coords?.lat ?? null, lng: coords?.lng ?? null,
       tagline_he: manualTypeLabel(addType).he, must_see: 0, manual: true as const,
       ...(price != null && price > 0 ? { priceEur: price } : {}),
     };
     update(tripId, { leftOut: [entry as NonNullable<NonNullable<typeof trip>["leftOut"]>[number], ...(trip?.leftOut ?? [])] });
-    setAddName(""); setAddLink(""); setAddType("food"); setAddPrice(""); setAddCoords(null); setAddMsg(null); setAddOpen(false);
+    setAddName(""); setAddLink(""); setAddAddress(""); setAddType("food"); setAddPrice(""); setAddCoords(null); setAddMsg(null); setAddOpen(false);
   };
   const deleteManualPlace = (id: number) =>
     update(tripId, { leftOut: (trip?.leftOut ?? []).filter((l) => l.id !== id) });
@@ -1314,7 +1347,10 @@ export function TripView({ tripId }: { tripId: string }) {
                             // isn't a DB attraction, so label it "רחוב" directly (older trips
                             // never get its cat from the details re-attach, which is points-only).
                             const isStreet = (s.ref?.startsWith("street") ?? false) || (!!s.path && s.kind !== "nature");
-                            const label = isStreet ? "רחוב"
+                            // a traveller-added place shows the type-tag it was created with
+                            // (מסעדה / בר / קזינו…), not the broad "אוכל" kind label.
+                            const label = s.manual ? manualTypeLabel(s.cat || "other").he
+                              : isStreet ? "רחוב"
                               : catLabel(s.cat, s.sub)
                               || (s.kind !== "food" && s.kind !== "rest" ? (KIND_META[s.kind]?.label ?? "") : "");
                             if (!label) return null;
@@ -1355,10 +1391,10 @@ export function TripView({ tripId }: { tripId: string }) {
                           )}
                         </div>
                         {s.note && <p className={`mt-1 text-[13.5px] leading-snug text-[var(--text-2)] ${isOpen ? "" : "line-clamp-2"}`}>{s.note}</p>}
-                        {/* A meal break has no place of its own — offer "restaurants nearby",
-                            centred on the last stop before it, so the traveller can pick where
-                            to eat right where they'll be. */}
-                        {s.kind === "food" && (() => {
+                        {/* A logistical meal BREAK has no place of its own — offer "restaurants
+                            nearby", centred on the last stop before it. A real/added restaurant
+                            (has its own id) IS the place, so it gets no such link. */}
+                        {s.kind === "food" && s.id == null && (() => {
                           const near = [...day.stops.slice(0, si)].reverse().find((x) => x.lat != null && x.lng != null);
                           if (!near) return null;
                           return (
@@ -1569,13 +1605,24 @@ export function TripView({ tripId }: { tripId: string }) {
 
                   {addOpen && (
                     <div className="mt-2 rounded-[12px] border border-[var(--border)] bg-[var(--surface-2)] p-3">
-                      <input value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="שם המקום (למשל: מסעדת דישום)"
+                      {/* Name — on blur we try to locate it automatically (like the hotel form),
+                          so a well-known place needs no address at all. */}
+                      <input value={addName} onChange={(e) => { setAddName(e.target.value); setAddCoords(null); }}
+                        onBlur={(e) => { const v = e.target.value.trim(); if (v && !addCoords && !addAddress.trim()) geocodePlace(v, { fillName: false }); }}
+                        placeholder="שם המקום (למשל: מסעדת דישום)"
                         className="w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13.5px] outline-none focus:border-[var(--brand)]" />
-                      <div className="mt-2 flex items-center gap-2">
+                      {/* Location — TWO ways, either/or: type an address, OR paste a Google-Maps link. */}
+                      <p className="mt-2 text-[11.5px] text-[var(--text-3)]">מיקום — כתובת או קישור (או פשוט השם למעלה, וננסה לאתר):</p>
+                      <input value={addAddress} onChange={(e) => { setAddAddress(e.target.value); setAddCoords(null); }}
+                        onBlur={(e) => e.target.value.trim() && geocodePlace(e.target.value)}
+                        placeholder={`כתובת / עיר (למשל: דרך ג'אפה 5, ${cityHe || "העיר"})`}
+                        className="mt-1 w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[var(--brand)]" />
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="shrink-0 text-[11px] text-[var(--text-3)]">או</span>
                         <input value={addLink} onChange={(e) => setAddLink(e.target.value)}
                           onBlur={(e) => e.target.value.trim() && resolvePlace(e.target.value)}
                           onPaste={(e) => { const v = e.clipboardData.getData("text"); if (v.trim()) setTimeout(() => resolvePlace(v), 0); }}
-                          placeholder="הדביקו קישור מגוגל מפה (לא חובה)"
+                          placeholder="הדביקו קישור מגוגל מפה"
                           className="min-w-0 flex-1 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[var(--brand)]" dir="ltr" />
                         <button onClick={() => resolvePlace(addLink)} disabled={addBusy || !addLink.trim()}
                           className="shrink-0 rounded-[9px] border border-[var(--border)] px-3 py-2 text-[12.5px] text-[var(--text-2)] transition hover:border-[var(--brand)] disabled:opacity-40">
