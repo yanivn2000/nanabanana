@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Assistant, Fredoka } from "next/font/google";
+import { Assistant, Fredoka, Frank_Ruhl_Libre } from "next/font/google";
 import "./globals.css";
 import { BottomNav } from "@/components/BottomNav";
 import { TopNav } from "@/components/TopNav";
@@ -17,6 +17,15 @@ const fredoka = Fredoka({
   variable: "--font-fredoka",
   subsets: ["hebrew", "latin"],
   weight: ["400", "500", "600", "700"],
+});
+
+// Editorial display face — Frank Ruhl Libre: a true Hebrew serif for the
+// "Editorial Travel Planner" direction. Loaded globally, USED only inside the
+// feature-flagged .editorial-scope (so live pages keep Fredoka untouched).
+const frankRuhl = Frank_Ruhl_Libre({
+  variable: "--font-frank",
+  subsets: ["hebrew", "latin"],
+  weight: ["500", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
@@ -39,7 +48,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="he" dir="rtl" className={`${assistant.variable} ${fredoka.variable} h-full antialiased`}>
+    <html lang="he" dir="rtl" className={`${assistant.variable} ${fredoka.variable} ${frankRuhl.variable} h-full antialiased`}>
       <body className="min-h-full">
         <TopNav />
         {children}

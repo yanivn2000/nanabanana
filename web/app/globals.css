@@ -88,6 +88,17 @@
   color: var(--text-3); font-weight: 500; }
 .rule { height: 2px; width: 32px; background: var(--accent); border-radius: 2px; }
 
+/* Editorial variant, feature-flagged at /trip/[id]?v=editorial.
+   Scoped re-skin, so live pages (no flag) are untouched. Milestone 1: swap the
+   display face to Frank Ruhl Libre (a true Hebrew serif) inside the scope only.
+   Set font-family directly off the plain --font-frank var (not the Tailwind
+   theme token --font-serif, which the compiler inlines). */
+.editorial-scope .serif {
+  font-family: var(--font-frank), var(--font-assistant), Georgia, "Times New Roman", serif;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+
 * { box-sizing: border-box; }
 
 body {
