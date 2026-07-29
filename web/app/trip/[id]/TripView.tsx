@@ -44,6 +44,7 @@ import { CityPoster } from "@/components/CityPoster";
 import { PackingList } from "@/components/PackingList";
 import { TravelChecklist } from "@/components/TravelChecklist";
 import { BudgetPanel } from "@/components/BudgetPanel";
+import { stopEntryPerPerson } from "@/lib/budget";
 import { Hotels } from "@/app/trips/Hotels";
 import { EditorTools } from "./EditorTools";
 import { MapClient } from "@/components/MapClient";
@@ -215,6 +216,7 @@ export function TripView({ tripId }: { tripId: string }) {
   const [addName, setAddName] = useState("");
   const [addLink, setAddLink] = useState("");
   const [addType, setAddType] = useState("food");
+  const [addPrice, setAddPrice] = useState("");
   const [addCoords, setAddCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [addBusy, setAddBusy] = useState(false);
   const [addMsg, setAddMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -621,7 +623,7 @@ export function TripView({ tripId }: { tripId: string }) {
     const stop: Stop = {
       name: p.name_he || p.name_en, kind: CAT_TO_KIND[p.category] ?? "culture", time: "", duration: "",
       id: p.id, lat: p.lat ?? undefined, lng: p.lng ?? undefined, image: p.image_url ?? undefined, tagline: p.tagline_he ?? undefined,
-      cat: p.category, ...(p.manual ? { manual: true } : {}),
+      cat: p.category, ...(p.manual ? { manual: true } : {}), ...(p.priceEur != null ? { priceEur: p.priceEur } : {}),
     };
     const it: Itinerary = JSON.parse(JSON.stringify(itinerary));
     const stops = it.days[di].stops;
@@ -649,7 +651,7 @@ export function TripView({ tripId }: { tripId: string }) {
       // to the "מקומות שהוספתי" section, not the ranked bank.
       const entry = { id: s.id, name_he: s.name, name_en: s.name, lat: s.lat ?? null, lng: s.lng ?? null,
         image_url: s.image ?? null, category: s.manual ? (s.cat ?? "other") : (KIND_TO_CAT[s.kind] ?? "attraction"),
-        tagline_he: s.tagline ?? null, ...(s.manual ? { manual: true } : {}) };
+        tagline_he: s.tagline ?? null, ...(s.manual ? { manual: true } : {}), ...(s.priceEur != null ? { priceEur: s.priceEur } : {}) };
       patch.leftOut = [entry as NonNullable<NonNullable<typeof trip>["leftOut"]>[number], ...(trip?.leftOut ?? [])];
     }
     update(tripId, patch);
@@ -728,13 +730,15 @@ export function TripView({ tripId }: { tripId: string }) {
     const name = addName.trim();
     if (!name) return;
     const id = -Math.floor(Date.now());   // synthetic negative id, never collides with DB ids
+    const price = addPrice.trim() ? Number(addPrice) : null;
     const entry = {
       id, name_he: name, name_en: name, image_url: null, category: addType,
       lat: addCoords?.lat ?? null, lng: addCoords?.lng ?? null,
       tagline_he: manualTypeLabel(addType).he, must_see: 0, manual: true as const,
+      ...(price != null && price > 0 ? { priceEur: price } : {}),
     };
     update(tripId, { leftOut: [entry as NonNullable<NonNullable<typeof trip>["leftOut"]>[number], ...(trip?.leftOut ?? [])] });
-    setAddName(""); setAddLink(""); setAddType("food"); setAddCoords(null); setAddMsg(null); setAddOpen(false);
+    setAddName(""); setAddLink(""); setAddType("food"); setAddPrice(""); setAddCoords(null); setAddMsg(null); setAddOpen(false);
   };
   const deleteManualPlace = (id: number) =>
     update(tripId, { leftOut: (trip?.leftOut ?? []).filter((l) => l.id !== id) });
@@ -1327,6 +1331,18 @@ export function TripView({ tripId }: { tripId: string }) {
                               <Star size={12} fill="currentColor" /><span className="tabular-nums">{s.score}</span>
                             </span>
                           )}
+                          {/* estimated entry price per person (band-based, or a manual
+                              place's own price) — the itemised half of the budget. A
+                              logistical break (auto lunch / rest) has no price → hidden. */}
+                          {(() => {
+                            const e = stopEntryPerPerson(s);
+                            if (e == null) return null;
+                            return (
+                              <span className="tabular-nums" title="מחיר משוער לאדם">
+                                {e > 0 ? `≈€${e}` : "חינם"}
+                              </span>
+                            );
+                          })()}
                           {s.duration && (
                             <span className="flex items-center gap-1" title="משך שהייה — לחצו +/− לכוונון (חצי שעה)">
                               <Hourglass size={11} className="shrink-0" />
@@ -1575,6 +1591,12 @@ export function TripView({ tripId }: { tripId: string }) {
                           </button>
                         ))}
                       </div>
+                      <label className="mt-2.5 flex items-center gap-2 text-[12.5px] text-[var(--text-2)]">
+                        <span className="shrink-0">מחיר משוער לאדם (€):</span>
+                        <input type="number" min={0} inputMode="numeric" value={addPrice}
+                          onChange={(e) => setAddPrice(e.target.value)} placeholder="לא חובה"
+                          className="w-24 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[var(--brand)]" dir="ltr" />
+                      </label>
                       <button onClick={addManualPlace} disabled={!addName.trim()}
                         className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-[13.5px] font-medium text-white transition hover:opacity-90 disabled:opacity-40">
                         <Plus size={14} /> הוסף לבנק
@@ -1597,7 +1619,7 @@ export function TripView({ tripId }: { tripId: string }) {
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-[14px] font-semibold">{p.name_he || p.name_en}</p>
                               <p className="truncate text-[11.5px] text-[var(--text-3)]">
-                                {tag.emoji} {tag.he}{p.lat == null ? " · ללא מיקום" : ""}
+                                {tag.emoji} {tag.he}{p.priceEur != null ? ` · ≈€${p.priceEur} לאדם` : ""}{p.lat == null ? " · ללא מיקום" : ""}
                               </p>
                             </div>
                             {p.lat != null && p.lng != null && (

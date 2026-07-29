@@ -42,6 +42,9 @@ export type Stop = {
   // A place the traveller added by hand (typed / pasted from a Google-Maps link) —
   // NOT a DB attraction. Carries a synthetic negative id; never re-matched to the pool.
   manual?: boolean;
+  // Manual place's own known price per person (€) — used by the budget instead of a
+  // band; everyone in the party pays it (a chosen dinner/ticket, not a 60%-kid entry).
+  priceEur?: number;
 };
 
 export type Day = {

@@ -54,6 +54,15 @@ export function BudgetPanel({
               <span>כניסות: {eur(est.entriesTotal)}</span>
               <span>אוכל ותחבורה: {eur(est.allowanceTotal)}</span>
             </div>
+            {/* daily food + transport, itemised (per whole party, per day) so the
+                "אוכל ותחבורה" lump reads as real numbers, not one figure. */}
+            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[12px] text-[var(--text-3)]">
+              <span className="text-[var(--text-2)]">ליום:</span>
+              <span>🍳 בוקר €{est.allowanceParts.breakfast.toLocaleString("he")}</span>
+              <span>🥪 צהריים €{est.allowanceParts.lunch.toLocaleString("he")}</span>
+              <span>🍽️ ערב €{est.allowanceParts.dinner.toLocaleString("he")}</span>
+              <span>🚇 תחבורה €{est.allowanceParts.transport.toLocaleString("he")}</span>
+            </div>
             {target != null && (
               <p className="mt-2 text-[13px]" style={{ color: over ? "var(--amber)" : "var(--brand)" }}>
                 {over
@@ -75,7 +84,7 @@ export function BudgetPanel({
           </div>
 
           <p className="text-[12.5px] leading-relaxed text-[var(--text-3)]">
-            הערכה גסה — מבוססת על רמת-המחיר של כל אטרקציה (לא מחיר מדויק) ואומדן יומי לאוכל ותחבורה מקומית לפי סגנון התקציב. לא כולל טיסות ולינה.
+            הערכה גסה — הכניסות לפי רמת-המחיר של כל אטרקציה (לא מחיר מדויק), ואוכל+תחבורה מקומית לפי אומדן יומי קבוע לסגנון התקציב (הפירוט לארוחות הוא חלוקה של אותו אומדן). מקום שהוספת עם מחיר נספר במלואו. לא כולל טיסות ולינה.
           </p>
         </>
       )}
