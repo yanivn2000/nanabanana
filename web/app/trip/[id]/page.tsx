@@ -20,7 +20,7 @@ export default async function TripPage({
   if (v === "editorial") {
     return (
       <div className="editorial-scope">
-        <TripView tripId={id} />
+        <TripView tripId={id} editorial />
       </div>
     );
   }

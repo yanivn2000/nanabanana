@@ -175,7 +175,7 @@ function StopIcon({ kind }: { kind: Stop["kind"] }) {
 // NEXT_PUBLIC_AI_ENABLED (client) and AI_ENABLED (server) to re-enable.
 const AI_ENABLED = process.env.NEXT_PUBLIC_AI_ENABLED === "true";
 
-export function TripView({ tripId }: { tripId: string }) {
+export function TripView({ tripId, editorial = false }: { tripId: string; editorial?: boolean }) {
   const { trips, update, remove, loaded } = useTrips();
   const [globalProfile] = useProfile();
   const { hotels } = useHotels();
@@ -935,6 +935,49 @@ export function TripView({ tripId }: { tripId: string }) {
           absolute so it spans the rows without adding any header height; the
           rows reserve room on the right (lg:pr) so nothing runs under it. */}
       <div className="lg:relative">
+        {/* ── Editorial hero (M2a, flag only) — a cinematic city band with a serif
+             title, in place of the compact 3-row header. Reuses the same actions. ── */}
+        {editorial && (
+          <div>
+            <div className="flex items-center gap-2 px-5 pt-4 lg:px-8">
+              <Link href="/trips" className="inline-flex items-center gap-1 text-[13.5px] font-medium text-[var(--text-2)] transition hover:text-[var(--brand-ink)]">
+                <ChevronRight size={14} /> הטיולים שלי
+              </Link>
+              <div className="ms-auto flex items-center gap-2">
+                {trip && <ShareTrip trip={trip} profile={tripProfile} onShared={(shared) => update(tripId, { shared })} />}
+                {trip && <EditorTools trip={trip} itinerary={itinerary} />}
+                <button onClick={() => { if (confirm("למחוק את הטיול הזה? הפעולה אינה ניתנת לביטול.")) { remove(tripId); window.location.href = "/trips"; } }}
+                  title="מחק טיול" aria-label="מחק טיול"
+                  className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--border)] px-3 py-1.5 text-[13.5px] font-medium text-[var(--text-2)] transition hover:border-[var(--danger,#dc2626)] hover:text-[var(--danger,#dc2626)]">
+                  <Trash2 size={14} /> מחק
+                </button>
+              </div>
+            </div>
+            <section className="relative mx-5 mt-3 overflow-hidden rounded-[18px] shadow-[var(--shadow)] lg:mx-8">
+              {trip?.destinationId && (
+                <>
+                  {/* wrap in our own absolute-inset-0 box (stretches like the gradient
+                      does); CityPoster fills THAT with size-full. Passing absolute to
+                      CityPoster directly loses to its own `relative` in the cascade. */}
+                  <div className="absolute inset-0">
+                    <CityPoster destinationId={trip.destinationId} cityHe={cityHe}
+                      orientation="landscape" position="50% 42%" className="size-full" />
+                  </div>
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, rgba(18,14,9,0.74) 0%, rgba(18,14,9,0.30) 46%, rgba(18,14,9,0.12) 100%)" }} />
+                </>
+              )}
+              <div className="relative flex min-h-[280px] flex-col justify-end gap-3 p-7 lg:min-h-[340px] lg:p-9">
+                <h1 className="serif text-[38px] font-bold leading-[0.98] text-white lg:text-[54px]" style={{ textShadow: "0 2px 20px rgba(0,0,0,0.4)" }}>{trip?.title ?? "…"}</h1>
+                <div className="flex flex-wrap items-center gap-2">
+                  {cityHe && <span className="rounded-full border border-white/25 bg-white/15 px-3 py-1 text-[13px] font-medium text-white backdrop-blur">{cityHe}</span>}
+                  {!!trip?.days && <span className="rounded-full border border-white/25 bg-white/15 px-3 py-1 text-[13px] font-medium text-white backdrop-blur">{trip.days} ימים</span>}
+                  {!!trip?.month && <span className="rounded-full border border-white/25 bg-white/15 px-3 py-1 text-[13px] font-medium text-white backdrop-blur">{MONTHS_HE[trip.month - 1]}</span>}
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+        {!editorial && (<>
         {trip?.destinationId && (
           <div className="hidden overflow-hidden rounded-[var(--radius-sm)] lg:absolute lg:top-3 lg:block lg:h-[105px] lg:w-[160px]"
                style={{ insetInlineStart: "32px" }}>
@@ -1015,10 +1058,11 @@ export function TripView({ tripId }: { tripId: string }) {
           )}
         </div>
       )}
+        </>)}
 
       {/* row 2 — day tabs (thin pills) */}
       {itinerary && allDays.length > 0 && (
-        <div className="mt-1.5 flex items-center gap-2.5 px-5 lg:pl-8 lg:pr-[204px]">
+        <div className={`mt-1.5 flex items-center gap-2.5 px-5 ${editorial ? "lg:mt-4 lg:px-8" : "lg:pl-8 lg:pr-[204px]"}`}>
           <span className="hidden shrink-0 text-[12px] font-semibold text-[var(--text-3)] sm:block">ימי הטיול</span>
           <div className="-mx-5 flex gap-1.5 overflow-x-auto px-5 sm:mx-0 sm:px-0" style={{ scrollbarWidth: "none" }}>
             {allDays.map((d, i) => {
@@ -1096,8 +1140,8 @@ export function TripView({ tripId }: { tripId: string }) {
       {/* row 3 — day summary (thin strip, no card): day label + edit + stats,
           and an on-demand "why?" toggle (no big AI explanation block) */}
       {itinerary && day && (
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--border)] px-5 pb-2 lg:pl-8 lg:pr-[204px]">
-          <h2 className="serif text-[15px] font-bold leading-tight lg:text-[16px]">{dayLabels[curIdx]}</h2>
+        <div className={`mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--border)] px-5 pb-2 ${editorial ? "lg:px-8" : "lg:pl-8 lg:pr-[204px]"}`}>
+          <h2 className={`serif font-bold leading-tight ${editorial ? "text-[22px] lg:text-[26px]" : "text-[15px] lg:text-[16px]"}`}>{dayLabels[curIdx]}</h2>
           {/* move the whole day earlier / later in the trip order. RTL: right
               arrow = earlier day (toward יום 1), left arrow = later. */}
           {allDays.length > 1 && (
