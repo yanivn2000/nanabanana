@@ -52,10 +52,32 @@ def _intro(lang, title):
         pass
     return None
 
+def wikidata_article(qid, country):
+    """Given a Wikidata Q-id, pick the best-language Wikipedia article from its
+    sitelinks: local country language first, then English, then major langs, then any."""
+    try:
+        r = requests.get("https://www.wikidata.org/w/api.php", headers=eg.H, timeout=20, params={
+            "action": "wbgetentities", "ids": qid, "props": "sitelinks", "format": "json"})
+        links = r.json().get("entities", {}).get(qid, {}).get("sitelinks", {})
+    except Exception:
+        return None
+    local = eg.LANG.get(country, "en")
+    others = sorted(k[:-4] for k in links if k.endswith("wiki") and len(k) <= 7)  # e.g. "enwiki"→"en"
+    seen = set()
+    for lang in [local, "en", "de", "fr", "it", "es", "ru", "pt", "nl"] + others:
+        if lang in seen or len(lang) > 3:
+            continue
+        seen.add(lang)
+        sl = links.get(f"{lang}wiki")
+        if sl and sl.get("title"):
+            return lang, sl["title"]
+    return None
+
 def source_intro(r):
-    """(lang, title, intro, url) — prefer the stored info_sources Wikipedia link,
-    else re-resolve the coordinate-verified article by name."""
-    for s in (db.jloads(r["info_sources"]) or []):
+    """(lang, title, intro, url) — prefer a stored Wikipedia link; else resolve a
+    Wikidata id to its best-language article; else re-resolve by name + coords."""
+    srcs = db.jloads(r["info_sources"]) or []
+    for s in srcs:
         if s.get("title") == "Wikipedia":
             try:
                 p = urllib.parse.urlparse(s["url"]); lang = p.netloc.split(".")[0]
@@ -65,6 +87,16 @@ def source_intro(r):
             ix = _intro(lang, title)
             if ix:
                 return lang, title, ix, s["url"]
+    # Wikidata id → its best-language Wikipedia article
+    for s in srcs:
+        if s.get("title") == "Wikidata":
+            qid = s["url"].rstrip("/").split("/")[-1]
+            art = wikidata_article(qid, r["country"])
+            if art:
+                lang, title = art
+                ix = _intro(lang, title)
+                if ix:
+                    return lang, title, ix, f"https://{lang}.wikipedia.org/wiki/{urllib.parse.quote(title.replace(' ', '_'))}"
     local = eg.LANG.get(r["country"], "en")
     langs = ("en",) if local == "en" else ("en", local)
     hit = eg.resolve([r["name_en"], r["name_he"]], r["lat"], r["lng"], langs)
