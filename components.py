@@ -15,7 +15,15 @@ import math
 
 import db
 
-PARENT_SUBS = ("zoo", "theme_park", "water_park", "aquarium")
+# Parent venues large enough that a generic 'attraction' POI within 200m is
+# genuinely one of their sub-parts (a zoo's animal house, a park's ride).
+# NOTE: aquariums and water-parks are deliberately EXCLUDED — their exhibits are
+# almost never ingested as separate POIs, but they sit right next to famous
+# standalone landmarks (the London Eye + London Dungeon + Westminster Bridge all
+# hug the South Bank aquarium; the Munich Olympic Tower abuts SeaLife). Including
+# them produced only false positives — hiding real must-see landmarks. See the
+# git history of this line for the London-Eye regression that removed them.
+PARENT_SUBS = ("zoo", "theme_park")
 
 
 def _km(a, b, x, y):
