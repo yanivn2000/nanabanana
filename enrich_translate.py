@@ -149,12 +149,22 @@ def main():
         if TEST:
             print(f"  HE  {r['name_he'] or r['name_en']}  <- {lang}:{title}\n      {he[:220]}")
         if APPLY:
-            conn.execute(
-                "UPDATE attractions SET description_he=%s, tagline_he=COALESCE(NULLIF(tagline_he,''),%s), "
-                "info_sources=%s WHERE id=%s",
-                (he, tag, psycopg2.extras.Json([{"title": "Wikipedia", "url": url}]), r["id"]))
-            if i % 20 == 0:
-                conn.commit()
+            # Supabase drops the connection while it sits idle during the ~10s API call —
+            # reconnect and retry the write so one drop doesn't abort the whole run.
+            for attempt in (1, 2, 3):
+                try:
+                    conn.execute(
+                        "UPDATE attractions SET description_he=%s, tagline_he=COALESCE(NULLIF(tagline_he,''),%s), "
+                        "info_sources=%s WHERE id=%s",
+                        (he, tag, psycopg2.extras.Json([{"title": "Wikipedia", "url": url}]), r["id"]))
+                    break
+                except Exception as e:
+                    print(f"  DB-retry {r['id']} (attempt {attempt}): {e}", flush=True)
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+                    conn = db.get_conn()
         if not TEST and i % 25 == 0:
             print(f"  {i}/{len(rows)} — ok={ok} nosrc={nosrc} fail={fail}", flush=True)
     if APPLY:
