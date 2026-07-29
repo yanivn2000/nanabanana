@@ -7,7 +7,7 @@ import {
   ChevronRight, ChevronLeft, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, ChevronDown,
   Trash2, ExternalLink, Navigation, Map as MapIcon, Route, Luggage, ListChecks, Wallet, CalendarDays,
-  Clock, MapPin, Ruler, Footprints, Copy, Car, Hourglass, GripVertical, Plus, Minus,
+  Clock, MapPin, Ruler, Footprints, Copy, Car, Hourglass, GripVertical, Plus, Minus, Search, X,
 } from "lucide-react";
 
 // Render a stop's stay time cleanly. New builds already store natural Hebrew
@@ -188,6 +188,14 @@ export function TripView({ tripId }: { tripId: string }) {
   // A bank ("לא נכנסו") card the user is pointing at — highlight its marker on the map,
   // exactly like hovering a scheduled stop lights up its pin.
   const [hoverBankId, setHoverBankId] = useState<number | null>(null);
+  // "Add any place" search over the whole city (the bank is only the ranked leftOut set;
+  // this lets a traveller add a specific place they remembered — no rebuild).
+  type SearchHit = { id: number; name_he: string | null; name_en: string; category: string;
+    lat: number | null; lng: number | null; image_url: string | null; tagline_he: string | null;
+    tips_he: string | null; description_he: string | null; must_see: number | null };
+  const [searchQ, setSearchQ] = useState("");
+  const [searchHits, setSearchHits] = useState<SearchHit[]>([]);
+  const [searchBusy, setSearchBusy] = useState(false);
   // The stop the user is pointing at — hovered in the list or clicked on the map.
   // Indexed in "located stop" space (matches the numbered map markers).
   const [active, setActive] = useState<number | null>(null);
@@ -622,11 +630,13 @@ export function TripView({ tripId }: { tripId: string }) {
     update(tripId, patch);
   };
 
-  // Insert an attraction (from the "more" suggestion pool — NOT the bank) into a day.
-  const insertAttraction = (di: number, at: number, a: { id: number; name_he: string | null; name_en: string; category: string; lat?: number | null; lng?: number | null; image_url?: string | null; tagline_he?: string | null; tips_he?: string | null }) =>
+  // Insert an attraction (from the "more" suggestion pool OR the search box — NOT the
+  // bank) into a day. `description_he` (from search) shows immediately in the expanded stop.
+  const insertAttraction = (di: number, at: number, a: { id: number; name_he: string | null; name_en: string; category: string; lat?: number | null; lng?: number | null; image_url?: string | null; tagline_he?: string | null; tips_he?: string | null; description_he?: string | null }) =>
     mutate((it) => {
       const stop: Stop = { name: a.name_he || a.name_en, kind: CAT_TO_KIND[a.category] ?? "culture", time: "", duration: "",
-        id: a.id, lat: a.lat ?? undefined, lng: a.lng ?? undefined, image: a.image_url ?? undefined, tagline: a.tagline_he ?? undefined, note: a.tips_he || a.tagline_he || undefined, cat: a.category };
+        id: a.id, lat: a.lat ?? undefined, lng: a.lng ?? undefined, image: a.image_url ?? undefined, tagline: a.tagline_he ?? undefined,
+        description: a.description_he ?? undefined, note: a.tips_he || a.tagline_he || undefined, cat: a.category };
       const stops = it.days[di].stops;
       stops.splice(Math.max(0, Math.min(at, stops.length)), 0, stop);
       it.days[di].stops = retimeStops(stops);
@@ -642,6 +652,30 @@ export function TripView({ tripId }: { tripId: string }) {
     const pts = (day?.stops ?? []).filter((s) => s.lat != null && s.lng != null);
     if (pts.length) return { lat: pts.reduce((a, s) => a + (s.lat as number), 0) / pts.length, lng: pts.reduce((a, s) => a + (s.lng as number), 0) / pts.length };
     return mapCenter[0] !== 0 || mapCenter[1] !== 0 ? { lat: mapCenter[0], lng: mapCenter[1] } : null;
+  };
+  // "Add any place" search — debounced free-text query over the whole city.
+  useEffect(() => {
+    const q = searchQ.trim();
+    if (!trip?.destinationId || q.length < 2) { setSearchHits([]); setSearchBusy(false); return; }
+    setSearchBusy(true);
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/attractions/search?dest=${trip.destinationId}&q=${encodeURIComponent(q)}`);
+        const d = await r.json();
+        if (!cancelled) setSearchHits((d?.results ?? []) as SearchHit[]);
+      } catch { if (!cancelled) setSearchHits([]); }
+      finally { if (!cancelled) setSearchBusy(false); }
+    }, 300);
+    return () => { cancelled = true; clearTimeout(t); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQ, trip?.destinationId]);
+  // Add a searched place to the CURRENT day at its best geographic slot (re-times).
+  const addSearchHit = (a: SearchHit) => {
+    const stops = day?.stops ?? [];
+    const at = a.lat != null && a.lng != null ? bestInsertIndex(stops, a.lat, a.lng) : stops.length;
+    insertAttraction(curIdx, at, a);
+    setSearchQ(""); setSearchHits([]);
   };
   // "פחות אטרקציות": drop the least-valuable real stop of the day INTO the bank
   // (least = "אם יש זמן" filler first, then lowest rating). Keeps ≥1 real stop.
@@ -1350,7 +1384,7 @@ export function TripView({ tripId }: { tripId: string }) {
               day at the exact spot you want; drag a stop DOWN onto this box to send
               it back here. Shown when it has picks OR while a stop is being dragged
               (so there's always somewhere to drop a stop you want to remove). */}
-          {((trip?.leftOut?.length ?? 0) > 0 || drag?.kind === "stop") && (
+          {(!!trip?.destinationId || (trip?.leftOut?.length ?? 0) > 0 || drag?.kind === "stop") && (
             <div data-drop-bank
               className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 transition-colors"
               style={overBank ? { borderColor: "var(--brand)", boxShadow: "inset 0 0 0 2px var(--brand)" } : undefined}>
@@ -1360,6 +1394,62 @@ export function TripView({ tripId }: { tripId: string }) {
                   ? "שחררו כאן כדי להוציא את העצירה מהיומן."
                   : "מה שלא נכנס ליומן, מסודר לפי חשיבות (⭐ = חובה). לחצו \"הוסף ליום זה\" (או גררו כרטיס אל היום) — או גררו עצירה לכאן כדי להוציא."}
               </p>
+
+              {/* "add any place" search — the bank is only the ranked leftOut; this reaches the
+                  whole city so a traveller can add a specific place they remembered (no rebuild).
+                  Adds to the CURRENT day at the best geographic slot + re-times. */}
+              {!!trip?.destinationId && drag?.kind !== "stop" && (
+                <div className="mt-3">
+                  <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2">
+                    <Search size={15} className="shrink-0 text-[var(--text-3)]" />
+                    <input value={searchQ} onChange={(e) => setSearchQ(e.target.value)}
+                      placeholder={`חיפוש והוספה של כל מקום ב${cityHe || "עיר"}…`}
+                      className="min-w-0 flex-1 bg-transparent text-[13.5px] outline-none placeholder:text-[var(--text-3)]" />
+                    {searchQ && (
+                      <button onClick={() => { setSearchQ(""); setSearchHits([]); }} aria-label="נקה חיפוש"
+                        className="shrink-0 text-[var(--text-3)] transition hover:text-[var(--text)]"><X size={15} /></button>
+                    )}
+                  </div>
+                  {searchQ.trim().length >= 2 && (() => {
+                    const usedIds = new Set<number>([
+                      ...(itinerary?.days.flatMap((d) => d.stops.map((s) => s.id)) ?? []),
+                      ...(trip?.leftOut ?? []).map((l) => l.id),
+                    ].filter((x): x is number => x != null));
+                    const hits = searchHits.filter((h) => !usedIds.has(h.id));
+                    return (
+                      <div className="mt-2 flex flex-col gap-1.5">
+                        {searchBusy && hits.length === 0 && <p className="px-1 text-[12.5px] text-[var(--text-3)]">מחפש…</p>}
+                        {!searchBusy && hits.length === 0 && <p className="px-1 text-[12.5px] text-[var(--text-3)]">לא נמצאו מקומות מתאימים — נסו שם אחר.</p>}
+                        {hits.slice(0, 8).map((h) => {
+                          return (
+                            <div key={h.id} className="flex items-center gap-2.5 rounded-[10px] border border-[var(--border)] bg-[var(--surface-2)] p-1.5">
+                              {h.image_url ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={bigImage(h.image_url, 120)} alt="" loading="lazy" className="size-10 shrink-0 rounded-[8px] object-cover" />
+                              ) : (
+                                <div className="grid size-10 shrink-0 place-items-center rounded-[8px]" style={{ background: `color-mix(in srgb, ${catColor(h.category)} 16%, var(--surface))` }}>
+                                  <MapPin size={15} style={{ color: catColor(h.category) }} />
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-[13px] font-semibold">
+                                  {h.must_see === 1 && <span className="text-[var(--accent-ink)]">⭐ </span>}
+                                  {h.name_he || h.name_en}
+                                </p>
+                                <p className="truncate text-[11.5px] text-[var(--text-3)]">{catLabel(h.category)}{h.tagline_he ? ` · ${h.tagline_he}` : ""}</p>
+                              </div>
+                              <button onClick={() => addSearchHit(h)}
+                                className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--brand)] px-3 py-1.5 text-[12.5px] font-medium text-white transition hover:opacity-90">
+                                <Plus size={13} /> הוסף ליום {curIdx + 1}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
               <div className="mt-3 flex flex-col gap-2">
                 {(trip?.leftOut ?? []).map((p) => {
                   const bKey = `bank-${p.id}`;

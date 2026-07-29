@@ -172,6 +172,29 @@ const ATTR_COLS_EFF = ATTR_COLS.replace(/\bmust_see\b/,
   `${EFF_MUST} AS must_see, a.must_see AS osm_must_see, ep.rank AS editor_rank, ep.kids AS editor_kids`)
   + `, ${NOTABLE} AS notable`;
 
+// Free-text search over a city's attractions by name (Hebrew or English) — the trip
+// page's "add any place" search. Same quality filters as the builder pool, coords
+// required (an added stop needs a location), must-see / notable / family first.
+export async function searchAttractions(destinationId: number, q: string, limit = 20): Promise<Attraction[]> {
+  const term = `%${q.trim()}%`;
+  return query<Attraction>(
+    `SELECT ${ATTR_COLS_EFF}
+       FROM attractions a ${EDITOR_JOIN}
+       WHERE a.destination_id = $1
+         AND (a.quality_keep = 1 OR a.quality_keep IS NULL)
+         AND (a.is_duplicate IS NULL OR a.is_duplicate = 0)
+         AND (a.is_component IS NULL OR a.is_component = 0)
+         AND (ep.rank IS NULL OR ep.rank <> 'no')
+         AND a.lat IS NOT NULL
+         AND (a.name_he ILIKE $2 OR a.name_en ILIKE $2)
+       ORDER BY ${EDITOR_ORDER},
+                ${NOTABLE} DESC,
+                COALESCE(a.family_score, 0) DESC, a.name_en
+       LIMIT $3`,
+    [destinationId, term, limit]
+  );
+}
+
 export async function topAttractions(destinationId: number, limit = 40): Promise<Attraction[]> {
   // The builder's auto pool. Uses the editor's effective must-see and EXCLUDES
   // editor-rejected places (rank='no') so a demoted tourist trap never anchors.
