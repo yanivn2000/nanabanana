@@ -829,6 +829,22 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
     });
     closeFill();
   };
+  // Bridge: the DB search found nothing, but the typed text IS a real place name — locate
+  // it via the same geocoder "הוסף מקום" uses (biased to the city) and fill the break.
+  // So a restaurant that isn't a catalogued attraction (e.g. "Ave Mario") still resolves.
+  const fillBreakByName = async (di: number, si: number, raw: string) => {
+    const name = raw.trim();
+    if (!name) return;
+    const hit = await geocodePlace(name, { fillName: false });
+    const price = addPrice.trim() ? Number(addPrice) : null;
+    replaceBreakWithStop(di, si, {
+      name, kind: "food", time: "", duration: durationHe(90),
+      id: -Math.floor(Date.now()), lat: hit?.lat ?? undefined, lng: hit?.lng ?? undefined,
+      cat: addType, manual: true, tagline: manualTypeLabel(addType).he,
+      ...(price != null && price > 0 ? { priceEur: price } : {}),
+    });
+    closeFill();
+  };
   // The "fill this meal break with a real eatery" UI — search the city, or add a place
   // by name / address / pasted link. Shared by the editorial thin meal strip and the
   // plain (non-editorial) card row so there's one source of truth for the form.
@@ -869,7 +885,15 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 {searchQ.trim().length >= 2 && (
                   <div className="mt-2 flex flex-col gap-1.5">
                     {searchBusy && hits.length === 0 && <p className="px-1 text-[12px] text-[var(--text-3)]">מחפש…</p>}
-                    {!searchBusy && hits.length === 0 && <p className="px-1 text-[12px] text-[var(--text-3)]">לא נמצאו מקומות — נסו שם אחר, או הוסיפו ידנית.</p>}
+                    {!searchBusy && hits.length === 0 && (
+                      <div className="px-0.5">
+                        <p className="text-[12px] text-[var(--text-3)]">לא במאגר האטרקציות — אפשר לאתר את השם ישירות:</p>
+                        <button onClick={() => fillBreakByName(curIdx, fsi, searchQ)} disabled={addBusy}
+                          className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-3 py-1.5 text-[12.5px] font-medium text-white transition hover:opacity-90 disabled:opacity-40">
+                          <MapPin size={13} /> {addBusy ? "מאתר…" : `אתרו והוסיפו את “${searchQ.trim()}”`}
+                        </button>
+                      </div>
+                    )}
                     {hits.slice(0, 6).map((h) => (
                       <div key={h.id} className="flex items-center gap-2.5 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] p-1.5">
                         {h.image_url ? (
