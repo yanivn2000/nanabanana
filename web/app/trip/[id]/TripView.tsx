@@ -213,6 +213,9 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
   // "Add a place I was told about" — a manual entry (typed or pasted from a Google-Maps
   // link) that becomes a draggable item in the "מקומות שהוספתי" bank section.
   const [addOpen, setAddOpen] = useState(false);
+  // Which lunch-break card has its inline "fill this slot with a restaurant" form open
+  // (keyed by the stop's render key). Reuses the same add-place inputs/handlers below.
+  const [fillKey, setFillKey] = useState<string | null>(null);
   const [addName, setAddName] = useState("");
   const [addLink, setAddLink] = useState("");
   const [addType, setAddType] = useState("food");
@@ -781,6 +784,51 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
   };
   const deleteManualPlace = (id: number) =>
     update(tripId, { leftOut: (trip?.leftOut ?? []).filter((l) => l.id !== id) });
+  // --- fill a lunch break in place: turn the "הפסקת צהריים" placeholder INTO a real
+  // eatery (a searched restaurant, or a typed/pasted place) at the same slot. The
+  // replacement carries kind:"food" so it counts AS the meal — retimeStops won't
+  // re-insert another break (it only adds one when a day has no food stop). Its coords
+  // give the map real legs to/from lunch, and a manual price flows into the budget.
+  const openFill = (key: string) => {
+    setAddOpen(false); setFillKey(key);
+    setAddName(""); setAddLink(""); setAddAddress(""); setAddType("food"); setAddPrice("");
+    setAddCoords(null); setAddMsg(null); setSearchQ(""); setSearchHits([]);
+  };
+  const closeFill = () => { setFillKey(null); setSearchQ(""); setSearchHits([]); };
+  const replaceBreakWithStop = (di: number, si: number, stop: Stop) =>
+    mutate((it) => {
+      it.days[di].stops[si] = { ...stop, kind: "food" };
+      it.days[di].stops = retimeStops(it.days[di].stops);
+    });
+  // Fill from a searched DB place (built like insertAttraction's stop, but as the meal).
+  const fillBreakFromHit = (di: number, si: number, h: SearchHit) => {
+    replaceBreakWithStop(di, si, {
+      name: h.name_he || h.name_en, kind: "food", time: "", duration: durationHe(90),
+      id: h.id, lat: h.lat ?? undefined, lng: h.lng ?? undefined, image: h.image_url ?? undefined,
+      tagline: h.tagline_he ?? undefined, description: h.description_he ?? undefined,
+      note: h.tips_he || h.tagline_he || undefined, cat: h.category,
+    });
+    closeFill();
+  };
+  // Fill from a typed / pasted place (like addManualPlace, but replaces the break slot
+  // instead of prepending to the bank — a synthetic id + its own type-tag + price).
+  const fillBreakManual = async (di: number, si: number) => {
+    const name = addName.trim();
+    if (!name) return;
+    let coords = addCoords;
+    if (!coords) {
+      const hit = await geocodePlace(addAddress.trim() || name, { fillName: false });
+      if (hit) coords = { lat: hit.lat, lng: hit.lng };
+    }
+    const price = addPrice.trim() ? Number(addPrice) : null;
+    replaceBreakWithStop(di, si, {
+      name, kind: "food", time: "", duration: durationHe(90),
+      id: -Math.floor(Date.now()), lat: coords?.lat ?? undefined, lng: coords?.lng ?? undefined,
+      cat: addType, manual: true, tagline: manualTypeLabel(addType).he,
+      ...(price != null && price > 0 ? { priceEur: price } : {}),
+    });
+    closeFill();
+  };
   // Bank card "הוסף ליום זה": a manual place isn't in the DB, so it can't go through
   // the server arrange — insert it locally (best geo slot + re-time). Ranked DB picks
   // keep the server path (re-fits the day).
@@ -1247,9 +1295,11 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
       )}
       </div>{/* /lg:relative header wrapper (rows + destination image) */}
 
-      <div className="lg:flex lg:items-start lg:gap-4 lg:px-8 lg:pt-2.5">
+      {/* editorial: a tight magazine reading column + sticky map, centred with outer
+          whitespace (matches the concept). default: the wide itinerary + 380px rail. */}
+      <div className={`lg:flex lg:items-start lg:pt-2.5 ${editorial ? "lg:mx-auto lg:max-w-[1000px] lg:gap-10 lg:px-6" : "lg:gap-4 lg:px-8"}`}>
         {/* main column (right on desktop): the day timeline */}
-        <div className="lg:min-w-0 lg:flex-1">
+        <div className={`lg:min-w-0 lg:flex-1 ${editorial ? "lg:max-w-[560px]" : ""}`}>
       {error && error.trim() && (
         <div className="mx-5 mt-4 rounded-[var(--radius-card)] bg-[var(--amber-soft)] px-4 py-3 text-[14px] text-[var(--amber)] lg:mx-0">
           {error}
@@ -1371,8 +1421,11 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                        className={drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}
                        style={dragOverSi === si && drag && !(drag.kind === "stop" && drag.si === si)
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
-                    <div className={`group/row -mx-2 flex gap-2 rounded-[12px] px-2 transition-colors lg:gap-3 ${hasDetails ? "cursor-pointer" : ""}`}
-                         style={{ background: isActive ? `color-mix(in srgb, ${col} 12%, transparent)` : "transparent" }}
+                    <div className={`group/row transition-colors ${hasDetails ? "cursor-pointer" : ""} ${editorial
+                           ? "relative mb-1 flex flex-col overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)]"
+                           : "-mx-2 flex gap-2 rounded-[12px] px-2 lg:gap-3"}`}
+                         style={{ background: !editorial && isActive ? `color-mix(in srgb, ${col} 12%, transparent)` : undefined,
+                                  boxShadow: editorial && isActive ? `0 0 0 2px color-mix(in srgb, ${col} 45%, transparent), var(--shadow)` : undefined }}
                          onMouseEnter={() => { if (ci != null) { setActive(ci);
                            // slide the map toward the hovered stop (keeping the day
                            // overview) — same idea as a bank card centring its place.
@@ -1385,7 +1438,9 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                           Hidden on the auto lunch row (it's re-timed, not user-managed). */}
                       {/* fixed width on desktop so a grip-only row (the meal break) reserves
                           the SAME space as grip+delete rows — keeps the time column aligned. */}
-                      <div className="flex flex-col items-center gap-1.5 self-center opacity-100 transition-opacity lg:order-last lg:w-[60px] lg:flex-row lg:items-center lg:justify-start lg:gap-2 lg:pl-1 lg:opacity-0 lg:group-hover/row:opacity-100">
+                      <div className={editorial
+                        ? "absolute left-2 top-2 z-[5] flex flex-row items-center gap-1 rounded-full bg-[color-mix(in_srgb,var(--surface)_82%,transparent)] px-1.5 py-1 opacity-0 shadow-[var(--shadow)] backdrop-blur transition-opacity group-hover/row:opacity-100"
+                        : "flex flex-col items-center gap-1.5 self-center opacity-100 transition-opacity lg:order-last lg:w-[60px] lg:flex-row lg:items-center lg:justify-start lg:gap-2 lg:pl-1 lg:opacity-0 lg:group-hover/row:opacity-100"}>
                         <span
                           onPointerDown={(e) => startPointerDrag(e, { kind: "stop", si }, s.name)}
                           onClick={(e) => e.stopPropagation()}
@@ -1406,24 +1461,37 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                       </div>
                       {/* photo (falls back to the kind icon). Editorial: a large landscape
                           frame so each stop leads with its image (photo-forward, M3a). */}
-                      <div className={editorial ? "self-center py-2.5" : "py-2.5 pr-1"}>
+                      <div className={editorial ? "relative w-full" : "py-2.5 pr-1"}>
                         {s.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={editorial ? (bigImage(s.image, 360) ?? s.image) : s.image} alt="" loading="lazy"
+                          <img src={editorial ? (bigImage(s.image, 720) ?? s.image) : s.image} alt="" loading="lazy"
                             onError={editorial ? (e) => { const t = e.currentTarget; if (s.image && t.src !== s.image) t.src = s.image; } : undefined}
                             className={editorial
-                              ? "h-[94px] w-[136px] rounded-[13px] bg-[var(--surface-2)] object-cover shadow-[var(--shadow)]"
+                              ? "h-[200px] w-full bg-[var(--surface-2)] object-cover"
                               : "size-12 rounded-[12px] object-cover"} />
                         ) : editorial ? (
-                          <div className="grid h-[94px] w-[136px] place-items-center rounded-[13px] border border-[var(--border)] bg-[var(--surface-2)]">
+                          <div className="grid h-[200px] w-full place-items-center border-b border-[var(--border)] bg-[var(--surface-2)]">
                             <StopIcon kind={s.kind} />
                           </div>
                         ) : (
                           <StopIcon kind={s.kind} />
                         )}
+                        {editorial && (
+                          <>
+                            {/* legibility scrim so the overlaid number + time read on any photo */}
+                            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
+                            {ci != null && (
+                              <span className="absolute bottom-2.5 right-3 grid size-8 place-items-center rounded-full text-[14px] font-bold text-white shadow-[var(--shadow)]"
+                                style={{ background: col }}>{ci + 1}</span>
+                            )}
+                            {s.time && (
+                              <span className="absolute bottom-3 left-3 rounded-full bg-black/45 px-2.5 py-1 text-[13px] font-semibold text-white tabular-nums" dir="ltr">{s.time}</span>
+                            )}
+                          </>
+                        )}
                       </div>
                       {/* name + details */}
-                      <div className="min-w-0 flex-1 py-2.5">
+                      <div className={`min-w-0 ${editorial ? "px-4 pb-4 pt-3" : "flex-1 py-2.5"}`}>
                         {/* top line: the NAME is the hero — it gets the whole block width;
                             only the expand chevron sits at the far end. Rating + stay time
                             drop to the meta line below so the name is never squeezed. */}
@@ -1499,23 +1567,123 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                             </span>
                           )}
                         </div>
+                        {/* editorial: a short story line under the meta, so the card reads
+                            like a magazine entry even before it's expanded */}
+                        {editorial && !isOpen && (s.tagline || s.description) && (
+                          <p className="mt-2 line-clamp-2 text-[14px] leading-relaxed text-[var(--text-2)]">{s.tagline || s.description}</p>
+                        )}
                         {s.note && <p className={`mt-1 text-[13.5px] leading-snug text-[var(--text-2)] ${isOpen ? "" : "line-clamp-2"}`}>{s.note}</p>}
                         {/* A logistical meal BREAK has no place of its own — offer "restaurants
                             nearby", centred on the last stop before it. A real/added restaurant
                             (has its own id) IS the place, so it gets no such link. */}
                         {s.kind === "food" && s.id == null && (() => {
                           const near = [...day.stops.slice(0, si)].reverse().find((x) => x.lat != null && x.lng != null);
-                          if (!near) return null;
+                          const isFill = fillKey === key;
+                          const used = new Set<number>([
+                            ...(itinerary?.days.flatMap((d) => d.stops.map((x) => x.id)) ?? []),
+                            ...(trip?.leftOut ?? []).map((l) => l.id),
+                          ].filter((x): x is number => x != null));
+                          const hits = searchHits.filter((h) => !used.has(h.id));
                           return (
-                            <a href={googleMapsNearby(near.lat as number, near.lng as number, "מסעדות")}
-                              target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
-                              className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1 text-[12.5px] text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
-                              <Utensils size={12} /> מסעדות בסביבה
-                            </a>
+                            <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <button onClick={() => (isFill ? closeFill() : openFill(key))}
+                                  className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-3 py-1 text-[12.5px] font-medium text-white transition hover:opacity-90">
+                                  {isFill ? <X size={12} /> : <Utensils size={12} />} {isFill ? "סגור" : "בחרו מסעדה למקום הזה"}
+                                </button>
+                                {near && (
+                                  <a href={googleMapsNearby(near.lat as number, near.lng as number, "מסעדות")}
+                                    target="_blank" rel="noreferrer"
+                                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1 text-[12.5px] text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
+                                    <MapPin size={12} /> מסעדות בסביבה
+                                  </a>
+                                )}
+                              </div>
+                              {isFill && (
+                                <div className="mt-2 rounded-[12px] border border-[var(--border)] bg-[var(--surface-2)] p-3">
+                                  {/* search the city for a specific eatery */}
+                                  {!!trip?.destinationId && (
+                                    <>
+                                      <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5">
+                                        <Search size={14} className="shrink-0 text-[var(--text-3)]" />
+                                        <input value={searchQ} onChange={(e) => setSearchQ(e.target.value)} autoFocus
+                                          placeholder={`חיפוש מסעדה / מקום ב${cityHe || "עיר"}…`}
+                                          className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-[var(--text-3)]" />
+                                        {searchQ && <button onClick={() => { setSearchQ(""); setSearchHits([]); }} aria-label="נקה"><X size={14} className="text-[var(--text-3)]" /></button>}
+                                      </div>
+                                      {searchQ.trim().length >= 2 && (
+                                        <div className="mt-2 flex flex-col gap-1.5">
+                                          {searchBusy && hits.length === 0 && <p className="px-1 text-[12px] text-[var(--text-3)]">מחפש…</p>}
+                                          {!searchBusy && hits.length === 0 && <p className="px-1 text-[12px] text-[var(--text-3)]">לא נמצאו מקומות — נסו שם אחר, או הוסיפו ידנית.</p>}
+                                          {hits.slice(0, 6).map((h) => (
+                                            <div key={h.id} className="flex items-center gap-2.5 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] p-1.5">
+                                              {h.image_url ? (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img src={bigImage(h.image_url, 120)} alt="" loading="lazy" className="size-9 shrink-0 rounded-[8px] object-cover" />
+                                              ) : (
+                                                <div className="grid size-9 shrink-0 place-items-center rounded-[8px]" style={{ background: `color-mix(in srgb, ${catColor(h.category)} 16%, var(--surface))` }}>
+                                                  <MapPin size={14} style={{ color: catColor(h.category) }} />
+                                                </div>
+                                              )}
+                                              <div className="min-w-0 flex-1">
+                                                <p className="truncate text-[12.5px] font-semibold">{h.name_he || h.name_en}</p>
+                                                <p className="truncate text-[11px] text-[var(--text-3)]">{catLabel(h.category)}{h.tagline_he ? ` · ${h.tagline_he}` : ""}</p>
+                                              </div>
+                                              <button onClick={() => fillBreakFromHit(curIdx, si, h)}
+                                                className="shrink-0 rounded-full bg-[var(--brand)] px-3 py-1 text-[12px] font-medium text-white transition hover:opacity-90">בחרו</button>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                      <div className="my-2.5 flex items-center gap-2 text-[11px] text-[var(--text-3)]">
+                                        <span className="h-px flex-1 bg-[var(--border)]" /> או הוסיפו ידנית <span className="h-px flex-1 bg-[var(--border)]" />
+                                      </div>
+                                    </>
+                                  )}
+                                  {/* manual: typed name (auto-locate on blur) OR address / pasted link */}
+                                  <input value={addName} onChange={(e) => { setAddName(e.target.value); setAddCoords(null); }}
+                                    onBlur={(e) => { const v = e.target.value.trim(); if (v && !addCoords && !addAddress.trim()) geocodePlace(v, { fillName: false }); }}
+                                    placeholder="שם המקום (למשל: מסעדת דישום)"
+                                    className="w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[var(--brand)]" />
+                                  <div className="mt-2 flex items-center gap-2">
+                                    <input value={addAddress} onChange={(e) => { setAddAddress(e.target.value); setAddCoords(null); }}
+                                      onBlur={(e) => e.target.value.trim() && !addCoords && geocodePlace(e.target.value)}
+                                      placeholder="כתובת (לא חובה)"
+                                      className={`min-w-0 flex-1 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[12.5px] outline-none focus:border-[var(--brand)] ${addFlash ? "field-flash" : ""}`} />
+                                    <span className="shrink-0 text-[11px] text-[var(--text-3)]">או</span>
+                                    <input value={addLink} onChange={(e) => setAddLink(e.target.value)}
+                                      onBlur={(e) => e.target.value.trim() && resolvePlace(e.target.value)}
+                                      onPaste={(e) => { const v = e.clipboardData.getData("text"); if (v.trim()) setTimeout(() => resolvePlace(v), 0); }}
+                                      placeholder="קישור גוגל מפה" dir="ltr"
+                                      className="min-w-0 flex-1 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[12.5px] outline-none focus:border-[var(--brand)]" />
+                                  </div>
+                                  {addMsg && <p className={`mt-1.5 text-[12px] ${addMsg.ok ? "text-[var(--brand-ink)]" : "text-[var(--text-3)]"}`}>{addMsg.text}</p>}
+                                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                                    {MANUAL_TYPES.map((t) => (
+                                      <button key={t.key} onClick={() => setAddType(t.key)}
+                                        className={`rounded-full border px-2.5 py-1 text-[12px] transition ${addType === t.key ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-ink)]" : "border-[var(--border)] text-[var(--text-2)] hover:border-[var(--brand)]"}`}>
+                                        {t.emoji} {t.he}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  <label className="mt-2.5 flex items-center gap-2 text-[12.5px] text-[var(--text-2)]">
+                                    <span className="shrink-0">מחיר משוער לאדם (€):</span>
+                                    <input type="number" min={0} inputMode="numeric" value={addPrice} onChange={(e) => setAddPrice(e.target.value)} placeholder="לא חובה" dir="ltr"
+                                      className="w-24 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[var(--brand)]" />
+                                  </label>
+                                  <button onClick={() => fillBreakManual(curIdx, si)} disabled={addBusy || !addName.trim()}
+                                    className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-[13px] font-medium text-white transition hover:opacity-90 disabled:opacity-40">
+                                    <Utensils size={14} /> {addBusy ? "…" : "הוסיפו מסעדה כאן"}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           );
                         })()}
                       </div>
-                      {/* timeline spine — a numbered dot in the stop's own colour */}
+                      {/* timeline spine — a numbered dot in the stop's own colour.
+                          Hidden in editorial: the number rides on the photo overlay instead. */}
+                      {!editorial && (
                       <div className="flex w-7 shrink-0 flex-col items-center">
                         <div className="min-h-[16px] w-px flex-1" style={{ background: first ? "transparent" : spine }} />
                         {ci != null ? (
@@ -1528,14 +1696,17 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                         )}
                         <div className="min-h-[16px] w-px flex-1" style={{ background: last ? "transparent" : spine }} />
                       </div>
-                      {/* time */}
+                      )}
+                      {/* time — hidden in editorial (it rides on the photo overlay) */}
+                      {!editorial && (
                       <div className="w-11 shrink-0 py-2.5">
                         <p className="text-[14px] font-semibold text-[var(--text-2)]" dir="ltr">{s.time}</p>
                       </div>
+                      )}
                     </div>
 
                     {isOpen && (
-                      <div className="border-t border-[var(--border)] pb-3.5 pt-3">
+                      <div className={`pb-3.5 pt-3 ${editorial ? "mb-1 rounded-[16px] border border-[var(--border)] bg-[var(--surface)] px-4" : "border-t border-[var(--border)]"}`}>
                         {s.image && (
                           // eslint-disable-next-line @next/next/no-img-element
                           // Natural aspect ratio (bounded), NOT a forced landscape crop — a
@@ -1579,9 +1750,9 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                     {/* how to get to the next stop — walk vs transit by the
                         traveler's tolerance, with a live-navigation deep-link */}
                     {leg && !last && (
-                      <div className="flex items-stretch gap-3">
-                        <div className="w-12 shrink-0 pr-1" />
-                        <div className="min-w-0 flex-1 py-0.5">
+                      <div className={editorial ? "flex justify-center py-1.5" : "flex items-stretch gap-3"}>
+                        {!editorial && <div className="w-12 shrink-0 pr-1" />}
+                        <div className={editorial ? "min-w-0 py-0.5" : "min-w-0 flex-1 py-0.5"}>
                           <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-[var(--text-3)]">
                             <span className="inline-flex items-center gap-1 whitespace-nowrap">
                               <span aria-hidden>{leg.icon}</span>
@@ -1597,10 +1768,12 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                             </a>
                           </span>
                         </div>
-                        <div className="flex w-7 shrink-0 justify-center">
-                          <div className="w-px border-l border-dashed border-[var(--border)]" />
-                        </div>
-                        <div className="w-11 shrink-0" />
+                        {!editorial && (
+                          <div className="flex w-7 shrink-0 justify-center">
+                            <div className="w-px border-l border-dashed border-[var(--border)]" />
+                          </div>
+                        )}
+                        {!editorial && <div className="w-11 shrink-0" />}
                       </div>
                     )}
                   </div>
@@ -1706,7 +1879,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                     <p className="text-[13px] font-bold text-[var(--text-2)]">
                       מקומות שהוספתי{(trip?.leftOut ?? []).some((l) => l.manual) ? ` · ${(trip?.leftOut ?? []).filter((l) => l.manual).length}` : ""}
                     </p>
-                    <button onClick={() => setAddOpen((v) => !v)}
+                    <button onClick={() => { setFillKey(null); setAddOpen((v) => !v); }}
                       className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
                       {addOpen ? <X size={13} /> : <Plus size={13} />} {addOpen ? "סגור" : "הוסף מקום"}
                     </button>
