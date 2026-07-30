@@ -797,7 +797,10 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
   const closeFill = () => { setFillKey(null); setSearchQ(""); setSearchHits([]); };
   const replaceBreakWithStop = (di: number, si: number, stop: Stop) =>
     mutate((it) => {
-      it.days[di].stops[si] = { ...stop, kind: "food" };
+      // remember which meal slot this was ("הפסקת צהריים" / "ארוחת ערב") so the filled
+      // stop keeps rendering as a full-width meal strip and can show the meal label.
+      const slot = it.days[di].stops[si]?.name;
+      it.days[di].stops[si] = { ...stop, kind: "food", meal: slot };
       it.days[di].stops = retimeStops(it.days[di].stops);
     });
   // Fill from a searched DB place (built like insertAttraction's stop, but as the meal).
@@ -1552,7 +1555,11 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 // Every other stop is one uniform cell in the 2–3-up auto-fill grid, so no
                 // photo is stretched to a full-width hero (that upscaled low-res sources into
                 // mush and cropped tall images) — a small cell keeps even a low-res photo crisp.
-                const isBreakStrip = editorial && s.id == null && (s.kind === "food" || s.kind === "rest");
+                // A meal strip = an empty break (food/rest, no id) OR a break the traveller
+                // FILLED with a real eatery (carries s.meal). Either way it's a full-width
+                // brand band, never a photo card — so a filled "Ave Mario" lunch stays a strip.
+                const isBreakStrip = editorial && ((s.id == null && (s.kind === "food" || s.kind === "rest")) || !!s.meal);
+                const isFilledMeal = editorial && !!s.meal;
                 const brandBg = s.kind === "rest" ? "var(--brand-soft)" : "var(--accent-soft)";
                 const brandInk = s.kind === "rest" ? "var(--brand-ink)" : "var(--accent-ink)";
                 return (
@@ -1563,34 +1570,69 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
                     {isBreakStrip ? (
                       <div>
-                        {/* meal / rest break: a thin brand-tinted strip (no photo), full width */}
-                        <div className="flex items-center gap-2.5 rounded-[14px] px-3.5 py-2.5"
+                        {/* meal / rest strip — a full-width brand band (never a photo card). A
+                            FILLED meal grows to ~40% of a card's height and shows the place name
+                            + which meal + its details; an empty break stays a thin bar. */}
+                        <div className="flex items-stretch overflow-hidden rounded-[16px] shadow-[var(--shadow)]"
                              style={{ background: brandBg, color: brandInk }}
-                             onMouseEnter={() => { if (s.lat != null && s.lng != null) setFocus({ lat: s.lat, lng: s.lng, n: Date.now(), keepZoom: true }); } }>
-                          <span onPointerDown={(e) => startPointerDrag(e, { kind: "stop", si }, s.name)} onClick={(e) => e.stopPropagation()} style={{ touchAction: "none" }}
-                            className="hidden shrink-0 cursor-grab touch-none select-none place-items-center opacity-40 transition hover:opacity-90 lg:grid" title="גררו לשינוי סדר">
-                            <GripVertical size={15} />
-                          </span>
-                          <span aria-hidden className="text-[17px] leading-none">{s.kind === "rest" ? "☕" : "🍽️"}</span>
-                          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-0.5">
-                            <span className="serif text-[15.5px] font-bold">{s.name}</span>
-                            {s.time && <span className="text-[12.5px] font-medium tabular-nums opacity-70" dir="ltr">{s.time}</span>}
-                            {s.duration && (
-                              <span className="flex items-center gap-1 opacity-80" title="משך שהייה — לחצו +/−">
-                                <button onClick={(e) => { e.stopPropagation(); bumpDwell(curIdx, si, -30); }} aria-label="פחות זמן" className="grid size-[18px] place-items-center rounded border border-current text-[13px] leading-none">−</button>
-                                <span className="min-w-[46px] text-center text-[12px]">{stayHe(s.duration)}</span>
-                                <button onClick={(e) => { e.stopPropagation(); bumpDwell(curIdx, si, 30); }} aria-label="יותר זמן" className="grid size-[18px] place-items-center rounded border border-current text-[13px] leading-none">+</button>
-                              </span>
+                             onMouseEnter={() => { if (ci != null) { setActive(ci); if (s.lat != null && s.lng != null) setFocus({ lat: s.lat, lng: s.lng, n: Date.now(), keepZoom: true }); } } }
+                             onMouseLeave={() => setActive(null)}
+                             onClick={() => isFilledMeal && hasDetails && setExpanded(isOpen ? null : key)}>
+                          {ci != null && (
+                            <div className="flex w-11 shrink-0 items-center justify-center">
+                              <span className="grid size-7 place-items-center rounded-full text-[13px] font-bold text-white shadow-[var(--shadow)]" style={{ background: col }}>{ci + 1}</span>
+                            </div>
+                          )}
+                          <div className={`flex min-w-0 flex-1 flex-col justify-center gap-1.5 py-3.5 ${ci != null ? "pr-0" : "pr-4"} ${isFilledMeal ? "min-h-[126px]" : ""}`}>
+                            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                              <span aria-hidden className="text-[19px] leading-none">{s.kind === "rest" ? "☕" : "🍽️"}</span>
+                              <span className="serif text-[18px] font-bold leading-tight">{s.name}</span>
+                              {isFilledMeal && s.meal && (
+                                <span className="rounded-full bg-[color-mix(in_srgb,currentColor_16%,transparent)] px-2 py-0.5 text-[11.5px] font-medium">
+                                  {s.meal.replace("הפסקת", "ארוחת")}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px]">
+                              {isFilledMeal && <span className="opacity-90">{s.manual ? manualTypeLabel(s.cat || "other").he : (catLabel(s.cat, s.sub) || "מסעדה")}</span>}
+                              {s.time && <span className="font-medium tabular-nums opacity-70" dir="ltr">{s.time}</span>}
+                              {(() => { const e = stopEntryPerPerson(s); return e != null && e > 0 ? <span className="tabular-nums opacity-80" title="מחיר משוער לאדם">≈€{e}</span> : null; })()}
+                              {s.duration && (
+                                <span className="flex items-center gap-1 opacity-80" title="משך שהייה — לחצו +/−">
+                                  <button onClick={(e) => { e.stopPropagation(); bumpDwell(curIdx, si, -30); }} aria-label="פחות זמן" className="grid size-[18px] place-items-center rounded border border-current text-[13px] leading-none">−</button>
+                                  <span className="min-w-[46px] text-center">{stayHe(s.duration)}</span>
+                                  <button onClick={(e) => { e.stopPropagation(); bumpDwell(curIdx, si, 30); }} aria-label="יותר זמן" className="grid size-[18px] place-items-center rounded border border-current text-[13px] leading-none">+</button>
+                                </span>
+                              )}
+                              {isFilledMeal && hasDetails && <ChevronDown size={15} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-center justify-center gap-2 px-3 opacity-60">
+                            <span onPointerDown={(e) => startPointerDrag(e, { kind: "stop", si }, s.name)} onClick={(e) => e.stopPropagation()} style={{ touchAction: "none" }}
+                              className="hidden cursor-grab touch-none select-none place-items-center transition hover:opacity-100 lg:grid" title="גררו לשינוי סדר">
+                              <GripVertical size={15} />
+                            </span>
+                            {s.name !== "הפסקת צהריים" && (
+                              <button onClick={(e) => { e.stopPropagation(); deleteStop(curIdx, si); }} title="מחק עצירה" aria-label="מחק עצירה"
+                                className="grid place-items-center transition hover:opacity-100">
+                                <Trash2 size={14} />
+                              </button>
                             )}
                           </div>
-                          {s.name !== "הפסקת צהריים" && (
-                            <button onClick={(e) => { e.stopPropagation(); deleteStop(curIdx, si); }} title="מחק עצירה" aria-label="מחק עצירה"
-                              className="grid size-6 shrink-0 place-items-center rounded-md opacity-60 transition hover:opacity-100">
-                              <Trash2 size={14} />
-                            </button>
-                          )}
                         </div>
-                        {s.kind === "food" && s.id == null && <div className="px-1">{mealFillUI(key, si)}</div>}
+                        {isFilledMeal && isOpen && (s.tagline || s.description || (s.lat != null && s.lng != null)) && (
+                          <div className="mt-1 rounded-[14px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+                            {s.tagline && s.tagline !== s.note && <p className="mb-1.5 text-[14px] italic text-[var(--text-2)]">{s.tagline}</p>}
+                            {s.description && <p className="mb-2 text-[13.5px] leading-relaxed text-[var(--text-2)]">{s.description}</p>}
+                            {s.lat != null && s.lng != null && (
+                              <a href={googleMapsPin(s.lat, s.lng)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[13px] text-[var(--text-2)]">
+                                <MapPin size={13} /> פתח במפה
+                              </a>
+                            )}
+                          </div>
+                        )}
+                        {s.kind === "food" && s.id == null && !s.meal && <div className="px-1 pt-1">{mealFillUI(key, si)}</div>}
                       </div>
                     ) : (
                     <>

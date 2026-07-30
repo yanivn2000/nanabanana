@@ -45,6 +45,10 @@ export type Stop = {
   // Manual place's own known price per person (€) — used by the budget instead of a
   // band; everyone in the party pays it (a chosen dinner/ticket, not a 60%-kid entry).
   priceEur?: number;
+  // The meal SLOT this stop fills, when a break ("הפסקת צהריים" / "ארוחת ערב") was
+  // replaced by a real eatery. Keeps the stop rendering as a full-width meal strip
+  // (not a photo card) and lets it show both the place name and which meal it is.
+  meal?: string;
 };
 
 export type Day = {
