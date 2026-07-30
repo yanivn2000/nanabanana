@@ -195,6 +195,10 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
   const editTravelers = false;
   const [tool, setTool] = useState<ToolKey | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+  // Editorial mosaic: each stop photo's measured aspect (naturalW/naturalH), keyed by
+  // render key. Drives the dynamic grid — a wide panorama earns a full-width hero, a
+  // portrait gets a taller half-slot, the rest pair up two-per-row to fill the width.
+  const [imgAspect, setImgAspect] = useState<Record<string, number>>({});
   const [dayIdx, setDayIdx] = useState(0);                 // one day on screen — pager
   const [mobileTab, setMobileTab] = useState<"plan" | "map">("plan");
   const [datesOpen, setDatesOpen] = useState(false);         // dates aren't permanent — a popover
@@ -1297,9 +1301,9 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
 
       {/* editorial: a tight magazine reading column + sticky map, centred with outer
           whitespace (matches the concept). default: the wide itinerary + 380px rail. */}
-      <div className={`lg:flex lg:items-start lg:pt-2.5 ${editorial ? "lg:mx-auto lg:max-w-[1000px] lg:gap-10 lg:px-6" : "lg:gap-4 lg:px-8"}`}>
+      <div className={`lg:flex lg:items-start lg:pt-2.5 ${editorial ? "lg:mx-auto lg:max-w-[1360px] lg:gap-8 lg:px-6" : "lg:gap-4 lg:px-8"}`}>
         {/* main column (right on desktop): the day timeline */}
-        <div className={`lg:min-w-0 lg:flex-1 ${editorial ? "lg:max-w-[560px]" : ""}`}>
+        <div className="lg:min-w-0 lg:flex-1">
       {error && error.trim() && (
         <div className="mx-5 mt-4 rounded-[var(--radius-card)] bg-[var(--amber-soft)] px-4 py-3 text-[14px] text-[var(--amber)] lg:mx-0">
           {error}
@@ -1401,6 +1405,9 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                   <Coffee size={13} /> מנוחה במלון
                 </button>
               </div>
+              {/* editorial: a 2-column dense mosaic (per-card span set below) so photos
+                  fill the widened column with a magazine rhythm; plain stack otherwise */}
+              <div className={editorial ? "lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:[grid-auto-flow:dense]" : ""}>
               {day.stops.map((s, si) => {
                 const key = `${curIdx}-${si}`;
                 const isOpen = expanded === key;
@@ -1415,10 +1422,18 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 const col = ci != null ? stopColor(ci) : "var(--text-3)";
                 const isActive = ci != null && active === ci;
                 const leg = legAfter[si];
+                // Editorial mosaic sizing: the opening photo, a wide panorama (≥1.7:1), or a
+                // meal break with its fill-form open takes a full-width hero row; a portrait
+                // (<0.95:1) gets a taller half-slot; everything else — including photo-less
+                // stops — pairs up half-width, so the row fills without giant empty cards.
+                const ar = imgAspect[key];
+                const fillOpenHere = fillKey === key;
+                const spanFull = editorial && ((first && !!s.image) || (ar != null && ar >= 1.7) || fillOpenHere);
+                const tallPhoto = editorial && !spanFull && ar != null && ar < 0.95;
                 return (
                   <div key={si} ref={(el) => { stopRefs.current[si] = el; }}
                        data-drop-idx={si}
-                       className={drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}
+                       className={`${editorial ? (spanFull ? "lg:col-span-2" : "lg:col-span-1") : ""} ${drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}`}
                        style={dragOverSi === si && drag && !(drag.kind === "stop" && drag.si === si)
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
                     <div className={`group/row transition-colors ${hasDetails ? "cursor-pointer" : ""} ${editorial
@@ -1466,11 +1481,12 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={editorial ? (bigImage(s.image, 720) ?? s.image) : s.image} alt="" loading="lazy"
                             onError={editorial ? (e) => { const t = e.currentTarget; if (s.image && t.src !== s.image) t.src = s.image; } : undefined}
+                            onLoad={editorial ? (e) => { const t = e.currentTarget; if (t.naturalWidth && t.naturalHeight) { const r = t.naturalWidth / t.naturalHeight; setImgAspect((m) => Math.abs((m[key] ?? 0) - r) < 0.02 ? m : { ...m, [key]: r }); } } : undefined}
                             className={editorial
-                              ? "h-[200px] w-full bg-[var(--surface-2)] object-cover"
+                              ? `${tallPhoto ? "h-[300px]" : "h-[200px]"} w-full bg-[var(--surface-2)] object-cover`
                               : "size-12 rounded-[12px] object-cover"} />
                         ) : editorial ? (
-                          <div className="grid h-[200px] w-full place-items-center border-b border-[var(--border)] bg-[var(--surface-2)]">
+                          <div className="grid h-[120px] w-full place-items-center border-b border-[var(--border)] bg-[var(--surface-2)]">
                             <StopIcon kind={s.kind} />
                           </div>
                         ) : (
@@ -1750,7 +1766,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                     {/* how to get to the next stop — walk vs transit by the
                         traveler's tolerance, with a live-navigation deep-link */}
                     {leg && !last && (
-                      <div className={editorial ? "flex justify-center py-1.5" : "flex items-stretch gap-3"}>
+                      <div className={editorial ? "flex justify-center py-1.5 lg:hidden" : "flex items-stretch gap-3"}>
                         {!editorial && <div className="w-12 shrink-0 pr-1" />}
                         <div className={editorial ? "min-w-0 py-0.5" : "min-w-0 flex-1 py-0.5"}>
                           <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-[var(--text-3)]">
@@ -1779,6 +1795,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                   </div>
                 );
               })}
+              </div>
               {/* drop-at-end zone — only while dragging a left-out pick, to place it
                   as the day's last stop. */}
               {drag?.kind === "bank" && (
