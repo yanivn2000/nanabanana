@@ -195,10 +195,6 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
   const editTravelers = false;
   const [tool, setTool] = useState<ToolKey | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
-  // Editorial mosaic: each stop photo's measured aspect (naturalW/naturalH), keyed by
-  // render key. Drives the dynamic grid — a wide panorama earns a full-width hero, a
-  // portrait gets a taller half-slot, the rest pair up two-per-row to fill the width.
-  const [imgAspect, setImgAspect] = useState<Record<string, number>>({});
   const [dayIdx, setDayIdx] = useState(0);                 // one day on screen — pager
   const [mobileTab, setMobileTab] = useState<"plan" | "map">("plan");
   const [datesOpen, setDatesOpen] = useState(false);         // dates aren't permanent — a popover
@@ -833,6 +829,111 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
     });
     closeFill();
   };
+  // The "fill this meal break with a real eatery" UI — search the city, or add a place
+  // by name / address / pasted link. Shared by the editorial thin meal strip and the
+  // plain (non-editorial) card row so there's one source of truth for the form.
+  const mealFillUI = (fkey: string, fsi: number) => {
+    const near = [...(day?.stops ?? [])].slice(0, fsi).reverse().find((x) => x.lat != null && x.lng != null);
+    const isFill = fillKey === fkey;
+    const used = new Set<number>([
+      ...(itinerary?.days.flatMap((d) => d.stops.map((x) => x.id)) ?? []),
+      ...(trip?.leftOut ?? []).map((l) => l.id),
+    ].filter((x): x is number => x != null));
+    const hits = searchHits.filter((h) => !used.has(h.id));
+    return (
+      <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button onClick={() => (isFill ? closeFill() : openFill(fkey))}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-3 py-1 text-[12.5px] font-medium text-white transition hover:opacity-90">
+            {isFill ? <X size={12} /> : <Utensils size={12} />} {isFill ? "סגור" : "בחרו מסעדה למקום הזה"}
+          </button>
+          {near && (
+            <a href={googleMapsNearby(near.lat as number, near.lng as number, "מסעדות")}
+              target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1 text-[12.5px] text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
+              <MapPin size={12} /> מסעדות בסביבה
+            </a>
+          )}
+        </div>
+        {isFill && (
+          <div className="mt-2 rounded-[12px] border border-[var(--border)] bg-[var(--surface-2)] p-3">
+            {!!trip?.destinationId && (
+              <>
+                <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5">
+                  <Search size={14} className="shrink-0 text-[var(--text-3)]" />
+                  <input value={searchQ} onChange={(e) => setSearchQ(e.target.value)} autoFocus
+                    placeholder={`חיפוש מסעדה / מקום ב${cityHe || "עיר"}…`}
+                    className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-[var(--text-3)]" />
+                  {searchQ && <button onClick={() => { setSearchQ(""); setSearchHits([]); }} aria-label="נקה"><X size={14} className="text-[var(--text-3)]" /></button>}
+                </div>
+                {searchQ.trim().length >= 2 && (
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {searchBusy && hits.length === 0 && <p className="px-1 text-[12px] text-[var(--text-3)]">מחפש…</p>}
+                    {!searchBusy && hits.length === 0 && <p className="px-1 text-[12px] text-[var(--text-3)]">לא נמצאו מקומות — נסו שם אחר, או הוסיפו ידנית.</p>}
+                    {hits.slice(0, 6).map((h) => (
+                      <div key={h.id} className="flex items-center gap-2.5 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] p-1.5">
+                        {h.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={bigImage(h.image_url, 120)} alt="" loading="lazy" className="size-9 shrink-0 rounded-[8px] object-cover" />
+                        ) : (
+                          <div className="grid size-9 shrink-0 place-items-center rounded-[8px]" style={{ background: `color-mix(in srgb, ${catColor(h.category)} 16%, var(--surface))` }}>
+                            <MapPin size={14} style={{ color: catColor(h.category) }} />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[12.5px] font-semibold">{h.name_he || h.name_en}</p>
+                          <p className="truncate text-[11px] text-[var(--text-3)]">{catLabel(h.category)}{h.tagline_he ? ` · ${h.tagline_he}` : ""}</p>
+                        </div>
+                        <button onClick={() => fillBreakFromHit(curIdx, fsi, h)}
+                          className="shrink-0 rounded-full bg-[var(--brand)] px-3 py-1 text-[12px] font-medium text-white transition hover:opacity-90">בחרו</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="my-2.5 flex items-center gap-2 text-[11px] text-[var(--text-3)]">
+                  <span className="h-px flex-1 bg-[var(--border)]" /> או הוסיפו ידנית <span className="h-px flex-1 bg-[var(--border)]" />
+                </div>
+              </>
+            )}
+            <input value={addName} onChange={(e) => { setAddName(e.target.value); setAddCoords(null); }}
+              onBlur={(e) => { const v = e.target.value.trim(); if (v && !addCoords && !addAddress.trim()) geocodePlace(v, { fillName: false }); }}
+              placeholder="שם המקום (למשל: מסעדת דישום)"
+              className="w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[var(--brand)]" />
+            <div className="mt-2 flex items-center gap-2">
+              <input value={addAddress} onChange={(e) => { setAddAddress(e.target.value); setAddCoords(null); }}
+                onBlur={(e) => e.target.value.trim() && !addCoords && geocodePlace(e.target.value)}
+                placeholder="כתובת (לא חובה)"
+                className={`min-w-0 flex-1 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[12.5px] outline-none focus:border-[var(--brand)] ${addFlash ? "field-flash" : ""}`} />
+              <span className="shrink-0 text-[11px] text-[var(--text-3)]">או</span>
+              <input value={addLink} onChange={(e) => setAddLink(e.target.value)}
+                onBlur={(e) => e.target.value.trim() && resolvePlace(e.target.value)}
+                onPaste={(e) => { const v = e.clipboardData.getData("text"); if (v.trim()) setTimeout(() => resolvePlace(v), 0); }}
+                placeholder="קישור גוגל מפה" dir="ltr"
+                className="min-w-0 flex-1 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[12.5px] outline-none focus:border-[var(--brand)]" />
+            </div>
+            {addMsg && <p className={`mt-1.5 text-[12px] ${addMsg.ok ? "text-[var(--brand-ink)]" : "text-[var(--text-3)]"}`}>{addMsg.text}</p>}
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              {MANUAL_TYPES.map((t) => (
+                <button key={t.key} onClick={() => setAddType(t.key)}
+                  className={`rounded-full border px-2.5 py-1 text-[12px] transition ${addType === t.key ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-ink)]" : "border-[var(--border)] text-[var(--text-2)] hover:border-[var(--brand)]"}`}>
+                  {t.emoji} {t.he}
+                </button>
+              ))}
+            </div>
+            <label className="mt-2.5 flex items-center gap-2 text-[12.5px] text-[var(--text-2)]">
+              <span className="shrink-0">מחיר משוער לאדם (€):</span>
+              <input type="number" min={0} inputMode="numeric" value={addPrice} onChange={(e) => setAddPrice(e.target.value)} placeholder="לא חובה" dir="ltr"
+                className="w-24 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[var(--brand)]" />
+            </label>
+            <button onClick={() => fillBreakManual(curIdx, fsi)} disabled={addBusy || !addName.trim()}
+              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-[13px] font-medium text-white transition hover:opacity-90 disabled:opacity-40">
+              <Utensils size={14} /> {addBusy ? "…" : "הוסיפו מסעדה כאן"}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
   // Bank card "הוסף ליום זה": a manual place isn't in the DB, so it can't go through
   // the server arrange — insert it locally (best geo slot + re-time). Ranked DB picks
   // keep the server path (re-fits the day).
@@ -1407,7 +1508,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
               </div>
               {/* editorial: a 2-column dense mosaic (per-card span set below) so photos
                   fill the widened column with a magazine rhythm; plain stack otherwise */}
-              <div className={editorial ? "lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:[grid-auto-flow:dense]" : ""}>
+              <div className={editorial ? "lg:grid lg:grid-cols-[repeat(auto-fill,minmax(300px,1fr))] lg:items-start lg:gap-4 lg:[grid-auto-flow:dense]" : ""}>
               {day.stops.map((s, si) => {
                 const key = `${curIdx}-${si}`;
                 const isOpen = expanded === key;
@@ -1422,20 +1523,53 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 const col = ci != null ? stopColor(ci) : "var(--text-3)";
                 const isActive = ci != null && active === ci;
                 const leg = legAfter[si];
-                // Editorial mosaic sizing: the opening photo, a wide panorama (≥1.7:1), or a
-                // meal break with its fill-form open takes a full-width hero row; a portrait
-                // (<0.95:1) gets a taller half-slot; everything else — including photo-less
-                // stops — pairs up half-width, so the row fills without giant empty cards.
-                const ar = imgAspect[key];
-                const fillOpenHere = fillKey === key;
-                const spanFull = editorial && ((first && !!s.image) || (ar != null && ar >= 1.7) || fillOpenHere);
-                const tallPhoto = editorial && !spanFull && ar != null && ar < 0.95;
+                // A meal / rest break (no real place: kind food|rest, no id) renders as a
+                // THIN full-width strip on a brand-tint background — never a photo card.
+                // Every other stop is one uniform cell in the 2–3-up auto-fill grid, so no
+                // photo is stretched to a full-width hero (that upscaled low-res sources into
+                // mush and cropped tall images) — a small cell keeps even a low-res photo crisp.
+                const isBreakStrip = editorial && s.id == null && (s.kind === "food" || s.kind === "rest");
+                const brandBg = s.kind === "rest" ? "var(--brand-soft)" : "var(--accent-soft)";
+                const brandInk = s.kind === "rest" ? "var(--brand-ink)" : "var(--accent-ink)";
                 return (
                   <div key={si} ref={(el) => { stopRefs.current[si] = el; }}
                        data-drop-idx={si}
-                       className={`${editorial ? (spanFull ? "lg:col-span-2" : "lg:col-span-1") : ""} ${drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}`}
+                       className={`${isBreakStrip ? "lg:col-span-full" : ""} ${drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}`}
                        style={dragOverSi === si && drag && !(drag.kind === "stop" && drag.si === si)
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
+                    {isBreakStrip ? (
+                      <div>
+                        {/* meal / rest break: a thin brand-tinted strip (no photo), full width */}
+                        <div className="flex items-center gap-2.5 rounded-[14px] px-3.5 py-2.5"
+                             style={{ background: brandBg, color: brandInk }}
+                             onMouseEnter={() => { if (s.lat != null && s.lng != null) setFocus({ lat: s.lat, lng: s.lng, n: Date.now(), keepZoom: true }); } }>
+                          <span onPointerDown={(e) => startPointerDrag(e, { kind: "stop", si }, s.name)} onClick={(e) => e.stopPropagation()} style={{ touchAction: "none" }}
+                            className="hidden shrink-0 cursor-grab touch-none select-none place-items-center opacity-40 transition hover:opacity-90 lg:grid" title="גררו לשינוי סדר">
+                            <GripVertical size={15} />
+                          </span>
+                          <span aria-hidden className="text-[17px] leading-none">{s.kind === "rest" ? "☕" : "🍽️"}</span>
+                          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-0.5">
+                            <span className="serif text-[15.5px] font-bold">{s.name}</span>
+                            {s.time && <span className="text-[12.5px] font-medium tabular-nums opacity-70" dir="ltr">{s.time}</span>}
+                            {s.duration && (
+                              <span className="flex items-center gap-1 opacity-80" title="משך שהייה — לחצו +/−">
+                                <button onClick={(e) => { e.stopPropagation(); bumpDwell(curIdx, si, -30); }} aria-label="פחות זמן" className="grid size-[18px] place-items-center rounded border border-current text-[13px] leading-none">−</button>
+                                <span className="min-w-[46px] text-center text-[12px]">{stayHe(s.duration)}</span>
+                                <button onClick={(e) => { e.stopPropagation(); bumpDwell(curIdx, si, 30); }} aria-label="יותר זמן" className="grid size-[18px] place-items-center rounded border border-current text-[13px] leading-none">+</button>
+                              </span>
+                            )}
+                          </div>
+                          {s.name !== "הפסקת צהריים" && (
+                            <button onClick={(e) => { e.stopPropagation(); deleteStop(curIdx, si); }} title="מחק עצירה" aria-label="מחק עצירה"
+                              className="grid size-6 shrink-0 place-items-center rounded-md opacity-60 transition hover:opacity-100">
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                        {s.kind === "food" && s.id == null && <div className="px-1">{mealFillUI(key, si)}</div>}
+                      </div>
+                    ) : (
+                    <>
                     <div className={`group/row transition-colors ${hasDetails ? "cursor-pointer" : ""} ${editorial
                            ? "relative mb-1 flex flex-col overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)]"
                            : "-mx-2 flex gap-2 rounded-[12px] px-2 lg:gap-3"}`}
@@ -1479,11 +1613,10 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                       <div className={editorial ? "relative w-full" : "py-2.5 pr-1"}>
                         {s.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={editorial ? (bigImage(s.image, 720) ?? s.image) : s.image} alt="" loading="lazy"
+                          <img src={editorial ? (bigImage(s.image, 960) ?? s.image) : s.image} alt="" loading="lazy"
                             onError={editorial ? (e) => { const t = e.currentTarget; if (s.image && t.src !== s.image) t.src = s.image; } : undefined}
-                            onLoad={editorial ? (e) => { const t = e.currentTarget; if (t.naturalWidth && t.naturalHeight) { const r = t.naturalWidth / t.naturalHeight; setImgAspect((m) => Math.abs((m[key] ?? 0) - r) < 0.02 ? m : { ...m, [key]: r }); } } : undefined}
                             className={editorial
-                              ? `${tallPhoto ? "h-[300px]" : "h-[200px]"} w-full bg-[var(--surface-2)] object-cover`
+                              ? "h-[190px] w-full bg-[var(--surface-2)] object-cover"
                               : "size-12 rounded-[12px] object-cover"} />
                         ) : editorial ? (
                           <div className="grid h-[120px] w-full place-items-center border-b border-[var(--border)] bg-[var(--surface-2)]">
@@ -1592,110 +1725,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                         {/* A logistical meal BREAK has no place of its own — offer "restaurants
                             nearby", centred on the last stop before it. A real/added restaurant
                             (has its own id) IS the place, so it gets no such link. */}
-                        {s.kind === "food" && s.id == null && (() => {
-                          const near = [...day.stops.slice(0, si)].reverse().find((x) => x.lat != null && x.lng != null);
-                          const isFill = fillKey === key;
-                          const used = new Set<number>([
-                            ...(itinerary?.days.flatMap((d) => d.stops.map((x) => x.id)) ?? []),
-                            ...(trip?.leftOut ?? []).map((l) => l.id),
-                          ].filter((x): x is number => x != null));
-                          const hits = searchHits.filter((h) => !used.has(h.id));
-                          return (
-                            <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                <button onClick={() => (isFill ? closeFill() : openFill(key))}
-                                  className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-3 py-1 text-[12.5px] font-medium text-white transition hover:opacity-90">
-                                  {isFill ? <X size={12} /> : <Utensils size={12} />} {isFill ? "סגור" : "בחרו מסעדה למקום הזה"}
-                                </button>
-                                {near && (
-                                  <a href={googleMapsNearby(near.lat as number, near.lng as number, "מסעדות")}
-                                    target="_blank" rel="noreferrer"
-                                    className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1 text-[12.5px] text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
-                                    <MapPin size={12} /> מסעדות בסביבה
-                                  </a>
-                                )}
-                              </div>
-                              {isFill && (
-                                <div className="mt-2 rounded-[12px] border border-[var(--border)] bg-[var(--surface-2)] p-3">
-                                  {/* search the city for a specific eatery */}
-                                  {!!trip?.destinationId && (
-                                    <>
-                                      <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5">
-                                        <Search size={14} className="shrink-0 text-[var(--text-3)]" />
-                                        <input value={searchQ} onChange={(e) => setSearchQ(e.target.value)} autoFocus
-                                          placeholder={`חיפוש מסעדה / מקום ב${cityHe || "עיר"}…`}
-                                          className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-[var(--text-3)]" />
-                                        {searchQ && <button onClick={() => { setSearchQ(""); setSearchHits([]); }} aria-label="נקה"><X size={14} className="text-[var(--text-3)]" /></button>}
-                                      </div>
-                                      {searchQ.trim().length >= 2 && (
-                                        <div className="mt-2 flex flex-col gap-1.5">
-                                          {searchBusy && hits.length === 0 && <p className="px-1 text-[12px] text-[var(--text-3)]">מחפש…</p>}
-                                          {!searchBusy && hits.length === 0 && <p className="px-1 text-[12px] text-[var(--text-3)]">לא נמצאו מקומות — נסו שם אחר, או הוסיפו ידנית.</p>}
-                                          {hits.slice(0, 6).map((h) => (
-                                            <div key={h.id} className="flex items-center gap-2.5 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] p-1.5">
-                                              {h.image_url ? (
-                                                // eslint-disable-next-line @next/next/no-img-element
-                                                <img src={bigImage(h.image_url, 120)} alt="" loading="lazy" className="size-9 shrink-0 rounded-[8px] object-cover" />
-                                              ) : (
-                                                <div className="grid size-9 shrink-0 place-items-center rounded-[8px]" style={{ background: `color-mix(in srgb, ${catColor(h.category)} 16%, var(--surface))` }}>
-                                                  <MapPin size={14} style={{ color: catColor(h.category) }} />
-                                                </div>
-                                              )}
-                                              <div className="min-w-0 flex-1">
-                                                <p className="truncate text-[12.5px] font-semibold">{h.name_he || h.name_en}</p>
-                                                <p className="truncate text-[11px] text-[var(--text-3)]">{catLabel(h.category)}{h.tagline_he ? ` · ${h.tagline_he}` : ""}</p>
-                                              </div>
-                                              <button onClick={() => fillBreakFromHit(curIdx, si, h)}
-                                                className="shrink-0 rounded-full bg-[var(--brand)] px-3 py-1 text-[12px] font-medium text-white transition hover:opacity-90">בחרו</button>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      )}
-                                      <div className="my-2.5 flex items-center gap-2 text-[11px] text-[var(--text-3)]">
-                                        <span className="h-px flex-1 bg-[var(--border)]" /> או הוסיפו ידנית <span className="h-px flex-1 bg-[var(--border)]" />
-                                      </div>
-                                    </>
-                                  )}
-                                  {/* manual: typed name (auto-locate on blur) OR address / pasted link */}
-                                  <input value={addName} onChange={(e) => { setAddName(e.target.value); setAddCoords(null); }}
-                                    onBlur={(e) => { const v = e.target.value.trim(); if (v && !addCoords && !addAddress.trim()) geocodePlace(v, { fillName: false }); }}
-                                    placeholder="שם המקום (למשל: מסעדת דישום)"
-                                    className="w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[var(--brand)]" />
-                                  <div className="mt-2 flex items-center gap-2">
-                                    <input value={addAddress} onChange={(e) => { setAddAddress(e.target.value); setAddCoords(null); }}
-                                      onBlur={(e) => e.target.value.trim() && !addCoords && geocodePlace(e.target.value)}
-                                      placeholder="כתובת (לא חובה)"
-                                      className={`min-w-0 flex-1 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[12.5px] outline-none focus:border-[var(--brand)] ${addFlash ? "field-flash" : ""}`} />
-                                    <span className="shrink-0 text-[11px] text-[var(--text-3)]">או</span>
-                                    <input value={addLink} onChange={(e) => setAddLink(e.target.value)}
-                                      onBlur={(e) => e.target.value.trim() && resolvePlace(e.target.value)}
-                                      onPaste={(e) => { const v = e.clipboardData.getData("text"); if (v.trim()) setTimeout(() => resolvePlace(v), 0); }}
-                                      placeholder="קישור גוגל מפה" dir="ltr"
-                                      className="min-w-0 flex-1 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[12.5px] outline-none focus:border-[var(--brand)]" />
-                                  </div>
-                                  {addMsg && <p className={`mt-1.5 text-[12px] ${addMsg.ok ? "text-[var(--brand-ink)]" : "text-[var(--text-3)]"}`}>{addMsg.text}</p>}
-                                  <div className="mt-2.5 flex flex-wrap gap-1.5">
-                                    {MANUAL_TYPES.map((t) => (
-                                      <button key={t.key} onClick={() => setAddType(t.key)}
-                                        className={`rounded-full border px-2.5 py-1 text-[12px] transition ${addType === t.key ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-ink)]" : "border-[var(--border)] text-[var(--text-2)] hover:border-[var(--brand)]"}`}>
-                                        {t.emoji} {t.he}
-                                      </button>
-                                    ))}
-                                  </div>
-                                  <label className="mt-2.5 flex items-center gap-2 text-[12.5px] text-[var(--text-2)]">
-                                    <span className="shrink-0">מחיר משוער לאדם (€):</span>
-                                    <input type="number" min={0} inputMode="numeric" value={addPrice} onChange={(e) => setAddPrice(e.target.value)} placeholder="לא חובה" dir="ltr"
-                                      className="w-24 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[var(--brand)]" />
-                                  </label>
-                                  <button onClick={() => fillBreakManual(curIdx, si)} disabled={addBusy || !addName.trim()}
-                                    className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-[13px] font-medium text-white transition hover:opacity-90 disabled:opacity-40">
-                                    <Utensils size={14} /> {addBusy ? "…" : "הוסיפו מסעדה כאן"}
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
+                        {s.kind === "food" && s.id == null && mealFillUI(key, si)}
                       </div>
                       {/* timeline spine — a numbered dot in the stop's own colour.
                           Hidden in editorial: the number rides on the photo overlay instead. */}
@@ -1762,10 +1792,12 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                         )}
                       </div>
                     )}
+                    </>
+                    )}
 
                     {/* how to get to the next stop — walk vs transit by the
                         traveler's tolerance, with a live-navigation deep-link */}
-                    {leg && !last && (
+                    {leg && !last && !isBreakStrip && (
                       <div className={editorial ? "flex justify-center py-1.5 lg:hidden" : "flex items-stretch gap-3"}>
                         {!editorial && <div className="w-12 shrink-0 pr-1" />}
                         <div className={editorial ? "min-w-0 py-0.5" : "min-w-0 flex-1 py-0.5"}>
