@@ -415,7 +415,9 @@ export function DestinationView({
   // Two ways in: "choose" (the default — pick an audience) and "short" (an audience
   // is chosen → the calibratable topic chips + one-tap build). The old "explore /
   // הכל" deep-editor mode was retired; its filters live next to the search now.
-  const [audience, setAudience] = useState<Profile | null>(null);
+  // Editorial drops the "who is the trip for?" step: default to adults, and the
+  // "עם ילדים" tab's ♥ flips it to families (see the tab bar). Classic keeps the picker.
+  const [audience, setAudience] = useState<Profile | null>(() => editorial ? "adults" : null);
   const [boosts, setBoosts] = useState<Set<string>>(new Set());
   // Two flows: GUIDED (default — audience → topics → the system pre-marks → you
   // adjust) and MANUAL/"בנייה חופשית" (steps ①② off — you pick every place yourself
@@ -622,7 +624,11 @@ export function DestinationView({
   const mode: "choose" | "short" = audience ? "short" : "choose";
   // Require at least one "אוהבים" topic before building — otherwise everyone with the
   // same audience gets the identical trip. Gates the build CTA + reveals step ③.
-  const readyToBuild = !!audience && boosts.size > 0;
+  // Editorial has no funnel: audience is pre-set, so building unlocks the moment ANYTHING
+  // is hearted — a topic, a neighbourhood, or a specific place.
+  const readyToBuild = editorial
+    ? (boosts.size > 0 || yesCount > 0)   // a topic ♥, or any place/neighbourhood marked
+    : (!!audience && boosts.size > 0);
   // MANUAL flow: the build unlocks once ≥MANUAL_MIN places are marked (we don't know
   // the trip length yet, so a flat floor). GUIDED: audience + a topic.
   const canBuild = manual ? yesCount >= MANUAL_MIN : readyToBuild;
@@ -648,6 +654,7 @@ export function DestinationView({
     { key: "__all", label: "הכל", emoji: "🔎" },
     { key: "__must", label: "אתרי חובה", emoji: "⭐" },
     ...(areas.length ? [{ key: "__areas", label: "שכונות", emoji: "🏘️" }] : []),
+    { key: "__kids", label: "עם ילדים", emoji: "👨‍👩‍👧" },
     ...govInterests.map((it) => ({ key: it.key, label: it.label, emoji: it.emoji })),
   ], [areas.length, govInterests]);
   // Sort a set of attractions the house way: must-see first, then photo'd, then rating.
@@ -662,6 +669,7 @@ export function DestinationView({
   const cityTabItems = useMemo(() => {
     if (cityTab === "__all") return mustFirst(attractions);
     if (cityTab === "__must") return mustFirst(attractions.filter((a) => a.must_see === 1));
+    if (cityTab === "__kids") return mustFirst(attractions.filter((a) => matchesInterest(a, "ילדים")));
     if (cityTab === "__areas") {
       if (!activeArea) return [] as Attraction[];
       return mustFirst(activeArea.member_ids.map((id) => attrById.get(id)).filter((m): m is Attraction => !!m));
@@ -951,14 +959,11 @@ export function DestinationView({
   );
   const cityTabsEl = (
     <>
-          {/* the "highlight what you love" step lives on the tabs now: ♥ a topic or a
-              neighbourhood to mark it as a build emphasis (nudge until one is chosen). */}
-          {!manual && mode === "short" && boosts.size === 0 && chosenAreas.size === 0 && (
-            <p className="flex flex-wrap items-center gap-1.5 px-1 pt-3 text-[12.5px] text-[var(--text-2)]">
-              <span className="grid size-5 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-bold text-white pulse-attn">2</span>
-              הדגישו <Heart size={12} className="text-[var(--accent)]" fill="currentColor" /> תחום או שכונה שאוהבים — ונדגיש אותם בטיול
-            </p>
-          )}
+          {/* explainer for the ♥ flow — moved up from the list, reworded for the tab
+              flow (no audience step: the "עם ילדים" tab ♥ handles families). */}
+          <p className="mb-1 mt-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2 text-[12.5px] leading-relaxed text-[var(--text-2)]">
+            כל מקום עם <span className="inline-flex translate-y-0.5 items-center font-medium text-[var(--brand-ink)]"><Heart size={12} fill="currentColor" /></span> נכנס לטיול — אתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> כבר מסומנים. הדגישו ב־<span className="inline-flex translate-y-0.5 items-center font-medium text-[var(--accent-ink)]"><Heart size={12} fill="currentColor" /></span> תחום, שכונה או “עם ילדים” כדי להוסיף עוד — או הסירו כל מקום. ואז “בנו לי טיול”.
+          </p>
           {/* browse tabs — split the long list: "שכונות" (a sub-tab per neighbourhood)
               then one tab per governing interest. A place in a neighbourhood is also
               cross-listed under its topic tab; each tab is ordered must-see first. */}
@@ -968,11 +973,15 @@ export function DestinationView({
               const count = t.key === "__all" ? attractions.length
                 : t.key === "__must" ? attractions.filter((a) => a.must_see === 1).length
                 : t.key === "__areas" ? areas.length
+                : t.key === "__kids" ? attractions.filter((a) => matchesInterest(a, "ילדים")).length
                 : attractions.filter((a) => matchesInterest(a, t.key)).length;
-              // interest tabs carry a ♥ that highlights the topic (= adds it as a build
-              // "boost", the same as the old "הדגישו מה שאוהבים" chip). __must / __areas don't.
-              const isInterest = t.key !== "__must" && t.key !== "__areas";
-              const boosted = isInterest && boosts.has(t.key);
+              // ♥ on a tab = a build signal. Interest tabs add the topic as a "boost";
+              // the "עם ילדים" tab flips the audience families (♥) / adults (off). The
+              // הכל / אתרי חובה / שכונות tabs carry no ♥.
+              const isKids = t.key === "__kids";
+              const isInterest = t.key !== "__must" && t.key !== "__areas" && t.key !== "__all" && !isKids;
+              const hasHeart = isInterest || isKids;
+              const boosted = isKids ? audience === "families" : (isInterest && boosts.has(t.key));
               return (
                 <div key={t.key}
                   className="flex shrink-0 items-center overflow-hidden rounded-full border shadow-[var(--shadow)] transition"
@@ -980,13 +989,16 @@ export function DestinationView({
                     : boosted ? { background: "var(--accent-soft)", borderColor: "var(--accent)", color: "var(--accent-ink)" }
                     : { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)", boxShadow: "none" }}>
                   <button onClick={() => setCityTab(t.key)}
-                    className={`flex items-center gap-1.5 py-1.5 ps-3.5 text-[13.5px] font-medium ${isInterest ? "pe-1.5" : "pe-3.5"}`}>
+                    className={`flex items-center gap-1.5 py-1.5 ps-3.5 text-[13.5px] font-medium ${hasHeart ? "pe-1.5" : "pe-3.5"}`}>
                     <span aria-hidden>{t.emoji}</span> {t.label}
                     <span className={`text-[11.5px] ${active || boosted ? "opacity-80" : "opacity-60"}`}>{count}</span>
                   </button>
-                  {isInterest && (
-                    <button onClick={(e) => { e.stopPropagation(); setBoosts((s) => { const n = new Set(s); if (n.has(t.key)) n.delete(t.key); else n.add(t.key); return n; }); }}
-                      aria-pressed={boosted} title={boosted ? "בטלו הדגשה" : "הדגישו — יסומן אוטומטית בטיול"}
+                  {hasHeart && (
+                    <button onClick={(e) => { e.stopPropagation();
+                        if (isKids) setAudience(audience === "families" ? "adults" : "families");
+                        else setBoosts((s) => { const n = new Set(s); if (n.has(t.key)) n.delete(t.key); else n.add(t.key); return n; }); }}
+                      aria-pressed={boosted}
+                      title={isKids ? (boosted ? "בטלו התאמה לילדים" : "התאימו את הטיול לטיול עם ילדים") : (boosted ? "בטלו הדגשה" : "הדגישו — יסומן אוטומטית בטיול")}
                       className="grid size-8 shrink-0 place-items-center pe-1.5"
                       style={{ color: active ? "#fff" : boosted ? "var(--accent)" : "var(--text-3)" }}>
                       <Heart size={15} fill={boosted ? "currentColor" : "none"} />
@@ -1156,7 +1168,10 @@ export function DestinationView({
                 </div>
               </div>
 
-              {/* audience tabs — pick who the trip is for (families / couples&friends). */}
+              {/* audience tabs — pick who the trip is for (families / couples&friends).
+                  Editorial hides this whole step: the audience is pre-set (adults) and the
+                  "עם ילדים" tab ♥ flips it to families — no 1-2-3 funnel. */}
+              {!editorial && (
               <div className="flex flex-wrap items-center gap-2">
                 {!manual && (
                   <>
@@ -1183,6 +1198,7 @@ export function DestinationView({
                   </span>
                 )}
               </div>
+              )}
 
               {/* short mode — taste calibration + one-tap build, transparent (no card).
                   In editorial this row is REPLACED by a ♥ on each topic/neighbourhood tab. */}
@@ -1409,13 +1425,14 @@ export function DestinationView({
             <p className="mt-3 text-[13px] text-[var(--text-2)]" title={`המקומות הבודדים מחוץ לשכונות. עוד עשרות מקומות מקובצים בתוך ${areas.length} השכונות (שכל אחת היא אזור שלם). הצ'יפים מדגישים בתוך המאגר, לא מצמצמים אותו.`}>
               <b className="text-[var(--text)]">{poolStats.total}</b> מקומות בודדים
               {areas.length > 0 && <> {"+ "}<b className="text-[var(--brand-ink)]">{areas.length}</b> שכונות</>}
-              {" "}מתאימים ל{PROFILE_HE[audience]}
+              {" "}מתאימים ל{PROFILE_HE[audience ?? "adults"]}
               {boosts.size > 0 && <> · <b className="text-[var(--accent-ink)]">{emphInTrip}</b> מודגשים בטיול לפי הבחירה שלכם</>}
             </p>
           )}
 
-          {/* Transparency line — explains the ❤: in guided the system pre-marks them;
-              in manual you mark them yourself. Either way they ARE the trip. */}
+          {/* Transparency line — explains the ❤. Editorial moves this ABOVE the tabs
+              (reworded), so it's hidden here. */}
+          {!editorial && (
           <p className="mt-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2 text-[12.5px] leading-relaxed text-[var(--text-2)]">
             {manual ? (
               <>
@@ -1429,6 +1446,7 @@ export function DestinationView({
               </>
             )}
           </p>
+          )}
 
           {/* the whole list fades out → in while the preview re-chooses, so a topic
               click reads as an active refresh, not an abrupt reshuffle. */}
