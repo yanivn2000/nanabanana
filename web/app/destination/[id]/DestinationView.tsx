@@ -627,7 +627,7 @@ export function DestinationView({
   // Editorial has no funnel: audience is pre-set, so building unlocks the moment ANYTHING
   // is hearted — a topic, a neighbourhood, or a specific place.
   const readyToBuild = editorial
-    ? (boosts.size > 0 || yesCount > 0)   // a topic ♥, or any place/neighbourhood marked
+    ? (boosts.size > 0 || yesCount > 0 || audience === "families")   // any category ♥ (topic / "עם ילדים"), a place, or a neighbourhood
     : (!!audience && boosts.size > 0);
   // MANUAL flow: the build unlocks once ≥MANUAL_MIN places are marked (we don't know
   // the trip length yet, so a flat floor). GUIDED: audience + a topic.
