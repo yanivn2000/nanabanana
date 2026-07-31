@@ -15,8 +15,11 @@ export default async function DestinationPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
+  // Editorial is now the DEFAULT city view (hero + photo-card tabs). The old flat
+  // list is still reachable at /destination/<id>?v=classic (or ?v=list) for rollback.
   const vRaw = Array.isArray(sp.v) ? sp.v[0] : sp.v;
-  const editorial = String(vRaw ?? "").trim().replace(/\/+$/, "").toLowerCase() === "editorial";
+  const v = String(vRaw ?? "").trim().replace(/\/+$/, "").toLowerCase();
+  const editorial = !(v === "classic" || v === "list" || v === "off");
   const dest = await getDestination(Number(id));
   if (!dest) notFound();
   const [attractions, allInsights, editor, communityCount, areas] = await Promise.all([

@@ -11,18 +11,17 @@ export default async function TripPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  // Feature flag: /trip/<id>?v=editorial renders the same TripView inside an
-  // .editorial-scope wrapper (a re-skin via scoped tokens/CSS). The default
-  // route is untouched — no wrapper, identical markup — so the live page is safe.
-  // Tolerate a trailing slash / whitespace / array form (?v=editorial/ still works).
+  // Editorial is now the DEFAULT view (photo-forward magazine layout inside an
+  // .editorial-scope wrapper). The old compact layout is still reachable as an
+  // escape hatch at /trip/<id>?v=classic (or ?v=list) for comparison / rollback.
+  // Tolerate a trailing slash / whitespace / array form.
   const vRaw = Array.isArray(sp.v) ? sp.v[0] : sp.v;
   const v = String(vRaw ?? "").trim().replace(/\/+$/, "").toLowerCase();
-  if (v === "editorial") {
-    return (
-      <div className="editorial-scope">
-        <TripView tripId={id} editorial />
-      </div>
-    );
-  }
-  return <TripView tripId={id} />;
+  const classic = v === "classic" || v === "list" || v === "off";
+  if (classic) return <TripView tripId={id} />;
+  return (
+    <div className="editorial-scope">
+      <TripView tripId={id} editorial />
+    </div>
+  );
 }
