@@ -1109,7 +1109,9 @@ export function DestinationView({
                 </div>
                 )}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                  {/* flow toggle — GUIDED (system picks, you adjust) vs MANUAL (you pick everything) */}
+                  {/* flow toggle — GUIDED vs MANUAL. Editorial hides it: there's one flow
+                      now (pick categories/attractions with ♥, then build from them). */}
+                  {!editorial && (
                   <div className="flex items-center gap-0.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
                     <button onClick={() => setManual(false)}
                       className="rounded-full px-3 py-1 text-[12.5px] font-semibold transition"
@@ -1122,6 +1124,7 @@ export function DestinationView({
                       ✍️ בנייה חופשית
                     </button>
                   </div>
+                  )}
                   {/* actions — build (prominent) + show-selected + clear, pushed left,
                       ABOVE the places-count / badges meta row below. */}
                   <div ref={topCtaRef} className="flex items-center gap-2 ms-auto">
