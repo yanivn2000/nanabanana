@@ -967,7 +967,7 @@ export function DestinationView({
           {/* browse tabs — split the long list: "שכונות" (a sub-tab per neighbourhood)
               then one tab per governing interest. A place in a neighbourhood is also
               cross-listed under its topic tab; each tab is ordered must-see first. */}
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1.5 pt-2">
+          <div className="flex flex-wrap gap-2 pb-1.5 pt-2">
             {cityTabs.map((t) => {
               const active = cityTab === t.key;
               const count = t.key === "__all" ? attractions.length
@@ -1011,7 +1011,7 @@ export function DestinationView({
           {/* neighbourhood sub-tabs (only under "שכונות") */}
           {cityTab === "__areas" && areas.length > 0 && (
             <>
-              <div className="-mx-1 mt-1.5 flex gap-2 overflow-x-auto px-1 pb-1 pt-1.5">
+              <div className="mt-1.5 flex flex-wrap gap-2 pb-1 pt-1.5">
                 {areas.map((area) => {
                   const active = (activeArea?.id ?? null) === area.id;
                   const toured = chosenAreas.has(area.id);
