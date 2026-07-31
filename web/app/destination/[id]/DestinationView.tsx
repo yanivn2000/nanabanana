@@ -470,7 +470,7 @@ export function DestinationView({
   // Editorial city browse: the long flat list is split into tabs — "שכונות" (with a
   // sub-tab per neighbourhood) + one tab per governing interest. cityTab is the active
   // top tab ("__areas" or an interest key); areaTab is the chosen neighbourhood.
-  const [cityTab, setCityTab] = useState<string>("__areas");
+  const [cityTab, setCityTab] = useState<string>("__must");
   const [areaTab, setAreaTab] = useState<number | null>(null);
   const yesCount = Object.values(choices).filter((c) => c === "yes").length;
   // Likes are optional refinements now — the governed build works from audience +
@@ -643,6 +643,7 @@ export function DestinationView({
     [attractions]);
   // Editorial browse tabs: שכונות (if the city has any) then one per governing interest.
   const cityTabs = useMemo(() => [
+    { key: "__must", label: "אתרי חובה", emoji: "⭐" },
     ...(areas.length ? [{ key: "__areas", label: "שכונות", emoji: "🏘️" }] : []),
     ...govInterests.map((it) => ({ key: it.key, label: it.label, emoji: it.emoji })),
   ], [areas.length, govInterests]);
@@ -656,6 +657,7 @@ export function DestinationView({
   // interest tab shows every attraction matching it — INCLUDING area members (so a
   // museum in a neighbourhood is cross-listed under "מוזיאונים" too). Must-see first.
   const cityTabItems = useMemo(() => {
+    if (cityTab === "__must") return mustFirst(attractions.filter((a) => a.must_see === 1));
     if (cityTab === "__areas") {
       if (!activeArea) return [] as Attraction[];
       return mustFirst(activeArea.member_ids.map((id) => attrById.get(id)).filter((m): m is Attraction => !!m));
@@ -1162,7 +1164,7 @@ export function DestinationView({
       <div className={`lg:flex lg:items-start lg:pe-8 ${showBrowse ? "" : "hidden"}`}>
         {/* map — a narrow sticky rail on desktop; full-width strip on mobile */}
         <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-2 lg:!h-[calc(100dvh-164px)] lg:top-[72px] lg:w-[380px] lg:shrink-0 lg:border-y-0 lg:border-s`}>
-          <MapClient attractions={displayItems} center={[dest.lat, dest.lng]} selected={selected}
+          <MapClient attractions={editorial ? cityTabItems : displayItems} center={[dest.lat, dest.lng]} selected={selected}
             picks={pickedAttractions} fitNonce={fitNonce} onBounds={setBounds} hoveredId={hoveredId} focus={areaFocus} />
           {pickedAttractions.length > 0 && (
             <button onClick={() => setFitNonce((n) => n + 1)}
@@ -1197,7 +1199,7 @@ export function DestinationView({
                   🗺️ הצג מפה ▾
                 </button>
               )}
-              {!soloInterest && !selectedOnly && (
+              {!editorial && !soloInterest && !selectedOnly && (
                 <button onClick={() => setMustOnly((v) => !v)}
                   className="rounded-full px-3 py-1.5 text-[13.5px] font-medium transition"
                   style={{ background: mustOnly ? "var(--brand)" : "var(--surface)",
@@ -1280,7 +1282,7 @@ export function DestinationView({
             </div>
             {/* "רק אתרי חובה" sits with the sort/filters controls; default OFF so the
                 browse opens on ALL attractions once an audience is picked. */}
-            {!soloInterest && !selectedOnly && (
+            {!editorial && !soloInterest && !selectedOnly && (
               <button onClick={() => setMustOnly((v) => !v)} aria-pressed={mustOnly}
                 className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] font-medium transition"
                 style={{ background: mustOnly ? "var(--brand)" : "var(--surface)", color: mustOnly ? "#fff" : "var(--text-2)",
@@ -1438,10 +1440,11 @@ export function DestinationView({
           {/* browse tabs — split the long list: "שכונות" (a sub-tab per neighbourhood)
               then one tab per governing interest. A place in a neighbourhood is also
               cross-listed under its topic tab; each tab is ordered must-see first. */}
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 pt-3">
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1.5 pt-3">
             {cityTabs.map((t) => {
               const active = cityTab === t.key;
-              const count = t.key === "__areas" ? areas.length
+              const count = t.key === "__must" ? attractions.filter((a) => a.must_see === 1).length
+                : t.key === "__areas" ? areas.length
                 : attractions.filter((a) => matchesInterest(a, t.key)).length;
               return (
                 <button key={t.key} onClick={() => setCityTab(t.key)}
@@ -1457,7 +1460,7 @@ export function DestinationView({
           {/* neighbourhood sub-tabs (only under "שכונות") */}
           {cityTab === "__areas" && areas.length > 0 && (
             <>
-              <div className="-mx-1 mt-1.5 flex gap-2 overflow-x-auto px-1 pb-1">
+              <div className="-mx-1 mt-1.5 flex gap-2 overflow-x-auto px-1 pb-1 pt-1.5">
                 {areas.map((area) => {
                   const active = (activeArea?.id ?? null) === area.id;
                   return (
