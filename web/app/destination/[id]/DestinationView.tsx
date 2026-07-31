@@ -645,6 +645,7 @@ export function DestinationView({
     [attractions]);
   // Editorial browse tabs: שכונות (if the city has any) then one per governing interest.
   const cityTabs = useMemo(() => [
+    { key: "__all", label: "הכל", emoji: "🔎" },
     { key: "__must", label: "אתרי חובה", emoji: "⭐" },
     ...(areas.length ? [{ key: "__areas", label: "שכונות", emoji: "🏘️" }] : []),
     ...govInterests.map((it) => ({ key: it.key, label: it.label, emoji: it.emoji })),
@@ -659,6 +660,7 @@ export function DestinationView({
   // interest tab shows every attraction matching it — INCLUDING area members (so a
   // museum in a neighbourhood is cross-listed under "מוזיאונים" too). Must-see first.
   const cityTabItems = useMemo(() => {
+    if (cityTab === "__all") return mustFirst(attractions);
     if (cityTab === "__must") return mustFirst(attractions.filter((a) => a.must_see === 1));
     if (cityTab === "__areas") {
       if (!activeArea) return [] as Attraction[];
@@ -667,7 +669,17 @@ export function DestinationView({
     return mustFirst(attractions.filter((a) => matchesInterest(a, cityTab)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cityTab, activeArea, attractions, attrById]);
-  const cityGridItems = cityTabItems.slice(0, visibleCount);
+  // Search is SCOPED to the active tab — typing in "מוזיאונים" searches only museums,
+  // in a neighbourhood only that area; the "הכל" tab holds every attraction, so it's
+  // where a city-wide search lives.
+  const cityScoped = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return cityTabItems;
+    return cityTabItems.filter((a) => `${a.name_he ?? ""} ${a.name_en} ${descriptor(a)}`.toLowerCase().includes(q));
+  }, [cityTabItems, query]);
+  const cityGridItems = cityScoped.slice(0, visibleCount);
+  const cityTabLabel = cityTab === "__areas" ? (activeArea?.name_he || activeArea?.name_en || "שכונה")
+    : (cityTabs.find((t) => t.key === cityTab)?.label ?? "");
   // Bulk marks over the matched set (the primary view).
   const viewIds = matchedIds;
   const viewSelected = viewIds.filter((id) => choices[id]).length;
@@ -1167,7 +1179,7 @@ export function DestinationView({
       <div className={`lg:flex lg:items-start lg:pe-8 ${showBrowse ? "" : "hidden"}`}>
         {/* map — a narrow sticky rail on desktop; full-width strip on mobile */}
         <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-2 lg:!h-[calc(100dvh-164px)] lg:top-[72px] lg:w-[380px] lg:shrink-0 lg:border-y-0 lg:border-s`}>
-          <MapClient attractions={editorial ? cityTabItems : displayItems} center={[dest.lat, dest.lng]} selected={selected}
+          <MapClient attractions={editorial ? cityScoped : displayItems} center={[dest.lat, dest.lng]} selected={selected}
             picks={pickedAttractions} fitNonce={fitNonce} onBounds={setBounds} hoveredId={hoveredId} focus={areaFocus} />
           {pickedAttractions.length > 0 && (
             <button onClick={() => setFitNonce((n) => n + 1)}
@@ -1244,7 +1256,7 @@ export function DestinationView({
             <div className="flex min-w-[220px] flex-1 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2">
               <Search size={16} className="shrink-0 text-[var(--text-3)]" />
               <input value={query} onChange={(e) => setQuery(e.target.value)}
-                placeholder="חיפוש אטרקציה, שכונה או סוג מקום…"
+                placeholder={editorial ? (cityTab === "__all" ? "חיפוש בכל האטרקציות בעיר…" : `חיפוש בתוך "${cityTabLabel}"…`) : "חיפוש אטרקציה, שכונה או סוג מקום…"}
                 className="flex-1 bg-transparent text-[14.5px] outline-none placeholder:text-[var(--text-3)]" />
               {query && (
                 <button onClick={() => setQuery("")} aria-label="נקה חיפוש" className="shrink-0 text-[var(--text-3)] transition hover:text-[var(--text)]">
@@ -1454,7 +1466,8 @@ export function DestinationView({
           <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1.5 pt-2">
             {cityTabs.map((t) => {
               const active = cityTab === t.key;
-              const count = t.key === "__must" ? attractions.filter((a) => a.must_see === 1).length
+              const count = t.key === "__all" ? attractions.length
+                : t.key === "__must" ? attractions.filter((a) => a.must_see === 1).length
                 : t.key === "__areas" ? areas.length
                 : attractions.filter((a) => matchesInterest(a, t.key)).length;
               // interest tabs carry a ♥ that highlights the topic (= adds it as a build
@@ -1516,7 +1529,9 @@ export function DestinationView({
           )}
           <div className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-2 lg:pt-4 xl:grid-cols-3">
             {cityGridItems.length === 0 && (
-              <p className="col-span-full py-6 text-center text-[13.5px] text-[var(--text-3)]">אין כאן מקומות עדיין.</p>
+              <p className="col-span-full py-6 text-center text-[13.5px] text-[var(--text-3)]">
+                {query.trim() ? `לא נמצאו תוצאות ל"${query.trim()}"${cityTab === "__all" ? "" : ` תחת "${cityTabLabel}" — נסו בטאב "הכל"`}.` : "אין כאן מקומות עדיין."}
+              </p>
             )}
             {cityGridItems.map((a) => {
               const isSel = selected?.id === a.id;
@@ -1640,11 +1655,11 @@ export function DestinationView({
           </div>
 
           {/* one unified paginator for every mode (the list is one browse now) */}
-          {(editorial ? visibleCount < cityTabItems.length : visibleCount < sortedItems.length) && (
+          {(editorial ? visibleCount < cityScoped.length : visibleCount < sortedItems.length) && (
             <div className="mt-6 flex justify-center pb-4">
               <button onClick={() => setVisibleCount((v) => v + PAGE)}
                 className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-6 py-2.5 text-[14px] font-medium text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:border-[var(--brand)]">
-                הצג עוד · נותרו {(editorial ? cityTabItems.length : sortedItems.length) - visibleCount}
+                הצג עוד · נותרו {(editorial ? cityScoped.length : sortedItems.length) - visibleCount}
               </button>
             </div>
           )}
