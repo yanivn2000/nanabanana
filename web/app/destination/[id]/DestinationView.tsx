@@ -628,7 +628,9 @@ export function DestinationView({
   const canBuild = manual ? yesCount >= MANUAL_MIN : readyToBuild;
   // Hearts are interactive only when picking makes sense: always in manual, and in
   // guided ONLY after the system has something to pre-mark (audience + a topic).
-  const heartsEnabled = manual || readyToBuild;
+  // Editorial makes hearts the primary selection (♥ on tabs / neighbourhoods / cards),
+  // so they're always live there — manual marks survive the preview merge either way.
+  const heartsEnabled = manual || readyToBuild || editorial;
   // The list + map show in manual too (guided keeps them hidden until an audience is set).
   const showBrowse = manual || mode === "short";
 
