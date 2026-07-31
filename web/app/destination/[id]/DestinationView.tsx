@@ -1109,6 +1109,27 @@ export function DestinationView({
                 </div>
                 )}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  {/* editorial: the places-count + pass/community badges ride on THIS row
+                      (the toggle is gone) instead of taking their own line below. */}
+                  {editorial && (
+                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                      <span className="text-[13px] font-semibold text-[var(--text-2)]">
+                        {dest.attraction_count.toLocaleString("he")} מקומות לגלות בעיר
+                      </span>
+                      {passes.length > 0 && (
+                        <button onClick={() => setShowPasses((v) => !v)}
+                          className="inline-flex items-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
+                          💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
+                        </button>
+                      )}
+                      {communityCount > 0 && (
+                        <Link href={`/destination/${dest.id}/trips`}
+                          className="inline-flex items-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-2 py-0.5 text-[11.5px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
+                          ❤️ {communityCount} טיולים של מטיילים
+                        </Link>
+                      )}
+                    </div>
+                  )}
                   {/* flow toggle — GUIDED vs MANUAL. Editorial hides it: there's one flow
                       now (pick categories/attractions with ♥, then build from them). */}
                   {!editorial && (
@@ -1151,7 +1172,9 @@ export function DestinationView({
                     </span>
                   </div>
                 </div>
-                {/* meta — places count + pass/community badges, on their own line below the actions */}
+                {/* meta — places count + pass/community badges. Classic keeps it on its own
+                    line below; editorial moves it up onto the actions row (above). */}
+                {!editorial && (
                 <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
                   <span className="text-[13px] font-semibold text-[var(--text-2)]">
                     {dest.attraction_count.toLocaleString("he")} מקומות לגלות בעיר
@@ -1169,6 +1192,7 @@ export function DestinationView({
                     </Link>
                   )}
                 </div>
+                )}
               </div>
 
               {/* audience tabs — pick who the trip is for (families / couples&friends).
