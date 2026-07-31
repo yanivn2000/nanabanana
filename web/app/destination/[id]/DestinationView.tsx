@@ -467,6 +467,11 @@ export function DestinationView({
   const openBuild = () => { setBuildPace((profile.pace as Pace) ?? "בינוני"); setBuildOpen(true); };
   const PAGE = 200;
   const [visibleCount, setVisibleCount] = useState(PAGE);
+  // Editorial city browse: the long flat list is split into tabs — "שכונות" (with a
+  // sub-tab per neighbourhood) + one tab per governing interest. cityTab is the active
+  // top tab ("__areas" or an interest key); areaTab is the chosen neighbourhood.
+  const [cityTab, setCityTab] = useState<string>("__areas");
+  const [areaTab, setAreaTab] = useState<number | null>(null);
   const yesCount = Object.values(choices).filter((c) => c === "yes").length;
   // Likes are optional refinements now — the governed build works from audience +
   // topics alone, so building is always available once an audience is chosen (no
@@ -606,7 +611,7 @@ export function DestinationView({
   }, [attractions, choices, boostMatch]);
 
   // Paginate: show PAGE at a time; reset to page 1 on any change.
-  useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, selectedOnly, soloInterest, profile.interests, profile.dislikes, audience, boosts]);
+  useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, selectedOnly, soloInterest, profile.interests, profile.dislikes, audience, boosts, cityTab, areaTab]);
   // Never leave the traveler stranded in an empty "selected only" view.
   useEffect(() => { if (selectedOnly && yesCount === 0) setSelectedOnly(false); }, [selectedOnly, yesCount]);
   const visible = sortedItems.slice(0, visibleCount);
@@ -636,6 +641,29 @@ export function DestinationView({
   const govInterests = useMemo(
     () => GOVERNING_INTERESTS.filter((it) => attractions.filter((a) => matchesInterest(a, it.key)).length >= 2),
     [attractions]);
+  // Editorial browse tabs: שכונות (if the city has any) then one per governing interest.
+  const cityTabs = useMemo(() => [
+    ...(areas.length ? [{ key: "__areas", label: "שכונות", emoji: "🏘️" }] : []),
+    ...govInterests.map((it) => ({ key: it.key, label: it.label, emoji: it.emoji })),
+  ], [areas.length, govInterests]);
+  // Sort a set of attractions the house way: must-see first, then photo'd, then rating.
+  const mustFirst = (arr: Attraction[]) => [...arr].sort((a, b) =>
+    (b.must_see === 1 ? 1 : 0) - (a.must_see === 1 ? 1 : 0) ||
+    (b.image_url ? 1 : 0) - (a.image_url ? 1 : 0) ||
+    (b.family_score ?? 0) - (a.family_score ?? 0));
+  const activeArea = useMemo(() => areas.find((x) => x.id === areaTab) ?? areas[0] ?? null, [areas, areaTab]);
+  // The active tab's attractions. A neighbourhood tab shows that area's members; an
+  // interest tab shows every attraction matching it — INCLUDING area members (so a
+  // museum in a neighbourhood is cross-listed under "מוזיאונים" too). Must-see first.
+  const cityTabItems = useMemo(() => {
+    if (cityTab === "__areas") {
+      if (!activeArea) return [] as Attraction[];
+      return mustFirst(activeArea.member_ids.map((id) => attrById.get(id)).filter((m): m is Attraction => !!m));
+    }
+    return mustFirst(attractions.filter((a) => matchesInterest(a, cityTab)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cityTab, activeArea, attractions, attrById]);
+  const cityGridItems = cityTabItems.slice(0, visibleCount);
   // Bulk marks over the matched set (the primary view).
   const viewIds = matchedIds;
   const viewSelected = viewIds.filter((id) => choices[id]).length;
@@ -1298,7 +1326,7 @@ export function DestinationView({
           {/* neighbourhoods lead the list as "container" rows (same row design) — a
               whole-area heart tours it, expand to like specific members. Hidden while
               searching (then their members surface as normal flat results). */}
-          {!query && (
+          {!query && !editorial && (
             <NeighbourhoodRows areas={areas} chosenIds={chosenAreas} attrById={attrById}
               isPicked={(id) => choices[id] === "yes"}
               onToggleArea={toggleAreaHeart}
@@ -1406,8 +1434,52 @@ export function DestinationView({
             })}
           </div>
           ) : (
+          <>
+          {/* browse tabs — split the long list: "שכונות" (a sub-tab per neighbourhood)
+              then one tab per governing interest. A place in a neighbourhood is also
+              cross-listed under its topic tab; each tab is ordered must-see first. */}
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 pt-3">
+            {cityTabs.map((t) => {
+              const active = cityTab === t.key;
+              const count = t.key === "__areas" ? areas.length
+                : attractions.filter((a) => matchesInterest(a, t.key)).length;
+              return (
+                <button key={t.key} onClick={() => setCityTab(t.key)}
+                  className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium transition ${active
+                    ? "border-transparent bg-[var(--brand)] text-white shadow-[var(--shadow)]"
+                    : "border-[var(--border)] bg-[var(--surface)] text-[var(--text-2)] hover:border-[var(--brand)]"}`}>
+                  <span aria-hidden>{t.emoji}</span> {t.label}
+                  <span className={`text-[11.5px] ${active ? "opacity-80" : "opacity-60"}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+          {/* neighbourhood sub-tabs (only under "שכונות") */}
+          {cityTab === "__areas" && areas.length > 0 && (
+            <>
+              <div className="-mx-1 mt-1.5 flex gap-2 overflow-x-auto px-1 pb-1">
+                {areas.map((area) => {
+                  const active = (activeArea?.id ?? null) === area.id;
+                  return (
+                    <button key={area.id} onClick={() => setAreaTab(area.id)}
+                      className={`shrink-0 rounded-full px-3 py-1 text-[12.5px] font-medium transition ${active
+                        ? "bg-[var(--brand-soft)] text-[var(--brand-ink)] ring-1 ring-[var(--brand)]"
+                        : "text-[var(--text-3)] hover:text-[var(--brand-ink)]"}`}>
+                      {area.name_he || area.name_en} <span className="opacity-60">{area.member_ids.length}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {activeArea?.vibe_he && (
+                <p className="mt-1 px-1 text-[13px] leading-snug text-[var(--text-2)]">{activeArea.vibe_he}</p>
+              )}
+            </>
+          )}
           <div className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-2 lg:pt-4 xl:grid-cols-3">
-            {displayItems.map((a) => {
+            {cityGridItems.length === 0 && (
+              <p className="col-span-full py-6 text-center text-[13.5px] text-[var(--text-3)]">אין כאן מקומות עדיין.</p>
+            )}
+            {cityGridItems.map((a) => {
               const isSel = selected?.id === a.id;
               const cost = a.cost_level != null ? COST_HE[a.cost_level] : null;
               const dur = durationHe(a.duration_minutes);
@@ -1417,7 +1489,7 @@ export function DestinationView({
               const choice = choices[a.id];
               return (
                 <Fragment key={a.id}>
-                {a.id === firstDimId && (
+                {false && a.id === firstDimId && (
                   <div className="col-span-full mt-1 flex items-center gap-3 pb-1 pt-2">
                     <div className="h-px flex-1 bg-[var(--border)]" />
                     <span className="shrink-0 text-[12.5px] text-[var(--text-3)]">
@@ -1524,15 +1596,16 @@ export function DestinationView({
               );
             })}
           </div>
+          </>
           )}
           </div>
 
           {/* one unified paginator for every mode (the list is one browse now) */}
-          {visibleCount < sortedItems.length && (
+          {(editorial ? visibleCount < cityTabItems.length : visibleCount < sortedItems.length) && (
             <div className="mt-6 flex justify-center pb-4">
               <button onClick={() => setVisibleCount((v) => v + PAGE)}
                 className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-6 py-2.5 text-[14px] font-medium text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:border-[var(--brand)]">
-                הצג עוד · נותרו {sortedItems.length - visibleCount}
+                הצג עוד · נותרו {(editorial ? cityTabItems.length : sortedItems.length) - visibleCount}
               </button>
             </div>
           )}
