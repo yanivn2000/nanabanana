@@ -1,56 +1,78 @@
 @import "tailwindcss";
 
 :root {
-  /* Yalle brand (direction B, approved 2026-07-11) — cream canvas, navy ink,
-     forest-green primary, terracotta accent. All pairs AA-verified. */
-  --bg: #faf6ec;
-  --surface: #ffffff;
-  --surface-2: #f2ecdf;
-  --text: #101d2b;
-  --text-2: #4f5d6a;
-  --text-3: #8a94a0;
-  --border: rgba(16, 29, 43, 0.10);
-  /* terracotta — hero accent (CTA, highlights). 4.6:1 with white. */
-  --accent: #c64f26;
-  --accent-ink: #a63e1b;
-  --accent-soft: #fbe7dd;
-  --accent-bright: #e76f51; /* decorative only (illustration, motifs) — not for text */
-  /* forest green — primary (buttons, logo, nav). 6.4:1 with white. */
-  --brand: #0e6b5e;
-  --brand-ink: #0a5044;
-  --brand-soft: #e3f0ea;
-  /* warm amber — "בולט" / gentle-nudge highlights + warnings */
-  --amber: #8a5a0b;
-  --amber-soft: #f7e9c8;
-  --amber-fill: #ef9f27; /* filled "אולי" chips — pair with dark ink text (AA) */
-  --blue: #2e7a96;
-  --blue-soft: #e1eef3;
+  /* Yalle Design System v1.0 — official color tokens (light).
+     Cream canvas, teal primary, travel-coral accent, soft info blue.
+     Usage: ~82% white/sand, ~10% teal, ~5% dark text, ~2% coral, amber/blue trace. */
+  /* canvas / surfaces */
+  --bg: #FAF8F3;          /* warm page background */
+  --surface: #FFFFFF;     /* cards */
+  --surface-2: #F3F4F6;   /* secondary surfaces */
+  /* text / ink */
+  --text: #1F2933;        /* primary headings & body */
+  --text-2: #5D6672;      /* secondary text */
+  --text-3: #8B94A1;      /* captions / muted */
+  --border: #E8EAED;      /* borders & dividers */
+  /* accent — travel coral (primary CTA, ♥ highlights) */
+  --accent: #F26D5B;
+  --accent-ink: #CC5848;    /* dark coral — text on light */
+  --accent-soft: #FDEBE6;   /* soft coral background */
+  --accent-bright: #FF8A65; /* illustration only — not for text */
+  /* primary — brand teal (buttons, logo, nav) */
+  --brand: #0F7668;
+  --brand-ink: #0B5A4F;   /* dark teal — text on light */
+  --brand-soft: #E7F3F0;  /* soft brand background */
+  /* highlight / discovery — amber (recommendations, badges, "בולט") */
+  --amber: #8A5A0B;
+  --amber-soft: #F8ECD1;
+  --amber-fill: #EFB24B;  /* filled chips — pair with dark ink text */
+  /* information — soft blue (informational content ONLY) */
+  --blue: #6A9BB6;
+  --blue-soft: #EDF5F9;
+  /* status */
+  --success: #2F9E6B;
+  --warning: #E6A82F;
+  --error: #D94B4B;
+  --danger: var(--error);  /* alias — legacy delete affordances use var(--danger) */
   --radius: 16px;
   --radius-sm: 10px;
-  --shadow: 0 1px 3px rgba(16,29,43,0.05), 0 12px 30px rgba(16,29,43,0.08);
+  --shadow: 0 1px 3px rgba(31,41,51,0.05), 0 12px 30px rgba(31,41,51,0.08);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #101d1a;
-    --surface: #172723;
-    --surface-2: #1f312c;
-    --text: #f2efe6;
-    --text-2: #a3aeab;
-    --text-3: #6f7b78;
+    /* dark counterparts derived from the v1.0 light palette — bases brightened
+       for dark grounds, inks lightened for legibility, softs deepened. */
+    /* canvas / surfaces */
+    --bg: #0F1A17;
+    --surface: #16221E;
+    --surface-2: #1E2A26;
+    /* text / ink */
+    --text: #F2EFE6;
+    --text-2: #A6AFAB;
+    --text-3: #737D79;
     --border: rgba(235, 242, 238, 0.12);
-    --accent: #e76f51;
-    --accent-ink: #f0906f;
-    --accent-soft: #3a2018;
-    --accent-bright: #e76f51;
-    --brand: #35a08f;
-    --brand-ink: #8ed4c7;
-    --brand-soft: #12332c;
-    --amber: #e8a33b;
-    --amber-soft: #2f2611;
-    --amber-fill: #e8a33b;
-    --blue: #59b6c8;
-    --blue-soft: #0e2a33;
+    /* accent — coral (brightened for dark) */
+    --accent: #FF8266;
+    --accent-ink: #FFA890;
+    --accent-soft: #3A211C;
+    --accent-bright: #FF8A65;
+    /* primary — teal (brightened for dark) */
+    --brand: #2FA594;
+    --brand-ink: #7FD4C6;
+    --brand-soft: #123531;
+    /* highlight — amber */
+    --amber: #E8A33B;
+    --amber-soft: #2E2611;
+    --amber-fill: #EFB24B;
+    /* information — blue */
+    --blue: #86B4CE;
+    --blue-soft: #12262F;
+    /* status */
+    --success: #46B583;
+    --warning: #E8B043;
+    --error: #E86A6A;
+    --danger: var(--error);
     --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 10px 30px rgba(0,0,0,0.5);
   }
 }
@@ -73,6 +95,9 @@
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
   --font-sans: var(--font-assistant), system-ui, sans-serif;
   --font-serif: var(--font-fredoka), var(--font-assistant), sans-serif;
   --radius-card: var(--radius);
