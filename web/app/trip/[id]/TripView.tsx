@@ -1316,12 +1316,15 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
           numeral, the neighbourhood as the chapter title, the day's rationale as a
           one-line intro. (Real day.title/intro come later; area/why are the stopgap.) */}
       {editorial && itinerary && day && (
-        <div className="mt-7 flex items-start gap-5 px-5 lg:px-8">
-          <div className="serif text-[56px] font-extrabold leading-[0.8] text-[var(--accent)] lg:text-[76px]">{String(curIdx + 1).padStart(2, "0")}</div>
+        <div className="mt-7 flex items-start gap-5 px-5 lg:gap-6 lg:px-8">
+          <div className="shrink-0">
+            <div className="serif text-[56px] font-extrabold leading-[0.8] tracking-tight text-[var(--accent)] [font-variant-numeric:tabular-nums] lg:text-[76px]">{String(curIdx + 1).padStart(2, "0")}</div>
+            <div className="mt-2 h-[3px] w-9 rounded-full bg-[var(--accent)] lg:w-12" />
+          </div>
           <div className="pt-1.5">
             <p className="eyebrow" style={{ color: "var(--brand-ink)" }}>יום {curIdx + 1}{allDays.length > 1 ? ` · מתוך ${allDays.length}` : ""}</p>
-            <h2 className="serif mt-1 text-[28px] font-bold leading-[1.04] lg:text-[38px]">{day.area || dayLabels[curIdx]}</h2>
-            {day.why && <p className="mt-2 max-w-[58ch] text-[15.5px] leading-relaxed text-[var(--text-2)]">{day.why}</p>}
+            <h2 className="serif mt-1 text-[28px] font-bold leading-[1.04] [text-wrap:balance] lg:text-[40px]">{day.area || dayLabels[curIdx]}</h2>
+            {day.why && <p className="mt-2.5 max-w-[58ch] text-[15.5px] leading-relaxed text-[var(--text-2)]">{day.why}</p>}
           </div>
         </div>
       )}
@@ -1533,6 +1536,9 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                              onMouseEnter={() => { if (ci != null) { setActive(ci); if (s.lat != null && s.lng != null) setFocus({ lat: s.lat, lng: s.lng, n: Date.now(), keepZoom: true }); } } }
                              onMouseLeave={() => setActive(null)}
                              onClick={() => isFilledMeal && hasDetails && setExpanded(isOpen ? null : key)}>
+                          {/* leading accent spine — a slim bar that reads the band as a
+                              deliberate meal marker on the timeline, not just a color block */}
+                          <div className="w-1.5 shrink-0 self-stretch" style={{ background: "color-mix(in srgb, currentColor 26%, transparent)" }} />
                           {ci != null && (
                             <div className="flex w-11 shrink-0 items-center justify-center">
                               <span className="grid size-7 place-items-center rounded-full text-[13px] font-bold text-white shadow-[var(--shadow)]" style={{ background: col }}>{ci + 1}</span>
@@ -1750,6 +1756,16 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                             nearby", centred on the last stop before it. A real/added restaurant
                             (has its own id) IS the place, so it gets no such link. */}
                         {s.kind === "food" && s.id == null && mealFillUI(key, si)}
+                        {/* walk/transit hint to the NEXT stop — a compact chip INSIDE the card
+                            so it works in the desktop mosaic (there's no between-card row). */}
+                        {editorial && leg && !last && (
+                          <a href={googleDirUrl(leg.fromLat, leg.fromLng, leg.toLat, leg.toLng,
+                               leg.recommended === "transit" ? "transit" : leg.recommended === "drive" ? "driving" : "walking")}
+                            target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                            className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[12px] text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
+                            <span aria-hidden>{leg.icon}</span> {leg.primaryHe} · {formatDistance(leg.km)} <span className="font-medium text-[var(--brand-ink)]">· נווט</span>
+                          </a>
+                        )}
                       </div>
                       {/* timeline spine — a numbered dot in the stop's own colour.
                           Hidden in editorial: the number rides on the photo overlay instead. */}
@@ -1776,8 +1792,10 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                     </div>
 
                     {isOpen && (
-                      <div className={`pb-3.5 pt-3 ${editorial ? "mb-1 rounded-[16px] border border-[var(--border)] bg-[var(--surface)] px-4" : "border-t border-[var(--border)]"}`}>
-                        {s.image && (
+                      <div className={`${editorial ? "mb-1 -mt-1 rounded-b-[16px] border border-t-0 border-[var(--border)] bg-[var(--surface)] px-4 pb-4 pt-3.5" : "border-t border-[var(--border)] pb-3.5 pt-3"}`}>
+                        {/* editorial already shows the hero photo on top of the card, so we
+                            don't repeat it here — only the classic list needs the image. */}
+                        {s.image && !editorial && (
                           // eslint-disable-next-line @next/next/no-img-element
                           // Natural aspect ratio (bounded), NOT a forced landscape crop — a
                           // tall subject (a tower) shows tall, a wide one wide; nothing is
@@ -1790,7 +1808,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                           <p className="mb-2 text-[14.5px] italic text-[var(--text-2)]">{s.tagline}</p>
                         )}
                         {s.description && (
-                          <p className="mb-2.5 text-[13.5px] leading-relaxed text-[var(--text-2)]">{s.description}</p>
+                          <p className="mb-3 text-[14px] leading-relaxed text-[var(--text-2)]">{s.description}</p>
                         )}
                         <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[13.5px] text-[var(--text-2)]">
                           {s.bestTime && <span><span className="text-[var(--text-3)]">מתי: </span>{s.bestTime}</span>}
@@ -1819,10 +1837,12 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                     </>
                     )}
 
-                    {/* how to get to the next stop — walk vs transit by the
-                        traveler's tolerance, with a live-navigation deep-link */}
-                    {leg && !last && !isBreakStrip && (
-                      <div className={editorial ? "flex justify-center py-1.5 lg:hidden" : "flex items-stretch gap-3"}>
+                    {/* how to get to the next stop — walk vs transit by the traveler's
+                        tolerance, with a live-navigation deep-link. Editorial renders this
+                        as an in-card chip instead (above), so the between-card row is
+                        classic-only — otherwise mobile would show it twice. */}
+                    {leg && !last && !isBreakStrip && !editorial && (
+                      <div className={"flex items-stretch gap-3"}>
                         {!editorial && <div className="w-12 shrink-0 pr-1" />}
                         <div className={editorial ? "min-w-0 py-0.5" : "min-w-0 flex-1 py-0.5"}>
                           <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-[var(--text-3)]">
