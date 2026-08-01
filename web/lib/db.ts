@@ -943,8 +943,13 @@ export async function setCommentHelpful(
 // --- User feedback ("מצאתם באג? יש רעיון?") ---------------------------------
 export type Feedback = {
   id: number; created_at: string; kind: string | null;
-  message: string; email: string | null; page: string | null;
+  message: string; email: string | null; page: string | null; handled: boolean;
 };
+
+// Idempotent — adds the "handled" flag if an older feedback table predates it.
+async function ensureFeedbackSchema(): Promise<void> {
+  await query(`ALTER TABLE feedback ADD COLUMN IF NOT EXISTS handled boolean NOT NULL DEFAULT false`);
+}
 
 export async function addFeedback(f: {
   kind: string; message: string; email: string | null;
@@ -958,9 +963,21 @@ export async function addFeedback(f: {
 }
 
 export async function listFeedback(limit = 200): Promise<Feedback[]> {
+  await ensureFeedbackSchema();
+  // unhandled first (newest of each), so the open queue is at the top
   return query<Feedback>(
-    `SELECT id, created_at, kind, message, email, page
-       FROM feedback ORDER BY id DESC LIMIT $1`, [limit]);
+    `SELECT id, created_at, kind, message, email, page, handled
+       FROM feedback ORDER BY handled ASC, id DESC LIMIT $1`, [limit]);
+}
+
+// Admin: mark a message handled/unhandled, or delete it.
+export async function setFeedbackHandled(id: number, handled: boolean): Promise<void> {
+  await ensureFeedbackSchema();
+  await query(`UPDATE feedback SET handled = $2 WHERE id = $1`, [id, handled]);
+}
+
+export async function deleteFeedback(id: number): Promise<void> {
+  await query(`DELETE FROM feedback WHERE id = $1`, [id]);
 }
 
 // Shared AI model setting (written by the Streamlit admin Settings tab).

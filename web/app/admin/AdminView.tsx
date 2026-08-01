@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Loader2, Check, ExternalLink } from "lucide-react";
+import { ChevronDown, Loader2, Check, ExternalLink, Trash2 } from "lucide-react";
 import { InsightsIngest } from "./InsightsIngest";
 import { AttractionsTable } from "./AttractionsTable";
 import { AreasTable } from "./AreasTable";
@@ -167,6 +167,23 @@ export function AdminView({ destinations, feedback, email, version }: {
   destinations: AdminDestination[]; feedback: Feedback[]; email: string; version?: string;
 }) {
   const [tab, setTab] = useState<TabKey>("cities");
+  // Local copy so handle/delete update the list without a full reload.
+  const [fb, setFb] = useState<Feedback[]>(feedback);
+  const [fbBusy, setFbBusy] = useState<number | null>(null);
+  async function fbAction(id: number, action: "handle" | "unhandle" | "delete") {
+    if (action === "delete" && !confirm("למחוק את ההודעה לצמיתות?")) return;
+    setFbBusy(id);
+    try {
+      const res = await fetch("/api/admin/feedback", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, action }),
+      });
+      if (!res.ok) return;
+      setFb((cur) => action === "delete"
+        ? cur.filter((f) => f.id !== id)
+        : cur.map((f) => (f.id === id ? { ...f, handled: action === "handle" } : f)));
+    } finally { setFbBusy(null); }
+  }
   return (
     <main className="mx-auto max-w-6xl px-5 py-6 lg:px-8">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -260,14 +277,26 @@ export function AdminView({ destinations, feedback, email, version }: {
 
       {tab === "feedback" && (
         <section className="flex flex-col gap-2">
-          {feedback.length === 0 && <p className="py-8 text-center text-[14px] text-[var(--text-3)]">אין פידבק עדיין.</p>}
-          {feedback.map((f) => (
-            <div key={f.id} className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-3">
+          {fb.length === 0 && <p className="py-8 text-center text-[14px] text-[var(--text-3)]">אין פידבק עדיין.</p>}
+          {fb.map((f) => (
+            <div key={f.id} className={`rounded-[var(--radius-sm)] border p-3 transition ${f.handled ? "border-[var(--border)] bg-[var(--surface-2)] opacity-60" : "border-[var(--border)] bg-[var(--surface)]"}`}>
               <div className="mb-1 flex flex-wrap items-center gap-2 text-[12.5px] text-[var(--text-3)]">
                 <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-medium">{KIND_HE[f.kind ?? ""] ?? f.kind}</span>
+                {f.handled && <span className="rounded-full bg-[var(--brand-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--brand-ink)]">✓ טופל</span>}
                 <span dir="ltr">{new Date(f.created_at).toLocaleString("he-IL")}</span>
                 {f.page && <span dir="ltr" className="truncate">{f.page}</span>}
                 {f.email && <a href={`mailto:${f.email}`} dir="ltr" className="text-[var(--brand-ink)]">{f.email}</a>}
+                {/* actions pushed to the far side */}
+                <span className="ms-auto flex items-center gap-1.5">
+                  <button onClick={() => fbAction(f.id, f.handled ? "unhandle" : "handle")} disabled={fbBusy === f.id}
+                    className="rounded-full border border-[var(--border)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)] disabled:opacity-50">
+                    {f.handled ? "החזר לפתוח" : "סמן כטופל"}
+                  </button>
+                  <button onClick={() => fbAction(f.id, "delete")} disabled={fbBusy === f.id} aria-label="מחק"
+                    className="grid size-7 place-items-center rounded-md text-[var(--text-3)] transition hover:bg-[var(--surface-2)] hover:text-[var(--error)] disabled:opacity-50">
+                    {fbBusy === f.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                  </button>
+                </span>
               </div>
               <p className="whitespace-pre-wrap text-[14px] leading-relaxed">{f.message}</p>
             </div>
