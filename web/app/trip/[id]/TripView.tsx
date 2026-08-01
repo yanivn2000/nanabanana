@@ -193,25 +193,6 @@ function StopIcon({ kind }: { kind: Stop["kind"] }) {
   );
 }
 
-// Editorial mosaic layout: cards tile a 6-column grid, RESETTING at every meal
-// strip so a day reads as rows of up to 3 attractions. A meal after 1 or 2 stops
-// leaves a short row, which "condenses" (stretches) to fill the width — 1 card
-// spans the whole row, 2 cards take half each, 3 cards a third each. Returns the
-// Tailwind col-span for stop `si` (meal strips always span the full row).
-function editorialColSpan(stops: Stop[], si: number): string {
-  const isStrip = (s: Stop) =>
-    (s.id == null && (s.kind === "food" || s.kind === "rest")) || !!s.meal;
-  if (isStrip(stops[si])) return "lg:col-span-full";
-  // walk to the segment bounds (the run of non-strip stops around si)
-  let start = si;
-  while (start > 0 && !isStrip(stops[start - 1])) start--;
-  let end = si;
-  while (end < stops.length - 1 && !isStrip(stops[end + 1])) end++;
-  const segLen = end - start + 1;
-  const rowStart = Math.floor((si - start) / 3) * 3;  // 0/3/6… within the segment
-  const rowLen = Math.min(3, segLen - rowStart);      // cards sharing si's row
-  return rowLen === 1 ? "lg:col-span-6" : rowLen === 2 ? "lg:col-span-3" : "lg:col-span-2";
-}
 
 // AI is off for the commercial launch (server kill-switch). Mirror that on the
 // client so the "שדרגו עם AI" button only appears when AI can actually run —
@@ -1511,11 +1492,10 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                   <Coffee size={13} /> מנוחה במלון
                 </button>
               </div>
-              {/* editorial: a fixed 6-column grid so a day defaults to 3 attractions per
-                  row (each card spans 2). Meal strips span the full row and reset it, so a
-                  lunch after 1 or 2 stops leaves a short row that condenses to fill the
-                  width (span set per card by editorialColSpan). Plain stack otherwise. */}
-              <div className={editorial ? "lg:grid lg:grid-cols-6 lg:items-start lg:gap-4" : ""}>
+              {/* editorial: a fixed 3-column grid — every stop (attractions AND meal
+                  breaks) is one equal cube, 3 per row, all stretched to a uniform row
+                  height (lg:items-stretch + lg:h-full on each card). Plain stack otherwise. */}
+              <div className={editorial ? "lg:grid lg:grid-cols-3 lg:items-stretch lg:gap-4" : ""}>
               {day.stops.map((s, si) => {
                 const key = `${curIdx}-${si}`;
                 const isOpen = expanded === key;
@@ -1533,99 +1513,23 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 // A meal / rest break (no real place: kind food|rest, no id) renders as a
                 // THIN full-width strip on a brand-tint background — never a photo card.
                 // Every other stop is one uniform cell in the 2–3-up auto-fill grid, so no
-                // photo is stretched to a full-width hero (that upscaled low-res sources into
-                // mush and cropped tall images) — a small cell keeps even a low-res photo crisp.
-                // A meal strip = an empty break (food/rest, no id) OR a break the traveller
-                // FILLED with a real eatery (carries s.meal). Either way it's a full-width
-                // brand band, never a photo card — so a filled "Ave Mario" lunch stays a strip.
-                const isBreakStrip = editorial && ((s.id == null && (s.kind === "food" || s.kind === "rest")) || !!s.meal);
+                // photo is one uniform cell in the 3-up grid, so no photo is stretched to a
+                // full-width hero (that upscaled low-res sources into mush) — a small cell
+                // keeps even a low-res photo crisp.
+                // Meal breaks (empty lunch/dinner slots) and traveller-filled eateries now
+                // render as ordinary cubes through the SAME card path as attractions — a
+                // uniform 3-up grid, no full-width strips. isFilledMeal only tags the card
+                // with WHICH meal it fills.
                 const isFilledMeal = editorial && !!s.meal;
-                const brandBg = s.kind === "rest" ? "var(--brand-soft)" : "var(--accent-soft)";
-                const brandInk = s.kind === "rest" ? "var(--brand-ink)" : "var(--accent-ink)";
-                // column span in the editorial 6-col grid (meal strips span full row;
-                // a card widens to fill a short row). `wide` = a full-row card, which
-                // needs a higher-res photo so it doesn't upscale into mush.
-                const spanCls = editorial ? editorialColSpan(day.stops, si) : "";
-                const wide = spanCls === "lg:col-span-6";
                 return (
                   <div key={si} ref={(el) => { stopRefs.current[si] = el; }}
                        data-drop-idx={si}
-                       className={`${spanCls} ${drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}`}
+                       className={`${drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}`}
                        style={dragOverSi === si && drag && !(drag.kind === "stop" && drag.si === si)
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
-                    {isBreakStrip ? (
-                      <div>
-                        {/* meal / rest strip — a full-width brand band (never a photo card). A
-                            FILLED meal grows to ~40% of a card's height and shows the place name
-                            + which meal + its details; an empty break stays a thin bar. */}
-                        <div className="flex items-stretch overflow-hidden rounded-[16px] shadow-[var(--shadow)]"
-                             style={{ background: brandBg, color: brandInk }}
-                             onMouseEnter={() => { if (ci != null) { setActive(ci); if (s.lat != null && s.lng != null) setFocus({ lat: s.lat, lng: s.lng, n: Date.now(), keepZoom: true }); } } }
-                             onMouseLeave={() => setActive(null)}
-                             onClick={() => isFilledMeal && hasDetails && setExpanded(isOpen ? null : key)}>
-                          {/* leading accent spine — a slim bar that reads the band as a
-                              deliberate meal marker on the timeline, not just a color block */}
-                          <div className="w-1.5 shrink-0 self-stretch" style={{ background: "color-mix(in srgb, currentColor 26%, transparent)" }} />
-                          {ci != null && (
-                            <div className="flex w-11 shrink-0 items-center justify-center">
-                              <span className="grid size-7 place-items-center rounded-full text-[13px] font-bold text-white shadow-[var(--shadow)]" style={{ background: col }}>{ci + 1}</span>
-                            </div>
-                          )}
-                          <div className={`flex min-w-0 flex-1 flex-col justify-center gap-1.5 py-3.5 ${ci != null ? "pr-0" : "pr-4"} ${isFilledMeal ? "min-h-[126px]" : ""}`}>
-                            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                              <span aria-hidden className="text-[19px] leading-none">{s.kind === "rest" ? "☕" : "🍽️"}</span>
-                              <span className="serif text-[18px] font-bold leading-tight">{s.name}</span>
-                              {isFilledMeal && s.meal && (
-                                <span className="rounded-full bg-[color-mix(in_srgb,currentColor_16%,transparent)] px-2 py-0.5 text-[11.5px] font-medium">
-                                  {s.meal.replace("הפסקת", "ארוחת")}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px]">
-                              {isFilledMeal && <span className="opacity-90">{s.manual ? manualTypeLabel(s.cat || "other").he : (catLabel(s.cat, s.sub) || "מסעדה")}</span>}
-                              {s.time && <span className="font-medium tabular-nums opacity-70" dir="ltr">{s.time}</span>}
-                              {(() => { const e = stopEntryPerPerson(s); return e != null && e > 0 ? <span className="tabular-nums opacity-80" title="מחיר משוער לאדם">≈€{e}</span> : null; })()}
-                              {s.duration && (
-                                <span className="flex items-center gap-1 opacity-80" title="משך שהייה — לחצו +/−">
-                                  <button onClick={(e) => { e.stopPropagation(); bumpDwell(curIdx, si, -30); }} aria-label="פחות זמן" className="grid size-[18px] place-items-center rounded border border-current text-[13px] leading-none">−</button>
-                                  <span className="min-w-[46px] text-center">{stayHe(s.duration)}</span>
-                                  <button onClick={(e) => { e.stopPropagation(); bumpDwell(curIdx, si, 30); }} aria-label="יותר זמן" className="grid size-[18px] place-items-center rounded border border-current text-[13px] leading-none">+</button>
-                                </span>
-                              )}
-                              {isFilledMeal && hasDetails && <ChevronDown size={15} className={`transition-transform ${isOpen ? "rotate-180" : ""}`} />}
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-center justify-center gap-2 px-3 opacity-60">
-                            <span onPointerDown={(e) => startPointerDrag(e, { kind: "stop", si }, s.name)} onClick={(e) => e.stopPropagation()} style={{ touchAction: "none" }}
-                              className="hidden cursor-grab touch-none select-none place-items-center transition hover:opacity-100 lg:grid" title="גררו לשינוי סדר">
-                              <GripVertical size={15} />
-                            </span>
-                            {s.name !== "הפסקת צהריים" && s.name !== "ארוחת ערב" && (
-                              <button onClick={(e) => { e.stopPropagation(); deleteStop(curIdx, si); }} title="מחק עצירה" aria-label="מחק עצירה"
-                                className="grid place-items-center transition hover:opacity-100">
-                                <Trash2 size={14} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        {isFilledMeal && isOpen && (s.tagline || s.description || (s.lat != null && s.lng != null)) && (
-                          <div className="mt-1 rounded-[14px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
-                            {s.tagline && s.tagline !== s.note && <p className="mb-1.5 text-[14px] italic text-[var(--text-2)]">{s.tagline}</p>}
-                            {s.description && <p className="mb-2 text-[13.5px] leading-relaxed text-[var(--text-2)]">{s.description}</p>}
-                            {s.lat != null && s.lng != null && (
-                              <a href={googleMapsPin(s.lat, s.lng)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
-                                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[13px] text-[var(--text-2)]">
-                                <MapPin size={13} /> פתח במפה
-                              </a>
-                            )}
-                          </div>
-                        )}
-                        {s.kind === "food" && s.id == null && !s.meal && <div className="px-1 pb-2.5 pt-1.5">{mealFillUI(key, si)}</div>}
-                      </div>
-                    ) : (
                     <>
                     <div className={`group/row transition-colors ${hasDetails ? "cursor-pointer" : ""} ${editorial
-                           ? "relative mb-1 flex flex-col overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)]"
+                           ? "relative mb-1 flex h-full flex-col overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)] lg:mb-0"
                            : "-mx-2 flex gap-2 rounded-[12px] px-2 lg:gap-3"}`}
                          style={{ background: !editorial && isActive ? `color-mix(in srgb, ${col} 12%, transparent)` : undefined,
                                   boxShadow: editorial && isActive ? `0 0 0 2px color-mix(in srgb, ${col} 45%, transparent), var(--shadow)` : undefined }}
@@ -1667,7 +1571,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                       <div className={editorial ? "relative w-full" : "py-2.5 pr-1"}>
                         {s.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={editorial ? (bigImage(s.image, wide ? 1440 : 960) ?? s.image) : s.image} alt="" loading="lazy"
+                          <img src={editorial ? (bigImage(s.image, 960) ?? s.image) : s.image} alt="" loading="lazy"
                             onError={editorial ? (e) => { const t = e.currentTarget; if (s.image && t.src !== s.image) t.src = s.image; } : undefined}
                             className={editorial
                               ? "h-[190px] w-full bg-[var(--surface-2)] object-cover"
@@ -1697,13 +1601,18 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                         )}
                       </div>
                       {/* name + details */}
-                      <div className={`min-w-0 ${editorial ? "px-4 pb-4 pt-3" : "flex-1 py-2.5"}`}>
+                      <div className={`min-w-0 ${editorial ? "flex flex-1 flex-col px-4 pb-4 pt-3" : "flex-1 py-2.5"}`}>
                         {/* top line: the NAME is the hero — it gets the whole block width;
                             only the expand chevron sits at the far end. Rating + stay time
                             drop to the meta line below so the name is never squeezed. */}
                         <div className="flex items-start justify-between gap-1.5">
                           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 gap-y-0.5">
                             <p className={`line-clamp-2 font-semibold leading-snug ${editorial ? "serif text-[19px] lg:text-[21px]" : "text-[16.5px]"}`}>{s.name}</p>
+                            {isFilledMeal && s.meal && (
+                              <span className="shrink-0 rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--accent-ink)]">
+                                {s.meal.replace("הפסקת", "ארוחת")}
+                              </span>
+                            )}
                             {fromSelection && s.anchor === true && (
                               <span className="shrink-0 rounded-full bg-[var(--brand-soft)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--brand-ink)]">עוגן</span>
                             )}
@@ -1789,7 +1698,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                           <a href={googleDirUrl(leg.fromLat, leg.fromLng, leg.toLat, leg.toLng,
                                leg.recommended === "transit" ? "transit" : leg.recommended === "drive" ? "driving" : "walking")}
                             target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
-                            className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[12px] text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
+                            className="mt-2.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[12px] text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)] lg:mt-auto lg:pt-0">
                             <span aria-hidden>{leg.icon}</span> {leg.primaryHe} לאטרקציה הבאה · {formatDistance(leg.km)} <span className="font-medium text-[var(--brand-ink)]">· נווט</span>
                           </a>
                         )}
@@ -1862,13 +1771,12 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                       </div>
                     )}
                     </>
-                    )}
 
                     {/* how to get to the next stop — walk vs transit by the traveler's
                         tolerance, with a live-navigation deep-link. Editorial renders this
                         as an in-card chip instead (above), so the between-card row is
                         classic-only — otherwise mobile would show it twice. */}
-                    {leg && !last && !isBreakStrip && !editorial && (
+                    {leg && !last && !editorial && (
                       <div className={"flex items-stretch gap-3"}>
                         {!editorial && <div className="w-12 shrink-0 pr-1" />}
                         <div className={editorial ? "min-w-0 py-0.5" : "min-w-0 flex-1 py-0.5"}>
