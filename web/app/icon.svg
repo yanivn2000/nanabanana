@@ -1,7 +1,7 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <!-- Yalle app icon — forest-green tile, white Y, terracotta pin (brand B) -->
-  <rect width="512" height="512" rx="118" fill="#0e6b5e"/>
+  <!-- Yalle app icon / favicon — teal tile, white Y, coral pin (Design System 2027) -->
+  <rect width="512" height="512" rx="118" fill="#0E7468"/>
   <path d="M158,150 L256,272 M354,150 L256,272 M256,272 L256,398" fill="none" stroke="#ffffff" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M388,74c-30,0-54,24-54,54 0,38 45,87 51,93a4.2,4.2 0 0 0 6,0c6-6 51-55 51-93 0-30-24-54-54-54z" fill="#e76f51"/>
-  <circle cx="388" cy="129" r="21" fill="#fff8ee"/>
+  <path d="M388,74c-30,0-54,24-54,54 0,38 45,87 51,93a4.2,4.2 0 0 0 6,0c6-6 51-55 51-93 0-30-24-54-54-54z" fill="#F16A57"/>
+  <circle cx="388" cy="129" r="21" fill="#FFF3E9"/>
 </svg>

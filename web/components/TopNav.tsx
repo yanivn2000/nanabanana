@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Home, Briefcase } from "lucide-react";
 import { AuthButton } from "./AuthButton";
 import { FeedbackWidget } from "./FeedbackWidget";
-import { YalleMark } from "./YalleMark";
+import { YalleLogo } from "./YalleMark";
 
 const ITEMS = [
   { href: "/", label: "בית", Icon: Home },
@@ -19,9 +19,8 @@ export function TopNav() {
   return (
     <header className="sticky top-0 z-30 hidden border-b border-[var(--border)] bg-[var(--surface)]/85 backdrop-blur-lg lg:block">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-8 py-3">
-        <Link href="/" className="flex items-center gap-2">
-          <YalleMark size={28} />
-          <span className="serif text-[22px] font-black leading-none text-[var(--brand)]">Yalle</span>
+        <Link href="/" className="flex items-center" aria-label="Yalle · דף הבית">
+          <YalleLogo size={24} />
         </Link>
         <nav className="flex items-center gap-1">
           {ITEMS.map(({ href, label, Icon }) => {

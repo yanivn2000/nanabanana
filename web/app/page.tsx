@@ -1,5 +1,5 @@
 import { listDestinations, destinationSummaries } from "@/lib/db";
-import { YalleMark } from "@/components/YalleMark";
+import { YalleLogo } from "@/components/YalleMark";
 import { ExploreList } from "./explore/ExploreList";
 import { HomeTrips } from "./HomeTrips";
 
@@ -20,7 +20,7 @@ export default async function Home() {
           <h1 className="mt-0.5 text-[24px] font-bold leading-tight lg:text-[30px]">לאן טסים?</h1>
         </div>
         <div className="lg:hidden">
-          <YalleMark size={38} />
+          <YalleLogo size={22} />
         </div>
       </header>
 
