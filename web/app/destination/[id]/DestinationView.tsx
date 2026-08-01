@@ -631,7 +631,9 @@ export function DestinationView({
     : (!!audience && boosts.size > 0);
   // MANUAL flow: the build unlocks once ≥MANUAL_MIN places are marked (we don't know
   // the trip length yet, so a flat floor). GUIDED: audience + a topic.
-  const canBuild = manual ? yesCount >= MANUAL_MIN : readyToBuild;
+  // Editorial: "בנו לי טיול" is ALWAYS active — all must-see are pre-marked, and even an
+  // empty selection builds a sensible trip (the engine fills from must-see + the city).
+  const canBuild = editorial ? true : (manual ? yesCount >= MANUAL_MIN : readyToBuild);
   // Hearts are interactive only when picking makes sense: always in manual, and in
   // guided ONLY after the system has something to pre-mark (audience + a topic).
   // Editorial makes hearts the primary selection (♥ on tabs / neighbourhoods / cards),
@@ -738,6 +740,9 @@ export function DestinationView({
   const [previewing, setPreviewing] = useState(false);
   const boostsKey = [...boosts].sort().join(",");
   const areasKey = [...chosenAreas].sort().join(",");
+  // Editorial pre-marks every must-see ❤ on entry (they're "חובה"); keeping them OUT of
+  // the preview's auto-pick set means clearing topics never un-marks them.
+  const mustSeeSet = useMemo(() => new Set(editorial ? attractions.filter((a) => a.must_see === 1).map((a) => a.id) : []), [attractions, editorial]);
   useEffect(() => {
     if (!selLoaded) return;   // wait for the saved marks to load before touching them
     if (manual) { setPreviewing(false); return; }   // manual: the user owns every mark — never auto-clear/pre-mark
@@ -777,12 +782,24 @@ export function DestinationView({
         const stale = [...autoPickRef.current].filter((id) => !ids.has(id));
         if (stale.length) setMany(stale, null);
         if (ids.size) setMany([...ids], "yes");
-        autoPickRef.current = ids;
+        // keep must-see out of the auto-pick set so they stay ❤ when topics change
+        autoPickRef.current = new Set([...ids].filter((id) => !mustSeeSet.has(id)));
       } catch { /* preview is best-effort */ } finally { if (!cancelled) setPreviewing(false); }
     }, 500);
     return () => { cancelled = true; clearTimeout(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audience, boostsKey, areasKey, buildDays, dest.city, selLoaded, manual]);
+  // Editorial: on entry, ❤ every must-see so the trip already contains all of them (the
+  // engine trims to the chosen days if there are more than fit). Once per mount; the user
+  // can still remove any, and they stay removed for the session.
+  const mustMarkedRef = useRef(false);
+  useEffect(() => {
+    if (!editorial || !selLoaded || mustMarkedRef.current || mustSeeSet.size === 0) return;
+    mustMarkedRef.current = true;
+    const toMark = [...mustSeeSet].filter((id) => choices[id] !== "yes");
+    if (toMark.length) setMany(toMark, "yes");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editorial, selLoaded, mustSeeSet]);
   // Mobile: the 240px sticky map strip eats most of the screen — let the
   // traveler collapse it. Desktop always shows the map rail. A window resize
   // event after the toggle makes Leaflet re-measure its container.
@@ -961,8 +978,8 @@ export function DestinationView({
     <>
           {/* explainer for the ♥ flow — moved up from the list, reworded for the tab
               flow (no audience step: the "עם ילדים" tab ♥ handles families). */}
-          <p className="mb-1 mt-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-2 text-[12.5px] leading-relaxed text-[var(--text-2)]">
-            כל מקום עם <span className="inline-flex translate-y-0.5 items-center font-medium text-[var(--brand-ink)]"><Heart size={12} fill="currentColor" /></span> נכנס לטיול — אתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> כבר מסומנים. הדגישו ב־<span className="inline-flex translate-y-0.5 items-center font-medium text-[var(--accent-ink)]"><Heart size={12} fill="currentColor" /></span> תחום, שכונה או “עם ילדים” כדי להוסיף עוד — או הסירו כל מקום. ואז “בנו לי טיול”.
+          <p className="mb-1.5 mt-2 rounded-[13px] bg-[var(--accent-soft)] px-4 py-3 text-[14.5px] font-medium leading-relaxed text-[var(--text)] shadow-[var(--shadow)]">
+            כל מקום עם <span className="inline-flex translate-y-0.5 items-center font-semibold text-[var(--accent-ink)]"><Heart size={14} fill="currentColor" /></span> נכנס לטיול — אתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> כבר מסומנים. הדגישו ב־<span className="inline-flex translate-y-0.5 items-center font-semibold text-[var(--accent-ink)]"><Heart size={14} fill="currentColor" /></span> תחום, שכונה או “עם ילדים” כדי להוסיף עוד — או הסירו כל מקום. ואז “בנו לי טיול”.
           </p>
           {/* browse tabs — split the long list: "שכונות" (a sub-tab per neighbourhood)
               then one tab per governing interest. A place in a neighbourhood is also
