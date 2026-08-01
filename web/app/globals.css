@@ -1,42 +1,46 @@
 @import "tailwindcss";
 
 :root {
-  /* Yalle Design System v1.0 — official color tokens (light).
-     Cream canvas, teal primary, travel-coral accent, soft info blue.
+  /* Yalle Design System 2027 — official color tokens (light). Refines v1.0:
+     warmer canvas + border, tuned teal/coral/amber/status, hover+active states.
      Usage: ~82% white/sand, ~10% teal, ~5% dark text, ~2% coral, amber/blue trace. */
   /* canvas / surfaces */
-  --bg: #FAF8F3;          /* warm page background */
+  --bg: #FBF9F5;          /* warm page background */
   --surface: #FFFFFF;     /* cards */
-  --surface-2: #F3F4F6;   /* secondary surfaces */
+  --surface-2: #F6F4EF;   /* secondary surfaces */
   /* text / ink */
-  --text: #1F2933;        /* primary headings & body */
-  --text-2: #5D6672;      /* secondary text */
-  --text-3: #8B94A1;      /* captions / muted */
-  --border: #E8EAED;      /* borders & dividers */
+  --text: #23313D;        /* primary headings & body */
+  --text-2: #5F6D79;      /* secondary text */
+  --text-3: #98A2AD;      /* captions / muted */
+  --border: #E8E6E1;      /* borders & dividers */
   /* accent — travel coral (primary CTA, ♥ highlights) */
-  --accent: #F26D5B;
-  --accent-ink: #CC5848;    /* dark coral — text on light */
-  --accent-soft: #FDEBE6;   /* soft coral background */
-  --accent-bright: #FF8A65; /* illustration only — not for text */
+  --accent: #F16A57;
+  --accent-hover: #E65E4C;  /* hover fill */
+  --accent-active: #CC5443; /* pressed fill / dark coral */
+  --accent-ink: var(--accent-active); /* text-on-light coral (= active shade) */
+  --accent-soft: #FDECE7;   /* soft coral background */
+  --accent-bright: #FF8A65; /* illustration only — not for text (carried from v1.0) */
   /* primary — brand teal (buttons, logo, nav) */
-  --brand: #0F7668;
-  --brand-ink: #0B5A4F;   /* dark teal — text on light */
-  --brand-soft: #E7F3F0;  /* soft brand background */
+  --brand: #0E7468;
+  --brand-hover: #0C695E;   /* hover fill */
+  --brand-active: #09594F;  /* pressed fill / dark teal */
+  --brand-ink: var(--brand-active); /* text-on-light teal (= active shade) */
+  --brand-soft: #E7F3F0;    /* soft brand background */
   /* highlight / discovery — amber (recommendations, badges, "בולט") */
-  --amber: #8A5A0B;
-  --amber-soft: #F8ECD1;
-  --amber-fill: #EFB24B;  /* filled chips — pair with dark ink text */
-  /* information — soft blue (informational content ONLY) */
+  --amber: #8C6116;
+  --amber-soft: #FAEFD6;
+  --amber-fill: #E7B34A;  /* filled chips — pair with dark ink text */
+  /* information — soft blue (informational content ONLY; carried from v1.0) */
   --blue: #6A9BB6;
   --blue-soft: #EDF5F9;
   /* status */
-  --success: #2F9E6B;
-  --warning: #E6A82F;
-  --error: #D94B4B;
+  --success: #2E9D6A;
+  --warning: #D79B22;
+  --error: #D74C4C;
   --danger: var(--error);  /* alias — legacy delete affordances use var(--danger) */
   --radius: 16px;
   --radius-sm: 10px;
-  --shadow: 0 1px 3px rgba(31,41,51,0.05), 0 12px 30px rgba(31,41,51,0.08);
+  --shadow: 0 1px 3px rgba(35,49,61,0.05), 0 12px 30px rgba(35,49,61,0.08);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -54,17 +58,21 @@
     --border: rgba(235, 242, 238, 0.12);
     /* accent — coral (brightened for dark) */
     --accent: #FF8266;
-    --accent-ink: #FFA890;
+    --accent-hover: #FF9075;
+    --accent-active: #F0715C;
+    --accent-ink: #FFA890;   /* text-on-dark → light coral (explicit, not the active alias) */
     --accent-soft: #3A211C;
     --accent-bright: #FF8A65;
     /* primary — teal (brightened for dark) */
     --brand: #2FA594;
-    --brand-ink: #7FD4C6;
+    --brand-hover: #38B2A1;
+    --brand-active: #279385;
+    --brand-ink: #7FD4C6;    /* text-on-dark → light teal (explicit, not the active alias) */
     --brand-soft: #123531;
     /* highlight — amber */
     --amber: #E8A33B;
     --amber-soft: #2E2611;
-    --amber-fill: #EFB24B;
+    --amber-fill: #E7B34A;
     /* information — blue */
     --blue: #86B4CE;
     --blue-soft: #12262F;
