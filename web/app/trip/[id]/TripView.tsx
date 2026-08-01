@@ -1698,11 +1698,11 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                           <a href={googleDirUrl(leg.fromLat, leg.fromLng, leg.toLat, leg.toLng,
                                leg.recommended === "transit" ? "transit" : leg.recommended === "drive" ? "driving" : "walking")}
                             target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
-                            className="mt-2.5 flex w-fit flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1.5 text-[12px] text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)] lg:mt-auto">
-                            {/* two nowrap units so the distance + נווט wrap to the next line
-                                together instead of breaking mid-phrase in a narrow cube */}
-                            <span className="inline-flex items-center gap-1.5 whitespace-nowrap"><span aria-hidden>{leg.icon}</span> {leg.primaryHe} לאטרקציה הבאה</span>
-                            <span className="inline-flex items-center gap-1.5 whitespace-nowrap">{formatDistance(leg.km)} <span className="font-medium text-[var(--brand-ink)]">· נווט</span></span>
+                            title="פתחו ניווט לאטרקציה הבאה"
+                            className="mt-2.5 inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-[12px] font-medium text-[var(--brand-ink)] transition hover:brightness-95 lg:mt-auto">
+                            {/* no "נווט" label — the whole chip is the link (tap → navigation),
+                                which keeps time + distance on one line. */}
+                            <span aria-hidden>{leg.icon}</span> {leg.primaryHe} לאטרקציה הבאה · {formatDistance(leg.km)}
                           </a>
                         )}
                       </div>
