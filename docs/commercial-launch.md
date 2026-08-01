@@ -11,9 +11,12 @@ Legend — 🔴 must-have before charging / public push · 🟡 important · �
 ---
 
 ## 0 · Decisions needed first (they change the rest of the list)
-- **Business model at launch** — free · freemium (paid AI / pro features) · other.
-  Determines whether §4 (payments) is in scope for v1. Today: builds are FREE
-  (heuristic engine); paid Anthropic AI is an opt-in hook (`body.ai`) not yet gated.
+- **Business model at launch** — DECIDED 2026-08-01: **launch FREE, no AI.** Paid AI is
+  now hard-disabled in code (`AI_HARD_DISABLED` in lib/ai.ts, commit 71b39b0) so no build
+  ever calls Claude. **Action: also remove `ANTHROPIC_API_KEY` + unset `AI_ENABLED` /
+  `NEXT_PUBLIC_AI_ENABLED` in Vercel prod.** Re-enable only when a paid tier launches.
+- **Launch scope** — DECIDED: **soft launch (FB groups) but SEO matters** → keep the SEO
+  polish (per-page meta, JSON-LD, sitemap on yalle.co) on the near-term list.
 - **Launch scope** — soft (Hebrew FB groups, same as today) vs. open/SEO push.
   Affects how hard we need §3 (legal) and §5 (analytics) on day one.
 
@@ -37,7 +40,9 @@ Legend — 🔴 must-have before charging / public push · 🟡 important · �
 - [ ] Confirm the Postgres provider has **automated backups**, and do one **test restore**.
 
 ## 3 · Legal / compliance — required for B2C + EU + emails + UGC + accounts  🔴
-- [ ] `/legal/terms` + `/legal/privacy` pages, linked in the footer (P5 — still open).
+- [~] `/legal/terms` + `/legal/privacy` pages **scaffolded** (Hebrew RTL) + linked in a new
+      global footer (commit 71b39b0). **TODO: finalise** — fill `[תאריך]` / `[שם הישות המשפטית]`
+      / jurisdiction placeholders and get a legal review before an open push.
 - [ ] Cookie/consent: Supabase auth cookies (+ analytics if added) → GDPR banner or a
       documented "essential-only" stance.
 - [ ] **Right to erasure + data export**: "delete my account" and "download my data"
