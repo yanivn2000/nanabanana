@@ -11,6 +11,11 @@ export function Hotels({
   const tripHotels = hotels.filter((h) => h.tripId === tripId);
   const unassigned = hotels.filter((h) => !h.tripId);
   const multi = !!segments && segments.length > 1;
+  // One hotel per city: the itinerary engine only uses the first hotel of a city
+  // to anchor its days, so more than one is misleading. Cap at 1 for a single-city
+  // trip, or one-per-segment for a multi-city trip; hide "add" once we're there.
+  const hotelLimit = multi ? Math.max(1, segments!.length) : 1;
+  const atLimit = tripHotels.length >= hotelLimit;
 
   // Best-guess which leg a hotel belongs to, by matching its city/label to a
   // segment's city name (Hebrew or English, either direction).
@@ -37,6 +42,7 @@ export function Hotels({
   const [err, setErr] = useState<string | null>(null);
 
   async function save() {
+    if (atLimit) { setErr("כבר יש מלון לטיול הזה — אפשר מלון אחד לכל עיר"); return; }
     const q = (address || name).trim();
     if (!q) { setErr("הזינו שם או כתובת"); return; }
     setBusy(true);
@@ -73,8 +79,8 @@ export function Hotels({
   return (
     <section className="mt-2">
       <div className="mb-1 flex items-center justify-between">
-        <p className="eyebrow">מלונות הטיול</p>
-        {!open && (
+        <p className="eyebrow">{multi ? "מלונות הטיול" : "מלון הטיול"}</p>
+        {!open && !atLimit && (
           <button onClick={() => setOpen(true)}
             className="flex items-center gap-1 text-[14px] text-[var(--accent-ink)]">
             <Plus size={15} /> הוסף מלון
@@ -162,7 +168,7 @@ export function Hotels({
         })}
       </div>
 
-      {unassigned.length > 0 && (
+      {!atLimit && unassigned.length > 0 && (
         <div className="mt-3">
           <p className="eyebrow mb-2">מלונות שהוספת — קשר לטיול הזה</p>
           <div className="flex flex-col gap-2">
