@@ -2097,6 +2097,13 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
             match the destination-page map rail — the itinerary column (lg:flex-1) absorbs
             the freed width. */}
         <aside className="lg:sticky lg:top-[73px] lg:w-[380px] lg:shrink-0">
+          {/* hotel(s) — pinned at the TOP of the rail (above the map) so the trip's
+              anchor is the first thing set; adding/moving one re-anchors each day. */}
+          <div className="px-5 pb-5 lg:px-0">
+            <Hotels tripId={tripId} segments={trip?.segments} countryHint={trip?.country}
+              onFocus={(h) => h.lat != null && h.lng != null && setFocus({ lat: h.lat, lng: h.lng, n: Date.now() })} />
+          </div>
+
           {/* map of the selected day — desktop; mobile uses the מפה tab */}
           {(stopPoints.length > 0 || hotelPoints.length > 0) && (
             <div className="hidden lg:block">
@@ -2150,11 +2157,6 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
               </p>
             </div>
           )}
-
-          <div className="px-5 pt-6 lg:px-0 lg:pt-5">
-            <Hotels tripId={tripId} segments={trip?.segments} countryHint={trip?.country}
-              onFocus={(h) => h.lat != null && h.lng != null && setFocus({ lat: h.lat, lng: h.lng, n: Date.now() })} />
-          </div>
 
           {/* trip tools — a compact submenu; panels open only on demand */}
           <div className="mt-5 px-5 lg:px-0">
