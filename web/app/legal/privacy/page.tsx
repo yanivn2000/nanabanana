@@ -32,7 +32,7 @@ export default function PrivacyPage() {
       </LegalSection>
 
       <LegalSection n={4} title="צדדים שלישיים">
-        <p>אנו נעזרים בספקים המעבדים מידע עבורנו: <b>Vercel</b> (אירוח), <b>Supabase</b> (מסד נתונים והזדהות), <b>Sentry</b> (דיווחי שגיאות), <b>OpenStreetMap/Nominatim</b> (מפות וגיאוקוד), ו‑<b>Pexels</b> (תמונות). לכל אחד מהם מדיניות פרטיות משלו.</p>
+        <p>אנו נעזרים בספקים המעבדים עבורנו מידע כדי להפעיל את השירות: אירוח (Vercel), מסד נתונים והזדהות (Supabase) וניטור שגיאות (Sentry). אנו משתפים איתם רק את המינימום הנדרש, ולכל אחד מדיניות פרטיות משלו.</p>
       </LegalSection>
 
       <LegalSection n={5} title="תוכן משותף וקטינים">
@@ -44,7 +44,7 @@ export default function PrivacyPage() {
       </LegalSection>
 
       <LegalSection n={7} title="הזכויות שלכם">
-        <p>אתם רשאים לבקש גישה, תיקון, מחיקה או ייצוא של המידע האישי שלכם. עד להשקת כלים לניהול עצמי, פנו אלינו ב‑<a href="mailto:hello@yalle.co" className="text-[var(--brand-ink)] underline">hello@yalle.co</a> ונטפל בבקשה. תוכלו גם למחוק את הנתונים המקומיים על ידי ניקוי אחסון הדפדפן.</p>
+        <p>אתם רשאים לבקש גישה, תיקון, מחיקה או ייצוא של המידע האישי שלכם. עד להשקת כלים לניהול עצמי, <a href="/contact" className="text-[var(--brand-ink)] underline">צרו קשר</a> ונטפל בבקשה. תוכלו גם למחוק את הנתונים המקומיים על ידי ניקוי אחסון הדפדפן.</p>
       </LegalSection>
 
       <LegalSection n={8} title="ילדים">
@@ -52,7 +52,7 @@ export default function PrivacyPage() {
       </LegalSection>
 
       <LegalSection n={9} title="שינויים ויצירת קשר">
-        <p>נעדכן מדיניות זו מעת לעת; תאריך העדכון מופיע בראש העמוד. לשאלות בנושא פרטיות: <a href="mailto:hello@yalle.co" className="text-[var(--brand-ink)] underline">hello@yalle.co</a> · האחראי על המידע: [שם הישות המשפטית].</p>
+        <p>נעדכן מדיניות זו מעת לעת; תאריך העדכון מופיע בראש העמוד. לשאלות בנושא פרטיות <a href="/contact" className="text-[var(--brand-ink)] underline">צרו קשר</a> · האחראי על המידע: [שם הישות המשפטית].</p>
       </LegalSection>
     </LegalArticle>
   );

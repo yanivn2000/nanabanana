@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { addFeedback } from "@/lib/db";
 import { rateLimit } from "@/lib/ratelimit";
 import { isAdmin } from "@/lib/admin";
+import { sendTeamEmail, contactConfig } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -11,22 +12,9 @@ export const dynamic = "force-dynamic";
 // /api/contact in a browser to check whether RESEND_API_KEY reached prod.
 export async function GET() {
   const admin = await isAdmin();
-  return NextResponse.json({
-    hasKey: Boolean(process.env.RESEND_API_KEY),
-    ...(admin ? { to: process.env.CONTACT_TO || "support@eos-online.com", from: process.env.CONTACT_FROM || "Yalle <onboarding@resend.dev>" } : {}),
-  });
+  const cfg = contactConfig();
+  return NextResponse.json({ hasKey: cfg.hasKey, ...(admin ? { to: cfg.to, from: cfg.from } : {}) });
 }
-
-// Where contact messages go, and who they're "from" for delivery. Resend requires
-// the From to be a domain you verify — verify yalle.co in Resend, then set
-// CONTACT_FROM="Yalle <contact@yalle.co>". The user's own address goes in reply_to
-// so the team can just hit Reply.
-// Default recipient = yaniv@eos-online.com, because the default sender is Resend's
-// shared onboarding@resend.dev, which can ONLY deliver to the Resend account owner's
-// email (yaniv@eos-online.com). Once yalle.co is verified in Resend and CONTACT_FROM
-// is a yalle.co address, point CONTACT_TO back to support@eos-online.com.
-const TO = process.env.CONTACT_TO || "yaniv@eos-online.com";
-const FROM = process.env.CONTACT_FROM || "Yalle <onboarding@resend.dev>";
 
 // Contact form — LOGGED-IN users only. The sender identity is the user's account
 // email (verified server-side via Supabase), so there's no spoofing and no spam
@@ -63,36 +51,11 @@ export async function POST(req: NextRequest) {
 
   // Email the team (best-effort; inert until RESEND_API_KEY is set). `reason` is
   // returned so we can diagnose from the browser network tab without server access.
-  let emailed = false;
-  let reason: string | undefined;
-  const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    reason = "no_key";
-    console.warn("[contact] RESEND_API_KEY not set — email skipped (message stored in /admin)");
-  } else {
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: FROM,
-          to: [TO],
-          reply_to: from,
-          subject: `[Yalle · צור קשר] ${subject} — ${from}`,
-          text: `פנייה חדשה דרך טופס יצירת הקשר של Yalle\n\nמאת: ${from}\nעמוד: ${page ?? "-"}\n\n${message}`,
-        }),
-      });
-      emailed = res.ok;
-      if (!res.ok) {
-        const detail = await res.text().catch(() => "");
-        reason = `send_failed_${res.status}`;
-        console.warn(`[contact] resend failed: ${res.status} ${detail}`);
-      }
-    } catch (e) {
-      reason = "send_error";
-      console.warn(`[contact] resend error: ${(e as Error).message}`);
-    }
-  }
+  const { emailed, reason } = await sendTeamEmail({
+    subject: `[Yalle · צור קשר] ${subject} — ${from}`,
+    text: `פנייה חדשה דרך טופס יצירת הקשר של Yalle\n\nמאת: ${from}\nעמוד: ${page ?? "-"}\n\n${message}`,
+    replyTo: from,
+  });
 
   return NextResponse.json({ ok: true, emailed, ...(reason ? { reason } : {}) });
 }

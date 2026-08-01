@@ -50,7 +50,7 @@ export default function TermsPage() {
       </LegalSection>
 
       <LegalSection n={9} title="יצירת קשר">
-        <p>לשאלות בנוגע לתנאים: <a href="mailto:hello@yalle.co" className="text-[var(--brand-ink)] underline">hello@yalle.co</a>.</p>
+        <p>לשאלות בנוגע לתנאים <a href="/contact" className="text-[var(--brand-ink)] underline">צרו קשר</a>.</p>
       </LegalSection>
     </LegalArticle>
   );
