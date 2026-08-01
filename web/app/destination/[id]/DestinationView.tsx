@@ -1041,8 +1041,8 @@ export function DestinationView({
                       const toured = chosenAreas.has(area.id);
                       return (
                         <div key={area.id}
-                          className={`flex shrink-0 items-center overflow-hidden rounded-full transition ${active ? "ring-1 ring-[var(--brand)]" : ""}`}
-                          style={active ? { background: "var(--brand-soft)" } : toured ? { background: "var(--accent-soft)" } : undefined}>
+                          className={`flex shrink-0 items-center overflow-hidden rounded-full border transition ${active ? "border-transparent ring-1 ring-[var(--brand)]" : toured ? "border-[var(--accent)]" : "border-[var(--border)] shadow-[var(--shadow)]"}`}
+                          style={active ? { background: "var(--brand-soft)" } : toured ? { background: "var(--accent-soft)" } : { background: "var(--surface)" }}>
                           <button onClick={() => setAreaTab(area.id)}
                             className={`py-1 ps-3 pe-1 text-[12.5px] font-medium ${active ? "text-[var(--brand-ink)]" : "text-[var(--text-3)] hover:text-[var(--brand-ink)]"}`}>
                             {area.name_he || area.name_en} <span className="opacity-60">{area.member_ids.length}</span>
