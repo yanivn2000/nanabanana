@@ -37,11 +37,19 @@ function verifiedBlock(insights: Insight[] | undefined, attractions: Attraction[
 ${lines.join("\n")}\n`;
 }
 
-// AI is a HARD OPT-IN. It's available only when a key exists AND AI_ENABLED=true is
-// set explicitly. Default (no flag) = OFF, so a commercial deployment never spends a
-// paid Claude call: generate falls back to the deterministic engine and revise is
-// handled by reviseHeuristic. Flip AI_ENABLED=true only to re-enable the AI upgrade.
+// COMMERCIAL LAUNCH KILL-SWITCH — Yalle ships with ALL paid AI off, hard-coded.
+// While this is true, no user-facing build ever calls Claude, regardless of env
+// (even if ANTHROPIC_API_KEY / AI_ENABLED are accidentally set): generate falls
+// back to the deterministic engine and revise uses reviseHeuristic. Set to false
+// (and set the key + AI_ENABLED=true) only when a paid AI tier is deliberately
+// launched. Belt-and-suspenders: also remove ANTHROPIC_API_KEY from the prod env.
+const AI_HARD_DISABLED = true;
+
+// AI is a HARD OPT-IN. Available only when the kill-switch above is off AND a key
+// exists AND AI_ENABLED=true is set explicitly. Default = OFF, so a commercial
+// deployment never spends a paid Claude call.
 export function aiConfigured(): boolean {
+  if (AI_HARD_DISABLED) return false;
   return Boolean(process.env.ANTHROPIC_API_KEY) && process.env.AI_ENABLED === "true";
 }
 

@@ -3,6 +3,7 @@ import { Assistant, Fredoka, Frank_Ruhl_Libre } from "next/font/google";
 import "./globals.css";
 import { BottomNav } from "@/components/BottomNav";
 import { TopNav } from "@/components/TopNav";
+import { SiteFooter } from "@/components/SiteFooter";
 import { SITE_URL } from "@/lib/site";
 
 const assistant = Assistant({
@@ -52,6 +53,7 @@ export default function RootLayout({
       <body className="min-h-full">
         <TopNav />
         {children}
+        <SiteFooter />
         <BottomNav />
       </body>
     </html>
