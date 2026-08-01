@@ -77,6 +77,13 @@ const manualTypeLabel = (key: string) => MANUAL_TYPES.find((t) => t.key === key)
 // manual drag/insert/remove the clock stays sequential and a freshly-dropped pick
 // gets a real time instead of a blank. Client-side + instant (no server round-trip).
 const DAY_START_MIN = 9 * 60 + 30, LUNCH_AFTER_MIN = 12 * 60, LUNCH_MIN = 60;
+// Dinner is a FIXED evening slot (19:30) present in every day — like lunch, fillable with
+// a restaurant and draggable. If the day's stops end earlier, it's pinned at 19:30.
+const DINNER_AT_MIN = 19 * 60 + 30, DINNER_MIN = 90;
+// A meal SLOT is either the empty placeholder (by name) or a real eatery that FILLED it
+// (Stop.meal carries the slot name). Used to decide whether to auto-insert the slot.
+const isLunchSlot = (s: Stop) => s.kind === "food" && (s.name === "הפסקת צהריים" || s.meal === "הפסקת צהריים");
+const isDinnerSlot = (s: Stop) => s.kind === "food" && (s.name === "ארוחת ערב" || s.meal === "ארוחת ערב");
 const fmtClock = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 // A saved-trip timestamp (ms) → short Hebrew date + time, e.g. "23.7.26, 14:05".
 const fmtStamp = (ms?: number) => (ms ? new Date(ms).toLocaleString("he-IL", { day: "numeric", month: "numeric", year: "2-digit", hour: "2-digit", minute: "2-digit" }) : "");
@@ -99,8 +106,11 @@ function retimeStops(stops: Stop[]): Stop[] {
   // and just recompute times. Only a day with NO meal gets one auto-inserted at noon.
   // Every break (food/rest) keeps its OWN duration (dinner 90, rest 60, edited stays);
   // arrival times snap to the nearest half hour so the day reads as clean :00/:30 slots.
-  const hasFood = stops.some((s) => s.kind === "food");
-  const seq = hasFood ? stops : stops.filter((s) => s.kind !== "food");
+  // Lunch (noon) and dinner (19:30) are BOTH fixed slots. Detect each separately so a
+  // day that already has one still gets the other auto-inserted.
+  const hasLunch = stops.some(isLunchSlot);
+  const hasDinner = stops.some(isDinnerSlot);
+  const seq = stops;
   // Resolve each coord-bearing stop's ENTER/EXIT ports so a dragged street is timed
   // end-to-end: you enter the end nearer the previous stop, walk it (dwell), and the
   // leg to the next stop starts from the far end — same contract the builder + map
@@ -122,12 +132,17 @@ function retimeStops(stops: Stop[]): Stop[] {
     prevExit = exit;
   });
   const out: Stop[] = [];
-  let clock = round30(DAY_START_MIN), lunchDone = hasFood;
+  let clock = round30(DAY_START_MIN), lunchDone = hasLunch, dinnerDone = hasDinner;
   seq.forEach((s, i) => {
     if (!lunchDone && i > 0 && clock >= LUNCH_AFTER_MIN) {
       const t = round30(clock);
       out.push({ name: "הפסקת צהריים", kind: "food", time: fmtClock(t), duration: durationHe(LUNCH_MIN), note: "מסעדה מקומית באזור" });
       clock = t + LUNCH_MIN; lunchDone = true;
+    }
+    if (!dinnerDone && i > 0 && clock >= DINNER_AT_MIN) {
+      const t = round30(clock);
+      out.push({ name: "ארוחת ערב", kind: "food", time: fmtClock(t), duration: durationHe(DINNER_MIN), note: "מסעדה מקומית באזור" });
+      clock = t + DINNER_MIN; dinnerDone = true;
     }
     const dw = durToMin(s.duration);   // honours edited / added-break durations
     const arr = round30(clock);
@@ -141,6 +156,15 @@ function retimeStops(stops: Stop[]): Stop[] {
       clock += travelMinutes(haversineKm(from[0], from[1], dest[0], dest[1]));
     }
   });
+  // Dinner is a fixed evening slot: if the day never reached 19:30 (ended earlier), pin it
+  // there anyway so every day has a dinner. It's still draggable + fillable afterwards.
+  if (!dinnerDone) {
+    out.push({ name: "ארוחת ערב", kind: "food", time: fmtClock(DINNER_AT_MIN), duration: durationHe(DINNER_MIN), note: "מסעדה מקומית באזור" });
+  }
+  // Same safety net for lunch (a very short day that never reached noon still gets it).
+  if (!lunchDone) {
+    out.splice(Math.min(1, out.length), 0, { name: "הפסקת צהריים", kind: "food", time: fmtClock(LUNCH_AFTER_MIN), duration: durationHe(LUNCH_MIN), note: "מסעדה מקומית באזור" });
+  }
   return out;
 }
 
@@ -542,6 +566,16 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
     else update(tripId, { hotelAnchorKey: hotelKey });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId, hotelKey, itinerary]);
+  // Every day carries lunch + a fixed 19:30 dinner. Trips built before dinner existed gain
+  // it on load (retimeStops inserts any missing meal slot). Converges: once all days have a
+  // dinner the guard short-circuits, so this never loops.
+  useEffect(() => {
+    if (!itinerary || itinerary.days.every((d) => d.stops.some(isDinnerSlot))) return;
+    const it: Itinerary = JSON.parse(JSON.stringify(itinerary));
+    for (const d of it.days) if (!d.stops.some(isDinnerSlot)) d.stops = retimeStops(d.stops);
+    update(tripId, { itinerary: it });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripId, itinerary]);
 
   // Left-out markers to show on the map: only picks within a walkable/short-transit
   // reach of the CURRENT day's stops — a far pick (Kew) isn't a sensible add to a
@@ -1522,11 +1556,8 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                   slot (dinner in the evening) and can be dragged to reposition. */}
               <div className="flex flex-wrap items-center gap-2.5 border-b border-[var(--border)] py-3 text-[13px]">
                 <span className="text-[var(--text-3)]">הוסיפו:</span>
-                <button onClick={() => addBreak("food", "ארוחת ערב", 90, "מסעדה מקומית באזור")}
-                  disabled={day.stops.some((s) => s.name === "ארוחת ערב")}
-                  className="flex items-center gap-1.5 rounded-full bg-[var(--brand-soft)] px-3.5 py-1.5 font-semibold text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:bg-[var(--brand)] hover:text-white disabled:opacity-40 disabled:shadow-none disabled:hover:bg-[var(--brand-soft)] disabled:hover:text-[var(--brand-ink)]">
-                  <Utensils size={13} /> ארוחת ערב
-                </button>
+                {/* dinner is now a fixed 19:30 slot in every day (auto-inserted), so no
+                    "add dinner" button — just the optional hotel rest. */}
                 <button onClick={() => addBreak("rest", "מנוחה במלון", 60, "חזרה למלון להתרעננות", 17 * 60, hotelPoints[0] ? { lat: hotelPoints[0].lat, lng: hotelPoints[0].lng } : undefined)}
                   disabled={day.stops.some((s) => s.name === "מנוחה במלון")}
                   className="flex items-center gap-1.5 rounded-full bg-[var(--brand-soft)] px-3.5 py-1.5 font-semibold text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:bg-[var(--brand)] hover:text-white disabled:opacity-40 disabled:shadow-none disabled:hover:bg-[var(--brand-soft)] disabled:hover:text-[var(--brand-ink)]">
@@ -1612,7 +1643,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                               className="hidden cursor-grab touch-none select-none place-items-center transition hover:opacity-100 lg:grid" title="גררו לשינוי סדר">
                               <GripVertical size={15} />
                             </span>
-                            {s.name !== "הפסקת צהריים" && (
+                            {s.name !== "הפסקת צהריים" && s.name !== "ארוחת ערב" && (
                               <button onClick={(e) => { e.stopPropagation(); deleteStop(curIdx, si); }} title="מחק עצירה" aria-label="מחק עצירה"
                                 className="grid place-items-center transition hover:opacity-100">
                                 <Trash2 size={14} />
@@ -1665,7 +1696,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                         </span>
                         {/* delete for real stops + user-added breaks (dinner/rest); only
                             the auto lunch break is non-deletable (it's re-added on re-time) */}
-                        {s.name !== "הפסקת צהריים" && (
+                        {s.name !== "הפסקת צהריים" && s.name !== "ארוחת ערב" && (
                           <button
                             onClick={(e) => { e.stopPropagation(); deleteStop(curIdx, si); }}
                             title="מחק עצירה" aria-label="מחק עצירה"
