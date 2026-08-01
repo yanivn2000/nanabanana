@@ -1763,7 +1763,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                                leg.recommended === "transit" ? "transit" : leg.recommended === "drive" ? "driving" : "walking")}
                             target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
                             className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[12px] text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
-                            <span aria-hidden>{leg.icon}</span> {leg.primaryHe} · {formatDistance(leg.km)} <span className="font-medium text-[var(--brand-ink)]">· נווט</span>
+                            <span aria-hidden>{leg.icon}</span> {leg.primaryHe} לאטרקציה הבאה · {formatDistance(leg.km)} <span className="font-medium text-[var(--brand-ink)]">· נווט</span>
                           </a>
                         )}
                       </div>
