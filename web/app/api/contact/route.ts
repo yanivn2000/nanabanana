@@ -21,7 +21,11 @@ export async function GET() {
 // the From to be a domain you verify — verify yalle.co in Resend, then set
 // CONTACT_FROM="Yalle <contact@yalle.co>". The user's own address goes in reply_to
 // so the team can just hit Reply.
-const TO = process.env.CONTACT_TO || "support@eos-online.com";
+// Default recipient = yaniv@eos-online.com, because the default sender is Resend's
+// shared onboarding@resend.dev, which can ONLY deliver to the Resend account owner's
+// email (yaniv@eos-online.com). Once yalle.co is verified in Resend and CONTACT_FROM
+// is a yalle.co address, point CONTACT_TO back to support@eos-online.com.
+const TO = process.env.CONTACT_TO || "yaniv@eos-online.com";
 const FROM = process.env.CONTACT_FROM || "Yalle <onboarding@resend.dev>";
 
 // Contact form — LOGGED-IN users only. The sender identity is the user's account
