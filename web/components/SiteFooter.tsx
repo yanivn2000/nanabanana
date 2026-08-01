@@ -12,7 +12,7 @@ export function SiteFooter() {
         <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13.5px]">
           <Link href="/legal/terms" className="text-[var(--text-2)] transition hover:text-[var(--brand-ink)]">תנאי שימוש</Link>
           <Link href="/legal/privacy" className="text-[var(--text-2)] transition hover:text-[var(--brand-ink)]">מדיניות פרטיות</Link>
-          <a href="mailto:hello@yalle.co" className="text-[var(--text-2)] transition hover:text-[var(--brand-ink)]">צרו קשר</a>
+          <Link href="/contact" className="text-[var(--text-2)] transition hover:text-[var(--brand-ink)]">צרו קשר</Link>
         </nav>
       </div>
     </footer>
