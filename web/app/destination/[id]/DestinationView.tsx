@@ -1113,7 +1113,7 @@ export function DestinationView({
           {/* ── Editorial city hero (M5a, flag only) — a cinematic band with the city
                name in serif, in place of the compact identity line. ── */}
           {editorial && (
-            <section className="relative mb-3 overflow-hidden rounded-[18px] shadow-[var(--shadow)]">
+            <section className="relative mb-1 overflow-hidden rounded-[18px] shadow-[var(--shadow)]">
               <div className="absolute inset-0">
                 <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
                   orientation="landscape" position="50% 42%" className="size-full" />
@@ -1138,7 +1138,7 @@ export function DestinationView({
               (breadcrumb | title · places · badges) with the destination image on
               the far right spanning it, and the interests as a full-width row
               below — no divider between the image and the info to its left. */}
-          <div className="p-3.5 lg:relative lg:p-4">
+          <div className={`lg:relative ${editorial ? "" : "p-3.5 lg:p-4"}`}>
             {/* destination image — floats to the far right, same 160×105 landscape treatment
                 as the trip page (the pr below reserves room so nothing runs under it) */}
             {!editorial && (

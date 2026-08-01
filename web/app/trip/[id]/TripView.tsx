@@ -837,16 +837,6 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
       it.days[di].stops[si] = { ...stop, kind: "food", meal: slot };
       it.days[di].stops = retimeStops(it.days[di].stops);
     });
-  // Fill from a searched DB place (built like insertAttraction's stop, but as the meal).
-  const fillBreakFromHit = (di: number, si: number, h: SearchHit) => {
-    replaceBreakWithStop(di, si, {
-      name: h.name_he || h.name_en, kind: "food", time: "", duration: durationHe(90),
-      id: h.id, lat: h.lat ?? undefined, lng: h.lng ?? undefined, image: h.image_url ?? undefined,
-      tagline: h.tagline_he ?? undefined, description: h.description_he ?? undefined,
-      note: h.tips_he || h.tagline_he || undefined, cat: h.category,
-    });
-    closeFill();
-  };
   // Fill from a typed / pasted place (like addManualPlace, but replaces the break slot
   // instead of prepending to the bank — a synthetic id + its own type-tag + price).
   const fillBreakManual = async (di: number, si: number) => {
@@ -866,33 +856,12 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
     });
     closeFill();
   };
-  // Bridge: the DB search found nothing, but the typed text IS a real place name — locate
-  // it via the same geocoder "הוסף מקום" uses (biased to the city) and fill the break.
-  // So a restaurant that isn't a catalogued attraction (e.g. "Ave Mario") still resolves.
-  const fillBreakByName = async (di: number, si: number, raw: string) => {
-    const name = raw.trim();
-    if (!name) return;
-    const hit = await geocodePlace(name, { fillName: false });
-    const price = addPrice.trim() ? Number(addPrice) : null;
-    replaceBreakWithStop(di, si, {
-      name, kind: "food", time: "", duration: durationHe(90),
-      id: -Math.floor(Date.now()), lat: hit?.lat ?? undefined, lng: hit?.lng ?? undefined,
-      cat: addType, manual: true, tagline: manualTypeLabel(addType).he,
-      ...(price != null && price > 0 ? { priceEur: price } : {}),
-    });
-    closeFill();
-  };
-  // The "fill this meal break with a real eatery" UI — search the city, or add a place
-  // by name / address / pasted link. Shared by the editorial thin meal strip and the
-  // plain (non-editorial) card row so there's one source of truth for the form.
+  // The "fill this meal break with a real eatery" UI — add a place by name / address /
+  // pasted link (the name/address geocode). Shared by the editorial thin meal strip and
+  // the plain (non-editorial) card row so there's one source of truth for the form.
   const mealFillUI = (fkey: string, fsi: number) => {
     const near = [...(day?.stops ?? [])].slice(0, fsi).reverse().find((x) => x.lat != null && x.lng != null);
     const isFill = fillKey === fkey;
-    const used = new Set<number>([
-      ...(itinerary?.days.flatMap((d) => d.stops.map((x) => x.id)) ?? []),
-      ...(trip?.leftOut ?? []).map((l) => l.id),
-    ].filter((x): x is number => x != null));
-    const hits = searchHits.filter((h) => !used.has(h.id));
     return (
       <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-wrap items-center gap-1.5">
@@ -910,68 +879,23 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
         </div>
         {isFill && (
           <div className="mt-2 rounded-[12px] border border-[var(--border)] bg-[var(--surface-2)] p-3">
-            {!!trip?.destinationId && (
-              <>
-                <div className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-3 py-1.5">
-                  <Search size={14} className="shrink-0 text-[var(--text-3)]" />
-                  <input value={searchQ} onChange={(e) => setSearchQ(e.target.value)} autoFocus
-                    placeholder={`חיפוש מסעדה / מקום ב${cityHe || "עיר"}…`}
-                    className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-[var(--text-3)]" />
-                  {searchQ && <button onClick={() => { setSearchQ(""); setSearchHits([]); }} aria-label="נקה"><X size={14} className="text-[var(--text-3)]" /></button>}
-                </div>
-                {searchQ.trim().length >= 2 && (
-                  <div className="mt-2 flex flex-col gap-1.5">
-                    {searchBusy && hits.length === 0 && <p className="px-1 text-[12px] text-[var(--text-3)]">מחפש…</p>}
-                    {!searchBusy && hits.length === 0 && (
-                      <div className="px-0.5">
-                        <p className="text-[12px] text-[var(--text-3)]">לא במאגר האטרקציות — אפשר לאתר את השם ישירות:</p>
-                        <button onClick={() => fillBreakByName(curIdx, fsi, searchQ)} disabled={addBusy}
-                          className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-3 py-1.5 text-[12.5px] font-medium text-white transition hover:opacity-90 disabled:opacity-40">
-                          <MapPin size={13} /> {addBusy ? "מאתר…" : `אתרו והוסיפו את “${searchQ.trim()}”`}
-                        </button>
-                      </div>
-                    )}
-                    {hits.slice(0, 6).map((h) => (
-                      <div key={h.id} className="flex items-center gap-2.5 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] p-1.5">
-                        {h.image_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={bigImage(h.image_url, 120)} alt="" loading="lazy" className="size-9 shrink-0 rounded-[8px] object-cover" />
-                        ) : (
-                          <div className="grid size-9 shrink-0 place-items-center rounded-[8px]" style={{ background: `color-mix(in srgb, ${catColor(h.category)} 16%, var(--surface))` }}>
-                            <MapPin size={14} style={{ color: catColor(h.category) }} />
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[12.5px] font-semibold">{h.name_he || h.name_en}</p>
-                          <p className="truncate text-[11px] text-[var(--text-3)]">{catLabel(h.category)}{h.tagline_he ? ` · ${h.tagline_he}` : ""}</p>
-                        </div>
-                        <button onClick={() => fillBreakFromHit(curIdx, fsi, h)}
-                          className="shrink-0 rounded-full bg-[var(--brand)] px-3 py-1 text-[12px] font-medium text-white transition hover:opacity-90">בחרו</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="my-2.5 flex items-center gap-2 text-[11px] text-[var(--text-3)]">
-                  <span className="h-px flex-1 bg-[var(--border)]" /> או הוסיפו ידנית <span className="h-px flex-1 bg-[var(--border)]" />
-                </div>
-              </>
-            )}
-            <input value={addName} onChange={(e) => { setAddName(e.target.value); setAddCoords(null); }}
-              onBlur={(e) => { const v = e.target.value.trim(); if (v && !addCoords && !addAddress.trim()) geocodePlace(v, { fillName: false }); }}
-              placeholder="שם המקום (למשל: מסעדת דישום)"
-              className="w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[var(--brand)]" />
-            <div className="mt-2 flex items-center gap-2">
+            {/* name + address side by side; the place is located from the name (on
+                blur), the address, or the pasted link below — no separate DB search. */}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input value={addName} onChange={(e) => { setAddName(e.target.value); setAddCoords(null); }}
+                onBlur={(e) => { const v = e.target.value.trim(); if (v && !addCoords && !addAddress.trim()) geocodePlace(v, { fillName: false }); }}
+                placeholder="שם המקום (למשל: מסעדת דישום)" autoFocus
+                className="min-w-0 flex-1 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[var(--brand)]" />
               <input value={addAddress} onChange={(e) => { setAddAddress(e.target.value); setAddCoords(null); }}
                 onBlur={(e) => e.target.value.trim() && !addCoords && geocodePlace(e.target.value)}
                 placeholder="כתובת (לא חובה)"
                 className={`min-w-0 flex-1 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[12.5px] outline-none focus:border-[var(--brand)] ${addFlash ? "field-flash" : ""}`} />
-              <span className="shrink-0 text-[11px] text-[var(--text-3)]">או</span>
-              <input value={addLink} onChange={(e) => setAddLink(e.target.value)}
-                onBlur={(e) => e.target.value.trim() && resolvePlace(e.target.value)}
-                onPaste={(e) => { const v = e.clipboardData.getData("text"); if (v.trim()) setTimeout(() => resolvePlace(v), 0); }}
-                placeholder="קישור גוגל מפה" dir="ltr"
-                className="min-w-0 flex-1 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[12.5px] outline-none focus:border-[var(--brand)]" />
             </div>
+            <input value={addLink} onChange={(e) => setAddLink(e.target.value)}
+              onBlur={(e) => e.target.value.trim() && resolvePlace(e.target.value)}
+              onPaste={(e) => { const v = e.clipboardData.getData("text"); if (v.trim()) setTimeout(() => resolvePlace(v), 0); }}
+              placeholder="או קישור גוגל מפה" dir="ltr"
+              className="mt-2 w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[12.5px] outline-none focus:border-[var(--brand)]" />
             {addMsg && <p className={`mt-1.5 text-[12px] ${addMsg.ok ? "text-[var(--brand-ink)]" : "text-[var(--text-3)]"}`}>{addMsg.text}</p>}
             <div className="mt-2.5 flex flex-wrap gap-1.5">
               {MANUAL_TYPES.map((t) => (
@@ -1663,7 +1587,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                             )}
                           </div>
                         )}
-                        {s.kind === "food" && s.id == null && !s.meal && <div className="px-1 pt-1">{mealFillUI(key, si)}</div>}
+                        {s.kind === "food" && s.id == null && !s.meal && <div className="px-1 pb-2.5 pt-1.5">{mealFillUI(key, si)}</div>}
                       </div>
                     ) : (
                     <>
