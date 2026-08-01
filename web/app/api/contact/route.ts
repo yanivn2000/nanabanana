@@ -2,8 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { addFeedback } from "@/lib/db";
 import { rateLimit } from "@/lib/ratelimit";
+import { isAdmin } from "@/lib/admin";
 
 export const dynamic = "force-dynamic";
+
+// Diagnostic: is email delivery actually configured on THIS (production) deploy?
+// hasKey is a harmless boolean; the addresses are admin-only. Visit
+// /api/contact in a browser to check whether RESEND_API_KEY reached prod.
+export async function GET() {
+  const admin = await isAdmin();
+  return NextResponse.json({
+    hasKey: Boolean(process.env.RESEND_API_KEY),
+    ...(admin ? { to: process.env.CONTACT_TO || "support@eos-online.com", from: process.env.CONTACT_FROM || "Yalle <onboarding@resend.dev>" } : {}),
+  });
+}
 
 // Where contact messages go, and who they're "from" for delivery. Resend requires
 // the From to be a domain you verify — verify yalle.co in Resend, then set
