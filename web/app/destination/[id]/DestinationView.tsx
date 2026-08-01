@@ -1063,8 +1063,20 @@ export function DestinationView({
                 </>
               )}
             </div>
-            {/* left 20% — the primary actions, stacked */}
-            <div className="mt-3 flex gap-2 lg:mt-0 lg:w-1/5 lg:flex-col">
+            {/* left 20% — the primary actions, stacked. Pass/community badges sit on top. */}
+            <div className="mt-3 flex flex-wrap gap-2 lg:mt-0 lg:w-1/5 lg:flex-col">
+              {passes.length > 0 && (
+                <button onClick={() => setShowPasses((v) => !v)}
+                  className="flex flex-1 items-center justify-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-3 py-2 text-[12.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
+                  💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
+                </button>
+              )}
+              {communityCount > 0 && (
+                <Link href={`/destination/${dest.id}/trips`}
+                  className="flex flex-1 items-center justify-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-3 py-2 text-[12.5px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
+                  ❤️ {communityCount} טיולים
+                </Link>
+              )}
               <button onClick={toggleSelectedOnly} disabled={yesCount === 0}
                 className="flex-1 rounded-full border px-3 py-2 text-[12.5px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
                 style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)", color: selectedOnly ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
@@ -1392,24 +1404,6 @@ export function DestinationView({
           shown on desktop (lg overrides), so the tabs never disappear on wide screens. */}
       {editorial && (
         <div className={`px-5 pt-1 lg:px-8 ${showBrowse ? "" : "hidden lg:block"}`}>
-          {/* places-count + pass/community badges live ON the bar (not a header row) */}
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 pt-2">
-            <span className="text-[13px] font-semibold text-[var(--text-2)]">
-              {dest.attraction_count.toLocaleString("he")} מקומות לגלות בעיר
-            </span>
-            {passes.length > 0 && (
-              <button onClick={() => setShowPasses((v) => !v)}
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-2 py-0.5 text-[11.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
-                💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
-              </button>
-            )}
-            {communityCount > 0 && (
-              <Link href={`/destination/${dest.id}/trips`}
-                className="inline-flex items-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-2 py-0.5 text-[11.5px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
-                ❤️ {communityCount} טיולים של מטיילים
-              </Link>
-            )}
-          </div>
           {cityTabsEl}
           {searchBarEl}
         </div>
