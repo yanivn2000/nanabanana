@@ -193,6 +193,26 @@ function StopIcon({ kind }: { kind: Stop["kind"] }) {
   );
 }
 
+// Editorial mosaic layout: cards tile a 6-column grid, RESETTING at every meal
+// strip so a day reads as rows of up to 3 attractions. A meal after 1 or 2 stops
+// leaves a short row, which "condenses" (stretches) to fill the width — 1 card
+// spans the whole row, 2 cards take half each, 3 cards a third each. Returns the
+// Tailwind col-span for stop `si` (meal strips always span the full row).
+function editorialColSpan(stops: Stop[], si: number): string {
+  const isStrip = (s: Stop) =>
+    (s.id == null && (s.kind === "food" || s.kind === "rest")) || !!s.meal;
+  if (isStrip(stops[si])) return "lg:col-span-full";
+  // walk to the segment bounds (the run of non-strip stops around si)
+  let start = si;
+  while (start > 0 && !isStrip(stops[start - 1])) start--;
+  let end = si;
+  while (end < stops.length - 1 && !isStrip(stops[end + 1])) end++;
+  const segLen = end - start + 1;
+  const rowStart = Math.floor((si - start) / 3) * 3;  // 0/3/6… within the segment
+  const rowLen = Math.min(3, segLen - rowStart);      // cards sharing si's row
+  return rowLen === 1 ? "lg:col-span-6" : rowLen === 2 ? "lg:col-span-3" : "lg:col-span-2";
+}
+
 // AI is off for the commercial launch (server kill-switch). Mirror that on the
 // client so the "שדרגו עם AI" button only appears when AI can actually run —
 // otherwise it just re-runs the same deterministic build. Flip both
@@ -1491,9 +1511,11 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                   <Coffee size={13} /> מנוחה במלון
                 </button>
               </div>
-              {/* editorial: a 2-column dense mosaic (per-card span set below) so photos
-                  fill the widened column with a magazine rhythm; plain stack otherwise */}
-              <div className={editorial ? "lg:grid lg:grid-cols-[repeat(auto-fill,minmax(300px,1fr))] lg:items-start lg:gap-4 lg:[grid-auto-flow:dense]" : ""}>
+              {/* editorial: a fixed 6-column grid so a day defaults to 3 attractions per
+                  row (each card spans 2). Meal strips span the full row and reset it, so a
+                  lunch after 1 or 2 stops leaves a short row that condenses to fill the
+                  width (span set per card by editorialColSpan). Plain stack otherwise. */}
+              <div className={editorial ? "lg:grid lg:grid-cols-6 lg:items-start lg:gap-4" : ""}>
               {day.stops.map((s, si) => {
                 const key = `${curIdx}-${si}`;
                 const isOpen = expanded === key;
@@ -1520,10 +1542,15 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 const isFilledMeal = editorial && !!s.meal;
                 const brandBg = s.kind === "rest" ? "var(--brand-soft)" : "var(--accent-soft)";
                 const brandInk = s.kind === "rest" ? "var(--brand-ink)" : "var(--accent-ink)";
+                // column span in the editorial 6-col grid (meal strips span full row;
+                // a card widens to fill a short row). `wide` = a full-row card, which
+                // needs a higher-res photo so it doesn't upscale into mush.
+                const spanCls = editorial ? editorialColSpan(day.stops, si) : "";
+                const wide = spanCls === "lg:col-span-6";
                 return (
                   <div key={si} ref={(el) => { stopRefs.current[si] = el; }}
                        data-drop-idx={si}
-                       className={`${isBreakStrip ? "lg:col-span-full" : ""} ${drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}`}
+                       className={`${spanCls} ${drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}`}
                        style={dragOverSi === si && drag && !(drag.kind === "stop" && drag.si === si)
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
                     {isBreakStrip ? (
@@ -1640,7 +1667,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                       <div className={editorial ? "relative w-full" : "py-2.5 pr-1"}>
                         {s.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={editorial ? (bigImage(s.image, 960) ?? s.image) : s.image} alt="" loading="lazy"
+                          <img src={editorial ? (bigImage(s.image, wide ? 1440 : 960) ?? s.image) : s.image} alt="" loading="lazy"
                             onError={editorial ? (e) => { const t = e.currentTarget; if (s.image && t.src !== s.image) t.src = s.image; } : undefined}
                             className={editorial
                               ? "h-[190px] w-full bg-[var(--surface-2)] object-cover"
