@@ -1462,7 +1462,10 @@ export function DestinationView({
           {/* the audience-fit count lives down here (not next to the step labels). Shown
               only once the flow is complete (audience + ≥1 topic) so clearing the topics
               hides it too — same as clearing the audience. */}
-          {!manual && readyToBuild && (
+          {/* Editorial hides this audience-pool line: it counted ALL neighbourhoods (not
+              selected ones) and named the audience — both confusing now that the funnel is
+              gone and the tab counts already show the numbers. */}
+          {!editorial && !manual && readyToBuild && (
             <p className="mt-3 text-[13px] text-[var(--text-2)]" title={`המקומות הבודדים מחוץ לשכונות. עוד עשרות מקומות מקובצים בתוך ${areas.length} השכונות (שכל אחת היא אזור שלם). הצ'יפים מדגישים בתוך המאגר, לא מצמצמים אותו.`}>
               <b className="text-[var(--text)]">{poolStats.total}</b> מקומות בודדים
               {areas.length > 0 && <> {"+ "}<b className="text-[var(--brand-ink)]">{areas.length}</b> שכונות</>}
