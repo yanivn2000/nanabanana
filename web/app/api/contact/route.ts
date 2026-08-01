@@ -45,10 +45,15 @@ export async function POST(req: NextRequest) {
     userAgent: req.headers.get("user-agent")?.slice(0, 300) ?? null,
   }).catch(() => {});
 
-  // Email the team (best-effort; inert until RESEND_API_KEY is set).
+  // Email the team (best-effort; inert until RESEND_API_KEY is set). `reason` is
+  // returned so we can diagnose from the browser network tab without server access.
   let emailed = false;
+  let reason: string | undefined;
   const key = process.env.RESEND_API_KEY;
-  if (key) {
+  if (!key) {
+    reason = "no_key";
+    console.warn("[contact] RESEND_API_KEY not set — email skipped (message stored in /admin)");
+  } else {
     try {
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -62,11 +67,16 @@ export async function POST(req: NextRequest) {
         }),
       });
       emailed = res.ok;
-      if (!res.ok) console.warn(`[contact] resend failed: ${res.status} ${await res.text().catch(() => "")}`);
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        reason = `send_failed_${res.status}`;
+        console.warn(`[contact] resend failed: ${res.status} ${detail}`);
+      }
     } catch (e) {
+      reason = "send_error";
       console.warn(`[contact] resend error: ${(e as Error).message}`);
     }
   }
 
-  return NextResponse.json({ ok: true, emailed });
+  return NextResponse.json({ ok: true, emailed, ...(reason ? { reason } : {}) });
 }
