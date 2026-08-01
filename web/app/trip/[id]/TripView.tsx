@@ -1640,7 +1640,10 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                               ? "h-[190px] w-full bg-[var(--surface-2)] object-cover"
                               : "size-12 rounded-[12px] object-cover"} />
                         ) : editorial ? (
-                          <div className="grid h-[120px] w-full place-items-center border-b border-[var(--border)] bg-[var(--surface-2)]">
+                          // no photo yet — a calm category-tinted gradient (not flat grey) at
+                          // full photo height, so the card still reads as intentional.
+                          <div className="grid h-[190px] w-full place-items-center border-b border-[var(--border)]"
+                            style={{ background: `linear-gradient(140deg, color-mix(in srgb, ${catColor(s.cat || "attraction")} 24%, var(--surface-2)), var(--surface-2) 74%)` }}>
                             <StopIcon kind={s.kind} />
                           </div>
                         ) : (
