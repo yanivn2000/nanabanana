@@ -4,6 +4,7 @@ import "./globals.css";
 import { BottomNav } from "@/components/BottomNav";
 import { TopNav } from "@/components/TopNav";
 import { SiteFooter } from "@/components/SiteFooter";
+import { Analytics } from "@vercel/analytics/next";
 import { SITE_URL } from "@/lib/site";
 
 const assistant = Assistant({
@@ -55,6 +56,7 @@ export default function RootLayout({
         {children}
         <SiteFooter />
         <BottomNav />
+        <Analytics />
       </body>
     </html>
   );
