@@ -1013,16 +1013,16 @@ export function DestinationView({
   };
   const cityTabsEl = (
     <>
-          {/* explainer for the ♥ flow — moved up from the list, reworded for the tab
-              flow (no audience step: the "עם ילדים" tab ♥ handles families). */}
-          <p className="mb-1.5 mt-2 rounded-[13px] bg-[var(--accent-soft)] px-4 py-3 text-[14.5px] font-medium leading-relaxed text-[var(--text)] shadow-[var(--shadow)]">
-            כל מקום עם <span className="inline-flex translate-y-0.5 items-center font-semibold text-[var(--accent-ink)]"><Heart size={14} fill="currentColor" /></span> נכנס לטיול — אתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> כבר מסומנים. הדגישו ב־<span className="inline-flex translate-y-0.5 items-center font-semibold text-[var(--accent-ink)]"><Heart size={14} fill="currentColor" /></span> תחום, שכונה או “עם ילדים” כדי להוסיף עוד — או הסירו כל מקום. ואז “בנו לי טיול”.
-          </p>
           {/* browse tags in THREE rows on 80% of the width; the primary action
               buttons on the left 20%. row 1 = הכל / אתרי חובה · row 2 = the highlight (♥)
               tags · row 3 = שכונות, with its neighbourhood sub-tabs opening below it. */}
           <div className="pt-2 lg:flex lg:items-start lg:gap-4">
             <div className="flex min-w-0 flex-col gap-1.5 lg:w-4/5">
+              {/* explainer for the ♥ flow — lives INSIDE the 80% column so it aligns with
+                  the tabs and doesn't stretch the full page width. */}
+              <p className="mb-0.5 rounded-[13px] bg-[var(--accent-soft)] px-4 py-3 text-[14.5px] font-medium leading-relaxed text-[var(--text)] shadow-[var(--shadow)]">
+                כל מקום עם <span className="inline-flex translate-y-0.5 items-center font-semibold text-[var(--accent-ink)]"><Heart size={14} fill="currentColor" /></span> נכנס לטיול — אתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> כבר מסומנים. הדגישו ב־<span className="inline-flex translate-y-0.5 items-center font-semibold text-[var(--accent-ink)]"><Heart size={14} fill="currentColor" /></span> תחום, שכונה או “עם ילדים” כדי להוסיף עוד — או הסירו כל מקום. ואז “בנו לי טיול”.
+              </p>
               <div className="flex flex-wrap gap-2">
                 {cityTabs.filter((t) => t.key === "__all" || t.key === "__must").map(renderTab)}
               </div>
