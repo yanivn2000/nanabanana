@@ -974,6 +974,43 @@ export function DestinationView({
             )}
           </div>
   );
+  // One category-tab pill — used across the three tag rows.
+  const renderTab = (t: { key: string; label: string; emoji: string }) => {
+    const active = cityTab === t.key;
+    const count = t.key === "__all" ? attractions.length
+      : t.key === "__must" ? attractions.filter((a) => a.must_see === 1).length
+      : t.key === "__areas" ? areas.length
+      : t.key === "__kids" ? attractions.filter((a) => matchesInterest(a, "ילדים")).length
+      : attractions.filter((a) => matchesInterest(a, t.key)).length;
+    const isKids = t.key === "__kids";
+    const isInterest = t.key !== "__must" && t.key !== "__areas" && t.key !== "__all" && !isKids;
+    const hasHeart = isInterest || isKids;
+    const boosted = isKids ? audience === "families" : (isInterest && boosts.has(t.key));
+    return (
+      <div key={t.key}
+        className="flex shrink-0 items-center overflow-hidden rounded-full border shadow-[var(--shadow)] transition"
+        style={active ? { background: "var(--brand)", borderColor: "transparent", color: "#fff" }
+          : boosted ? { background: "var(--accent-soft)", borderColor: "var(--accent)", color: "var(--accent-ink)" }
+          : { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)", boxShadow: "none" }}>
+        <button onClick={() => setCityTab(t.key)}
+          className={`flex items-center gap-1.5 py-1.5 ps-3.5 text-[13.5px] font-medium ${hasHeart ? "pe-1.5" : "pe-3.5"}`}>
+          <span aria-hidden>{t.emoji}</span> {t.label}
+          <span className={`text-[11.5px] ${active || boosted ? "opacity-80" : "opacity-60"}`}>{count}</span>
+        </button>
+        {hasHeart && (
+          <button onClick={(e) => { e.stopPropagation();
+              if (isKids) setAudience(audience === "families" ? "adults" : "families");
+              else setBoosts((s) => { const n = new Set(s); if (n.has(t.key)) n.delete(t.key); else n.add(t.key); return n; }); }}
+            aria-pressed={boosted}
+            title={isKids ? (boosted ? "בטלו התאמה לילדים" : "התאימו את הטיול לטיול עם ילדים") : (boosted ? "בטלו הדגשה" : "הדגישו — יסומן אוטומטית בטיול")}
+            className="grid size-8 shrink-0 place-items-center pe-1.5"
+            style={{ color: active ? "#fff" : boosted ? "var(--accent)" : "var(--text-3)" }}>
+            <Heart size={15} fill={boosted ? "currentColor" : "none"} />
+          </button>
+        )}
+      </div>
+    );
+  };
   const cityTabsEl = (
     <>
           {/* explainer for the ♥ flow — moved up from the list, reworded for the tab
@@ -981,80 +1018,72 @@ export function DestinationView({
           <p className="mb-1.5 mt-2 rounded-[13px] bg-[var(--accent-soft)] px-4 py-3 text-[14.5px] font-medium leading-relaxed text-[var(--text)] shadow-[var(--shadow)]">
             כל מקום עם <span className="inline-flex translate-y-0.5 items-center font-semibold text-[var(--accent-ink)]"><Heart size={14} fill="currentColor" /></span> נכנס לטיול — אתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> כבר מסומנים. הדגישו ב־<span className="inline-flex translate-y-0.5 items-center font-semibold text-[var(--accent-ink)]"><Heart size={14} fill="currentColor" /></span> תחום, שכונה או “עם ילדים” כדי להוסיף עוד — או הסירו כל מקום. ואז “בנו לי טיול”.
           </p>
-          {/* browse tabs — split the long list: "שכונות" (a sub-tab per neighbourhood)
-              then one tab per governing interest. A place in a neighbourhood is also
-              cross-listed under its topic tab; each tab is ordered must-see first. */}
-          <div className="flex flex-wrap gap-2 pb-1.5 pt-2">
-            {cityTabs.map((t) => {
-              const active = cityTab === t.key;
-              const count = t.key === "__all" ? attractions.length
-                : t.key === "__must" ? attractions.filter((a) => a.must_see === 1).length
-                : t.key === "__areas" ? areas.length
-                : t.key === "__kids" ? attractions.filter((a) => matchesInterest(a, "ילדים")).length
-                : attractions.filter((a) => matchesInterest(a, t.key)).length;
-              // ♥ on a tab = a build signal. Interest tabs add the topic as a "boost";
-              // the "עם ילדים" tab flips the audience families (♥) / adults (off). The
-              // הכל / אתרי חובה / שכונות tabs carry no ♥.
-              const isKids = t.key === "__kids";
-              const isInterest = t.key !== "__must" && t.key !== "__areas" && t.key !== "__all" && !isKids;
-              const hasHeart = isInterest || isKids;
-              const boosted = isKids ? audience === "families" : (isInterest && boosts.has(t.key));
-              return (
-                <div key={t.key}
-                  className="flex shrink-0 items-center overflow-hidden rounded-full border shadow-[var(--shadow)] transition"
-                  style={active ? { background: "var(--brand)", borderColor: "transparent", color: "#fff" }
-                    : boosted ? { background: "var(--accent-soft)", borderColor: "var(--accent)", color: "var(--accent-ink)" }
-                    : { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)", boxShadow: "none" }}>
-                  <button onClick={() => setCityTab(t.key)}
-                    className={`flex items-center gap-1.5 py-1.5 ps-3.5 text-[13.5px] font-medium ${hasHeart ? "pe-1.5" : "pe-3.5"}`}>
-                    <span aria-hidden>{t.emoji}</span> {t.label}
-                    <span className={`text-[11.5px] ${active || boosted ? "opacity-80" : "opacity-60"}`}>{count}</span>
-                  </button>
-                  {hasHeart && (
-                    <button onClick={(e) => { e.stopPropagation();
-                        if (isKids) setAudience(audience === "families" ? "adults" : "families");
-                        else setBoosts((s) => { const n = new Set(s); if (n.has(t.key)) n.delete(t.key); else n.add(t.key); return n; }); }}
-                      aria-pressed={boosted}
-                      title={isKids ? (boosted ? "בטלו התאמה לילדים" : "התאימו את הטיול לטיול עם ילדים") : (boosted ? "בטלו הדגשה" : "הדגישו — יסומן אוטומטית בטיול")}
-                      className="grid size-8 shrink-0 place-items-center pe-1.5"
-                      style={{ color: active ? "#fff" : boosted ? "var(--accent)" : "var(--text-3)" }}>
-                      <Heart size={15} fill={boosted ? "currentColor" : "none"} />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          {/* neighbourhood sub-tabs (only under "שכונות") */}
-          {cityTab === "__areas" && areas.length > 0 && (
-            <>
-              <div className="mt-1.5 flex flex-wrap gap-2 pb-1 pt-1.5">
-                {areas.map((area) => {
-                  const active = (activeArea?.id ?? null) === area.id;
-                  const toured = chosenAreas.has(area.id);
-                  return (
-                    <div key={area.id}
-                      className={`flex shrink-0 items-center overflow-hidden rounded-full transition ${active ? "ring-1 ring-[var(--brand)]" : ""}`}
-                      style={active ? { background: "var(--brand-soft)" } : toured ? { background: "var(--accent-soft)" } : undefined}>
-                      <button onClick={() => setAreaTab(area.id)}
-                        className={`py-1 ps-3 pe-1 text-[12.5px] font-medium ${active ? "text-[var(--brand-ink)]" : "text-[var(--text-3)] hover:text-[var(--brand-ink)]"}`}>
-                        {area.name_he || area.name_en} <span className="opacity-60">{area.member_ids.length}</span>
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); toggleAreaHeart(area.id); }} disabled={!heartsEnabled}
-                        aria-pressed={toured} title={heartsEnabled ? "טיילו בכל השכונה" : "בחרו קהל ותחום קודם"}
-                        className="grid size-7 shrink-0 place-items-center pe-1.5 disabled:opacity-40"
-                        style={{ color: toured ? "var(--accent)" : "var(--text-3)" }}>
-                        <Heart size={13} fill={toured ? "currentColor" : "none"} />
-                      </button>
-                    </div>
-                  );
-                })}
+          {/* browse tags in THREE rows on 80% of the width; the primary action
+              buttons on the left 20%. row 1 = הכל / אתרי חובה · row 2 = the highlight (♥)
+              tags · row 3 = שכונות, with its neighbourhood sub-tabs opening below it. */}
+          <div className="pt-2 lg:flex lg:items-start lg:gap-4">
+            <div className="flex min-w-0 flex-col gap-1.5 lg:w-4/5">
+              <div className="flex flex-wrap gap-2">
+                {cityTabs.filter((t) => t.key === "__all" || t.key === "__must").map(renderTab)}
               </div>
-              {activeArea?.vibe_he && (
-                <p className="mt-1 px-1 text-[13px] leading-snug text-[var(--text-2)]">{activeArea.vibe_he}</p>
+              <div className="flex flex-wrap gap-2">
+                {cityTabs.filter((t) => t.key !== "__all" && t.key !== "__must" && t.key !== "__areas").map(renderTab)}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {cityTabs.filter((t) => t.key === "__areas").map(renderTab)}
+              </div>
+              {/* neighbourhood sub-tabs open directly under "שכונות" */}
+              {cityTab === "__areas" && areas.length > 0 && (
+                <>
+                  <div className="mt-0.5 flex flex-wrap gap-2">
+                    {areas.map((area) => {
+                      const active = (activeArea?.id ?? null) === area.id;
+                      const toured = chosenAreas.has(area.id);
+                      return (
+                        <div key={area.id}
+                          className={`flex shrink-0 items-center overflow-hidden rounded-full transition ${active ? "ring-1 ring-[var(--brand)]" : ""}`}
+                          style={active ? { background: "var(--brand-soft)" } : toured ? { background: "var(--accent-soft)" } : undefined}>
+                          <button onClick={() => setAreaTab(area.id)}
+                            className={`py-1 ps-3 pe-1 text-[12.5px] font-medium ${active ? "text-[var(--brand-ink)]" : "text-[var(--text-3)] hover:text-[var(--brand-ink)]"}`}>
+                            {area.name_he || area.name_en} <span className="opacity-60">{area.member_ids.length}</span>
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); toggleAreaHeart(area.id); }} disabled={!heartsEnabled}
+                            aria-pressed={toured} title={heartsEnabled ? "טיילו בכל השכונה" : "בחרו קהל ותחום קודם"}
+                            className="grid size-7 shrink-0 place-items-center pe-1.5 disabled:opacity-40"
+                            style={{ color: toured ? "var(--accent)" : "var(--text-3)" }}>
+                            <Heart size={13} fill={toured ? "currentColor" : "none"} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {activeArea?.vibe_he && (
+                    <p className="mt-1 px-1 text-[13px] leading-snug text-[var(--text-2)]">{activeArea.vibe_he}</p>
+                  )}
+                </>
               )}
-            </>
-          )}
+            </div>
+            {/* left 20% — the primary actions, stacked */}
+            <div className="mt-3 flex gap-2 lg:mt-0 lg:w-1/5 lg:flex-col">
+              <button onClick={toggleSelectedOnly} disabled={yesCount === 0}
+                className="flex-1 rounded-full border px-3 py-2 text-[12.5px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
+                style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)", color: selectedOnly ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
+                {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
+              </button>
+              <button onClick={clearAllChoices} disabled={yesCount === 0}
+                title="נקה את כל הסימונים ששמורים לעיר"
+                className="flex flex-1 items-center justify-center gap-1 rounded-full border border-[var(--border)] px-3 py-2 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f] disabled:cursor-not-allowed disabled:opacity-40">
+                <X size={13} /> נקה
+              </button>
+              <span className={`inline-flex flex-1 rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
+                <button onClick={() => openBuild()} disabled={!canBuild}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
+                  style={canBuild ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" } : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
+                  <Sparkles size={15} /> בנו לי טיול
+                </button>
+              </span>
+            </div>
+          </div>
     </>
   );
   return (
@@ -1145,6 +1174,8 @@ export function DestinationView({
                   {/* actions — build (prominent) + show-selected + clear, pushed left,
                       ABOVE the places-count / badges meta row below. */}
                   <div ref={topCtaRef} className="flex items-center gap-2 ms-auto">
+                    {/* editorial: these actions live in the bar's left 20% column instead */}
+                    {!editorial && (<>
                     <button onClick={toggleSelectedOnly} disabled={yesCount === 0}
                       className="rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
                       style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)",
@@ -1166,6 +1197,7 @@ export function DestinationView({
                         <Sparkles size={15} /> בנו לי טיול{manual && !canBuild ? ` · ${yesCount}/${MANUAL_MIN}` : ""}
                       </button>
                     </span>
+                    </>)}
                   </div>
                 </div>
                 {/* meta — places count + pass/community badges. Classic keeps it on its own
