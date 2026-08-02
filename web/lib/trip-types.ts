@@ -27,6 +27,7 @@ export type Stop = {
   // logistical stop (meal/rest) that matched no attraction.
   anchor?: boolean;
   // Details matched back from the DB attraction (for the expandable view).
+  nameEn?: string | null;        // English name — shown under the Hebrew name (like the city card)
   image?: string | null;
   website?: string | null;
   lat?: number | null;

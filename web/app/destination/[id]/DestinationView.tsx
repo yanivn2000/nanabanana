@@ -2,7 +2,8 @@
 
 import { useMemo, useState, useEffect, useRef, Fragment } from "react";
 import Link from "next/link";
-import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin, X, Loader2, Heart } from "lucide-react";
+import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin, X, Loader2, Heart, ExternalLink } from "lucide-react";
+import { googleMapsPin } from "@/lib/geo";
 import { MapClient } from "@/components/MapClient";
 import { CityPoster } from "@/components/CityPoster";
 import { descriptor, catColor, bigImage, mergeCat, countryFlag, wikiUrl } from "@/lib/labels";
@@ -1725,10 +1726,19 @@ export function DestinationView({
                         {covered.has(a.id) && <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 font-medium text-[var(--brand-ink)]">💳 כלול בכרטיס</span>}
                       </div>
                       {a.tagline_he && (
-                        <p className={`mt-1.5 text-[13px] leading-snug text-[var(--text-2)] ${isSel ? "" : "line-clamp-2"}`}>{a.tagline_he}</p>
+                        <p className={`mt-1.5 text-[13px] italic leading-snug text-[var(--text-2)] ${isSel ? "" : "line-clamp-2"}`}>{a.tagline_he}</p>
                       )}
                       {isSel && a.description_he && (
                         <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--text-2)]">{a.description_he}</p>
+                      )}
+                      {/* when / dress / cost — the same practical meta line the trip card
+                          shows, so the two cards read identically (same system) */}
+                      {isSel && (a.best_time_he || a.dress_he || a.cost_level != null) && (
+                        <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1.5 text-[12.5px] text-[var(--text-2)]">
+                          {a.best_time_he && <span><span className="text-[var(--text-3)]">מתי: </span>{a.best_time_he}</span>}
+                          {a.dress_he && <span><span className="text-[var(--text-3)]">לבוש: </span>{a.dress_he}</span>}
+                          {a.cost_level != null && <span><span className="text-[var(--text-3)]">עלות: </span>{COST_HE[a.cost_level] ?? ""}</span>}
+                        </div>
                       )}
                       {tip && (
                         <p className="mt-1.5 flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]">
@@ -1747,13 +1757,28 @@ export function DestinationView({
                       )}
                     </div>
                   </button>
-                  {/* authoritative source — the Wikipedia article the description came
-                      from (an <a> can't nest in the card <button>, so it sits here). */}
-                  {isSel && wikiUrl(a.info_sources) && (
-                    <div className="border-t border-[var(--border)] px-3 py-2">
-                      <a href={wikiUrl(a.info_sources)!} target="_blank" rel="noreferrer"
-                        className="text-[12px] font-medium text-[var(--blue)] hover:underline">קראו עוד בוויקיפדיה ↗</a>
-                      <span className="text-[11px] text-[var(--text-3)]"> · CC BY-SA</span>
+                  {/* action links — the SAME row the trip card shows (official site /
+                      Wikipedia / open in map). An <a> can't nest in the card <button>,
+                      so it sits here below it. */}
+                  {isSel && (a.website || wikiUrl(a.info_sources) || (a.lat != null && a.lng != null)) && (
+                    <div className="border-t border-[var(--border)] px-3 py-2.5">
+                      <div className="flex flex-wrap gap-2">
+                        {a.website && (
+                          <a href={a.website} target="_blank" rel="noreferrer"
+                            className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--blue)]"><ExternalLink size={12} /> אתר רשמי</a>
+                        )}
+                        {wikiUrl(a.info_sources) && (
+                          <a href={wikiUrl(a.info_sources)!} target="_blank" rel="noreferrer" title="התיאור מבוסס על ויקיפדיה · CC BY-SA"
+                            className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--blue)]"><ExternalLink size={12} /> קראו עוד בוויקיפדיה</a>
+                        )}
+                        {a.lat != null && a.lng != null && (
+                          <a href={googleMapsPin(a.lat, a.lng)} target="_blank" rel="noreferrer"
+                            className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--text-2)]"><MapPin size={12} /> פתח במפה</a>
+                        )}
+                      </div>
+                      {wikiUrl(a.info_sources) && (
+                        <p className="mt-1.5 text-[11px] text-[var(--text-3)]">התיאור מוויקיפדיה · CC BY-SA</p>
+                      )}
                     </div>
                   )}
                   {/* editor curation — two 3-state ratings written immediately:

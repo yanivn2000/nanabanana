@@ -504,7 +504,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
     // re-fetched — so descriptions added to the DB later never showed. Checking for
     // a NON-EMPTY description makes the trip pick up newly-enriched content on load
     // (a stop the DB genuinely has no description for just re-checks once per mount).
-    const enriched = stops.some((s) => s.image) && realStops.every((s) => s.cat != null && "wiki" in s && !!(s.description && s.description.trim()));
+    const enriched = stops.some((s) => s.image) && realStops.every((s) => s.cat != null && "wiki" in s && "nameEn" in s && !!(s.description && s.description.trim()));
     if (enriched) return;
     if (detailsTriedRef.current) return;       // already refreshed this mount
     detailsTriedRef.current = true;
@@ -1634,6 +1634,10 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                             {fromSelection && s.anchor === false && (
                               <span className="shrink-0 rounded-full bg-[var(--surface-2)] px-1.5 py-0.5 text-[11px] text-[var(--text-3)]">אם יש זמן</span>
                             )}
+                            {/* English name on its own line under the Hebrew (like the city card) */}
+                            {editorial && s.nameEn && s.nameEn !== s.name && (
+                              <p className="w-full truncate text-[12.5px] text-[var(--text-3)]" dir="ltr" style={{ unicodeBidi: "isolate" }}>{s.nameEn}</p>
+                            )}
                           </div>
                           {/* chevron slot always present so nothing shifts between rows.
                               Only a "this opens" hint on collapsed cards — no close arrow
@@ -1682,7 +1686,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                             const e = stopEntryPerPerson(s);
                             if (e == null) return null;
                             return (
-                              <span className="tabular-nums" title="מחיר משוער לאדם">
+                              <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 font-medium tabular-nums text-[var(--brand-ink)]" title="מחיר משוער לאדם">
                                 {e > 0 ? `≈€${e}` : "חינם"}
                               </span>
                             );

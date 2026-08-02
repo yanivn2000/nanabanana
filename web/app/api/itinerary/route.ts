@@ -162,6 +162,7 @@ function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set
       }
       if (a) {
         s.id = a.id;
+        s.nameEn = a.name_en;
         s.image = a.image_url; s.website = a.website;
         // A builder-trimmed street carries its own (trimmed) path + centroid;
         // don't clobber it with the full-street geometry from the pool.
