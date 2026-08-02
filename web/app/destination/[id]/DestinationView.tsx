@@ -1669,12 +1669,12 @@ export function DestinationView({
                 )}
                 <div
                   onMouseEnter={() => setHoveredId(a.id)} onMouseLeave={() => setHoveredId((h) => (h === a.id ? null : h))}
-                  className="group flex flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition hover:-translate-y-0.5"
+                  className={`group flex flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition hover:-translate-y-0.5 ${isSel ? "sm:col-span-2 xl:col-span-3" : ""}`}
                   style={{ borderColor: choice === "yes" || isSel ? "var(--brand)" : "var(--border)",
                            boxShadow: isSel ? "0 0 0 1.5px var(--brand)" : undefined }}>
                   {/* clickable body — selects the place and flies the map */}
-                  <button onClick={() => setSelected(a)} className="flex flex-1 flex-col text-right">
-                    <div className="relative aspect-[16/10] w-full overflow-hidden bg-[var(--surface-2)]">
+                  <button onClick={() => setSelected(a)} className={`flex flex-1 text-right ${isSel ? "flex-col sm:flex-row sm:items-stretch" : "flex-col"}`}>
+                    <div className={`relative w-full overflow-hidden bg-[var(--surface-2)] ${isSel ? "aspect-[16/10] sm:aspect-auto sm:w-[44%] sm:shrink-0 sm:min-h-[260px]" : "aspect-[16/10]"}`}>
                       {a.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={bigImage(a.image_url, 400)} alt="" loading="lazy"
