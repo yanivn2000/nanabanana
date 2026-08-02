@@ -603,6 +603,12 @@ export async function POST(req: NextRequest) {
   // credit and upgrades trips created before details existed.
   if (body.mode === "details") {
     if (!body.current) return NextResponse.json({ error: "missing current" }, { status: 400 });
+    // Fetch the trip's OWN stop attractions by id, so a refresh attaches current
+    // details (description, Wikipedia source, image) for every stop regardless of
+    // whether the city pool happened to include them — the robust path for old trips.
+    const stopIds = [...new Set(body.current.days.flatMap((d) => d.stops).map((s) => s.id).filter((x): x is number => typeof x === "number" && isRealAttraction(x)))];
+    const stopRows = stopIds.length ? await attractionsByIds(stopIds) : [];
+    const detailPool = [...stopRows, ...pool];
     // Re-attach coords/tagline to left-out picks (older trips stored them without),
     // so the map can show them as grey markers.
     let leftOut: object[] | undefined;
@@ -610,7 +616,7 @@ export async function POST(req: NextRequest) {
       const rows = await attractionsByIds(body.leftOut.map((l) => l.id));
       leftOut = rows.map((a) => ({ id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category, lat: a.lat, lng: a.lng, tagline_he: a.tagline_he, tips_he: a.tips_he, best_time_he: a.best_time_he, dress_he: a.dress_he, cost_level: a.cost_level, website: a.website }));
     }
-    return NextResponse.json({ itinerary: attachDetails(body.current, pool), ...(leftOut ? { leftOut } : {}) });
+    return NextResponse.json({ itinerary: attachDetails(body.current, detailPool), ...(leftOut ? { leftOut } : {}) });
   }
 
   // Multi-city trip: one continuous itinerary across ordered segments, each

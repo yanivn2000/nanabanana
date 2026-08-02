@@ -1745,7 +1745,9 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                             onError={(e) => { const t = e.currentTarget; if (s.image && t.src !== s.image) t.src = s.image; }}
                             className="mb-3 mx-auto block max-h-[440px] w-auto max-w-full rounded-[10px]" />
                         )}
-                        {s.tagline && s.tagline !== s.note && (
+                        {/* always show the tagline in the expander (a one-liner is better
+                            than a blank) — the collapsed preview is hidden once open */}
+                        {s.tagline && (
                           <p className="mb-2 text-[14.5px] italic text-[var(--text-2)]">{s.tagline}</p>
                         )}
                         {s.description && (
@@ -1777,7 +1779,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                             </a>
                           )}
                         </div>
-                        {!s.website && !s.wiki && !s.image && s.lat == null && (
+                        {!s.description && !s.tagline && !s.wiki && !s.website && (
                           <p className="text-[13.5px] text-[var(--text-3)]">אין פרטים נוספים למקום הזה</p>
                         )}
                       </div>
