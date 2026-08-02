@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "אודות · Yalle",
-  description: "הטיול שלך. בול בשבילך. הסיפור מאחורי יאלה — מתכנן הטיולים שבונה לך מסלול שמתאים בדיוק לך.",
+  description: "הטיול שלכם. בול בשבילכם. הסיפור מאחורי יאלה — מתכנן הטיולים שבונה לכם מסלול שמתאים בדיוק לכם.",
 };
 
 // Editorial "About" page — brand voice, Frank Ruhl Libre headlines, tokenised
@@ -18,9 +18,9 @@ export default function AboutPage() {
 
       {/* hero */}
       <header className="border-b border-[var(--border)] pb-9">
-        <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-ink)]">אודות יאלה</p>
+        <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-ink)]">אודות יַאלֶה</p>
         <h1 className="serif mt-3 text-[38px] font-bold leading-[1.08] text-[var(--text)] lg:text-[52px]">
-          הטיול שלך.<br />בול בשבילך.
+          הטיול שלכם.<br />בול בשבילכם.
         </h1>
       </header>
 
@@ -35,7 +35,7 @@ export default function AboutPage() {
         </p>
 
         <p className="serif border-r-[3px] border-[var(--brand)] pr-5 text-[21px] font-medium leading-[1.6] text-[var(--brand-ink)]">
-          יאלה נולד מתוך אמונה פשוטה: טיול טוב הוא לא רשימה — הוא התאמה.
+          יַאלֶה נולד מתוך אמונה פשוטה: טיול טוב הוא לא רשימה — הוא התאמה.
         </p>
 
         <p>
@@ -56,7 +56,7 @@ export default function AboutPage() {
         <div>
           <h2 className="serif text-[24px] font-bold text-[var(--text)]">המידע אמיתי</h2>
           <p className="mt-3">
-            במקום לגרד את האינטרנט ולקוות לטוב, יאלה נשען על שכבת ידע שהצוות אישר — תובנות של
+            במקום לגרד את האינטרנט ולקוות לטוב, יַאלֶה נשען על שכבת ידע שהצוות אישר — תובנות של
             מטיילים אמיתיים, זיקוק של מה שבאמת שווה, ולא רעש. מה שמופיע — מופיע כי יש לו סיבה.
           </p>
         </div>
@@ -72,7 +72,7 @@ export default function AboutPage() {
 
       {/* closing */}
       <div className="mt-12 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] px-7 py-9 text-center">
-        <p className="serif text-[26px] font-bold text-[var(--brand-ink)]">הטיול שלך. בול בשבילך.</p>
+        <p className="serif text-[26px] font-bold text-[var(--brand-ink)]">הטיול שלכם. בול בשבילכם.</p>
         <Link href="/"
           className="mt-5 inline-flex items-center justify-center rounded-full bg-[var(--brand)] px-7 py-3 text-[16px] font-semibold text-white shadow-[var(--shadow)] transition hover:brightness-95">
           בואו נבנה טיול

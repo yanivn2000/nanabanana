@@ -77,7 +77,7 @@ function Stamp() {
       <circle cx="60" cy="60" r="54" fill="none" stroke={C.green} strokeWidth="3" strokeDasharray="2.5 5" strokeLinecap="round" />
       <circle cx="60" cy="60" r="43" fill="none" stroke={C.green} strokeWidth="1.5" />
       <text x="60" y="52" textAnchor="middle" fontFamily="var(--f-fred)" fontWeight="900" fontSize="26" fill={C.green}>Yalle</text>
-      <text x="60" y="74" textAnchor="middle" fontFamily="var(--f-fred)" fontWeight="500" fontSize="12" fill={C.green}>בול בשבילך</text>
+      <text x="60" y="74" textAnchor="middle" fontFamily="var(--f-fred)" fontWeight="500" fontSize="12" fill={C.green}>בול בשבילכם</text>
       <g stroke={C.green} strokeWidth="1.5" strokeLinecap="round">
         <path d="M28 60h-8" /><path d="M100 60h-8" />
       </g>
@@ -112,7 +112,7 @@ export default function BrandBoard() {
               <span className="disp font-black leading-none" style={{ fontSize: 92, color: C.green, letterSpacing: "-0.02em" }}>Yalle</span>
               <span className="-ms-2 mt-1"><PinSpark size={40} /></span>
             </div>
-            <p className="disp mt-3 text-[22px] font-700" style={{ color: C.ink, fontWeight: 700 }}>הטיול שלך. בול בשבילך.</p>
+            <p className="disp mt-3 text-[22px] font-700" style={{ color: C.ink, fontWeight: 700 }}>הטיול שלכם. בול בשבילכם.</p>
             <p className="mt-1 text-[14px]" style={{ color: C.ink2 }}>וורדמארק ירוק-יער · פין טרקוטה עם ניצוץ — האנרגיה של "יאלה, יוצאים"</p>
           </div>
           <div className="mt-6 flex flex-wrap items-end justify-center gap-7">
