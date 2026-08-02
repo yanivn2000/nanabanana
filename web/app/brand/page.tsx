@@ -113,7 +113,7 @@ export default function BrandBoard() {
               <span className="-ms-2 mt-1"><PinSpark size={40} /></span>
             </div>
             <p className="disp mt-3 text-[22px] font-700" style={{ color: C.ink, fontWeight: 700 }}>הטיול שלך. בול בשבילך.</p>
-            <p className="mt-1 text-[14px]" style={{ color: C.ink2 }}>וורדמארק ירוק-יער · פין טרקוטה עם ניצוץ — האנרגיה של "יאללה, יוצאים"</p>
+            <p className="mt-1 text-[14px]" style={{ color: C.ink2 }}>וורדמארק ירוק-יער · פין טרקוטה עם ניצוץ — האנרגיה של "יאלה, יוצאים"</p>
           </div>
           <div className="mt-6 flex flex-wrap items-end justify-center gap-7">
             <Tile bg={C.green} fg="#FFFFFF" pin={C.terraBright} label="ראשי" />

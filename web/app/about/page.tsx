@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "אודות · Yalle",
-  description: "הטיול שלך. בול בשבילך. הסיפור מאחורי יאללה — מתכנן הטיולים שבונה לך מסלול שמתאים בדיוק לך.",
+  description: "הטיול שלך. בול בשבילך. הסיפור מאחורי יאלה — מתכנן הטיולים שבונה לך מסלול שמתאים בדיוק לך.",
 };
 
 // Editorial "About" page — brand voice, Frank Ruhl Libre headlines, tokenised
@@ -18,7 +18,7 @@ export default function AboutPage() {
 
       {/* hero */}
       <header className="border-b border-[var(--border)] pb-9">
-        <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-ink)]">אודות יאללה</p>
+        <p className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-ink)]">אודות יאלה</p>
         <h1 className="serif mt-3 text-[38px] font-bold leading-[1.08] text-[var(--text)] lg:text-[52px]">
           הטיול שלך.<br />בול בשבילך.
         </h1>
@@ -35,7 +35,7 @@ export default function AboutPage() {
         </p>
 
         <p className="serif border-r-[3px] border-[var(--brand)] pr-5 text-[21px] font-medium leading-[1.6] text-[var(--brand-ink)]">
-          יאללה נולד מתוך אמונה פשוטה: טיול טוב הוא לא רשימה — הוא התאמה.
+          יאלה נולד מתוך אמונה פשוטה: טיול טוב הוא לא רשימה — הוא התאמה.
         </p>
 
         <p>
@@ -56,7 +56,7 @@ export default function AboutPage() {
         <div>
           <h2 className="serif text-[24px] font-bold text-[var(--text)]">המידע אמיתי</h2>
           <p className="mt-3">
-            במקום לגרד את האינטרנט ולקוות לטוב, יאללה נשען על שכבת ידע שהצוות אישר — תובנות של
+            במקום לגרד את האינטרנט ולקוות לטוב, יאלה נשען על שכבת ידע שהצוות אישר — תובנות של
             מטיילים אמיתיים, זיקוק של מה שבאמת שווה, ולא רעש. מה שמופיע — מופיע כי יש לו סיבה.
           </p>
         </div>

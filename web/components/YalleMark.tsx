@@ -13,7 +13,7 @@ export function YalleMark({ size = 28 }: { size?: number }) {
   );
 }
 
-// The coral map-pin with three spark lines above it — the "יאללה, יוצאים" energy.
+// The coral map-pin with three spark lines above it — the "יאלה, יוצאים" energy.
 // This is the exact pin from the /brand board lockup, re-expressed on tokens.
 export function PinSpark({ size = 28, className, style }: { size?: number; className?: string; style?: React.CSSProperties }) {
   return (
