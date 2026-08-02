@@ -1683,8 +1683,13 @@ export function DestinationView({
                   className={`group flex scroll-mt-24 flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition hover:-translate-y-0.5 ${isSel ? "sm:col-span-2 xl:col-span-3" : ""}`}
                   style={{ borderColor: choice === "yes" || isSel ? "var(--brand)" : "var(--border)",
                            boxShadow: isSel ? "0 0 0 1.5px var(--brand)" : undefined }}>
-                  {/* clickable body — selects the place and flies the map */}
-                  <button onClick={() => setSelected(isSel ? null : a)} className={`flex flex-1 text-right ${isSel ? "flex-col sm:flex-row sm:items-stretch sm:min-h-[260px] sm:max-h-[58vh] lg:max-h-[calc((100dvh-164px)*0.8)]" : "flex-col"}`}>
+                  {/* clickable body — selects the place and flies the map. A div (not a
+                      <button>) so the action links can nest inside the text column, like
+                      the trip card; a second click closes it. */}
+                  <div role="button" tabIndex={0}
+                    onClick={() => setSelected(isSel ? null : a)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(isSel ? null : a); } }}
+                    className={`flex flex-1 cursor-pointer text-right ${isSel ? "flex-col sm:flex-row sm:items-stretch sm:min-h-[260px] sm:max-h-[58vh] lg:max-h-[calc((100dvh-164px)*0.8)]" : "flex-col"}`}>
                     <div className={`relative w-full overflow-hidden bg-[var(--surface-2)] ${isSel ? "aspect-[16/10] sm:aspect-auto sm:w-[44%] sm:shrink-0" : "aspect-[16/10]"}`}>
                       {a.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -1755,32 +1760,32 @@ export function DestinationView({
                           ))}
                         </div>
                       )}
-                    </div>
-                  </button>
-                  {/* action links — the SAME row the trip card shows (official site /
-                      Wikipedia / open in map). An <a> can't nest in the card <button>,
-                      so it sits here below it. */}
-                  {isSel && (a.website || wikiUrl(a.info_sources) || (a.lat != null && a.lng != null)) && (
-                    <div className="border-t border-[var(--border)] px-3 py-2.5">
-                      <div className="flex flex-wrap gap-2">
-                        {a.website && (
-                          <a href={a.website} target="_blank" rel="noreferrer"
-                            className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--blue)]"><ExternalLink size={12} /> אתר רשמי</a>
-                        )}
-                        {wikiUrl(a.info_sources) && (
-                          <a href={wikiUrl(a.info_sources)!} target="_blank" rel="noreferrer" title="התיאור מבוסס על ויקיפדיה · CC BY-SA"
-                            className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--blue)]"><ExternalLink size={12} /> קראו עוד בוויקיפדיה</a>
-                        )}
-                        {a.lat != null && a.lng != null && (
-                          <a href={googleMapsPin(a.lat, a.lng)} target="_blank" rel="noreferrer"
-                            className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--text-2)]"><MapPin size={12} /> פתח במפה</a>
-                        )}
-                      </div>
-                      {wikiUrl(a.info_sources) && (
-                        <p className="mt-1.5 text-[11px] text-[var(--text-3)]">התיאור מוויקיפדיה · CC BY-SA</p>
+                      {/* action links — inside the text column, right under the paragraph
+                          (same placement as the trip card). stopPropagation so a link tap
+                          doesn't also toggle the card closed. */}
+                      {isSel && (a.website || wikiUrl(a.info_sources) || (a.lat != null && a.lng != null)) && (
+                        <>
+                          <div className="mt-2.5 flex flex-wrap gap-2">
+                            {a.website && (
+                              <a href={a.website} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                                className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--blue)]"><ExternalLink size={12} /> אתר רשמי</a>
+                            )}
+                            {wikiUrl(a.info_sources) && (
+                              <a href={wikiUrl(a.info_sources)!} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="התיאור מבוסס על ויקיפדיה · CC BY-SA"
+                                className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--blue)]"><ExternalLink size={12} /> קראו עוד בוויקיפדיה</a>
+                            )}
+                            {a.lat != null && a.lng != null && (
+                              <a href={googleMapsPin(a.lat, a.lng)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                                className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--text-2)]"><MapPin size={12} /> פתח במפה</a>
+                            )}
+                          </div>
+                          {wikiUrl(a.info_sources) && (
+                            <p className="mt-1.5 text-[11px] text-[var(--text-3)]">התיאור מוויקיפדיה · CC BY-SA</p>
+                          )}
+                        </>
                       )}
                     </div>
-                  )}
+                  </div>
                   {/* editor curation — two 3-state ratings written immediately:
                       importance (חובה/אולי/ממש לא) and kids fit (מתאים/אולי/לא) */}
                   {isEditor && (
