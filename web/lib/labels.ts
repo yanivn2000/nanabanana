@@ -134,13 +134,19 @@ export function countryFlag(country: string | null | undefined): string {
 //    worst case is simply the old (small) image — never a broken one.
 // Only ENLARGE (never shrink a thumbnail that's already bigger than px).
 // The authoritative-source link for an attraction's description — the Wikipedia
-// article it was drawn from (prefer the Hebrew article, else any language). Skips
-// the Wikidata entry (not reader-facing). Used for the "קראו עוד בוויקיפדיה" link.
+// article it was drawn from. Reader language preference: Hebrew → English → source
+// language. When the stored source is neither he nor en (e.g. the coordinate match
+// landed on the Czech article), route through /api/wiki, which resolves the he/en
+// sitelink via Wikidata at click-time and 302-redirects (falls back to the source).
 export function wikiUrl(sources: { url: string; title?: string }[] | null | undefined): string | null {
   if (!Array.isArray(sources)) return null;
   const wiki = sources.filter((s) => s?.url && /wikipedia\.org\/wiki\//.test(s.url));
   if (!wiki.length) return null;
-  return (wiki.find((s) => /(^|\/\/)he\.wikipedia\.org/.test(s.url)) ?? wiki[0]).url;
+  const he = wiki.find((s) => /(^|\/\/)he\.wikipedia\.org/.test(s.url));
+  if (he) return he.url;
+  const en = wiki.find((s) => /(^|\/\/)en\.wikipedia\.org/.test(s.url));
+  if (en) return en.url;
+  return `/api/wiki?u=${encodeURIComponent(wiki[0].url)}`;
 }
 
 export function bigImage(url: string | null | undefined, px = 640): string | undefined {
