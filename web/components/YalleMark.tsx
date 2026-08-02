@@ -40,3 +40,13 @@ export function YalleLogo({ size = 22 }: { size?: number }) {
     </span>
   );
 }
+
+// The Hebrew wordmark lockup — the uploaded "יאלה" logo (green letterforms, coral
+// plane + niqqud dots). Transparent PNG, trimmed to content (~2:1). `height` is
+// the rendered height in px; width scales automatically.
+export function YalleWordmark({ height = 26, className }: { height?: number; className?: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/yalle-logo.png" alt="יאלה" style={{ height, width: "auto" }} className={className} />
+  );
+}
