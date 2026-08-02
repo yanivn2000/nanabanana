@@ -1541,7 +1541,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
                     <>
                     <div className={`group/row transition-colors ${hasDetails ? "cursor-pointer" : ""} ${editorial
-                           ? `relative mb-1 flex flex-col overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)] lg:mb-0 ${isOpen ? "lg:flex-row lg:items-stretch" : "lg:h-full"}`
+                           ? `relative mb-1 flex flex-col overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)] lg:mb-0 ${isOpen ? "lg:flex-row lg:items-stretch lg:max-h-[82vh]" : "lg:h-full"}`
                            : "-mx-2 flex gap-2 rounded-[12px] px-2 lg:gap-3"}`}
                          style={{ background: !editorial && isActive ? `color-mix(in srgb, ${col} 12%, transparent)` : undefined,
                                   boxShadow: editorial && isActive ? `0 0 0 2px color-mix(in srgb, ${col} 45%, transparent), var(--shadow)` : undefined }}
@@ -1616,7 +1616,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                           uniform-height row and, with the walk chip's mt-auto, opened a big
                           empty gap that pushed the expanded description off-screen. Cards
                           still share a height via the grid's items-stretch + card h-full. */}
-                      <div className={`min-w-0 ${editorial ? `flex flex-col px-4 pb-4 pt-3 ${isOpen ? "lg:flex-1 lg:justify-center" : ""}` : "flex-1 py-2.5"}`}>
+                      <div className={`min-w-0 ${editorial ? `flex flex-col px-4 pb-4 pt-3 ${isOpen ? "lg:min-h-0 lg:flex-1 lg:justify-center lg:overflow-y-auto" : ""}` : "flex-1 py-2.5"}`}>
                         {/* top line: the NAME is the hero — it gets the whole block width;
                             only the expand chevron sits at the far end. Rating + stay time
                             drop to the meta line below so the name is never squeezed. */}

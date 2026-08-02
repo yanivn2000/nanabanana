@@ -1683,8 +1683,8 @@ export function DestinationView({
                   style={{ borderColor: choice === "yes" || isSel ? "var(--brand)" : "var(--border)",
                            boxShadow: isSel ? "0 0 0 1.5px var(--brand)" : undefined }}>
                   {/* clickable body — selects the place and flies the map */}
-                  <button onClick={() => setSelected(a)} className={`flex flex-1 text-right ${isSel ? "flex-col sm:flex-row sm:items-stretch" : "flex-col"}`}>
-                    <div className={`relative w-full overflow-hidden bg-[var(--surface-2)] ${isSel ? "aspect-[16/10] sm:aspect-auto sm:w-[44%] sm:shrink-0 sm:min-h-[260px]" : "aspect-[16/10]"}`}>
+                  <button onClick={() => setSelected(isSel ? null : a)} className={`flex flex-1 text-right ${isSel ? "flex-col sm:flex-row sm:items-stretch sm:min-h-[260px] sm:max-h-[72vh] lg:max-h-[calc(100dvh-164px)]" : "flex-col"}`}>
+                    <div className={`relative w-full overflow-hidden bg-[var(--surface-2)] ${isSel ? "aspect-[16/10] sm:aspect-auto sm:w-[44%] sm:shrink-0" : "aspect-[16/10]"}`}>
                       {a.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={bigImage(a.image_url, 400)} alt="" loading="lazy"
@@ -1714,7 +1714,7 @@ export function DestinationView({
                         <span className="absolute bottom-2 left-2 rounded-full bg-black/55 px-2 py-0.5 text-[10.5px] font-medium text-white shadow-sm backdrop-blur-sm">OSM ★ חובה</span>
                       )}
                     </div>
-                    <div className="flex min-w-0 flex-1 flex-col p-3">
+                    <div className={`flex min-w-0 flex-1 flex-col p-3 ${isSel ? "sm:min-h-0 sm:overflow-y-auto" : ""}`}>
                       <p className="serif truncate text-[17px] font-bold leading-tight">{a.name_he || a.name_en}</p>
                       {a.name_he && a.name_en && a.name_en !== a.name_he && (
                         <p className="truncate text-[12.5px] text-[var(--text-3)]" dir="ltr" style={{ unicodeBidi: "isolate" }}>{a.name_en}</p>
