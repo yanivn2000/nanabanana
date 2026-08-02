@@ -1532,7 +1532,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
                     <>
                     <div className={`group/row transition-colors ${hasDetails ? "cursor-pointer" : ""} ${editorial
-                           ? "relative mb-1 flex h-full flex-col overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)] lg:mb-0"
+                           ? `relative mb-1 flex flex-col overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)] lg:mb-0 ${isOpen ? "" : "lg:h-full"}`
                            : "-mx-2 flex gap-2 rounded-[12px] px-2 lg:gap-3"}`}
                          style={{ background: !editorial && isActive ? `color-mix(in srgb, ${col} 12%, transparent)` : undefined,
                                   boxShadow: editorial && isActive ? `0 0 0 2px color-mix(in srgb, ${col} 45%, transparent), var(--shadow)` : undefined }}
@@ -1603,8 +1603,11 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                           </>
                         )}
                       </div>
-                      {/* name + details */}
-                      <div className={`min-w-0 ${editorial ? "flex flex-1 flex-col px-4 pb-4 pt-3" : "flex-1 py-2.5"}`}>
+                      {/* name + details. NOTE: no flex-1 here — it used to stretch in a
+                          uniform-height row and, with the walk chip's mt-auto, opened a big
+                          empty gap that pushed the expanded description off-screen. Cards
+                          still share a height via the grid's items-stretch + card h-full. */}
+                      <div className={`min-w-0 ${editorial ? "flex flex-col px-4 pb-4 pt-3" : "flex-1 py-2.5"}`}>
                         {/* top line: the NAME is the hero — it gets the whole block width;
                             only the expand chevron sits at the far end. Rating + stay time
                             drop to the meta line below so the name is never squeezed. */}
@@ -1690,7 +1693,40 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                         {editorial && !isOpen && (s.tagline || s.description) && (
                           <p className="mt-2 line-clamp-2 text-[14px] leading-relaxed text-[var(--text-2)]">{s.tagline || s.description}</p>
                         )}
-                        {s.note && <p className={`mt-1 text-[13.5px] leading-snug text-[var(--text-2)] ${isOpen ? "" : "line-clamp-2"}`}>{s.note}</p>}
+                        {/* expanded detail — rendered INLINE in the card body (editorial) so it
+                            flows right under the story line; the sibling block below is classic-only
+                            (an outside-the-card sibling was landing under the stretched h-full card). */}
+                        {editorial && isOpen && (
+                          <div className="mt-2">
+                            {s.tagline && <p className="mb-2 text-[14.5px] italic text-[var(--text-2)]">{s.tagline}</p>}
+                            {s.description && <p className="mb-2 text-[14px] leading-relaxed text-[var(--text-2)]">{s.description}</p>}
+                            {(s.bestTime || s.dress || s.cost != null) && (
+                              <div className="mb-1 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-[var(--text-2)]">
+                                {s.bestTime && <span><span className="text-[var(--text-3)]">מתי: </span>{s.bestTime}</span>}
+                                {s.dress && <span><span className="text-[var(--text-3)]">לבוש: </span>{s.dress}</span>}
+                                {s.cost != null && <span><span className="text-[var(--text-3)]">עלות: </span>{COST_HE[s.cost] ?? ""}</span>}
+                              </div>
+                            )}
+                            <div className="mt-1 flex flex-wrap gap-2">
+                              {s.website && (
+                                <a href={s.website} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                                  className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--blue)]"><ExternalLink size={12} /> אתר רשמי</a>
+                              )}
+                              {s.wiki && (
+                                <a href={s.wiki} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="התיאור מבוסס על ויקיפדיה · CC BY-SA"
+                                  className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--blue)]"><ExternalLink size={12} /> קראו עוד בוויקיפדיה</a>
+                              )}
+                              {s.lat != null && s.lng != null && (
+                                <a href={googleMapsPin(s.lat, s.lng)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                                  className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[13px] text-[var(--text-2)]"><MapPin size={12} /> פתח במפה</a>
+                              )}
+                            </div>
+                            {!s.description && !s.tagline && !s.wiki && !s.website && (
+                              <p className="text-[13px] text-[var(--text-3)]">אין פרטים נוספים למקום הזה</p>
+                            )}
+                          </div>
+                        )}
+                        {s.note && <p className={`mt-1.5 text-[13.5px] leading-snug text-[var(--text-2)] ${isOpen ? "" : "line-clamp-2"}`}>{s.note}</p>}
                         {/* A logistical meal BREAK has no place of its own — offer "restaurants
                             nearby", centred on the last stop before it. A real/added restaurant
                             (has its own id) IS the place, so it gets no such link. */}
@@ -1702,7 +1738,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                                leg.recommended === "transit" ? "transit" : leg.recommended === "drive" ? "driving" : "walking")}
                             target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
                             title="פתחו ניווט לאטרקציה הבאה"
-                            className="mt-2.5 inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-[12px] font-medium text-[var(--brand-ink)] transition hover:brightness-95 lg:mt-auto">
+                            className="mt-2.5 inline-flex w-fit items-center gap-1.5 rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-[12px] font-medium text-[var(--brand-ink)] transition hover:brightness-95">
                             {/* no "נווט" label — the whole chip is the link (tap → navigation),
                                 which keeps time + distance on one line. */}
                             <span aria-hidden>{leg.icon}</span> {leg.primaryHe} לאטרקציה הבאה · {formatDistance(leg.km)}
@@ -1733,10 +1769,10 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                       )}
                     </div>
 
-                    {isOpen && (
-                      <div className={`${editorial ? "mb-1 -mt-1 rounded-b-[16px] border border-t-0 border-[var(--border)] bg-[var(--surface)] px-4 pb-4 pt-3.5" : "border-t border-[var(--border)] pb-3.5 pt-3"}`}>
-                        {/* editorial already shows the hero photo on top of the card, so we
-                            don't repeat it here — only the classic list needs the image. */}
+                    {isOpen && !editorial && (
+                      <div className="border-t border-[var(--border)] pb-3.5 pt-3">
+                        {/* classic list only — editorial renders its expanded detail inline in
+                            the card body above (a sibling here landed under the h-full card). */}
                         {s.image && !editorial && (
                           // eslint-disable-next-line @next/next/no-img-element
                           // Natural aspect ratio (bounded), NOT a forced landscape crop — a
