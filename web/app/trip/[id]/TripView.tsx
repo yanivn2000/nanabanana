@@ -489,10 +489,12 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
     // back-filled yet on a real attraction stop — so trips built before the tag existed
     // pick it up once. (details mode only attaches fields; it never reorders.)
     const realStops = stops.filter((s) => s.id != null && s.kind !== "food" && s.kind !== "rest");
-    // Also re-attach once when the fuller description hasn't been attached yet — a
-    // matched stop gets `cat` AND `description` together, so a trip built before the
-    // description existed re-fetches once (the key is then present, string-or-null).
-    const enriched = stops.some((s) => s.image) && realStops.every((s) => s.cat != null && "description" in s);
+    // Also re-attach once when the fuller description or the Wikipedia source hasn't
+    // been attached yet — a matched stop gets `cat`, `description` AND `wiki` together,
+    // so a trip built before those existed re-fetches once (keys then present). This
+    // also refreshes descriptions that were null at build time but have since been
+    // enriched in the DB, so an old trip's stops stop showing a near-empty expander.
+    const enriched = stops.some((s) => s.image) && realStops.every((s) => s.cat != null && "description" in s && "wiki" in s);
     if (enriched) return;
     if (detailsTriedRef.current) return;       // already refreshed this mount
     detailsTriedRef.current = true;
