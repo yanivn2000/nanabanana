@@ -135,6 +135,11 @@ export function countryFlag(country: string | null | undefined): string {
 // Only ENLARGE (never shrink a thumbnail that's already bigger than px).
 export function bigImage(url: string | null | undefined, px = 640): string | undefined {
   if (!url) return undefined;
+  // Wikimedia only reliably serves thumbnail widths it has ALREADY cached; asking
+  // for an arbitrary size (e.g. 400/640) frequently 400s, which showed up as blank
+  // image cards. The stored URL is a known-good, cached size — use it as-is rather
+  // than gambling on an on-the-fly resize.
+  if (/wikimedia\.org/.test(url)) return url;
   if (/[?&]width=\d+/.test(url)) return url.replace(/([?&]width=)\d+/, `$1${px}`);
   const m = url.match(/\/(\d+)px-/);
   if (m && Number(m[1]) < px) return url.replace(/\/\d+px-/, `/${px}px-`);
