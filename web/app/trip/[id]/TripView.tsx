@@ -1541,7 +1541,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
                     <>
                     <div className={`group/row transition-colors ${hasDetails ? "cursor-pointer" : ""} ${editorial
-                           ? `relative mb-1 flex flex-col overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)] lg:mb-0 ${isOpen ? "lg:flex-row lg:items-stretch lg:max-h-[82vh]" : "lg:h-full"}`
+                           ? `relative mb-1 flex flex-col overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)] lg:mb-0 ${isOpen ? "lg:flex-row lg:items-stretch lg:max-h-[66vh]" : "lg:h-full"}`
                            : "-mx-2 flex gap-2 rounded-[12px] px-2 lg:gap-3"}`}
                          style={{ background: !editorial && isActive ? `color-mix(in srgb, ${col} 12%, transparent)` : undefined,
                                   boxShadow: editorial && isActive ? `0 0 0 2px color-mix(in srgb, ${col} 45%, transparent), var(--shadow)` : undefined }}

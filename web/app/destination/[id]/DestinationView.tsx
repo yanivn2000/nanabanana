@@ -1683,7 +1683,7 @@ export function DestinationView({
                   style={{ borderColor: choice === "yes" || isSel ? "var(--brand)" : "var(--border)",
                            boxShadow: isSel ? "0 0 0 1.5px var(--brand)" : undefined }}>
                   {/* clickable body — selects the place and flies the map */}
-                  <button onClick={() => setSelected(isSel ? null : a)} className={`flex flex-1 text-right ${isSel ? "flex-col sm:flex-row sm:items-stretch sm:min-h-[260px] sm:max-h-[72vh] lg:max-h-[calc(100dvh-164px)]" : "flex-col"}`}>
+                  <button onClick={() => setSelected(isSel ? null : a)} className={`flex flex-1 text-right ${isSel ? "flex-col sm:flex-row sm:items-stretch sm:min-h-[260px] sm:max-h-[58vh] lg:max-h-[calc((100dvh-164px)*0.8)]" : "flex-col"}`}>
                     <div className={`relative w-full overflow-hidden bg-[var(--surface-2)] ${isSel ? "aspect-[16/10] sm:aspect-auto sm:w-[44%] sm:shrink-0" : "aspect-[16/10]"}`}>
                       {a.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
