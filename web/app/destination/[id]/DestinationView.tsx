@@ -52,16 +52,6 @@ function matchesInterest(a: Attraction, interest: string): boolean {
   return false;
 }
 
-// Should an attraction wear the "ילדים" tag? The editor's yes/no wins; otherwise
-// a standout family_score (top of the city — 9-10, ~2% of places, not the broad
-// "8" baseline) or a kid-native place type (zoo / theme park / aquarium /
-// playground / a "family" taste tag) earns it.
-function isKidFriendly(a: Attraction): boolean {
-  if (a.editor_kids === "yes") return true;
-  if (a.editor_kids === "no") return false;
-  return (a.family_score ?? 0) >= 9 || matchesInterest(a, "ילדים");
-}
-
 // Emoji per insight kind — quick visual cue for the source of the tip.
 const KIND_ICON: Record<string, string> = {
   tip: "💡", warning: "⚠️", verdict: "👍", food: "🍽️", season: "🗓️", access: "♿",
@@ -1540,7 +1530,6 @@ export function DestinationView({
                         </p>
                         <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] text-[var(--text-3)]">
                           <span>{CAT_HE[cat] ?? a.category}</span>
-                          {isKidFriendly(a) && <span style={{ color: "#7357C8" }}>👨‍👩‍👧 ילדים</span>}
                           {dur && <span>🕐 {dur}</span>}
                           {cost && <span className="text-[var(--brand-ink)]">{cost}</span>}
                           {covered.has(a.id) && <span className="text-[var(--brand-ink)]">💳 בכרטיס</span>}
@@ -1657,20 +1646,10 @@ export function DestinationView({
                           <MapPin size={30} className="opacity-30" style={{ color: catColor(cat) }} />
                         </div>
                       )}
-                      <div className="absolute right-2 top-2 flex flex-col items-end gap-1">
-                        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium text-white shadow-sm"
-                              style={{ background: catColor(cat) }}>
-                          {CAT_HE[cat] ?? a.category}
-                        </span>
-                        {/* kid-friendly attractions get their own tag so families spot
-                            them at a glance (editor-curated: editor_kids = "yes") */}
-                        {isKidFriendly(a) && (
-                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium text-white shadow-sm"
-                                style={{ background: "#7357C8" }}>
-                            👨‍👩‍👧 ילדים
-                          </span>
-                        )}
-                      </div>
+                      <span className="absolute right-2 top-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium text-white shadow-sm"
+                            style={{ background: catColor(cat) }}>
+                        {CAT_HE[cat] ?? a.category}
+                      </span>
                       {a.must_see === 1 && (
                         <span className="absolute left-2 top-2 rounded-full bg-[var(--accent)] px-2 py-0.5 text-[11px] font-medium text-white shadow-sm">⭐ חובה</span>
                       )}
