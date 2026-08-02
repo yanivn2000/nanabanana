@@ -133,6 +133,16 @@ export function countryFlag(country: string | null | undefined): string {
 //    that uses bigImage has an onError that falls back to the stored URL, so the
 //    worst case is simply the old (small) image — never a broken one.
 // Only ENLARGE (never shrink a thumbnail that's already bigger than px).
+// The authoritative-source link for an attraction's description — the Wikipedia
+// article it was drawn from (prefer the Hebrew article, else any language). Skips
+// the Wikidata entry (not reader-facing). Used for the "קראו עוד בוויקיפדיה" link.
+export function wikiUrl(sources: { url: string; title?: string }[] | null | undefined): string | null {
+  if (!Array.isArray(sources)) return null;
+  const wiki = sources.filter((s) => s?.url && /wikipedia\.org\/wiki\//.test(s.url));
+  if (!wiki.length) return null;
+  return (wiki.find((s) => /(^|\/\/)he\.wikipedia\.org/.test(s.url)) ?? wiki[0]).url;
+}
+
 export function bigImage(url: string | null | undefined, px = 640): string | undefined {
   if (!url) return undefined;
   // Wikimedia only reliably serves thumbnail widths it has ALREADY cached; asking

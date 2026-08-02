@@ -1761,6 +1761,13 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                               <ExternalLink size={13} /> אתר רשמי
                             </a>
                           )}
+                          {s.wiki && (
+                            <a href={s.wiki} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                              title="התיאור מבוסס על ויקיפדיה · CC BY-SA"
+                              className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[13.5px] text-[var(--blue)]">
+                              <ExternalLink size={13} /> קראו עוד בוויקיפדיה
+                            </a>
+                          )}
                           {s.lat != null && s.lng != null && (
                             <a href={googleMapsPin(s.lat, s.lng)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
                               className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-[13.5px] text-[var(--text-2)]">
@@ -1768,7 +1775,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                             </a>
                           )}
                         </div>
-                        {!s.website && !s.image && s.lat == null && (
+                        {!s.website && !s.wiki && !s.image && s.lat == null && (
                           <p className="text-[13.5px] text-[var(--text-3)]">אין פרטים נוספים למקום הזה</p>
                         )}
                       </div>

@@ -3,6 +3,7 @@ import { listDestinations, topAttractions, insightsForDestination, attractionsBy
 import { annotateDaysWithAreas } from "@/lib/cluster";
 import type { Attraction, Destination, Street } from "@/lib/db";
 import { refOf, synthId, isRealAttraction } from "@/lib/place";
+import { wikiUrl } from "@/lib/labels";
 import {
   aiConfigured,
   generateItinerary,
@@ -133,7 +134,7 @@ function streetAsStop(s: Street): Attraction {
     best_season: null, best_time_he: null, time_of_day: null, dress_he: null,
     cost_level: null, must_see: 1, osm_must_see: null, editor_rank: null,
     editor_kids: null, description_he: null, taste_tags: null, audience_fit: null,
-    admin_bonus: null, notable: false,
+    admin_bonus: null, notable: false, info_sources: null,
   };
 }
 
@@ -166,6 +167,7 @@ function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set
         // don't clobber it with the full-street geometry from the pool.
         if (!s.path) { s.lat = a.lat; s.lng = a.lng; }
         s.tagline = a.tagline_he; s.description = a.description_he; s.bestTime = a.best_time_he;
+        s.wiki = wikiUrl(a.info_sources);
         s.dress = a.dress_he; s.cost = a.cost_level;
         s.cat = a.category; s.sub = a.subcategory;
         s.ref = a.ref ?? refOf("attr", a.id);

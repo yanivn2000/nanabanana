@@ -103,6 +103,7 @@ export type Attraction = {
   audience_fit: AudienceFit | null;  // {families,couples,friends} 0-100 + type — the short-path signal
   admin_bonus: AudienceBonus | null; // editor's manual per-audience points, added to consensus
   notable: boolean;                  // has a Wikipedia/Wikidata entry (worthiness input)
+  info_sources: { url: string; title: string }[] | null; // where the description came from (Wikipedia/Wikidata)
 };
 
 // Per-attraction audience suitability, computed by the consensus pipeline.
@@ -113,7 +114,7 @@ export type AudienceBonus = { families?: number; couples?: number; friends?: num
 const ATTR_COLS = `id, name_he, name_en, lat, lng, category, subcategory,
   indoor_outdoor, family_score, tips_he, website, duration_minutes,
   image_url, tagline_he, best_season, best_time_he, time_of_day, dress_he, cost_level, must_see,
-  description_he, taste_tags, audience_fit, admin_bonus`;
+  description_he, taste_tags, audience_fit, admin_bonus, info_sources`;
 
 export type Destination = {
   id: number;

@@ -33,6 +33,7 @@ export type Stop = {
   lng?: number | null;
   tagline?: string | null;
   description?: string | null;   // fuller encyclopedic paragraph (shown in the expanded stop)
+  wiki?: string | null;          // authoritative source (Wikipedia article) the description came from
   bestTime?: string | null;
   dress?: string | null;
   cost?: number | null;

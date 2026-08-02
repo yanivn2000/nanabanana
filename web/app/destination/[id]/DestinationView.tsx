@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin, X, Loader2, Heart } from "lucide-react";
 import { MapClient } from "@/components/MapClient";
 import { CityPoster } from "@/components/CityPoster";
-import { descriptor, catColor, bigImage, mergeCat, countryFlag } from "@/lib/labels";
+import { descriptor, catColor, bigImage, mergeCat, countryFlag, wikiUrl } from "@/lib/labels";
 import { passUrl, type Pass } from "@/lib/passes";
 import { useRouter } from "next/navigation";
 import { useProfile, useTrips, useCitySelection, type Choice } from "@/lib/store";
@@ -1606,6 +1606,13 @@ export function DestinationView({
                         <div className="min-w-0 flex-1">
                           {a.tagline_he && <p className="mb-1.5 text-[14px] italic text-[var(--text-2)] sm:hidden">{a.tagline_he}</p>}
                           {a.description_he && <p className="text-[13.5px] leading-relaxed text-[var(--text-2)]">{a.description_he}</p>}
+                          {wikiUrl(a.info_sources) && (
+                            <p className="mt-1.5 text-[12px]">
+                              <a href={wikiUrl(a.info_sources)!} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                                className="font-medium text-[var(--blue)] hover:underline">קראו עוד בוויקיפדיה ↗</a>
+                              <span className="text-[var(--text-3)]"> · CC BY-SA</span>
+                            </p>
+                          )}
                           {tip && <p className="mt-1.5 flex items-start gap-1 text-[13px] leading-snug text-[var(--brand-ink)]"><span className="shrink-0">💡</span><span>טיפ מטיילים: {tip}</span></p>}
                           {insList.length > 1 && (
                             <div className="mt-1.5 flex flex-col gap-1">
