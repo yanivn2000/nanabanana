@@ -346,12 +346,21 @@ export function DestinationView({
   const [selected, setSelected] = useState<Attraction | null>(null);
   // The selected card grows to a full-width row, which the grid reflows onto its
   // own line further down — keep a ref to it so we can scroll it back into view
-  // instead of leaving the traveller to hunt for it below the fold.
+  // instead of leaving the traveller to hunt for it below the fold. On CLOSE the
+  // grid reflows the other way, so scroll the now-collapsed card back into view
+  // too (found by data-aid, since selCardRef only attaches while selected).
   const selCardRef = useRef<HTMLDivElement | null>(null);
+  const prevSelId = useRef<number | null>(null);
   useEffect(() => {
-    if (!selected) return;
-    const el = selCardRef.current;
-    if (el) requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "start" }));
+    const prev = prevSelId.current;
+    prevSelId.current = selected?.id ?? null;
+    if (selected) {
+      const el = selCardRef.current;
+      if (el) requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "start" }));
+    } else if (prev != null) {
+      const el = document.querySelector(`[data-aid="${prev}"]`);
+      if (el) requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "nearest" }));
+    }
   }, [selected]);
   const [hoveredId, setHoveredId] = useState<number | null>(null);  // card hover → grow its map marker
   const [query, setQuery] = useState("");
@@ -1620,6 +1629,7 @@ export function DestinationView({
                   </div>
                 )}
                 <div
+                  data-aid={a.id}
                   ref={isSel ? selCardRef : undefined}
                   onMouseEnter={() => setHoveredId(a.id)} onMouseLeave={() => setHoveredId((h) => (h === a.id ? null : h))}
                   className={`group flex scroll-mt-24 flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition hover:-translate-y-0.5 ${isSel ? "sm:col-span-2 xl:col-span-3" : ""}`}

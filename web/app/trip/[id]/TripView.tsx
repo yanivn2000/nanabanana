@@ -258,12 +258,17 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
   const stopRefs = useRef<(HTMLDivElement | null)[]>([]);
   // Expanding a stop grows it to a full-width row, which the grid reflows onto its
   // own line further down — so bring the opened card back into view instead of
-  // leaving the traveller to scroll for it.
+  // leaving the traveller to scroll for it. On CLOSE the grid reflows the other
+  // way, so scroll the now-collapsed card back into view too.
+  const prevExpanded = useRef<string | null>(null);
   useEffect(() => {
-    if (!expanded) return;
-    const si = Number(expanded.slice(expanded.indexOf("-") + 1));
+    const prev = prevExpanded.current;
+    prevExpanded.current = expanded;
+    const key = expanded ?? prev;
+    if (!key) return;
+    const si = Number(key.slice(key.indexOf("-") + 1));
     const el = stopRefs.current[si];
-    if (el) requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "start" }));
+    if (el) requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: expanded ? "start" : "nearest" }));
   }, [expanded]);
   // Destinations, for picking a target city when there's no hotel yet.
   const [dests, setDests] = useState<{ id: number; city: string; country: string; city_he: string | null }[]>([]);
