@@ -92,34 +92,6 @@ const TONE: Record<Choice, { on: string; ink: string; off: string }> = {
 };
 // A 3-state interest pill (the same values as the profile page): tap cycles
 // neutral → ✓ מעוניין → ✕ לא מעוניין → neutral. It edits the profile in place.
-// Editor-only 3-state rating row (importance / kids). Click the active option
-// again to clear it.
-function EditorRateRow({ label, value, options, onPick }: {
-  label: string;
-  value: string | null;
-  options: { v: string; t: string; bg: string; ink: string }[];
-  onPick: (v: string) => void;
-}) {
-  return (
-    <div className="flex items-center gap-1.5 px-2">
-      <span className="w-11 shrink-0 text-[11px] font-semibold text-[var(--text-3)]">{label}</span>
-      <div className="grid flex-1 grid-cols-3 gap-1">
-        {options.map((o) => {
-          const on = value === o.v;
-          return (
-            <button key={o.v} onClick={() => onPick(o.v)}
-              className="rounded-full border py-1 text-[12px] font-medium transition"
-              style={{ background: on ? o.bg : "var(--surface)", color: on ? o.ink : "var(--text-2)",
-                       borderColor: on ? o.bg : "var(--border)" }}>
-              {o.t}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function ChoiceBtn({ tone, active, onClick, icon, label }: {
   tone: Choice; active: boolean; onClick: () => void; icon: React.ReactNode; label: string;
 }) {
@@ -348,41 +320,11 @@ export function DestinationView({
   editorial?: boolean;
 }) {
   const covered = new Set(coveredIds);
-  // Editor curation: optimistic overrides of the two ratings while the write to
-  // editor_picks is in flight. Overlays onto the server data so the ⭐ badge,
-  // sort, kids matching and the controls react instantly. Consumers never see
-  // this UI. A rank of 'must' drives the effective must_see flag.
-  const [ratingOverrides, setRatingOverrides] = useState<Record<number, { rank?: string | null; kids?: string | null }>>({});
-  const attractions = useMemo(
-    () => (Object.keys(ratingOverrides).length === 0
-      ? baseAttractions
-      : baseAttractions.map((a) => {
-          const o = ratingOverrides[a.id];
-          if (!o) return a;
-          const rank = "rank" in o ? o.rank : a.editor_rank;
-          const kids = "kids" in o ? o.kids : a.editor_kids;
-          // Effective must-see overlay: a set rank drives it; clearing the rank
-          // reverts to the raw OSM flag (matches the server per-attraction model).
-          const must_see = "rank" in o ? (rank ? (rank === "must" ? 1 : 0) : (a.osm_must_see ?? 0)) : a.must_see;
-          return { ...a, editor_rank: rank ?? null, editor_kids: kids ?? null, must_see };
-        })),
-    [baseAttractions, ratingOverrides]
-  );
+  // Editor rank/kids come straight from the server now (the per-card editor
+  // rating controls were removed); filtering + sort read a.editor_* directly.
+  const attractions = baseAttractions;
   // Lookup for the neighbourhood strip to list each area's attractions by id.
   const attrById = useMemo(() => new Map(attractions.map((a) => [a.id, a])), [attractions]);
-  // Set one rating axis (click the active value again to clear it). Optimistic,
-  // reverts on failure.
-  const setRating = (a: Attraction, field: "rank" | "kids", value: string | null) => {
-    const prev = field === "rank" ? a.editor_rank : a.editor_kids;
-    const next = prev === value ? null : value;   // toggle off if re-picking the same
-    setRatingOverrides((o) => ({ ...o, [a.id]: { ...o[a.id], [field]: next } }));
-    fetch("/api/editor/pick", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ destination_id: dest.id, attraction_id: a.id, field, value: next }),
-    })
-      .then((r) => { if (!r.ok) throw new Error(String(r.status)); })
-      .catch(() => setRatingOverrides((o) => ({ ...o, [a.id]: { ...o[a.id], [field]: prev } })));
-  };
   // family_score is a family-friendliness metric — only surface it (the
   // "מומלץ למשפחות" filter, the score star) when the traveler has kids.
   // The profile is editable right here: the interest tiles are the same 3-state
@@ -1588,6 +1530,7 @@ export function DestinationView({
                         </p>
                         <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12px] text-[var(--text-3)]">
                           <span>{CAT_HE[cat] ?? a.category}</span>
+                          {a.editor_kids === "yes" && <span style={{ color: "#7357C8" }}>👨‍👩‍👧 ילדים</span>}
                           {dur && <span>🕐 {dur}</span>}
                           {cost && <span className="text-[var(--brand-ink)]">{cost}</span>}
                           {covered.has(a.id) && <span className="text-[var(--brand-ink)]">💳 בכרטיס</span>}
@@ -1704,10 +1647,20 @@ export function DestinationView({
                           <MapPin size={30} className="opacity-30" style={{ color: catColor(cat) }} />
                         </div>
                       )}
-                      <span className="absolute right-2 top-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium text-white shadow-sm"
-                            style={{ background: catColor(cat) }}>
-                        {CAT_HE[cat] ?? a.category}
-                      </span>
+                      <div className="absolute right-2 top-2 flex flex-col items-end gap-1">
+                        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium text-white shadow-sm"
+                              style={{ background: catColor(cat) }}>
+                          {CAT_HE[cat] ?? a.category}
+                        </span>
+                        {/* kid-friendly attractions get their own tag so families spot
+                            them at a glance (editor-curated: editor_kids = "yes") */}
+                        {a.editor_kids === "yes" && (
+                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium text-white shadow-sm"
+                                style={{ background: "#7357C8" }}>
+                            👨‍👩‍👧 ילדים
+                          </span>
+                        )}
+                      </div>
                       {a.must_see === 1 && (
                         <span className="absolute left-2 top-2 rounded-full bg-[var(--accent)] px-2 py-0.5 text-[11px] font-medium text-white shadow-sm">⭐ חובה</span>
                       )}
@@ -1786,22 +1739,6 @@ export function DestinationView({
                       )}
                     </div>
                   </div>
-                  {/* editor curation — two 3-state ratings written immediately:
-                      importance (חובה/אולי/ממש לא) and kids fit (מתאים/אולי/לא) */}
-                  {isEditor && (
-                    <div className="flex flex-col gap-1.5 border-t border-[var(--border)] bg-[var(--surface-2)] py-2">
-                      <EditorRateRow label="דירוג" value={a.editor_rank}
-                        onPick={(v) => setRating(a, "rank", v)}
-                        options={[{ v: "must", t: "חובה", bg: "var(--brand)", ink: "#fff" },
-                                  { v: "maybe", t: "אולי", bg: "var(--amber-fill)", ink: "#3d2c0a" },
-                                  { v: "no", t: "ממש לא", bg: "#c0453f", ink: "#fff" }]} />
-                      <EditorRateRow label="ילדים" value={a.editor_kids}
-                        onPick={(v) => setRating(a, "kids", v)}
-                        options={[{ v: "yes", t: "מתאים", bg: "var(--brand)", ink: "#fff" },
-                                  { v: "maybe", t: "אולי", bg: "var(--amber-fill)", ink: "#3d2c0a" },
-                                  { v: "no", t: "ממש לא", bg: "#c0453f", ink: "#fff" }]} />
-                    </div>
-                  )}
                   {/* yes / no marks — the traveler's picks for this city.
                       RTL order: כן first (right), then לא. */}
                   <div className="border-t border-[var(--border)] p-2">
