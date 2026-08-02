@@ -1616,7 +1616,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                           uniform-height row and, with the walk chip's mt-auto, opened a big
                           empty gap that pushed the expanded description off-screen. Cards
                           still share a height via the grid's items-stretch + card h-full. */}
-                      <div className={`min-w-0 ${editorial ? `flex flex-col px-4 pb-4 pt-3 ${isOpen ? "lg:min-h-0 lg:flex-1 lg:justify-center lg:overflow-y-auto" : ""}` : "flex-1 py-2.5"}`}>
+                      <div className={`min-w-0 ${editorial ? `flex flex-col px-4 pb-4 pt-3 ${isOpen ? "lg:min-h-0 lg:flex-1 lg:overflow-y-auto" : ""}` : "flex-1 py-2.5"}`}>
                         {/* top line: the NAME is the hero — it gets the whole block width;
                             only the expand chevron sits at the far end. Rating + stay time
                             drop to the meta line below so the name is never squeezed. */}
@@ -1635,11 +1635,12 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                               <span className="shrink-0 rounded-full bg-[var(--surface-2)] px-1.5 py-0.5 text-[11px] text-[var(--text-3)]">אם יש זמן</span>
                             )}
                           </div>
-                          {/* chevron slot always present so nothing shifts between rows */}
+                          {/* chevron slot always present so nothing shifts between rows.
+                              Only a "this opens" hint on collapsed cards — no close arrow
+                              when open (a second click closes it, which is obvious). */}
                           <span className="mt-0.5 grid w-4 shrink-0 place-items-center">
-                            {hasDetails && (
-                              <ChevronDown size={16}
-                                className={`text-[var(--text-3)] transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                            {hasDetails && !isOpen && (
+                              <ChevronDown size={16} className="text-[var(--text-3)]" />
                             )}
                           </span>
                         </div>
