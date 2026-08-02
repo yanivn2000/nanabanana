@@ -1527,12 +1527,12 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 return (
                   <div key={si} ref={(el) => { stopRefs.current[si] = el; }}
                        data-drop-idx={si}
-                       className={`${drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}`}
+                       className={`${isOpen && editorial ? "lg:col-span-3" : ""} ${drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}`}
                        style={dragOverSi === si && drag && !(drag.kind === "stop" && drag.si === si)
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
                     <>
                     <div className={`group/row transition-colors ${hasDetails ? "cursor-pointer" : ""} ${editorial
-                           ? `relative mb-1 flex flex-col overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)] lg:mb-0 ${isOpen ? "" : "lg:h-full"}`
+                           ? `relative mb-1 flex flex-col overflow-hidden rounded-[16px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow)] lg:mb-0 ${isOpen ? "lg:flex-row lg:items-stretch" : "lg:h-full"}`
                            : "-mx-2 flex gap-2 rounded-[12px] px-2 lg:gap-3"}`}
                          style={{ background: !editorial && isActive ? `color-mix(in srgb, ${col} 12%, transparent)` : undefined,
                                   boxShadow: editorial && isActive ? `0 0 0 2px color-mix(in srgb, ${col} 45%, transparent), var(--shadow)` : undefined }}
@@ -1571,18 +1571,18 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                       </div>
                       {/* photo (falls back to the kind icon). Editorial: a large landscape
                           frame so each stop leads with its image (photo-forward, M3a). */}
-                      <div className={editorial ? "relative w-full" : "py-2.5 pr-1"}>
+                      <div className={editorial ? `relative w-full ${isOpen ? "lg:w-[42%] lg:shrink-0" : ""}` : "py-2.5 pr-1"}>
                         {s.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={editorial ? (bigImage(s.image, 960) ?? s.image) : s.image} alt="" loading="lazy"
                             onError={editorial ? (e) => { const t = e.currentTarget; if (s.image && t.src !== s.image) t.src = s.image; } : undefined}
                             className={editorial
-                              ? "h-[190px] w-full bg-[var(--surface-2)] object-cover"
+                              ? `w-full bg-[var(--surface-2)] object-cover ${isOpen ? "h-[190px] lg:h-full lg:min-h-[240px]" : "h-[190px]"}`
                               : "size-12 rounded-[12px] object-cover"} />
                         ) : editorial ? (
                           // no photo yet — a calm category-tinted gradient (not flat grey) at
                           // full photo height, so the card still reads as intentional.
-                          <div className="grid h-[190px] w-full place-items-center border-b border-[var(--border)]"
+                          <div className={`grid w-full place-items-center border-b border-[var(--border)] ${isOpen ? "h-[190px] lg:h-full lg:min-h-[240px]" : "h-[190px]"}`}
                             style={{ background: `linear-gradient(140deg, color-mix(in srgb, ${catColor(s.cat || "attraction")} 24%, var(--surface-2)), var(--surface-2) 74%)` }}>
                             <StopIcon kind={s.kind} />
                           </div>
@@ -1607,7 +1607,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                           uniform-height row and, with the walk chip's mt-auto, opened a big
                           empty gap that pushed the expanded description off-screen. Cards
                           still share a height via the grid's items-stretch + card h-full. */}
-                      <div className={`min-w-0 ${editorial ? "flex flex-col px-4 pb-4 pt-3" : "flex-1 py-2.5"}`}>
+                      <div className={`min-w-0 ${editorial ? `flex flex-col px-4 pb-4 pt-3 ${isOpen ? "lg:flex-1 lg:justify-center" : ""}` : "flex-1 py-2.5"}`}>
                         {/* top line: the NAME is the hero — it gets the whole block width;
                             only the expand chevron sits at the far end. Rating + stay time
                             drop to the meta line below so the name is never squeezed. */}
