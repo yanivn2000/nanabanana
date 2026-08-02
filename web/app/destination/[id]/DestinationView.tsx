@@ -401,6 +401,15 @@ export function DestinationView({
   // (The interest ✓/✕/solo cycler + editor were retired with the "הכל" mode;
   // soloInterest state stays as a harmless no-op the list filter still reads.)
   const [selected, setSelected] = useState<Attraction | null>(null);
+  // The selected card grows to a full-width row, which the grid reflows onto its
+  // own line further down — keep a ref to it so we can scroll it back into view
+  // instead of leaving the traveller to hunt for it below the fold.
+  const selCardRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!selected) return;
+    const el = selCardRef.current;
+    if (el) requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, [selected]);
   const [hoveredId, setHoveredId] = useState<number | null>(null);  // card hover → grow its map marker
   const [query, setQuery] = useState("");
   const [showPlaces, setShowPlaces] = useState(false);
@@ -1668,8 +1677,9 @@ export function DestinationView({
                   </div>
                 )}
                 <div
+                  ref={isSel ? selCardRef : undefined}
                   onMouseEnter={() => setHoveredId(a.id)} onMouseLeave={() => setHoveredId((h) => (h === a.id ? null : h))}
-                  className={`group flex flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition hover:-translate-y-0.5 ${isSel ? "sm:col-span-2 xl:col-span-3" : ""}`}
+                  className={`group flex scroll-mt-24 flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition hover:-translate-y-0.5 ${isSel ? "sm:col-span-2 xl:col-span-3" : ""}`}
                   style={{ borderColor: choice === "yes" || isSel ? "var(--brand)" : "var(--border)",
                            boxShadow: isSel ? "0 0 0 1.5px var(--brand)" : undefined }}>
                   {/* clickable body — selects the place and flies the map */}

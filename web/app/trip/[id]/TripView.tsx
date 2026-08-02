@@ -256,6 +256,15 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
   const [legendOpen, setLegendOpen] = useState(false);
   // Row refs so a map-marker click can scroll its timeline card into view.
   const stopRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // Expanding a stop grows it to a full-width row, which the grid reflows onto its
+  // own line further down — so bring the opened card back into view instead of
+  // leaving the traveller to scroll for it.
+  useEffect(() => {
+    if (!expanded) return;
+    const si = Number(expanded.slice(expanded.indexOf("-") + 1));
+    const el = stopRefs.current[si];
+    if (el) requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, [expanded]);
   // Destinations, for picking a target city when there's no hotel yet.
   const [dests, setDests] = useState<{ id: number; city: string; country: string; city_he: string | null }[]>([]);
   useEffect(() => {
@@ -1527,7 +1536,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 return (
                   <div key={si} ref={(el) => { stopRefs.current[si] = el; }}
                        data-drop-idx={si}
-                       className={`${isOpen && editorial ? "lg:col-span-3" : ""} ${drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}`}
+                       className={`scroll-mt-24 ${isOpen && editorial ? "lg:col-span-3" : ""} ${drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}`}
                        style={dragOverSi === si && drag && !(drag.kind === "stop" && drag.si === si)
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
                     <>
