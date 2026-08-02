@@ -11,6 +11,7 @@ import { GraphTable } from "./GraphTable";
 import { BrainEval } from "./BrainEval";
 import { PrinciplesTable } from "./PrinciplesTable";
 import { Moderation } from "./Moderation";
+import { ContentGaps } from "./ContentGaps";
 import type { AdminDestination, Feedback } from "@/lib/db";
 
 const TABS = [
@@ -23,6 +24,7 @@ const TABS = [
   { key: "principles", label: "👨‍🍳 טכניקות" },
   { key: "insights", label: "📥 תובנות" },
   { key: "moderation", label: "🚩 מודרציה" },
+  { key: "content", label: "🖼️ תוכן" },
   { key: "feedback", label: "💬 פידבק" },
   { key: "posters", label: "🖼️ פוסטרים" },
 ] as const;
@@ -274,6 +276,8 @@ export function AdminView({ destinations, feedback, email, version }: {
       )}
 
       {tab === "moderation" && <Moderation />}
+
+      {tab === "content" && <ContentGaps />}
 
       {tab === "feedback" && (
         <section className="flex flex-col gap-2">

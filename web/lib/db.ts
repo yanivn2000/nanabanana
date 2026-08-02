@@ -506,6 +506,46 @@ export async function insightsByAttraction(
 }
 
 // --- Admin: destination management ------------------------------------------
+// --- Admin content-gap picker: must-see attractions missing an image or with a
+//     thin description, plus a manual setter. Used by the /admin "תוכן" tab. -----
+export type ContentGap = {
+  id: number; name_he: string | null; name_en: string;
+  city: string | null; city_he: string | null; destination_id: number;
+  image_url: string | null; description_he: string | null; tagline_he: string | null;
+  lat: number | null; lng: number | null;
+};
+
+export async function listContentGaps(opts?: { destinationId?: number; limit?: number }): Promise<ContentGap[]> {
+  const where = [
+    `COALESCE(${EFF_MUST}, 0) = 1`,
+    `(a.is_duplicate IS NULL OR a.is_duplicate = 0)`,
+    `((a.image_url IS NULL OR a.image_url = '') OR char_length(COALESCE(a.description_he, '')) < 80)`,
+  ];
+  const params: unknown[] = [];
+  if (opts?.destinationId) { params.push(opts.destinationId); where.push(`a.destination_id = $${params.length}`); }
+  params.push(opts?.limit ?? 500);
+  return query<ContentGap>(
+    `SELECT a.id, a.name_he, a.name_en, a.destination_id, d.city, d.city_he,
+            a.image_url, a.description_he, a.tagline_he, a.lat, a.lng
+       FROM attractions a ${EDITOR_JOIN}
+       JOIN destinations d ON d.id = a.destination_id
+      WHERE ${where.join(" AND ")}
+      ORDER BY a.destination_id, COALESCE(a.family_score, 0) DESC
+      LIMIT $${params.length}`, params);
+}
+
+export async function updateAttractionContent(id: number, f: {
+  image_url?: string | null; description_he?: string | null; tagline_he?: string | null;
+}): Promise<void> {
+  const sets: string[] = []; const params: unknown[] = [];
+  if (f.image_url !== undefined) { params.push(f.image_url || null); sets.push(`image_url = $${params.length}`); sets.push(`image_checked_at = now()`); }
+  if (f.description_he !== undefined) { params.push(f.description_he || null); sets.push(`description_he = $${params.length}`); }
+  if (f.tagline_he !== undefined) { params.push(f.tagline_he || null); sets.push(`tagline_he = $${params.length}`); }
+  if (!sets.length) return;
+  params.push(id);
+  await query(`UPDATE attractions SET ${sets.join(", ")} WHERE id = $${params.length}`, params);
+}
+
 export type AdminDestination = {
   id: number; city: string; country: string; region: string | null;
   city_he: string | null; country_he: string | null;
