@@ -1737,6 +1737,15 @@ export function DestinationView({
                       )}
                     </div>
                   </button>
+                  {/* authoritative source — the Wikipedia article the description came
+                      from (an <a> can't nest in the card <button>, so it sits here). */}
+                  {isSel && wikiUrl(a.info_sources) && (
+                    <div className="border-t border-[var(--border)] px-3 py-2">
+                      <a href={wikiUrl(a.info_sources)!} target="_blank" rel="noreferrer"
+                        className="text-[12px] font-medium text-[var(--blue)] hover:underline">קראו עוד בוויקיפדיה ↗</a>
+                      <span className="text-[11px] text-[var(--text-3)]"> · CC BY-SA</span>
+                    </div>
+                  )}
                   {/* editor curation — two 3-state ratings written immediately:
                       importance (חובה/אולי/ממש לא) and kids fit (מתאים/אולי/לא) */}
                   {isEditor && (
