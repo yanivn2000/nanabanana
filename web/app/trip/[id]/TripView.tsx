@@ -1700,6 +1700,8 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                           <div className="mt-2">
                             {s.tagline && <p className="mb-2 text-[14.5px] italic text-[var(--text-2)]">{s.tagline}</p>}
                             {s.description && <p className="mb-2 text-[14px] leading-relaxed text-[var(--text-2)]">{s.description}</p>}
+                            {/* traveler tip stays with the content, above the action links */}
+                            {s.note && <p className="mb-2 text-[13.5px] leading-snug text-[var(--brand-ink)]">💡 {s.note}</p>}
                             {(s.bestTime || s.dress || s.cost != null) && (
                               <div className="mb-1 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-[var(--text-2)]">
                                 {s.bestTime && <span><span className="text-[var(--text-3)]">מתי: </span>{s.bestTime}</span>}
@@ -1726,7 +1728,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                             )}
                           </div>
                         )}
-                        {s.note && <p className={`mt-1.5 text-[13.5px] leading-snug text-[var(--text-2)] ${isOpen ? "" : "line-clamp-2"}`}>{s.note}</p>}
+                        {s.note && !isOpen && <p className="mt-1.5 line-clamp-2 text-[13.5px] leading-snug text-[var(--text-2)]">{s.note}</p>}
                         {/* A logistical meal BREAK has no place of its own — offer "restaurants
                             nearby", centred on the last stop before it. A real/added restaurant
                             (has its own id) IS the place, so it gets no such link. */}
