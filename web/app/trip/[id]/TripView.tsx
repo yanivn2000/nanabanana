@@ -1351,9 +1351,12 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
       )}
 
       {/* row 3 — day summary (thin strip, no card): day label + edit + stats,
-          and an on-demand "why?" toggle (no big AI explanation block) */}
+          and an on-demand "why?" toggle (no big AI explanation block). Editorial:
+          a THIRD sticky tier that pins right under the day-tabs sub-bar, so the
+          day's controls (move-day / ±attractions / stats) stay reachable while
+          scrolling the stops. */}
       {itinerary && day && (
-        <div className={`mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--border)] px-5 pb-2 ${editorial ? "lg:mt-3 lg:px-8" : "lg:pl-8 lg:pr-[204px]"}`}>
+        <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--border)] px-5 pb-2 ${editorial ? "mt-3 pt-2 lg:sticky lg:top-[121px] lg:z-[19] lg:mt-0 lg:bg-[var(--surface)]/92 lg:px-8 lg:backdrop-blur-lg" : "mt-1.5 lg:pl-8 lg:pr-[204px]"}`}>
           {!editorial && <h2 className="serif text-[15px] font-bold leading-tight lg:text-[16px]">{dayLabels[curIdx]}</h2>}
           {/* REORDER the whole day within the trip (not day navigation — that's the
               tabs above). A visible "הזז יום" label so it doesn't read as paging.
@@ -2169,7 +2172,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
         {/* aside (left on desktop): the day's map + hotels + trip tools. Fixed 380px to
             match the destination-page map rail — the itinerary column (lg:flex-1) absorbs
             the freed width. */}
-        <aside className={`lg:w-[380px] lg:shrink-0 ${editorial ? "lg:sticky lg:top-[132px]" : "lg:sticky lg:top-[73px]"}`}>
+        <aside className={`lg:w-[380px] lg:shrink-0 ${editorial ? "lg:sticky lg:top-[172px]" : "lg:sticky lg:top-[73px]"}`}>
           {/* hotel(s) — pinned at the TOP of the rail (above the map) so the trip's
               anchor is the first thing set; adding/moving one re-anchors each day. */}
           <div className="px-5 pb-5 lg:px-0">
