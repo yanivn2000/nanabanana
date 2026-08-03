@@ -3,7 +3,8 @@
 import { useMemo, useState, useEffect, useRef, Fragment } from "react";
 import Link from "next/link";
 import { ChevronRight, Search, Sparkles, ChevronDown, Check, MapPin, X, Loader2, Heart, ExternalLink,
-  Compass, Star, Map as MapIcon, Baby, Palette, UtensilsCrossed, Trees, Wine, Landmark, Building2, Watch, Gem, FerrisWheel, Waves } from "lucide-react";
+  Compass, Star, Map as MapIcon, Baby, Palette, UtensilsCrossed, Trees, Wine, Landmark, Building2, Watch, Gem, FerrisWheel, Waves,
+  Coins, Umbrella, MessageCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 // Elegant outline icons per category (brand-coloured, stroke-only) — a Booking-ish
@@ -728,7 +729,11 @@ export function DestinationView({
   const canBuild = editorial ? (pickedCount >= buildCapacity) : (manual ? yesCount >= MANUAL_MIN : readyToBuild);
   // Floor of places needed before the build unlocks (for the CTA count + tooltip).
   const needToBuild = editorial ? buildCapacity : manual ? MANUAL_MIN : 0;
-  const buildCountSuffix = !canBuild && needToBuild > 0 ? ` · ${pickedCount}/${needToBuild}` : "";
+  // CTA suffix: while short of the floor, show progress (2/20); once buildable,
+  // show the count of places chosen so far — "בנו לי טיול (21)".
+  const buildCountSuffix = !canBuild && needToBuild > 0
+    ? ` · ${pickedCount}/${needToBuild}`
+    : pickedCount > 0 ? ` (${pickedCount})` : "";
   const buildTitle = canBuild ? ""
     : editorial ? `בחרו עוד ${Math.max(0, needToBuild - pickedCount)} מקומות לטיול (${pickedCount}/${needToBuild})`
     : manual ? `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`
@@ -1256,8 +1261,8 @@ export function DestinationView({
           <span aria-hidden className="grid w-5 place-items-center">
             {Icon ? <Icon size={16} strokeWidth={1.75} style={{ color: active ? "#fff" : boosted ? "var(--accent)" : "var(--brand)" }} /> : t.emoji}
           </span>
-          <span className="flex-1 truncate">{t.label}</span>
-          <span className={`text-[11.5px] ${active || boosted ? "opacity-80" : "text-[var(--text-3)]"}`}>{count}</span>
+          <span className="flex-1 truncate opacity-0 transition-opacity duration-150 group-hover:opacity-100">{t.label}</span>
+          <span className={`text-[11.5px] opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${active || boosted ? "" : "text-[var(--text-3)]"}`}>{count}</span>
         </button>
         {hasHeart && (
           <button onClick={(e) => { e.stopPropagation();
@@ -1285,8 +1290,8 @@ export function DestinationView({
         <span aria-hidden className="grid w-5 place-items-center">
           <Heart size={14} fill="currentColor" style={{ color: selectedOnly ? "#fff" : "var(--brand)" }} />
         </span>
-        <span className="flex-1 truncate">בטיול</span>
-        <span className={`text-[11.5px] ${selectedOnly ? "opacity-80" : "text-[var(--text-3)]"}`}>{pickedCount}</span>
+        <span className="flex-1 truncate opacity-0 transition-opacity duration-150 group-hover:opacity-100">בטיול</span>
+        <span className={`text-[11.5px] opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${selectedOnly ? "" : "text-[var(--text-3)]"}`}>{pickedCount}</span>
       </button>
       {cityTabs.filter((t) => t.key === "__all" || t.key === "__must").map(renderTabRow)}
       <div className="my-1 h-px bg-[var(--border)]" />
@@ -1318,31 +1323,36 @@ export function DestinationView({
           })}
         </div>
       )}
-      {/* filters — free / indoor / with-insights / on-the-map, as a vertical list */}
+      {/* filters — free / indoor / with-insights / on-the-map. Icon-first (like the
+          category rows) so the rail stays legible when collapsed to icons only. */}
       <div className="mt-3 flex flex-col gap-0.5 border-t border-[var(--border)] pt-3">
-        <p className="px-1 pb-0.5 text-[11.5px] font-semibold text-[var(--text-3)]">סינון</p>
-        {(([["free", "חינם"], ["indoor", "מקורה"],
-           ...(isFamily ? [["top", "מומלץ למשפחות"]] : []),
-           ["withInsights", "💬 עם תובנות מטיילים"]]) as [keyof typeof flags, string][]).map(([k, label]) => (
-          <button key={k} onClick={() => toggleFlag(k)} aria-pressed={flags[k]}
-            className="flex items-center justify-between rounded-[10px] px-2.5 py-1.5 text-[13px] transition"
+        <p className="whitespace-nowrap px-2.5 pb-0.5 text-[11.5px] font-semibold text-[var(--text-3)] opacity-0 transition-opacity duration-150 group-hover:opacity-100">סינון</p>
+        {(([["free", "חינם", Coins], ["indoor", "מקורה", Umbrella],
+           ...(isFamily ? [["top", "מומלץ למשפחות", Baby]] : []),
+           ["withInsights", "עם תובנות מטיילים", MessageCircle]]) as [keyof typeof flags, string, LucideIcon][]).map(([k, label, Icon]) => (
+          <button key={k} onClick={() => toggleFlag(k)} aria-pressed={flags[k]} title={label}
+            className="flex items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-right text-[13px] transition"
             style={flags[k] ? { background: "var(--brand-soft)", color: "var(--brand-ink)", fontWeight: 600 } : { color: "var(--text-2)" }}>
-            <span>{label}</span>
-            <span className="flex items-center gap-1.5">
-              <span className="text-[11.5px] text-[var(--text-3)]">{flagCount[k]}</span>
-              {flags[k] && <Check size={13} className="text-[var(--brand)]" />}
+            <span aria-hidden className="grid w-5 shrink-0 place-items-center">
+              <Icon size={15} strokeWidth={1.75} style={{ color: flags[k] ? "var(--brand)" : "var(--text-3)" }} />
             </span>
+            <span className="flex-1 truncate opacity-0 transition-opacity duration-150 group-hover:opacity-100">{label}</span>
+            <span className="text-[11.5px] text-[var(--text-3)] opacity-0 transition-opacity duration-150 group-hover:opacity-100">{flagCount[k]}</span>
+            {flags[k] && <Check size={13} className="shrink-0 text-[var(--brand)] opacity-0 transition-opacity duration-150 group-hover:opacity-100" />}
           </button>
         ))}
-        <button onClick={() => setMapOnly((v) => !v)} aria-pressed={mapOnly}
-          className="flex items-center justify-between rounded-[10px] px-2.5 py-1.5 text-[13px] transition"
+        <button onClick={() => setMapOnly((v) => !v)} aria-pressed={mapOnly} title="רק מה שעל המפה"
+          className="flex items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-right text-[13px] transition"
           style={mapOnly ? { background: "var(--brand-soft)", color: "var(--brand-ink)", fontWeight: 600 } : { color: "var(--text-2)" }}>
-          <span>📍 רק מה שעל המפה</span>
-          {mapOnly && <Check size={13} className="text-[var(--brand)]" />}
+          <span aria-hidden className="grid w-5 shrink-0 place-items-center">
+            <MapPin size={15} strokeWidth={1.75} style={{ color: mapOnly ? "var(--brand)" : "var(--text-3)" }} />
+          </span>
+          <span className="flex-1 truncate opacity-0 transition-opacity duration-150 group-hover:opacity-100">רק מה שעל המפה</span>
+          {mapOnly && <Check size={13} className="shrink-0 text-[var(--brand)] opacity-0 transition-opacity duration-150 group-hover:opacity-100" />}
         </button>
       </div>
-      {/* primary actions */}
-      <div className="mt-3 flex flex-col gap-2 border-t border-[var(--border)] pt-3">
+      {/* primary actions — hidden when the rail is collapsed to icons */}
+      <div className="mt-3 flex flex-col gap-2 border-t border-[var(--border)] pt-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
         {passes.length > 0 && (
           <button onClick={() => setShowPasses((v) => !v)}
             className="flex items-center justify-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-3 py-2 text-[12.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
@@ -1601,8 +1611,10 @@ export function DestinationView({
           now live in the always-visible toolbar just above the list, in every mode.) */}
 
       {/* Recommended specific places we don't have as attractions (hotels,
-          restaurants, tours, day-trips) — from travelers, grouped by place. */}
-      {placeGroups.length > 0 && (
+          restaurants, tours, day-trips) — from travelers, grouped by place.
+          Hidden in editorial: it pushed the browse down; those tips already
+          surface on each attraction card. */}
+      {!editorial && placeGroups.length > 0 && (
         <section className="rise border-b border-[var(--border)] bg-[var(--surface)] px-5 py-4 lg:px-8">
           <button onClick={() => setShowPlaces((v) => !v)}
             className="flex w-full items-center justify-between text-right">
@@ -1646,9 +1658,11 @@ export function DestinationView({
       {editorial && (
         <>
           {/* secondary nav — the trip settings (days · distance · pace) + build CTA,
-              a sub-menu stuck directly under the main top nav. Full-bleed surface with
-              a bottom border so it reads as subordinate to the main nav above it. */}
-          <div className={`sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--surface)]/92 backdrop-blur-lg lg:top-[57px] ${showBrowse ? "" : "hidden lg:block"}`}>
+              a sub-menu stuck directly under the main top nav (desktop). Full-bleed
+              surface with a bottom border so it reads as subordinate to the main nav.
+              Sticky only on desktop: on mobile there's no top nav and this bar is tall
+              (stacked sliders), so pinning it would cover the map strip below. */}
+          <div className={`relative z-20 border-b border-[var(--border)] bg-[var(--surface)]/92 backdrop-blur-lg lg:sticky lg:top-[64px] ${showBrowse ? "" : "hidden lg:block"}`}>
             <div className="mx-auto max-w-[1600px] px-5 py-2.5 lg:px-8">
               {tripSettingsEl}
             </div>
@@ -1659,14 +1673,22 @@ export function DestinationView({
         </>
       )}
       <div className={`lg:flex lg:items-start lg:gap-5 lg:ps-8 ${showBrowse ? "" : "hidden"}`}>
-        {/* right column (desktop): the category menu */}
-        <aside className="hidden lg:order-1 lg:block lg:w-[230px] lg:shrink-0">
-          <div className="lg:sticky lg:top-[72px] lg:pb-4">
-            {categoryMenuEl}
+        {/* right column (desktop): the category menu as an ICON-ONLY rail that
+            expands to the full labelled menu on hover. Only ~60px is reserved in
+            the flow; the expanded panel is an overlay (absolute) so hovering it
+            never reflows the middle attractions column — it just floats over it. */}
+        <aside className="hidden lg:order-1 lg:block lg:w-[52px] lg:shrink-0">
+          <div className="group lg:sticky lg:top-[140px]" style={{ height: "calc(100dvh - 168px)" }}>
+            <div className="absolute start-0 top-0 z-20 w-[52px] overflow-hidden rounded-[14px] bg-[var(--surface)] transition-[width,box-shadow] duration-200 group-hover:w-[248px] group-hover:overflow-y-auto group-hover:border group-hover:border-[var(--border)] group-hover:shadow-[0_10px_34px_rgba(24,18,9,0.16)]"
+                 style={{ maxHeight: "calc(100dvh - 168px)" }}>
+              <div className="w-[248px] p-1.5">
+                {categoryMenuEl}
+              </div>
+            </div>
           </div>
         </aside>
         {/* map — a narrow sticky rail on desktop (far side); full-width strip on mobile */}
-        <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-3 lg:!h-[calc(100dvh-164px)] lg:top-[72px] lg:w-[360px] lg:shrink-0 lg:border-y-0 lg:border-s`}>
+        <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-3 lg:!h-[calc(100dvh-156px)] lg:top-[140px] lg:w-[360px] lg:shrink-0 lg:border-y-0 lg:border-s`}>
           <MapClient attractions={editorial ? cityScoped : displayItems} center={[dest.lat, dest.lng]} selected={selected}
             picks={pickedAttractions} fitNonce={fitNonce} onBounds={setBounds} hoveredId={hoveredId} focus={areaFocus} />
           {pickedAttractions.length > 0 && (
