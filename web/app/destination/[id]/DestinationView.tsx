@@ -1674,21 +1674,19 @@ export function DestinationView({
       )}
       <div className={`lg:flex lg:items-start lg:gap-5 lg:ps-8 ${showBrowse ? "" : "hidden"}`}>
         {/* right column (desktop): the category menu as an ICON-ONLY rail that
-            expands to the full labelled menu on hover. Only ~60px is reserved in
-            the flow; the expanded panel is an overlay (absolute) so hovering it
-            never reflows the middle attractions column — it just floats over it. */}
-        <aside className="hidden lg:order-1 lg:block lg:w-[52px] lg:shrink-0">
-          <div className="group lg:sticky lg:top-[140px]" style={{ height: "calc(100dvh - 168px)" }}>
-            <div className="absolute start-0 top-0 z-20 w-[52px] overflow-hidden rounded-[14px] bg-[var(--surface)] transition-[width,box-shadow] duration-200 group-hover:w-[248px] group-hover:overflow-y-auto group-hover:border group-hover:border-[var(--border)] group-hover:shadow-[0_10px_34px_rgba(24,18,9,0.16)]"
-                 style={{ maxHeight: "calc(100dvh - 168px)" }}>
-              <div className="w-[248px] p-1.5">
-                {categoryMenuEl}
-              </div>
+            expands to the full labelled menu on hover. It grows IN FLOW (52→248px),
+            pushing the attractions column left; the map (a sibling `peer`) gives up
+            the room via peer-hover, so nothing is ever covered by the menu. */}
+        <aside className="group peer hidden lg:order-1 lg:block lg:w-[52px] lg:shrink-0 lg:transition-[width] lg:duration-200 lg:hover:w-[248px]">
+          <div className="lg:sticky lg:top-[140px] lg:max-h-[calc(100dvh-168px)] lg:w-full lg:overflow-hidden lg:rounded-[14px] lg:bg-[var(--surface)] lg:transition-shadow lg:duration-200 group-hover:lg:overflow-y-auto group-hover:lg:border group-hover:lg:border-[var(--border)] group-hover:lg:shadow-[0_10px_34px_rgba(24,18,9,0.16)]">
+            <div className="w-[248px] p-1.5">
+              {categoryMenuEl}
             </div>
           </div>
         </aside>
-        {/* map — a narrow sticky rail on desktop (far side); full-width strip on mobile */}
-        <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-3 lg:!h-[calc(100dvh-156px)] lg:top-[140px] lg:w-[360px] lg:shrink-0 lg:border-y-0 lg:border-s`}>
+        {/* map — a narrow sticky rail on desktop (far side); full-width strip on mobile.
+            Shrinks when the category rail is hovered (peer-hover) to lend it room. */}
+        <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-3 lg:!h-[calc(100dvh-156px)] lg:top-[140px] lg:w-[360px] lg:shrink-0 lg:border-y-0 lg:border-s lg:transition-[width,height] peer-hover:lg:w-[216px]`}>
           <MapClient attractions={editorial ? cityScoped : displayItems} center={[dest.lat, dest.lng]} selected={selected}
             picks={pickedAttractions} fitNonce={fitNonce} onBounds={setBounds} hoveredId={hoveredId} focus={areaFocus} />
           {pickedAttractions.length > 0 && (
