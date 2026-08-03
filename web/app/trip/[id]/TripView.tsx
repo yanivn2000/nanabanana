@@ -2173,62 +2173,108 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
               onFocus={(h) => h.lat != null && h.lng != null && setFocus({ lat: h.lat, lng: h.lng, n: Date.now() })} />
           </div>
 
-          {/* map of the selected day — desktop; mobile uses the מפה tab */}
-          {(stopPoints.length > 0 || hotelPoints.length > 0) && (
-            <div className="hidden lg:block">
-              <div className="relative">
-                <div className="h-[calc(100dvh-265px)] max-h-[700px] min-h-[440px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
-                  <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
-                    hotels={hotelPoints} focus={focus} colors={stopColors} activeIdx={active}
-                extras={mapExtras} hoveredId={hoverBankId}
-                onToggleExtra={toggleExtra} onToggleRemove={toggleRemoveLocated}
-                    onStopClick={(li) => { const si = locatedToStop[li]; if (si == null) return;
-                      setExpanded(`${curIdx}-${si}`); setActive(li);
-                      requestAnimationFrame(() => stopRefs.current[si]?.scrollIntoView({ behavior: "smooth", block: "center" })); }} />
-                </div>
+          {/* desktop rail — the MAP is the first tab; the trip tools (מה לארוז /
+              לפני שיוצאים / תקציב) sit alongside it as tabs instead of being buried
+              in a pill row beneath the map. */}
+          <div className="hidden lg:block">
+            <div className="mb-3 flex gap-1 rounded-full bg-[var(--surface-2)] p-1">
+              {([{ key: null as ToolKey | null, label: "מפה", Icon: MapIcon }, ...TOOLS]).map(({ key, label, Icon }) => {
+                const on = tool === key;
+                return (
+                  <button key={key ?? "map"} onClick={() => setTool(key)}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[13px] font-medium transition"
+                    style={{ background: on ? "var(--surface)" : "transparent",
+                             color: on ? "var(--brand-ink)" : "var(--text-2)",
+                             boxShadow: on ? "var(--shadow)" : "none" }}>
+                    <Icon size={15} /> {label}
+                  </button>
+                );
+              })}
+            </div>
 
-                {/* legend — a collapsible floating card tying numbers to names. */}
-                {stopPoints.length > 0 && (
-                  <div className="absolute bottom-3 left-3 z-[1000] w-[210px] overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)] shadow-[var(--shadow)]"
-                       style={{ background: "var(--surface)" }}>
-                    <button onClick={() => setLegendOpen((o) => !o)}
-                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-[13px] font-medium text-[var(--text-2)]">
-                      <span>מקרא · {stopPoints.length} תחנות</span>
-                      <ChevronDown size={14} className={`transition-transform ${legendOpen ? "" : "rotate-180"}`} />
-                    </button>
-                    {legendOpen && (
-                      <div className="max-h-[220px] overflow-y-auto px-2 pb-2">
-                        {mapStops.map((s, i) => {
-                          const on = active === i;
-                          return (
-                            <button key={i}
-                              onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(null)}
-                              onClick={() => { const si = locatedToStop[i]; if (si == null) return;
-                                setExpanded(`${curIdx}-${si}`);
-                                requestAnimationFrame(() => stopRefs.current[si]?.scrollIntoView({ behavior: "smooth", block: "center" })); }}
-                              className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-right text-[13px] transition"
-                              style={{ background: on ? "var(--surface-2)" : "transparent" }}>
-                              <span className="grid size-5 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-white"
-                                    style={{ background: stopColor(i) }}>{i + 1}</span>
-                              <span className="truncate text-[var(--text-2)]">{s.name}</span>
-                            </button>
-                          );
-                        })}
+            {tool === null ? (
+              (stopPoints.length > 0 || hotelPoints.length > 0) ? (
+                <>
+                  <div className="relative">
+                    <div className="h-[calc(100dvh-320px)] max-h-[660px] min-h-[420px] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border)]">
+                      <MapClient attractions={stopPoints} center={mapCenter} selected={null} ordered
+                        hotels={hotelPoints} focus={focus} colors={stopColors} activeIdx={active}
+                    extras={mapExtras} hoveredId={hoverBankId}
+                    onToggleExtra={toggleExtra} onToggleRemove={toggleRemoveLocated}
+                        onStopClick={(li) => { const si = locatedToStop[li]; if (si == null) return;
+                          setExpanded(`${curIdx}-${si}`); setActive(li);
+                          requestAnimationFrame(() => stopRefs.current[si]?.scrollIntoView({ behavior: "smooth", block: "center" })); }} />
+                    </div>
+
+                    {/* legend — a collapsible floating card tying numbers to names. */}
+                    {stopPoints.length > 0 && (
+                      <div className="absolute bottom-3 left-3 z-[1000] w-[210px] overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)] shadow-[var(--shadow)]"
+                           style={{ background: "var(--surface)" }}>
+                        <button onClick={() => setLegendOpen((o) => !o)}
+                          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-[13px] font-medium text-[var(--text-2)]">
+                          <span>מקרא · {stopPoints.length} תחנות</span>
+                          <ChevronDown size={14} className={`transition-transform ${legendOpen ? "" : "rotate-180"}`} />
+                        </button>
+                        {legendOpen && (
+                          <div className="max-h-[220px] overflow-y-auto px-2 pb-2">
+                            {mapStops.map((s, i) => {
+                              const on = active === i;
+                              return (
+                                <button key={i}
+                                  onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(null)}
+                                  onClick={() => { const si = locatedToStop[i]; if (si == null) return;
+                                    setExpanded(`${curIdx}-${si}`);
+                                    requestAnimationFrame(() => stopRefs.current[si]?.scrollIntoView({ behavior: "smooth", block: "center" })); }}
+                                  className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-right text-[13px] transition"
+                                  style={{ background: on ? "var(--surface-2)" : "transparent" }}>
+                                  <span className="grid size-5 shrink-0 place-items-center rounded-full text-[11px] font-semibold text-white"
+                                        style={{ background: stopColor(i) }}>{i + 1}</span>
+                                  <span className="truncate text-[var(--text-2)]">{s.name}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
+
+                  <p className="mt-2 px-0.5 text-[12.5px] leading-snug text-[var(--text-3)]">
+                    {day ? `${shortDay(curIdx)} · ${stopPoints.length} מקומות · ` : ""}
+                    <span className="text-[var(--brand)]">🏨 המלון</span> תמיד מוצג · המספרים = סדר הביקור · הקו = מסלול
+                  </p>
+                </>
+              ) : (
+                <div className="grid min-h-[420px] place-items-center rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] px-4 text-center text-[13.5px] text-[var(--text-3)]">
+                  אין עדיין מפה ליום הזה — הוסיפו מקומות
+                </div>
+              )
+            ) : (
+              <div className="max-h-[calc(100dvh-200px)] min-h-[420px] overflow-y-auto rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
+                {tool === "packing" && (
+                  <PackingList
+                    profile={tripProfile} month={trip?.month} days={trip?.days ?? 4} country={trip?.country}
+                    value={trip?.packing}
+                    onChange={(packing) => update(tripId, { packing })} />
+                )}
+                {tool === "checklist" && (
+                  <TravelChecklist
+                    profile={tripProfile}
+                    value={trip?.checklist}
+                    onChange={(checklist) => update(tripId, { checklist })} />
+                )}
+                {tool === "budget" && (
+                  <BudgetPanel
+                    itinerary={itinerary} profile={tripProfile}
+                    value={trip?.budget}
+                    onChange={(budget) => update(tripId, { budget })} />
                 )}
               </div>
+            )}
+          </div>
 
-              <p className="mt-2 px-0.5 text-[12.5px] leading-snug text-[var(--text-3)]">
-                {day ? `${shortDay(curIdx)} · ${stopPoints.length} מקומות · ` : ""}
-                <span className="text-[var(--brand)]">🏨 המלון</span> תמיד מוצג · המספרים = סדר הביקור · הקו = מסלול
-              </p>
-            </div>
-          )}
-
-          {/* trip tools — a compact submenu; panels open only on demand */}
-          <div className="mt-5 px-5 lg:px-0">
+          {/* mobile: the trip tools as a pill row (the map has its own mobile tab) */}
+          <div className="mt-5 px-5 lg:hidden">
             <div className="flex flex-wrap gap-2">
               {TOOLS.map(({ key, label, Icon }) => {
                 const on = tool === key;
