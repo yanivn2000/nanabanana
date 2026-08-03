@@ -697,7 +697,7 @@ export function DestinationView({
   // Paginate: show PAGE at a time; reset to page 1 on any change.
   useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, selectedOnly, soloInterest, profile.interests, profile.dislikes, audience, boosts, cityTab, areaTab]);
   // Never leave the traveler stranded in an empty "selected only" view.
-  useEffect(() => { if (selectedOnly && yesCount === 0) setSelectedOnly(false); }, [selectedOnly, yesCount]);
+  useEffect(() => { if (selectedOnly && yesCount + streetPicks.size === 0) setSelectedOnly(false); }, [selectedOnly, yesCount, streetPicks]);
   const visible = sortedItems.slice(0, visibleCount);
   const firstDimId = visible.find((a) => dimmedIds.has(a.id))?.id;
   // One unified list in every mode — audience is folded into the matched split
@@ -776,10 +776,14 @@ export function DestinationView({
   // in a neighbourhood only that area; the "הכל" tab holds every attraction, so it's
   // where a city-wide search lives.
   const cityScoped = useMemo(() => {
+    // "בטיול" (selectedOnly) overrides the category — show ONLY what's in the trip,
+    // across the whole city, and nothing else.
+    const base = selectedOnly ? mustFirst(attractions.filter((a) => choices[a.id] === "yes")) : cityTabItems;
     const q = query.trim().toLowerCase();
-    if (!q) return cityTabItems;
-    return cityTabItems.filter((a) => `${a.name_he ?? ""} ${a.name_en} ${descriptor(a)}`.toLowerCase().includes(q));
-  }, [cityTabItems, query]);
+    if (!q) return base;
+    return base.filter((a) => `${a.name_he ?? ""} ${a.name_en} ${descriptor(a)}`.toLowerCase().includes(q));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cityTabItems, query, selectedOnly, attractions, choices]);
   const cityGridItems = cityScoped.slice(0, visibleCount);
   const cityTabLabel = cityTab === "__areas" ? (activeArea?.name_he || activeArea?.name_en || "שכונה")
     : (cityTabs.find((t) => t.key === cityTab)?.label ?? "");
