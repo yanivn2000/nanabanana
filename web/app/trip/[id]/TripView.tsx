@@ -1248,12 +1248,13 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 // with the neighbourhood as its subtitle and an active accent rule.
                 return (
                   <button key={i} onClick={() => { setDayIdx(i); setExpanded(null); setActive(null); }}
-                    className="flex shrink-0 flex-col items-start gap-0.5 border-b-2 px-4 py-2.5 text-start transition"
-                    style={{ borderColor: on ? "var(--accent)" : "transparent" }}>
-                    <span className="serif text-[15px] font-bold leading-none" style={{ color: on ? "var(--text)" : "var(--text-3)" }}>
+                    className="flex shrink-0 flex-col items-start gap-1 rounded-t-[10px] border-b-[3px] px-4 py-2.5 text-start transition"
+                    style={{ borderColor: on ? "var(--accent)" : "transparent",
+                             background: on ? "var(--accent-soft)" : "transparent" }}>
+                    <span className="serif font-bold leading-none" style={{ color: on ? "var(--text)" : "var(--text-3)", fontSize: on ? 17 : 15 }}>
                       יום {i + 1}{today ? " · היום" : ""}
                     </span>
-                    <span className="text-[12px] leading-none" style={{ color: on ? "var(--brand-ink)" : "var(--text-3)" }}>
+                    <span className="text-[12.5px] leading-none" style={{ color: on ? "var(--accent-ink)" : "var(--text-3)", fontWeight: on ? 600 : 400 }}>
                       {d.area || `${d.stops.length} עצירות`}
                     </span>
                   </button>
