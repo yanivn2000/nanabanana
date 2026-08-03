@@ -165,7 +165,7 @@ function StreetCard({ s, picked, expanded, onToggle, onOpen }: {
           style={s.image_url ? undefined : { background: HDR }}>
           {s.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={expanded ? (hiResImage(s.image_url, 1100) ?? s.image_url) : bigImage(s.image_url, 640)} alt="" loading="lazy"
+            <img src={(expanded ? hiResImage(s.image_url, 1100) : hiResImage(s.image_url, 700)) ?? s.image_url} alt="" loading="lazy"
               onError={(e) => { const t = e.currentTarget; if (s.image_url && t.src !== s.image_url) t.src = s.image_url; }}
               className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
           ) : (

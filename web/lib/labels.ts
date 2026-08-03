@@ -162,6 +162,10 @@ export function hiResImage(url: string | null | undefined, px = 1000): string | 
   // already a Special:FilePath URL → just (re)set the width
   const fp = url.match(/Special:FilePath\/[^?#]+/);
   if (fp) return `https://commons.wikimedia.org/wiki/${fp[0]}?width=${px}`;
+  // a plain full-size commons/upload original (no /thumb/) → route through the
+  // resizer so we don't ship a multi-MB file to a small card.
+  const orig = url.match(/upload\.wikimedia\.org\/wikipedia\/[a-z-]+\/[0-9a-f]\/[0-9a-f]{2}\/([^/?#]+\.(?:jpe?g|png))$/i);
+  if (orig) return `https://commons.wikimedia.org/wiki/Special:FilePath/${orig[1]}?width=${px}`;
   return bigImage(url, px);
 }
 
