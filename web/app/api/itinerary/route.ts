@@ -578,7 +578,16 @@ export async function POST(req: NextRequest) {
   });
   // reservedIds pins the interest/must-see reservation at the FRONT even for the
   // family path, whose familyFit re-sort would otherwise drop the icons.
-  const buildOpts = { ...optsFor(dest, rules), reservedIds, guaranteeIds };
+  // Explicit ❤ picks are also GUARANTEED: after the proximity clusterer builds
+  // walkable days, any picked place that got dropped (e.g. the scattered tail day
+  // trimmed for cohesion) is force-added to its NEAREST day (≤8km, day may grow to
+  // pace+2). So when the picks fit the trip's total capacity they all land instead
+  // of a thin day + banked central picks. Truly far picks (>8km) still bank.
+  const pickGuarantee = anchorIds && anchorIds.size ? anchorIds : undefined;
+  const mergedGuarantee = guaranteeIds || pickGuarantee
+    ? new Set<number>([...(guaranteeIds ?? []), ...(pickGuarantee ?? [])])
+    : undefined;
+  const buildOpts = { ...optsFor(dest, rules), reservedIds, guaranteeIds: mergedGuarantee };
   const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary =>
     d.mobility === "car_base"
       ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp, buildOpts)

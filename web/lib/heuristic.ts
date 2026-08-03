@@ -240,6 +240,11 @@ export function buildHeuristicItinerary(
         const low = wA <= wB ? A : B;
         if (low.some((a) => a.must_see === 1 && a.category !== "nature")) break;
         day.length = 0; day.push(...(low === A ? B : A));
+        // Release the shed side back to the unused pool so the backfill + guarantee
+        // passes can re-home those stops on a NEARER day (e.g. a picked place that
+        // was the scattered tail of one day belongs to another day's cluster) instead
+        // of them staying "used" here and silently going to the bank.
+        low.forEach((a) => usedIds.delete(a.id));
       }
     }
   }
