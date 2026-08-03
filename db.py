@@ -80,7 +80,18 @@ class PgConn:
 
 
 def get_conn():
-    return PgConn(_dsn())
+    # This machine's DNS to the Supabase pooler is intermittently flaky
+    # ("could not translate host name"). Retry the connect with backoff so long
+    # pipeline runs ride through transient blips instead of crashing.
+    import time
+    last = None
+    for attempt in range(8):
+        try:
+            return PgConn(_dsn())
+        except psycopg2.OperationalError as e:
+            last = e
+            time.sleep(min(2 * (attempt + 1), 15))
+    raise last
 
 
 def jloads(val):
