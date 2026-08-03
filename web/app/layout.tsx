@@ -3,6 +3,7 @@ import { Assistant, Fredoka, Frank_Ruhl_Libre } from "next/font/google";
 import "./globals.css";
 import { BottomNav } from "@/components/BottomNav";
 import { TopNav } from "@/components/TopNav";
+import { NavTitleProvider } from "@/components/NavTitle";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Analytics } from "@vercel/analytics/next";
 import { SITE_URL } from "@/lib/site";
@@ -52,8 +53,10 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl" className={`${assistant.variable} ${fredoka.variable} ${frankRuhl.variable} h-full antialiased`}>
       <body className="min-h-full">
-        <TopNav />
-        {children}
+        <NavTitleProvider>
+          <TopNav />
+          {children}
+        </NavTitleProvider>
         <SiteFooter />
         <BottomNav />
         <Analytics />

@@ -21,6 +21,7 @@ import { descriptor, catColor, bigImage, hiResImage, mergeCat, countryFlag, wiki
 import { passUrl, type Pass } from "@/lib/passes";
 import { useRouter } from "next/navigation";
 import { useProfile, useTrips, useCitySelection, type Choice } from "@/lib/store";
+import { useNavTitle } from "@/components/NavTitle";
 
 // distance slider index → per-trip dailyDriveHours (same scale as the old flow)
 const RADIUS_HOURS = [0.5, 1, 2, 3];
@@ -417,6 +418,12 @@ export function DestinationView({
   // The profile is editable right here: the interest tiles are the same 3-state
   // control as the profile page, writing to profile.interests / profile.dislikes.
   const [profile] = useProfile();
+  // Show "אמסטרדם 🇳🇱" next to the logo in the top nav while on this city page.
+  const { setTitle } = useNavTitle();
+  useEffect(() => {
+    setTitle(<>{dest.city_he || dest.city} <span aria-hidden>{countryFlag(dest.country)}</span></>);
+    return () => setTitle(null);
+  }, [dest.city_he, dest.city, dest.country, setTitle]);
   const isFamily = profile.kids.length > 0;
   // "solo" — a transient focus (not saved to the profile): show ONLY this topic.
   // Single-select. It's the 4th step of the tile cycle, after "לא מעוניין".
@@ -1087,7 +1094,7 @@ export function DestinationView({
   // browse tabs — always visible, three fields to set before "בנו לי טיול"
   // (defaults are today's values, so doing nothing still works).
   const tripSettingsEl = (
-    <div className="mb-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3.5 lg:p-4">
+    <div>
       <div className="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:gap-5">
       <div className="grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-3 lg:w-[70%]">
         <div>
@@ -1360,32 +1367,12 @@ export function DestinationView({
       )}
       {/* compact card hero — a small landscape thumbnail + flag/city + a
           personalized CTA (the trip page's hero language), so the map + list
-          are reachable right away */}
+          are reachable right away. Editorial hides this whole band: the city
+          name + flag now sit next to the logo in the top nav, and the build
+          controls live in the settings sub-bar. */}
+      {!editorial && (
       <header className="rise px-5 pt-3 pb-2.5 lg:px-8 lg:pt-4 lg:pb-3">
         <div className="mx-auto max-w-[1600px]">
-          {/* ── Editorial city hero (M5a, flag only) — a cinematic band with the city
-               name in serif, in place of the compact identity line. ── */}
-          {editorial && (
-            <section className="relative mb-1 overflow-hidden rounded-[18px] shadow-[var(--shadow)]">
-              <div className="absolute inset-0">
-                <CityPoster destinationId={dest.id} cityHe={dest.city_he || dest.city}
-                  orientation="landscape" position="50% 42%" className="size-full" />
-              </div>
-              <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, rgba(18,14,9,0.74) 0%, rgba(18,14,9,0.28) 46%, rgba(18,14,9,0.12) 100%)" }} />
-              <div className="relative flex min-h-[260px] flex-col justify-end gap-2.5 p-7 lg:min-h-[320px] lg:p-9">
-                <Link href="/" className="inline-flex w-fit items-center gap-1 text-[13px] font-medium text-white/85 transition hover:text-white">
-                  <ChevronRight size={14} /> בית
-                </Link>
-                <h1 className="serif flex items-center gap-2.5 text-[40px] font-bold leading-[0.98] text-white lg:text-[58px]" style={{ textShadow: "0 2px 20px rgba(0,0,0,0.4)" }}>
-                  <span className="text-[0.62em]">{countryFlag(dest.country)}</span>
-                  {dest.city_he || dest.city}
-                </h1>
-                <p className="text-[15px] text-white/90" style={{ textShadow: "0 1px 10px rgba(0,0,0,0.4)" }}>
-                  {dest.country} · גלו את המקומות, השכונות והחוויות — ונרכיב לכם טיול משם.
-                </p>
-              </div>
-            </section>
-          )}
           {/* the top city section sits directly on the cream page background (no
               white card). Structured like the TRIP header: a horizontal identity
               (breadcrumb | title · places · badges) with the destination image on
@@ -1563,6 +1550,7 @@ export function DestinationView({
           </div>
         </div>
       </header>
+      )}
 
       {/* neighbourhoods now render INSIDE the attractions list (as container rows) —
           see <NeighbourhoodRows> just above the list. */}
@@ -1656,12 +1644,19 @@ export function DestinationView({
           Mirror the flex's visibility: hidden on mobile until the browse opens, but always
           shown on desktop (lg overrides), so the tabs never disappear on wide screens. */}
       {editorial && (
-        <div className={`px-5 pt-1 lg:px-8 ${showBrowse ? "" : "hidden lg:block"}`}>
-          {tripSettingsEl}
+        <>
+          {/* secondary nav — the trip settings (days · distance · pace) + build CTA,
+              a sub-menu stuck directly under the main top nav. Full-bleed surface with
+              a bottom border so it reads as subordinate to the main nav above it. */}
+          <div className={`sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--surface)]/92 backdrop-blur-lg lg:top-[57px] ${showBrowse ? "" : "hidden lg:block"}`}>
+            <div className="mx-auto max-w-[1600px] px-5 py-2.5 lg:px-8">
+              {tripSettingsEl}
+            </div>
+          </div>
           {/* mobile keeps the horizontal category chips; desktop uses the right menu.
               The search moved INTO the middle (attractions) column below. */}
-          <div className="lg:hidden">{cityTabsEl}</div>
-        </div>
+          <div className={`px-5 pt-1 lg:hidden ${showBrowse ? "" : "hidden"}`}>{cityTabsEl}</div>
+        </>
       )}
       <div className={`lg:flex lg:items-start lg:gap-5 lg:ps-8 ${showBrowse ? "" : "hidden"}`}>
         {/* right column (desktop): the category menu */}
