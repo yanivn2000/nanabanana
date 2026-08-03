@@ -148,6 +148,51 @@ function StreetPill({ s, picked, onToggle }: { s: Street; picked: boolean; onTog
   );
 }
 
+// A full street CARD — some streets are attractions in their own right, so they
+// get the same card treatment as a place (a brand-tinted header instead of a
+// photo, the vibe as the story, a "רוצה בטיול" toggle).
+function StreetCard({ s, picked, onToggle }: { s: Street; picked: boolean; onToggle: () => void }) {
+  return (
+    <div className="group flex flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition"
+      style={{ borderColor: picked ? "var(--brand)" : "var(--border)", boxShadow: picked ? "0 0 0 1.5px var(--brand)" : undefined }}>
+      <div className="relative aspect-[16/10] w-full overflow-hidden"
+        style={{ background: "linear-gradient(140deg, color-mix(in srgb, var(--brand) 22%, var(--surface-2)), var(--surface-2) 72%)" }}>
+        <div className="grid size-full place-items-center text-[46px]" aria-hidden>🛣️</div>
+        <span className="absolute right-2 top-2 rounded-full bg-[var(--brand)] px-2 py-0.5 text-[11px] font-medium text-white shadow-sm">רחוב</span>
+        {s.area_name_he && (
+          <span className="absolute left-2 top-2 rounded-full bg-black/45 px-2 py-0.5 text-[11px] font-medium text-white shadow-sm backdrop-blur-sm">{s.area_name_he}</span>
+        )}
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col p-3">
+        <p className="serif truncate text-[17px] font-bold leading-tight">{s.name_he || s.name_en}</p>
+        {s.name_en && s.name_en !== (s.name_he ?? "") && (
+          <p className="truncate text-[12.5px] text-[var(--text-3)]" dir="ltr" style={{ unicodeBidi: "isolate" }}>{s.name_en}</p>
+        )}
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[12px]">
+          {s.best_for_he && <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 font-medium text-[var(--brand-ink)]">{s.best_for_he}</span>}
+          {s.dwell_min ? <span className="text-[var(--text-3)]">🕐 ~{s.dwell_min} דק׳</span> : null}
+        </div>
+        {s.vibe_he && <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--text-2)]">{s.vibe_he}</p>}
+        {s.lat != null && s.lng != null && (
+          <a href={googleMapsPin(s.lat, s.lng)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+            className="mt-2.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[12.5px] text-[var(--text-2)]">
+            <MapPin size={12} /> פתח במפה
+          </a>
+        )}
+      </div>
+      <div className="border-t border-[var(--border)] p-2">
+        <button onClick={onToggle} aria-pressed={picked}
+          title={picked ? "בטיול — לחצו כדי להוציא" : "רוצה שיהיה חלק מהטיול"}
+          className="flex w-full items-center justify-center gap-1.5 rounded-full border py-1.5 text-[13px] font-medium transition"
+          style={{ background: picked ? "var(--brand)" : "var(--surface)", color: picked ? "#fff" : "var(--text-2)",
+                   borderColor: picked ? "var(--brand)" : "var(--border)" }}>
+          <Heart size={14} fill={picked ? "currentColor" : "none"} /> {picked ? "בטיול" : "רוצה בטיול"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Headline neighbourhoods, IN the attractions list, in the same row design — but a
 // neighbourhood is "an attraction that contains attractions": its own frame-heart
 // tours the WHOLE area (a half/full-day block the builder composes), and expanding
@@ -1492,13 +1537,13 @@ export function DestinationView({
           {/* streets — matched by the search box, or the ones already picked. A street
               is its own entity; picking one adds it to the trip (streetIds). */}
           {(matchedStreets.length > 0 || streetPicks.size > 0) && (
-            <div className="mb-3 mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3 lg:mt-4">
-              <p className="mb-2 text-[12.5px] font-semibold text-[var(--text-2)]">
+            <div className="mb-4 mt-3 lg:mt-4">
+              <p className="mb-2 text-[13px] font-semibold text-[var(--text-2)]">
                 🛣️ רחובות{query.trim() ? ` · תוצאות ל"${query.trim()}"` : " שבחרתם"}
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {(matchedStreets.length ? matchedStreets : streets.filter((s) => streetPicks.has(s.id))).map((s) => (
-                  <StreetPill key={s.id} s={s} picked={streetPicks.has(s.id)} onToggle={() => toggleStreet(s.id)} />
+                  <StreetCard key={s.id} s={s} picked={streetPicks.has(s.id)} onToggle={() => toggleStreet(s.id)} />
                 ))}
               </div>
             </div>
