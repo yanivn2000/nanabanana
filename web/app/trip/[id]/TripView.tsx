@@ -1913,11 +1913,11 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
             <div data-drop-bank
               className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 transition-colors"
               style={overBank ? { borderColor: "var(--brand)", boxShadow: "inset 0 0 0 2px var(--brand)" } : undefined}>
-              <p className="serif text-[15px] font-bold text-[var(--text)]">בנק המקומות — לפי חשיבות · {(trip?.leftOut ?? []).filter((l) => !l.manual).length}</p>
+              <p className="serif text-[15px] font-bold text-[var(--text)]">בנק המקומות · {(trip?.leftOut ?? []).filter((l) => !l.manual).length}</p>
               <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--text-2)]">
                 {drag?.kind === "stop"
                   ? "שחררו כאן כדי להוציא את העצירה מהיומן."
-                  : "מה שלא נכנס ליומן, מסודר לפי חשיבות (⭐ = חובה). לחצו \"הוסף ליום זה\" (או גררו כרטיס אל היום) — או גררו עצירה לכאן כדי להוציא."}
+                  : "הבחירות שלכם שלא נכנסו ליומן — ואחריהן אתרי חובה נוספים מומלצים (⭐). לחצו \"הוסף ליום זה\" (או גררו כרטיס אל היום) — או גררו עצירה לכאן כדי להוציא."}
               </p>
 
               {/* "add any place" search — the bank is only the ranked leftOut; this reaches the
@@ -2076,8 +2076,11 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 </div>
               )}
 
-              <div className="mt-3 flex flex-col gap-2">
-                {(trip?.leftOut ?? []).filter((p) => !p.manual).map((p) => {
+              {(() => {
+                const nonManual = (trip?.leftOut ?? []).filter((p) => !p.manual);
+                const mine = nonManual.filter((p) => p.picked);          // your picks that didn't fit
+                const suggested = nonManual.filter((p) => !p.picked);    // extra must-see suggestions
+                const bankCard = (p: (typeof nonManual)[number]) => {
                   const bKey = `bank-${p.id}`;
                   const bOpen = expanded === bKey;
                   // is there anything worth reading before it goes into the day?
@@ -2160,8 +2163,24 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                     )}
                   </div>
                   );
-                })}
-              </div>
+                };
+                return (
+                  <>
+                    {mine.length > 0 && (
+                      <div className="mt-3">
+                        <p className="mb-1.5 text-[13px] font-bold text-[var(--text-2)]">אטרקציות שבחרת ולא נכנסו לטיול · {mine.length}</p>
+                        <div className="flex flex-col gap-2">{mine.map(bankCard)}</div>
+                      </div>
+                    )}
+                    {suggested.length > 0 && (
+                      <div className="mt-3">
+                        <p className="mb-1.5 text-[13px] font-bold text-[var(--text-2)]">אטרקציות חובה נוספות שאולי יעניינו אותך · {suggested.length}</p>
+                        <div className="flex flex-col gap-2">{suggested.map(bankCard)}</div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           )}
 

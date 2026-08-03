@@ -197,7 +197,7 @@ export type Trip = {
   // expanded and read before it's dragged into the day (everything but the time).
   // `manual` items are traveller-added places (a restaurant/bar/… they typed or pasted
   // from a Google-Maps link) — synthetic negative id, `category` holds the type-tag key.
-  leftOut?: { id: number; name_he: string | null; name_en: string; image_url: string | null; category: string; lat?: number | null; lng?: number | null; tagline_he?: string | null; tips_he?: string | null; best_time_he?: string | null; dress_he?: string | null; cost_level?: number | null; website?: string | null; must_see?: number | null; manual?: boolean; priceEur?: number }[];
+  leftOut?: { id: number; name_he: string | null; name_en: string; image_url: string | null; category: string; lat?: number | null; lng?: number | null; tagline_he?: string | null; tips_he?: string | null; best_time_he?: string | null; dress_he?: string | null; cost_level?: number | null; website?: string | null; must_see?: number | null; manual?: boolean; priceEur?: number; picked?: boolean }[];
   itinerary?: Itinerary;
   engine?: string;         // how the current itinerary was built: "heuristic" | "neighbourhoods" | "ai"
   // Community sharing (phase 0+1): the public copy's slug + the owner token

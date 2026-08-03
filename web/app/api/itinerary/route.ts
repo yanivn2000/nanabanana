@@ -632,7 +632,14 @@ export async function POST(req: NextRequest) {
     const bankMusts = extra.filter((a) => a.must_see === 1);
     const bankRest = extra.filter((a) => a.must_see !== 1);
     const bankCap = Math.max(24, explicit.length + bankMusts.length);
-    const leftOut = [...explicit, ...bankMusts, ...bankRest].slice(0, bankCap).map(detailOf);
+    // Tag the traveller's OWN unscheduled picks (picked:true) so the trip page can
+    // show them as a SEPARATE group ("מה שבחרת ולא נכנס") from the must-see
+    // suggestions — the two must not blur together.
+    const leftOut = [
+      ...explicit.map((a) => ({ ...detailOf(a), picked: true })),
+      ...bankMusts.map(detailOf),
+      ...bankRest.map(detailOf),
+    ].slice(0, bankCap);
     return NextResponse.json({ itinerary: withDetails, ...(engine ? { engine } : {}), leftOut });
   };
 
