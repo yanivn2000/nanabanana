@@ -6,7 +6,7 @@ import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, 
 import { googleMapsPin } from "@/lib/geo";
 import { MapClient } from "@/components/MapClient";
 import { CityPoster } from "@/components/CityPoster";
-import { descriptor, catColor, bigImage, mergeCat, countryFlag, wikiUrl } from "@/lib/labels";
+import { descriptor, catColor, bigImage, hiResImage, mergeCat, countryFlag, wikiUrl } from "@/lib/labels";
 import { passUrl, type Pass } from "@/lib/passes";
 import { useRouter } from "next/navigation";
 import { useProfile, useTrips, useCitySelection, type Choice } from "@/lib/store";
@@ -1645,7 +1645,7 @@ export function DestinationView({
                     <div className={`relative w-full overflow-hidden bg-[var(--surface-2)] ${isSel ? "aspect-[16/10] sm:aspect-auto sm:w-[44%] sm:shrink-0" : "aspect-[16/10]"}`}>
                       {a.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={bigImage(a.image_url, 400)} alt="" loading="lazy"
+                        <img src={isSel ? hiResImage(a.image_url, 1100) : bigImage(a.image_url, 400)} alt="" loading="lazy"
                           onError={(e) => { const t = e.currentTarget; if (t.src !== a.image_url) t.src = a.image_url as string; }}
                           className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
                       ) : (

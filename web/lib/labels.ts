@@ -149,6 +149,22 @@ export function wikiUrl(sources: { url: string; title?: string }[] | null | unde
   return `/api/wiki?u=${encodeURIComponent(wiki[0].url)}`;
 }
 
+// A crisp, LARGER render for the expanded card. The stored Wikimedia URL is a
+// small (~330px) thumbnail; asking upload.wikimedia for an arbitrary thumb width
+// 400s (only a few widths are cached), but the Special:FilePath resizer generates
+// any width on demand. Route Wikimedia thumbs through it; the <img> onError falls
+// back to the stored thumbnail, so the worst case is simply the small image.
+export function hiResImage(url: string | null | undefined, px = 1000): string | undefined {
+  if (!url) return undefined;
+  // upload.wikimedia .../thumb/a/ab/<File>/NNNpx-... → File is the middle segment
+  const thumb = url.match(/\/thumb\/[^/]+\/[^/]+\/([^/]+)\/\d+px-[^/]*$/);
+  if (thumb) return `https://commons.wikimedia.org/wiki/Special:FilePath/${thumb[1]}?width=${px}`;
+  // already a Special:FilePath URL → just (re)set the width
+  const fp = url.match(/Special:FilePath\/[^?#]+/);
+  if (fp) return `https://commons.wikimedia.org/wiki/${fp[0]}?width=${px}`;
+  return bigImage(url, px);
+}
+
 export function bigImage(url: string | null | undefined, px = 640): string | undefined {
   if (!url) return undefined;
   // Wikimedia only reliably serves thumbnail widths it has ALREADY cached; asking

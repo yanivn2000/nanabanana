@@ -31,7 +31,7 @@ import { googleMapsUrl, googleMapsPin, googleMapsNearby, googleDirUrl, formatDis
 import { stopColor } from "@/lib/labels";
 import { entryExit, type LatLng } from "@/lib/access";
 import { orderFromDepot } from "@/lib/cluster";
-import { bigImage, catLabel, catColor } from "@/lib/labels";
+import { bigImage, hiResImage, catLabel, catColor } from "@/lib/labels";
 import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
 import type { Attraction } from "@/lib/db";
@@ -1588,7 +1588,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                       <div className={editorial ? `relative w-full ${isOpen ? "lg:w-[42%] lg:shrink-0" : ""}` : "py-2.5 pr-1"}>
                         {s.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={editorial ? (bigImage(s.image, 960) ?? s.image) : s.image} alt="" loading="lazy"
+                          <img src={editorial ? ((isOpen ? hiResImage(s.image, 1200) : bigImage(s.image, 960)) ?? s.image) : s.image} alt="" loading="lazy"
                             onError={editorial ? (e) => { const t = e.currentTarget; if (s.image && t.src !== s.image) t.src = s.image; } : undefined}
                             className={editorial
                               ? `w-full bg-[var(--surface-2)] object-cover ${isOpen ? "h-[190px] lg:h-full lg:min-h-[240px]" : "h-[190px]"}`
