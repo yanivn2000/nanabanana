@@ -3,7 +3,7 @@ import { listDestinations, topAttractions, insightsForDestination, attractionsBy
 import { annotateDaysWithAreas } from "@/lib/cluster";
 import type { Attraction, Destination, Street } from "@/lib/db";
 import { refOf, synthId, isRealAttraction } from "@/lib/place";
-import { wikiUrl } from "@/lib/labels";
+import { wikiUrl, mergeCat } from "@/lib/labels";
 import {
   aiConfigured,
   generateItinerary,
@@ -90,6 +90,29 @@ function normName(s: string): string {
     .toLowerCase();
 }
 
+// Reorder a ranked list into ROUND-ROBIN order over broad type (mergeCat on
+// category): one of each type, then a second of each, and so on. Buckets keep
+// the incoming (taste) order internally, and the bucket rotation follows each
+// type's first (best-ranked) appearance. Result: when the traveler picks more
+// than the trip can hold, the first `capacity` that the clusterer keeps are a
+// spread across types (museum + food + park + …) instead of, say, five museums;
+// the overflow trails and falls through to the bank downstream. No effect when
+// everything fits (all picks are kept regardless of order).
+function roundRobinByType(items: Attraction[]): Attraction[] {
+  const buckets: Attraction[][] = [];
+  const byKey = new Map<string, Attraction[]>();
+  for (const a of items) {
+    const k = mergeCat(a.category || "attraction");
+    let b = byKey.get(k);
+    if (!b) { b = []; byKey.set(k, b); buckets.push(b); }
+    b.push(a);
+  }
+  const out: Attraction[] = [];
+  for (let round = 0; out.length < items.length; round++)
+    for (const b of buckets) if (round < b.length) out.push(b[round]);
+  return out;
+}
+
 // Split the pool into the Explore selection's two tiers (F1). Anchors = the
 // traveler's "כן" picks (or, if they chose none, the must-sees) so the day has a
 // real centerpiece; fillers = everything else they didn't rule out ("לא").
@@ -105,7 +128,11 @@ function partitionBySelection(
   const avail = pool.filter((a) => !no.has(a.id));
   let anchorPool = avail.filter((a) => yes.has(a.id));
   if (anchorPool.length === 0) anchorPool = avail.filter((a) => a.must_see === 1);
-  const anchors = rankByTaste(anchorPool, taste, strict ? 200 : 30, isFamily);
+  const ranked = rankByTaste(anchorPool, taste, strict ? 200 : 30, isFamily);
+  // WYSIWYG picks: spread the kept attractions across types (round-robin) so an
+  // over-picked trip fills with variety and the rest go to the bank. Legacy
+  // explore keeps the plain taste order.
+  const anchors = strict ? roundRobinByType(ranked) : ranked;
   const anchorIds = new Set(anchors.map((a) => a.id));
   // strict (WYSIWYG): the ❤ ARE the trip — build ONLY from them, NO fillers, so an
   // un-liked place (even a must-see) never enters and un-liking one removes it.
