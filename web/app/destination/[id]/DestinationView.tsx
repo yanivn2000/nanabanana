@@ -2,7 +2,18 @@
 
 import { useMemo, useState, useEffect, useRef, Fragment } from "react";
 import Link from "next/link";
-import { ChevronRight, Search, Sparkles, ChevronDown, Check, MapPin, X, Loader2, Heart, ExternalLink } from "lucide-react";
+import { ChevronRight, Search, Sparkles, ChevronDown, Check, MapPin, X, Loader2, Heart, ExternalLink,
+  Compass, Star, Map as MapIcon, Baby, Palette, UtensilsCrossed, Trees, Wine, Landmark, Building2, Watch, Gem, FerrisWheel, Waves } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+// Elegant outline icons per category (brand-coloured, stroke-only) — a Booking-ish
+// look, replacing the emoji.
+const CAT_ICON: Record<string, LucideIcon> = {
+  __all: Compass, __must: Star, __areas: MapIcon, __kids: Baby,
+  "מוזיאונים": Palette, "אוכל": UtensilsCrossed, "טבע": Trees, "חיי לילה": Wine,
+  "היסטוריה": Landmark, "אדריכלות": Building2, "וינטג'": Watch, "יוקרה": Gem,
+  "פארקי שעשועים": FerrisWheel, "חופים": Waves,
+};
 import { googleMapsPin } from "@/lib/geo";
 import { MapClient } from "@/components/MapClient";
 import { CityPoster } from "@/components/CityPoster";
@@ -1187,7 +1198,9 @@ export function DestinationView({
   );
   // One category row for the VERTICAL desktop menu (full-width, emoji · label · count · ♥).
   const renderTabRow = (t: { key: string; label: string; emoji: string }) => {
-    const active = cityTab === t.key;
+    // A category and "בטיול" are mutually exclusive — a category is active only
+    // when the trip filter isn't, and picking one clears the other.
+    const active = cityTab === t.key && !selectedOnly;
     const count = t.key === "__all" ? attractions.length
       : t.key === "__must" ? attractions.filter((a) => a.must_see === 1).length
       : t.key === "__areas" ? areas.length
@@ -1197,13 +1210,16 @@ export function DestinationView({
     const isInterest = t.key !== "__must" && t.key !== "__areas" && t.key !== "__all" && !isKids;
     const hasHeart = isInterest || isKids;
     const boosted = isKids ? audience === "families" : (isInterest && boosts.has(t.key));
+    const Icon = CAT_ICON[t.key];
     return (
       <div key={t.key} className="flex items-center overflow-hidden rounded-[10px] transition"
         style={active ? { background: "var(--brand)", color: "#fff" }
           : boosted ? { background: "var(--accent-soft)", color: "var(--accent-ink)" } : {}}>
-        <button onClick={() => setCityTab(t.key)}
+        <button onClick={() => { setCityTab(t.key); setSelectedOnly(false); }}
           className="flex flex-1 items-center gap-2 px-2.5 py-2 text-right text-[13.5px] font-medium">
-          <span aria-hidden className="w-5 text-center">{t.emoji}</span>
+          <span aria-hidden className="grid w-5 place-items-center">
+            {Icon ? <Icon size={16} strokeWidth={1.75} style={{ color: active ? "#fff" : boosted ? "var(--accent)" : "var(--brand)" }} /> : t.emoji}
+          </span>
           <span className="flex-1 truncate">{t.label}</span>
           <span className={`text-[11.5px] ${active || boosted ? "opacity-80" : "text-[var(--text-3)]"}`}>{count}</span>
         </button>
