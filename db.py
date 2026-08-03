@@ -46,7 +46,13 @@ class PgConn:
     """sqlite3-Connection-like wrapper over a psycopg2 connection."""
 
     def __init__(self, dsn):
-        self._c = psycopg2.connect(dsn, cursor_factory=psycopg2.extras.DictCursor)
+        # TCP keepalives so a long pipeline run whose connection sits idle during
+        # slow external I/O (Wikipedia/Wikimedia fetches between DB writes) isn't
+        # reaped by the server/pooler with "server closed the connection".
+        self._c = psycopg2.connect(
+            dsn, cursor_factory=psycopg2.extras.DictCursor,
+            keepalives=1, keepalives_idle=30, keepalives_interval=10, keepalives_count=5,
+        )
         self._c.autocommit = True
 
     def execute(self, sql, params=()):
