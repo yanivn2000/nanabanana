@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getDestination, attractionsForMap, insightsForDestination, countSharedTripsForDestination, headlineAreasForCity, type Insight } from "@/lib/db";
+import { getDestination, attractionsForMap, insightsForDestination, countSharedTripsForDestination, headlineAreasForCity, approvedStreetsForCity, type Insight } from "@/lib/db";
 import { passesForCity, passCovers } from "@/lib/passes";
 import { isEditor } from "@/lib/admin";
 import { DestinationView } from "./DestinationView";
@@ -22,12 +22,13 @@ export default async function DestinationPage({
   const editorial = !(v === "classic" || v === "list" || v === "off");
   const dest = await getDestination(Number(id));
   if (!dest) notFound();
-  const [attractions, allInsights, editor, communityCount, areas] = await Promise.all([
+  const [attractions, allInsights, editor, communityCount, areas, streets] = await Promise.all([
     attractionsForMap(dest.id, 2000),   // load the whole city (rows are light); the list paginates client-side
     insightsForDestination(dest.id),
     isEditor(),
     countSharedTripsForDestination(dest.id),
     headlineAreasForCity(dest.id),
+    approvedStreetsForCity(dest.id),   // pickable streets (search + under neighbourhoods)
   ]);
   // Group attraction-linked insights into a plain object (client-serializable).
   const insights: Record<number, Insight[]> = {};
@@ -61,7 +62,7 @@ export default async function DestinationPage({
     <DestinationView
       dest={dest} attractions={attractions} insights={insights} placeGroups={placeGroups}
       passes={passes} coveredIds={coveredIds} isEditor={editor} communityCount={communityCount}
-      areas={areas} editorial={editorial}
+      areas={areas} streets={streets} editorial={editorial}
     />
   );
   // Feature flag: /destination/<id>?v=editorial renders the same view inside an

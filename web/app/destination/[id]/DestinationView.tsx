@@ -26,7 +26,7 @@ import { PROFILES, PROFILE_HE, PROFILE_EMOJI, type Profile } from "@/lib/shortpa
 // audience → it drops BELOW the divider (still markable), never hidden. Mirrors
 // the old shortPath FIT_FLOOR so the cut is the same, just soft instead of hard.
 const AUDIENCE_FIT_FLOOR = 35;
-import type { Attraction, Destination, Insight, AreaCard } from "@/lib/db";
+import type { Attraction, Destination, Insight, AreaCard, Street } from "@/lib/db";
 
 // Every interest in the profile vocabulary — used as the fallback tile set when
 // the traveler hasn't set profile interests yet.
@@ -128,6 +128,22 @@ function HeartToggle({ liked, onClick, disabled }: { liked: boolean; onClick: ()
       className="grid shrink-0 place-items-center self-stretch px-3.5 transition hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
       style={{ color: liked ? "var(--brand)" : "var(--text-3)" }}>
       <Heart size={20} fill={liked ? "currentColor" : "none"} />
+    </button>
+  );
+}
+
+// A pickable STREET chip — streets are their own entity (own id space), picked
+// here and sent to the build as streetIds. Brand-filled + ✓ when it's in the trip.
+function StreetPill({ s, picked, onToggle }: { s: Street; picked: boolean; onToggle: () => void }) {
+  return (
+    <button onClick={onToggle} aria-pressed={picked}
+      title={s.area_name_he ? `רחוב · ${s.area_name_he}` : "רחוב"}
+      className="flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13.5px] font-medium transition"
+      style={{ background: picked ? "var(--brand)" : "var(--surface)", color: picked ? "#fff" : "var(--text-2)",
+               borderColor: picked ? "var(--brand)" : "var(--border)" }}>
+      <span aria-hidden>🛣️</span>
+      <span className="max-w-[170px] truncate">{s.name_he || s.name_en}</span>
+      {picked && <Check size={13} />}
     </button>
   );
 }
@@ -305,6 +321,7 @@ export function DestinationView({
   isEditor = false,
   communityCount = 0,
   areas = [],
+  streets = [],
   editorial = false,
 }: {
   dest: Destination;
@@ -316,6 +333,7 @@ export function DestinationView({
   isEditor?: boolean;
   communityCount?: number;
   areas?: AreaCard[];
+  streets?: Street[];
   editorial?: boolean;
 }) {
   const covered = new Set(coveredIds);
@@ -425,6 +443,33 @@ export function DestinationView({
   const [buildRadius, setBuildRadius] = useState(1);
   const [perDay, setPerDay] = useState(() => Math.min(PER_DAY_MAX, Math.max(PER_DAY_MIN, paceToPerDay(profile?.pace as string))));   // attractions per day (3–6)
   const [building, setBuilding] = useState(false);
+  // Streets the traveller explicitly picked (search / neighbourhood). Streets have
+  // their own id space; they go to the build as `streetIds`. Persisted per city.
+  const streetKey = `yalle.streetpicks.${dest.id}`;
+  const [streetPicks, setStreetPicks] = useState<Set<number>>(new Set());
+  useEffect(() => {
+    try { const raw = localStorage.getItem(streetKey); if (raw) setStreetPicks(new Set(JSON.parse(raw) as number[])); } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dest.id]);
+  const toggleStreet = (id: number) => setStreetPicks((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    try { localStorage.setItem(streetKey, JSON.stringify([...next])); } catch { /* ignore */ }
+    return next;
+  });
+  const streetsById = useMemo(() => new Map(streets.map((s) => [s.id, s])), [streets]);
+  const streetsByArea = useMemo(() => {
+    const m = new Map<number, Street[]>();
+    for (const s of streets) if (s.area_id != null) { const l = m.get(s.area_id) ?? []; l.push(s); m.set(s.area_id, l); }
+    return m;
+  }, [streets]);
+  // Streets matching the search box (name en/he) — surfaced above the cards so a
+  // traveller can find & add "Oxford Street" / "ניין סטריט" directly.
+  const matchedStreets = useMemo(() => {
+    const raw = query.trim(); const q = raw.toLowerCase();
+    if (!raw) return [];
+    return streets.filter((s) => (s.name_en ?? "").toLowerCase().includes(q) || (s.name_he ?? "").includes(raw));
+  }, [streets, query]);
   // Open the build modal seeded with the traveler's saved pace (as a per-day count).
   const openBuild = () => { setBuildOpen(true); };
   const PAGE = 200;
@@ -594,12 +639,14 @@ export function DestinationView({
   // Editorial: nothing is pre-marked, so the traveller must actively pick enough
   // places to fill the trip (days × pace) before we build — no lazy "all must-see"
   // default that makes every trip identical.
-  const canBuild = editorial ? (yesCount >= buildCapacity) : (manual ? yesCount >= MANUAL_MIN : readyToBuild);
+  // Picked places count attractions + explicitly-picked streets (a street is a stop).
+  const pickedCount = yesCount + streetPicks.size;
+  const canBuild = editorial ? (pickedCount >= buildCapacity) : (manual ? yesCount >= MANUAL_MIN : readyToBuild);
   // Floor of places needed before the build unlocks (for the CTA count + tooltip).
   const needToBuild = editorial ? buildCapacity : manual ? MANUAL_MIN : 0;
-  const buildCountSuffix = !canBuild && needToBuild > 0 ? ` · ${yesCount}/${needToBuild}` : "";
+  const buildCountSuffix = !canBuild && needToBuild > 0 ? ` · ${pickedCount}/${needToBuild}` : "";
   const buildTitle = canBuild ? ""
-    : editorial ? `בחרו עוד ${Math.max(0, needToBuild - yesCount)} אטרקציות לטיול (${yesCount}/${needToBuild})`
+    : editorial ? `בחרו עוד ${Math.max(0, needToBuild - pickedCount)} מקומות לטיול (${pickedCount}/${needToBuild})`
     : manual ? `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`
     : !audience ? "קודם בחרו בשביל מי הטיול"
     : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : "";
@@ -871,6 +918,7 @@ export function DestinationView({
       ...(audience ? { audience } : {}),
       ...(yesFinal.length || noFinal.length ? { selection: { yes: yesFinal, no: noFinal } } : {}),
       ...(chosenAreaGroups.length ? { areaGroups: chosenAreaGroups, areaIds: chosenAreaIds } : {}),
+      ...(streetPicks.size ? { streetIds: [...streetPicks] } : {}),
     });
     router.push(`/trip/${trip.id}?build=1`);
   }
@@ -1055,6 +1103,15 @@ export function DestinationView({
                   </div>
                   {activeArea?.vibe_he && (
                     <p className="mt-1 px-1 text-[13px] leading-snug text-[var(--text-2)]">{activeArea.vibe_he}</p>
+                  )}
+                  {/* the active neighbourhood's streets — pick one to add it to the trip */}
+                  {activeArea && (streetsByArea.get(activeArea.id)?.length ?? 0) > 0 && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="text-[12px] font-medium text-[var(--text-3)]">🛣️ רחובות בשכונה:</span>
+                      {streetsByArea.get(activeArea.id)!.map((s) => (
+                        <StreetPill key={s.id} s={s} picked={streetPicks.has(s.id)} onToggle={() => toggleStreet(s.id)} />
+                      ))}
+                    </div>
                   )}
                 </>
               )}
@@ -1425,6 +1482,20 @@ export function DestinationView({
 
         {/* attraction cards — a grid on desktop, single column on mobile */}
         <section id="picks" className="scroll-mt-[120px] px-5 lg:order-1 lg:min-w-0 lg:flex-1 lg:px-8 lg:pb-16">
+          {/* streets — matched by the search box, or the ones already picked. A street
+              is its own entity; picking one adds it to the trip (streetIds). */}
+          {(matchedStreets.length > 0 || streetPicks.size > 0) && (
+            <div className="mb-3 mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3 lg:mt-4">
+              <p className="mb-2 text-[12.5px] font-semibold text-[var(--text-2)]">
+                🛣️ רחובות{query.trim() ? ` · תוצאות ל"${query.trim()}"` : " שבחרתם"}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(matchedStreets.length ? matchedStreets : streets.filter((s) => streetPicks.has(s.id))).map((s) => (
+                  <StreetPill key={s.id} s={s} picked={streetPicks.has(s.id)} onToggle={() => toggleStreet(s.id)} />
+                ))}
+              </div>
+            </div>
+          )}
           {/* (retired mobile filter header — the always-visible toolbar below now
               serves every breakpoint.) */}
           <div className="hidden">
