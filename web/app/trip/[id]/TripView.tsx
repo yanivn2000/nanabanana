@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   ChevronRight, ChevronLeft, Mountain, Utensils, Landmark, Coffee, ShoppingBag,
   Sparkles, Star, Loader2, ChevronDown,
-  Trash2, ExternalLink, Navigation, Map as MapIcon, Route, Luggage, ListChecks, Wallet, CalendarDays,
+  Trash2, ExternalLink, Navigation, Map as MapIcon, Route, ListChecks, Wallet, CalendarDays,
   Clock, MapPin, Ruler, Footprints, Copy, Car, Hourglass, GripVertical, Plus, Minus, Search, X,
 } from "lucide-react";
 
@@ -41,7 +41,6 @@ import { ProfileEditor } from "@/components/ProfileEditor";
 import { ShareTrip } from "@/components/ShareTrip";
 import { MapArt } from "@/components/Illustrations";
 import { CityPoster } from "@/components/CityPoster";
-import { PackingList } from "@/components/PackingList";
 import { TravelChecklist } from "@/components/TravelChecklist";
 import { BudgetPanel } from "@/components/BudgetPanel";
 import { stopEntryPerPerson } from "@/lib/budget";
@@ -175,7 +174,6 @@ const ICONS = {
 
 // Trip tools (#15 #17 #18) — a compact submenu instead of three stacked cards.
 const TOOLS = [
-  { key: "packing", label: "מה לארוז", Icon: Luggage },
   { key: "checklist", label: "לפני שיוצאים", Icon: ListChecks },
   { key: "budget", label: "תקציב", Icon: Wallet },
 ] as const;
@@ -2251,12 +2249,6 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
               )
             ) : (
               <div className="max-h-[calc(100dvh-200px)] min-h-[420px] overflow-y-auto rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
-                {tool === "packing" && (
-                  <PackingList
-                    profile={tripProfile} month={trip?.month} days={trip?.days ?? 4} country={trip?.country}
-                    value={trip?.packing}
-                    onChange={(packing) => update(tripId, { packing })} />
-                )}
                 {tool === "checklist" && (
                   <TravelChecklist
                     profile={tripProfile}
@@ -2290,12 +2282,6 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
             </div>
             {tool && (
               <div className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4">
-                {tool === "packing" && (
-                  <PackingList
-                    profile={tripProfile} month={trip?.month} days={trip?.days ?? 4} country={trip?.country}
-                    value={trip?.packing}
-                    onChange={(packing) => update(tripId, { packing })} />
-                )}
                 {tool === "checklist" && (
                   <TravelChecklist
                     profile={tripProfile}
