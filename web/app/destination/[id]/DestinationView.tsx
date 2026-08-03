@@ -1257,6 +1257,16 @@ export function DestinationView({
   // neighbourhood sublist, then the primary actions.
   const categoryMenuEl = (
     <div className="flex flex-col gap-0.5">
+      {/* the trip counter — everything picked so far; click to show only those */}
+      <button onClick={() => setSelectedOnly((v) => !v)} aria-pressed={selectedOnly}
+        title="הצג רק מה שנבחר לטיול"
+        className="mb-1.5 flex items-center justify-between rounded-[10px] px-3 py-2.5 text-[14px] font-bold transition"
+        style={selectedOnly ? { background: "var(--brand)", color: "#fff" }
+          : { background: "var(--brand-soft)", color: "var(--brand-ink)" }}>
+        <span className="flex items-center gap-1.5"><Heart size={14} fill="currentColor" /> בטיול</span>
+        <span className="rounded-full px-2 py-0.5 text-[12.5px] tabular-nums"
+          style={selectedOnly ? { background: "rgba(255,255,255,.22)" } : { background: "var(--brand)", color: "#fff" }}>{pickedCount}</span>
+      </button>
       {cityTabs.filter((t) => t.key === "__all" || t.key === "__must").map(renderTabRow)}
       <div className="my-1 h-px bg-[var(--border)]" />
       {cityTabs.filter((t) => t.key !== "__all" && t.key !== "__must" && t.key !== "__areas").map(renderTabRow)}
@@ -1301,11 +1311,6 @@ export function DestinationView({
             ❤️ {communityCount} טיולים
           </Link>
         )}
-        <button onClick={toggleSelectedOnly} disabled={yesCount === 0}
-          className="rounded-full border px-3 py-2 text-[12.5px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
-          style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)", color: selectedOnly ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
-          {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
-        </button>
         <button onClick={clearAllChoices} disabled={yesCount === 0}
           className="flex items-center justify-center gap-1 rounded-full border border-[var(--border)] px-3 py-2 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f] disabled:cursor-not-allowed disabled:opacity-40">
           <X size={13} /> נקה
