@@ -31,7 +31,8 @@ import { googleMapsUrl, googleMapsPin, googleMapsNearby, googleDirUrl, formatDis
 import { stopColor } from "@/lib/labels";
 import { entryExit, type LatLng } from "@/lib/access";
 import { orderFromDepot } from "@/lib/cluster";
-import { bigImage, hiResImage, catLabel, catColor } from "@/lib/labels";
+import { bigImage, hiResImage, catLabel, catColor, countryFlag } from "@/lib/labels";
+import { useNavTitle } from "@/components/NavTitle";
 import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
 import type { Attraction } from "@/lib/db";
@@ -292,6 +293,15 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
   const canBuild = !!trip?.city || !!trip?.destinationId || hotelLocated;
   // City for display: Hebrew (hotel city from geocode is already Hebrew).
   const cityHe = trip?.cityHe || tripHotels[0]?.city || trip?.city;
+
+  // Show the trip's city (+ flag) next to the logo in the global top nav — the
+  // same identity treatment as the city page — in editorial mode only.
+  const { setTitle } = useNavTitle();
+  useEffect(() => {
+    if (!editorial) return;
+    setTitle(cityHe ? <>{cityHe} <span aria-hidden>{countryFlag(trip?.country)}</span></> : null);
+    return () => setTitle(null);
+  }, [editorial, cityHe, trip?.country, setTitle]);
 
   // Segments (legs) of a multi-city trip.
   const segs = trip?.segments ?? [];
@@ -1128,28 +1138,15 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 </button>
               </div>
             </div>
-            <section className="relative mx-5 mt-3 overflow-hidden rounded-[18px] shadow-[var(--shadow)] lg:mx-8">
-              {trip?.destinationId && (
-                <>
-                  {/* wrap in our own absolute-inset-0 box (stretches like the gradient
-                      does); CityPoster fills THAT with size-full. Passing absolute to
-                      CityPoster directly loses to its own `relative` in the cascade. */}
-                  <div className="absolute inset-0">
-                    <CityPoster destinationId={trip.destinationId} cityHe={cityHe}
-                      orientation="landscape" position="50% 42%" className="size-full" />
-                  </div>
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, rgba(18,14,9,0.74) 0%, rgba(18,14,9,0.30) 46%, rgba(18,14,9,0.12) 100%)" }} />
-                </>
-              )}
-              <div className="relative flex min-h-[280px] flex-col justify-end gap-3 p-7 lg:min-h-[340px] lg:p-9">
-                <h1 className="serif text-[38px] font-bold leading-[0.98] text-white lg:text-[54px]" style={{ textShadow: "0 2px 20px rgba(0,0,0,0.4)" }}>{trip?.title ?? "…"}</h1>
-                <div className="flex flex-wrap items-center gap-2">
-                  {cityHe && <span className="rounded-full border border-white/25 bg-white/15 px-3 py-1 text-[13px] font-medium text-white backdrop-blur">{cityHe}</span>}
-                  {!!trip?.days && <span className="rounded-full border border-white/25 bg-white/15 px-3 py-1 text-[13px] font-medium text-white backdrop-blur">{trip.days} ימים</span>}
-                  {!!trip?.month && <span className="rounded-full border border-white/25 bg-white/15 px-3 py-1 text-[13px] font-medium text-white backdrop-blur">{MONTHS_HE[trip.month - 1]}</span>}
-                </div>
-              </div>
-            </section>
+            {/* the trip title + city/days/month now read as a compact line here (the
+                city name + flag also sit next to the logo in the top nav). The big
+                photo hero band was removed — the map + itinerary are the hero. */}
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-5 pt-2 lg:px-8">
+              <h1 className="serif text-[24px] font-bold leading-tight lg:text-[28px]">{trip?.title ?? "…"}</h1>
+              <span className="text-[13.5px] text-[var(--text-2)]">
+                {[cityHe, trip?.days ? `${trip.days} ימים` : null, trip?.month ? MONTHS_HE[trip.month - 1] : null].filter(Boolean).join(" · ")}
+              </span>
+            </div>
           </div>
         )}
         {!editorial && (<>
@@ -1234,12 +1231,19 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
         </div>
       )}
         </>)}
+      </div>{/* /lg:relative header wrapper (rows + destination image) — closed here
+              so the sticky day-tabs bar's parent is <main> (full page) and it stays
+              pinned under the top nav while you scroll the itinerary. */}
 
-      {/* row 2 — day tabs (thin pills) */}
+      {/* row 2 — day tabs (thin pills). Editorial: a secondary bar that sticks
+          directly under the main top nav when you scroll (like the city page's
+          settings sub-bar), so the day "chapters" stay reachable. */}
       {itinerary && allDays.length > 0 && (
-        <div className={`mt-1.5 flex items-center gap-2.5 px-5 ${editorial ? "lg:mt-4 lg:px-8" : "lg:pl-8 lg:pr-[204px]"}`}>
+        <div className={`flex items-center gap-2.5 px-5 ${editorial
+          ? "sticky top-0 z-20 mt-3 bg-[var(--surface)]/92 backdrop-blur-lg lg:top-[64px] lg:mt-4 lg:px-8"
+          : "mt-1.5 lg:pl-8 lg:pr-[204px]"}`}>
           {!editorial && <span className="hidden shrink-0 text-[12px] font-semibold text-[var(--text-3)] sm:block">ימי הטיול</span>}
-          <div className={`-mx-5 flex overflow-x-auto px-5 sm:mx-0 sm:px-0 ${editorial ? "gap-0 border-b border-[var(--border)]" : "gap-1.5"}`} style={{ scrollbarWidth: "none" }}>
+          <div className={`-mx-5 flex overflow-x-auto px-5 sm:mx-0 sm:px-0 ${editorial ? "w-full gap-0 border-b border-[var(--border)]" : "gap-1.5"}`} style={{ scrollbarWidth: "none" }}>
             {allDays.map((d, i) => {
               const on = i === curIdx;
               const today = i === todayIndex;
@@ -1405,7 +1409,6 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
           </div>
         </div>
       )}
-      </div>{/* /lg:relative header wrapper (rows + destination image) */}
 
       {/* editorial: a tight magazine reading column + sticky map, centred with outer
           whitespace (matches the concept). default: the wide itinerary + 380px rail. */}
@@ -2166,7 +2169,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
         {/* aside (left on desktop): the day's map + hotels + trip tools. Fixed 380px to
             match the destination-page map rail — the itinerary column (lg:flex-1) absorbs
             the freed width. */}
-        <aside className="lg:sticky lg:top-[73px] lg:w-[380px] lg:shrink-0">
+        <aside className={`lg:w-[380px] lg:shrink-0 ${editorial ? "lg:sticky lg:top-[132px]" : "lg:sticky lg:top-[73px]"}`}>
           {/* hotel(s) — pinned at the TOP of the rail (above the map) so the trip's
               anchor is the first thing set; adding/moving one re-anchors each day. */}
           <div className="px-5 pb-5 lg:px-0">
