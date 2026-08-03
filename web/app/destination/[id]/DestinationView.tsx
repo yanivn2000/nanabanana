@@ -1672,7 +1672,7 @@ export function DestinationView({
           <div className={`px-5 pt-1 lg:hidden ${showBrowse ? "" : "hidden"}`}>{cityTabsEl}</div>
         </>
       )}
-      <div className={`lg:flex lg:items-start lg:gap-5 lg:ps-8 ${showBrowse ? "" : "hidden"}`}>
+      <div className={`lg:flex lg:items-start lg:gap-5 lg:ps-8 lg:pe-6 ${showBrowse ? "" : "hidden"}`}>
         {/* right column (desktop): the category menu as an ICON-ONLY rail that
             expands to the full labelled menu on hover. It grows IN FLOW (52→248px),
             pushing the attractions column left; the map (a sibling `peer`) gives up
