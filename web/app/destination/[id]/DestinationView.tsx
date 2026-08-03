@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect, useRef, Fragment } from "react";
 import Link from "next/link";
 import { ChevronRight, Search, Sparkles, ChevronDown, Check, MapPin, X, Loader2, Heart, ExternalLink,
   Compass, Star, Map as MapIcon, Baby, Palette, UtensilsCrossed, Trees, Wine, Landmark, Building2, Watch, Gem, FerrisWheel, Waves,
-  Coins, Umbrella, MessageCircle } from "lucide-react";
+  Coins, Umbrella, MessageCircle, SlidersHorizontal } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 // Elegant outline icons per category (brand-coloured, stroke-only) — a Booking-ish
@@ -499,6 +499,7 @@ export function DestinationView({
     return () => { window.removeEventListener("scroll", check); window.removeEventListener("resize", check); };
   }, []);
   const [mapOnly, setMapOnly] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);   // "סינון" dropdown next to the search
   const [bounds, setBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
   // Desktop tags row: sort order + the "more filters" popover.
   const [sort] = useState<SortKey>("match");   // default sort; the picker was removed
@@ -1042,6 +1043,57 @@ export function DestinationView({
                 </button>
               )}
             </div>
+            {/* filters — a dropdown between the search and "נקה" (moved out of the
+                category rail). Free / indoor / [family] / insights / on-the-map. */}
+            {editorial && (() => {
+              const rows: [keyof typeof flags, string, LucideIcon][] = [
+                ["free", "חינם", Coins], ["indoor", "מקורה", Umbrella],
+                ...(isFamily ? [["top", "מומלץ למשפחות", Baby] as [keyof typeof flags, string, LucideIcon]] : []),
+                ["withInsights", "עם תובנות מטיילים", MessageCircle],
+              ];
+              const nActive = rows.filter(([k]) => flags[k]).length + (mapOnly ? 1 : 0);
+              return (
+                <div className="relative shrink-0">
+                  <button onClick={() => setFiltersOpen((v) => !v)} aria-expanded={filtersOpen}
+                    className="flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] font-medium transition"
+                    style={nActive > 0 ? { background: "var(--brand-soft)", borderColor: "var(--brand)", color: "var(--brand-ink)" }
+                      : { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}>
+                    <SlidersHorizontal size={15} /> סינון
+                    {nActive > 0 && <span className="grid size-5 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-bold text-white">{nActive}</span>}
+                    <ChevronDown size={14} className={`transition ${filtersOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {filtersOpen && (
+                    <>
+                      <div className="fixed inset-0 z-[40]" onClick={() => setFiltersOpen(false)} />
+                      <div className="absolute z-[41] mt-1 flex w-[230px] flex-col gap-0.5 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]"
+                        style={{ insetInlineStart: 0 }}>
+                        {rows.map(([k, label, Icon]) => (
+                          <button key={k} onClick={() => toggleFlag(k)} aria-pressed={flags[k]}
+                            className="flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-right text-[13px] transition"
+                            style={flags[k] ? { background: "var(--brand-soft)", color: "var(--brand-ink)", fontWeight: 600 } : { color: "var(--text-2)" }}>
+                            <span aria-hidden className="grid w-5 shrink-0 place-items-center">
+                              <Icon size={15} strokeWidth={1.75} style={{ color: flags[k] ? "var(--brand)" : "var(--text-3)" }} />
+                            </span>
+                            <span className="flex-1 truncate">{label}</span>
+                            <span className="text-[11.5px] text-[var(--text-3)]">{flagCount[k]}</span>
+                            {flags[k] && <Check size={13} className="shrink-0 text-[var(--brand)]" />}
+                          </button>
+                        ))}
+                        <button onClick={() => setMapOnly((v) => !v)} aria-pressed={mapOnly}
+                          className="flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-right text-[13px] transition"
+                          style={mapOnly ? { background: "var(--brand-soft)", color: "var(--brand-ink)", fontWeight: 600 } : { color: "var(--text-2)" }}>
+                          <span aria-hidden className="grid w-5 shrink-0 place-items-center">
+                            <MapPin size={15} strokeWidth={1.75} style={{ color: mapOnly ? "var(--brand)" : "var(--text-3)" }} />
+                          </span>
+                          <span className="flex-1 truncate">רק מה שעל המפה</span>
+                          {mapOnly && <Check size={13} className="shrink-0 text-[var(--brand)]" />}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
             {/* clear (brand-orange) — removes from the trip ONLY the in-trip attractions
                 visible under the current category/search, not every pick. */}
             {visibleTripIds.length > 0 && (
@@ -1296,34 +1348,7 @@ export function DestinationView({
           })}
         </div>
       )}
-      {/* filters — free / indoor / with-insights / on-the-map. Icon-first (like the
-          category rows) so the rail stays legible when collapsed to icons only. */}
-      <div className="mt-3 flex flex-col gap-0.5 border-t border-[var(--border)] pt-3">
-        <p className="whitespace-nowrap px-2.5 pb-0.5 text-[11.5px] font-semibold text-[var(--text-3)] opacity-0 transition-opacity duration-150 group-hover:opacity-100">סינון</p>
-        {(([["free", "חינם", Coins], ["indoor", "מקורה", Umbrella],
-           ...(isFamily ? [["top", "מומלץ למשפחות", Baby]] : []),
-           ["withInsights", "עם תובנות מטיילים", MessageCircle]]) as [keyof typeof flags, string, LucideIcon][]).map(([k, label, Icon]) => (
-          <button key={k} onClick={() => toggleFlag(k)} aria-pressed={flags[k]} title={label}
-            className="flex items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-right text-[13px] transition"
-            style={flags[k] ? { background: "var(--brand-soft)", color: "var(--brand-ink)", fontWeight: 600 } : { color: "var(--text-2)" }}>
-            <span aria-hidden className="grid w-5 shrink-0 place-items-center">
-              <Icon size={15} strokeWidth={1.75} style={{ color: flags[k] ? "var(--brand)" : "var(--text-3)" }} />
-            </span>
-            <span className="flex-1 truncate opacity-0 transition-opacity duration-150 group-hover:opacity-100">{label}</span>
-            <span className="text-[11.5px] text-[var(--text-3)] opacity-0 transition-opacity duration-150 group-hover:opacity-100">{flagCount[k]}</span>
-            {flags[k] && <Check size={13} className="shrink-0 text-[var(--brand)] opacity-0 transition-opacity duration-150 group-hover:opacity-100" />}
-          </button>
-        ))}
-        <button onClick={() => setMapOnly((v) => !v)} aria-pressed={mapOnly} title="רק מה שעל המפה"
-          className="flex items-center gap-2 rounded-[10px] px-2.5 py-1.5 text-right text-[13px] transition"
-          style={mapOnly ? { background: "var(--brand-soft)", color: "var(--brand-ink)", fontWeight: 600 } : { color: "var(--text-2)" }}>
-          <span aria-hidden className="grid w-5 shrink-0 place-items-center">
-            <MapPin size={15} strokeWidth={1.75} style={{ color: mapOnly ? "var(--brand)" : "var(--text-3)" }} />
-          </span>
-          <span className="flex-1 truncate opacity-0 transition-opacity duration-150 group-hover:opacity-100">רק מה שעל המפה</span>
-          {mapOnly && <Check size={13} className="shrink-0 text-[var(--brand)] opacity-0 transition-opacity duration-150 group-hover:opacity-100" />}
-        </button>
-      </div>
+      {/* (filters moved OUT of the rail into a "סינון" dropdown next to the search) */}
       {/* primary actions — hidden when the rail is collapsed to icons */}
       <div className="mt-3 flex flex-col gap-2 border-t border-[var(--border)] pt-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
         {passes.length > 0 && (
@@ -1645,14 +1670,14 @@ export function DestinationView({
           <div className={`px-5 pt-1 lg:hidden ${showBrowse ? "" : "hidden"}`}>{cityTabsEl}</div>
         </>
       )}
-      <div className={`lg:flex lg:items-start lg:gap-5 lg:ps-8 lg:pe-6 ${showBrowse ? "" : "hidden"}`}>
+      <div className={`lg:flex lg:items-start lg:gap-5 lg:ps-4 lg:pe-6 ${showBrowse ? "" : "hidden"}`}>
         {/* right column (desktop): the category menu as an ICON-ONLY rail that
             expands to the full labelled menu on hover. It grows IN FLOW (52→248px),
             pushing the attractions column left; the map (a sibling `peer`) gives up
             the room via peer-hover, so nothing is ever covered by the menu. */}
-        <aside className="group peer hidden lg:order-1 lg:block lg:w-[52px] lg:shrink-0 lg:transition-[width] lg:duration-200 lg:hover:w-[248px]">
+        <aside className="group peer hidden lg:order-1 lg:block lg:w-[52px] lg:shrink-0 lg:transition-[width] lg:duration-200 lg:hover:w-[208px]">
           <div className="lg:sticky lg:top-[140px] lg:max-h-[calc(100dvh-168px)] lg:w-full lg:overflow-hidden lg:rounded-[14px] lg:bg-[var(--surface)] lg:transition-shadow lg:duration-200 group-hover:lg:overflow-y-auto group-hover:lg:border group-hover:lg:border-[var(--border)] group-hover:lg:shadow-[0_10px_34px_rgba(24,18,9,0.16)]">
-            <div className="w-[248px] p-1.5">
+            <div className="w-[208px] p-1.5">
               {categoryMenuEl}
             </div>
           </div>
