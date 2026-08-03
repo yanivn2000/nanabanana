@@ -106,26 +106,26 @@ function ChoiceBtn({ tone, active, onClick, icon, label }: {
   );
 }
 
-// A single LIKE toggle replaces the כן/לא pair: liked = the place is "in" (choice
-// "yes"); un-liked = simply unmarked (no preference), so the builder just ignores it.
+// A single toggle: "in the trip" (choice "yes") vs unmarked (the builder ignores
+// it). Labelled around trip inclusion so it's clear it isn't a social "like".
 function LikeBtn({ liked, onClick, disabled }: { liked: boolean; onClick: () => void; disabled?: boolean }) {
   return (
     <button onClick={(e) => { e.stopPropagation(); onClick(); }} disabled={disabled}
-      aria-pressed={liked} title={disabled ? "בחרו קהל ותחום כדי לבחור מקומות" : undefined}
+      aria-pressed={liked} title={disabled ? "בחרו קהל ותחום כדי לבחור מקומות" : liked ? "לחצו כדי להוציא מהטיול" : "רוצה שיהיה חלק מהטיול"}
       className="flex w-full items-center justify-center gap-1.5 rounded-full border py-1.5 text-[13px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
       style={{ background: liked ? "var(--brand)" : "var(--surface)", color: liked ? "#fff" : "var(--text-2)",
                borderColor: liked ? "var(--brand)" : "var(--border)" }}>
-      <Heart size={14} fill={liked ? "currentColor" : "none"} /> {liked ? "אהבתי" : "לייק"}
+      <Heart size={14} fill={liked ? "currentColor" : "none"} /> {liked ? "בטיול" : "רוצה בטיול"}
     </button>
   );
 }
 
-// Compact like — a heart that lives ON the card frame (list rows), so a row
-// costs no extra full-width strip of air. Filled + brand when liked.
+// Compact version — sits ON the card frame (list rows), so a row costs no extra
+// full-width strip of air. + to add to the trip, ✓ when it's in.
 function HeartToggle({ liked, onClick, disabled }: { liked: boolean; onClick: () => void; disabled?: boolean }) {
   return (
     <button onClick={(e) => { e.stopPropagation(); onClick(); }} aria-pressed={liked} disabled={disabled}
-      aria-label={liked ? "אהבתי" : "לייק"} title={disabled ? "בחרו קהל ותחום כדי לבחור מקומות" : liked ? "אהבתי" : "לייק"}
+      aria-label={liked ? "בטיול" : "רוצה בטיול"} title={disabled ? "בחרו קהל ותחום כדי לבחור מקומות" : liked ? "בטיול — לחצו כדי להוציא" : "רוצה שיהיה חלק מהטיול"}
       className="grid shrink-0 place-items-center self-stretch px-3.5 transition hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
       style={{ color: liked ? "var(--brand)" : "var(--text-3)" }}>
       <Heart size={20} fill={liked ? "currentColor" : "none"} />
@@ -248,7 +248,7 @@ function NeighbourhoodRows({ areas, chosenIds, attrById, isPicked, onToggleArea,
                             {canExpand && <ChevronDown size={16} className={`ms-auto shrink-0 text-[var(--text-3)] transition-transform ${openM ? "rotate-180" : ""}`} />}
                           </button>
                           <button onClick={() => onToggleMember(m.id)} aria-pressed={picked} disabled={locked}
-                            aria-label={picked ? "אהבתי" : "לייק"} title={locked ? "בחרו קהל ותחום כדי לבחור מקומות" : picked ? "אהבתי" : "לייק"}
+                            aria-label={picked ? "בטיול" : "רוצה בטיול"} title={locked ? "בחרו קהל ותחום כדי לבחור מקומות" : picked ? "בטיול — לחצו כדי להוציא" : "רוצה שיהיה חלק מהטיול"}
                             className="grid size-9 shrink-0 place-items-center rounded-full transition hover:bg-[var(--surface-2)] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                             style={{ color: picked || toured ? "var(--brand)" : "var(--text-3)" }}>
                             <Heart size={18} fill={picked || toured ? "currentColor" : "none"} />
