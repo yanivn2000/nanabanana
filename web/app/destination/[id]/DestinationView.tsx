@@ -149,36 +149,50 @@ function StreetPill({ s, picked, onToggle }: { s: Street; picked: boolean; onTog
 }
 
 // A full street CARD — some streets are attractions in their own right, so they
-// get the same card treatment as a place (a brand-tinted header instead of a
-// photo, the vibe as the story, a "רוצה בטיול" toggle).
-function StreetCard({ s, picked, onToggle }: { s: Street; picked: boolean; onToggle: () => void }) {
+// get the same treatment as a place: a photo (or a brand-tinted placeholder), the
+// vibe as the story, a "רוצה בטיול" toggle, and click-to-expand to a wide card.
+function StreetCard({ s, picked, expanded, onToggle, onOpen }: {
+  s: Street; picked: boolean; expanded: boolean; onToggle: () => void; onOpen: () => void;
+}) {
+  const HDR = "linear-gradient(140deg, color-mix(in srgb, var(--brand) 22%, var(--surface-2)), var(--surface-2) 72%)";
   return (
-    <div className="group flex flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition"
+    <div className={`group flex scroll-mt-24 flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition ${expanded ? "sm:col-span-2 xl:col-span-3" : ""}`}
       style={{ borderColor: picked ? "var(--brand)" : "var(--border)", boxShadow: picked ? "0 0 0 1.5px var(--brand)" : undefined }}>
-      <div className="relative aspect-[16/10] w-full overflow-hidden"
-        style={{ background: "linear-gradient(140deg, color-mix(in srgb, var(--brand) 22%, var(--surface-2)), var(--surface-2) 72%)" }}>
-        <div className="grid size-full place-items-center text-[46px]" aria-hidden>🛣️</div>
-        <span className="absolute right-2 top-2 rounded-full bg-[var(--brand)] px-2 py-0.5 text-[11px] font-medium text-white shadow-sm">רחוב</span>
-        {s.area_name_he && (
-          <span className="absolute left-2 top-2 rounded-full bg-black/45 px-2 py-0.5 text-[11px] font-medium text-white shadow-sm backdrop-blur-sm">{s.area_name_he}</span>
-        )}
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col p-3">
-        <p className="serif truncate text-[17px] font-bold leading-tight">{s.name_he || s.name_en}</p>
-        {s.name_en && s.name_en !== (s.name_he ?? "") && (
-          <p className="truncate text-[12.5px] text-[var(--text-3)]" dir="ltr" style={{ unicodeBidi: "isolate" }}>{s.name_en}</p>
-        )}
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[12px]">
-          {s.best_for_he && <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 font-medium text-[var(--brand-ink)]">{s.best_for_he}</span>}
-          {s.dwell_min ? <span className="text-[var(--text-3)]">🕐 ~{s.dwell_min} דק׳</span> : null}
+      <div role="button" tabIndex={0} onClick={onOpen}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
+        className={`flex flex-1 cursor-pointer text-right ${expanded ? "flex-col sm:flex-row sm:items-stretch sm:min-h-[260px]" : "flex-col"}`}>
+        <div className={`relative w-full overflow-hidden ${expanded ? "aspect-[16/10] sm:aspect-auto sm:w-[44%] sm:shrink-0" : "aspect-[16/10]"}`}
+          style={s.image_url ? undefined : { background: HDR }}>
+          {s.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={expanded ? (hiResImage(s.image_url, 1100) ?? s.image_url) : bigImage(s.image_url, 640)} alt="" loading="lazy"
+              onError={(e) => { const t = e.currentTarget; if (s.image_url && t.src !== s.image_url) t.src = s.image_url; }}
+              className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
+          ) : (
+            <div className="grid size-full place-items-center text-[46px]" aria-hidden>🛣️</div>
+          )}
+          <span className="absolute right-2 top-2 rounded-full bg-[var(--brand)] px-2 py-0.5 text-[11px] font-medium text-white shadow-sm">רחוב</span>
+          {s.area_name_he && (
+            <span className="absolute left-2 top-2 rounded-full bg-black/45 px-2 py-0.5 text-[11px] font-medium text-white shadow-sm backdrop-blur-sm">{s.area_name_he}</span>
+          )}
         </div>
-        {s.vibe_he && <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--text-2)]">{s.vibe_he}</p>}
-        {s.lat != null && s.lng != null && (
-          <a href={googleMapsPin(s.lat, s.lng)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
-            className="mt-2.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[12.5px] text-[var(--text-2)]">
-            <MapPin size={12} /> פתח במפה
-          </a>
-        )}
+        <div className="flex min-w-0 flex-1 flex-col p-3">
+          <p className={`serif text-[17px] font-bold leading-tight ${expanded ? "" : "truncate"}`}>{s.name_he || s.name_en}</p>
+          {s.name_en && s.name_en !== (s.name_he ?? "") && (
+            <p className="truncate text-[12.5px] text-[var(--text-3)]" dir="ltr" style={{ unicodeBidi: "isolate" }}>{s.name_en}</p>
+          )}
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[12px]">
+            {s.best_for_he && <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 font-medium text-[var(--brand-ink)]">{s.best_for_he}</span>}
+            {s.dwell_min ? <span className="text-[var(--text-3)]">🕐 ~{s.dwell_min} דק׳</span> : null}
+          </div>
+          {s.vibe_he && <p className={`mt-1.5 text-[13px] leading-relaxed text-[var(--text-2)] ${expanded ? "" : "line-clamp-3"}`}>{s.vibe_he}</p>}
+          {expanded && s.lat != null && s.lng != null && (
+            <a href={googleMapsPin(s.lat, s.lng)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+              className="mt-2.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--border)] px-3 py-1.5 text-[12.5px] text-[var(--text-2)]">
+              <MapPin size={12} /> פתח במפה
+            </a>
+          )}
+        </div>
       </div>
       <div className="border-t border-[var(--border)] p-2">
         <button onClick={onToggle} aria-pressed={picked}
@@ -502,6 +516,7 @@ export function DestinationView({
     try { localStorage.setItem(streetKey, JSON.stringify([...next])); } catch { /* ignore */ }
     return next;
   });
+  const [openStreetId, setOpenStreetId] = useState<number | null>(null);   // which street card is expanded
   const streetsById = useMemo(() => new Map(streets.map((s) => [s.id, s])), [streets]);
   const streetsByArea = useMemo(() => {
     const m = new Map<number, Street[]>();
@@ -1543,7 +1558,9 @@ export function DestinationView({
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {(matchedStreets.length ? matchedStreets : streets.filter((s) => streetPicks.has(s.id))).map((s) => (
-                  <StreetCard key={s.id} s={s} picked={streetPicks.has(s.id)} onToggle={() => toggleStreet(s.id)} />
+                  <StreetCard key={s.id} s={s} picked={streetPicks.has(s.id)} expanded={openStreetId === s.id}
+                    onToggle={() => toggleStreet(s.id)}
+                    onOpen={() => setOpenStreetId((cur) => (cur === s.id ? null : s.id))} />
                 ))}
               </div>
             </div>
