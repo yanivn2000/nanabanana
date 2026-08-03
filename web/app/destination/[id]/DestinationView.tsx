@@ -592,9 +592,18 @@ export function DestinationView({
     : (!!audience && boosts.size > 0);
   // MANUAL flow: the build unlocks once ≥MANUAL_MIN places are marked (we don't know
   // the trip length yet, so a flat floor). GUIDED: audience + a topic.
-  // Editorial: "בנו לי טיול" is ALWAYS active — all must-see are pre-marked, and even an
-  // empty selection builds a sensible trip (the engine fills from must-see + the city).
-  const canBuild = editorial ? true : (manual ? yesCount >= MANUAL_MIN : readyToBuild);
+  // Editorial: nothing is pre-marked, so the traveller must actively pick enough
+  // places to fill the trip (days × pace) before we build — no lazy "all must-see"
+  // default that makes every trip identical.
+  const canBuild = editorial ? (yesCount >= buildCapacity) : (manual ? yesCount >= MANUAL_MIN : readyToBuild);
+  // Floor of places needed before the build unlocks (for the CTA count + tooltip).
+  const needToBuild = editorial ? buildCapacity : manual ? MANUAL_MIN : 0;
+  const buildCountSuffix = !canBuild && needToBuild > 0 ? ` · ${yesCount}/${needToBuild}` : "";
+  const buildTitle = canBuild ? ""
+    : editorial ? `בחרו עוד ${Math.max(0, needToBuild - yesCount)} אטרקציות לטיול (${yesCount}/${needToBuild})`
+    : manual ? `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`
+    : !audience ? "קודם בחרו בשביל מי הטיול"
+    : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : "";
   // Hearts are interactive only when picking makes sense: always in manual, and in
   // guided ONLY after the system has something to pre-mark (audience + a topic).
   // Editorial makes hearts the primary selection (♥ on tabs / neighbourhoods / cards),
@@ -750,17 +759,10 @@ export function DestinationView({
     return () => { cancelled = true; clearTimeout(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audience, boostsKey, areasKey, buildDays, dest.city, selLoaded, manual]);
-  // Editorial: on entry, ❤ every must-see so the trip already contains all of them (the
-  // engine trims to the chosen days if there are more than fit). Once per mount; the user
-  // can still remove any, and they stay removed for the session.
-  const mustMarkedRef = useRef(false);
-  useEffect(() => {
-    if (!editorial || !selLoaded || mustMarkedRef.current || mustSeeSet.size === 0) return;
-    mustMarkedRef.current = true;
-    const toMark = [...mustSeeSet].filter((id) => choices[id] !== "yes");
-    if (toMark.length) setMany(toMark, "yes");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editorial, selLoaded, mustSeeSet]);
+  // NOTE: we deliberately DON'T pre-mark must-sees on entry anymore — starting with
+  // everything selected made travellers lazy and every trip identical. Entry starts
+  // empty; the traveller picks what they want (must-sees are badged ⭐ to guide them),
+  // and the build unlocks once they've chosen enough (days × pace).
   // Mobile: the 240px sticky map strip eats most of the screen — let the
   // traveler collapse it. Desktop always shows the map rail. A window resize
   // event after the toggle makes Leaflet re-measure its container.
@@ -1026,7 +1028,7 @@ export function DestinationView({
               {/* explainer for the ♥ flow — lives INSIDE the 80% column so it aligns with
                   the tabs and doesn't stretch the full page width. */}
               <p className="mb-0.5 rounded-[13px] bg-[var(--accent-soft)] px-4 py-3 text-[14.5px] font-medium leading-relaxed text-[var(--text)] shadow-[var(--shadow)]">
-                כל מקום עם <span className="inline-flex translate-y-0.5 items-center font-semibold text-[var(--accent-ink)]"><Heart size={14} fill="currentColor" /></span> נכנס לטיול — אתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> כבר מסומנים. הדגישו ב־<span className="inline-flex translate-y-0.5 items-center font-semibold text-[var(--accent-ink)]"><Heart size={14} fill="currentColor" /></span> תחום, שכונה או “עם ילדים” כדי להוסיף עוד — או הסירו כל מקום. ואז “בנו לי טיול”.
+                סמנו ב־<span className="inline-flex translate-y-0.5 items-center font-semibold text-[var(--accent-ink)]"><Heart size={14} fill="currentColor" /></span> את המקומות שתרצו בטיול — אתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> מסומנים בכוכב כהמלצה, אבל אתם בוחרים מה נכנס. בחרו לפחות <b>{buildCapacity}</b> ({buildDays} ימים × הקצב), ואז “בנו לי טיול”.
               </p>
               <div className="flex flex-wrap gap-2">
                 {cityTabs.filter((t) => t.key === "__all" || t.key === "__must").map(renderTab)}
@@ -1093,10 +1095,10 @@ export function DestinationView({
                 <X size={13} /> נקה
               </button>
               <span className={`inline-flex flex-1 rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
-                <button onClick={() => openBuild()} disabled={!canBuild}
+                <button onClick={() => openBuild()} disabled={!canBuild} title={buildTitle}
                   className="flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
                   style={canBuild ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" } : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
-                  <Sparkles size={15} /> בנו לי טיול
+                  <Sparkles size={15} /> בנו לי טיול{buildCountSuffix}
                 </button>
               </span>
             </div>
@@ -1206,12 +1208,12 @@ export function DestinationView({
                     </button>
                     <span className={`inline-flex rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
                       <button onClick={() => openBuild()} disabled={!canBuild}
-                        title={manual ? (canBuild ? "" : `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`) : !audience ? "קודם בחרו בשביל מי הטיול" : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : ""}
+                        title={buildTitle}
                         className="flex items-center gap-1.5 rounded-full px-5 py-1.5 text-[13.5px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
                         style={canBuild
                           ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" }
                           : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
-                        <Sparkles size={15} /> בנו לי טיול{manual && !canBuild ? ` · ${yesCount}/${MANUAL_MIN}` : ""}
+                        <Sparkles size={15} /> בנו לי טיול{buildCountSuffix}
                       </button>
                     </span>
                     </>)}
@@ -1835,12 +1837,12 @@ export function DestinationView({
                   topic are chosen. */}
               <span className={`inline-flex rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
               <button onClick={() => openBuild()} disabled={!canBuild}
-                title={manual ? (canBuild ? "" : `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`) : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : ""}
+                title={buildTitle}
                 className="flex items-center gap-1.5 rounded-full px-5 py-1.5 text-[13.5px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
                 style={canBuild
                   ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" }
                   : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
-                <Sparkles size={15} /> בנו לי טיול{manual && !canBuild ? ` · ${yesCount}/${MANUAL_MIN}` : ""}
+                <Sparkles size={15} /> בנו לי טיול{buildCountSuffix}
               </button>
               </span>
             </div>
