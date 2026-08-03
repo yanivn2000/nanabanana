@@ -1,0 +1,39 @@
+{
+  "destination_id": 15,
+  "city": "Paris",
+  "streets": [
+    {
+      "name_local": "Avenue des Champs-Élysées",
+      "name_en": "Champs-Élysées",
+      "name_he": "השאנז אליזה",
+      "kind": "street",
+      "best_for_he": "השדרה המפורסמת בעולם",
+      "vibe_he": "השדרה הגדולה של פריז — מקשת הניצחון ועד כיכר קונקורד, עצי ערמונים, בתי קפה, חנויות דגל ותאורה שלא נגמרת.",
+      "dwell_min": 60,
+      "approx_lat": 48.8698,
+      "approx_lng": 2.3078
+    },
+    {
+      "name_local": "Rue de Rivoli",
+      "name_en": "Rue de Rivoli",
+      "name_he": "רְ דה ריבולי",
+      "kind": "street",
+      "best_for_he": "קניות לאורך הלובר",
+      "vibe_he": "רחוב ארוך עם קשתות אבן אלגנטיות שרץ לאורך גני הטווילרי והלובר — חנויות, קפה מרלי ונוף מונומנטלי.",
+      "dwell_min": 45,
+      "approx_lat": 48.8600,
+      "approx_lng": 2.3390
+    },
+    {
+      "name_local": "Rue Montorgueil",
+      "name_en": "Rue Montorgueil",
+      "name_he": "רְ מונטורגיי",
+      "kind": "street",
+      "best_for_he": "רחוב אוכל פריזאי",
+      "vibe_he": "רחוב הולכי-רגל תוסס עם דוכני שוק, מאפיות היסטוריות, בתי קפה ובראסרי — הפריז האמיתית של אוכל ואווירה.",
+      "dwell_min": 45,
+      "approx_lat": 48.8650,
+      "approx_lng": 2.3475
+    }
+  ]
+}

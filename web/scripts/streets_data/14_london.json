@@ -1,0 +1,39 @@
+{
+  "destination_id": 14,
+  "city": "London",
+  "streets": [
+    {
+      "name_local": "Oxford Street",
+      "name_en": "Oxford Street",
+      "name_he": "אוקספורד סטריט",
+      "kind": "street",
+      "best_for_he": "רחוב הקניות המרכזי",
+      "vibe_he": "רחוב הקניות הסואן והמפורסם בלונדון — חנויות הדגל הגדולות, קהל אינסופי ותאורת חג המולד המפורסמת.",
+      "dwell_min": 60,
+      "approx_lat": 51.5152,
+      "approx_lng": -0.1440
+    },
+    {
+      "name_local": "King's Road",
+      "name_en": "King's Road",
+      "name_he": "קינגס רואד",
+      "kind": "street",
+      "best_for_he": "אופנה וצ'לסי",
+      "vibe_he": "העורק האופנתי של צ'לסי — בוטיקים, בתי קפה ואווירה מלוטשת, ערש תרבות הפאנק של שנות ה-70.",
+      "dwell_min": 45,
+      "approx_lat": 51.4876,
+      "approx_lng": -0.1706
+    },
+    {
+      "name_local": "Marylebone High Street",
+      "name_en": "Marylebone High Street",
+      "name_he": "מרילבון היי סטריט",
+      "kind": "street",
+      "best_for_he": "רחוב שכונתי מלוטש",
+      "vibe_he": "רחוב כפרי-אורבני מקסים במרילבון עם חנויות עצמאיות, מאפיות ושוק חקלאים בסופ\"ש.",
+      "dwell_min": 40,
+      "approx_lat": 51.5205,
+      "approx_lng": -0.1520
+    }
+  ]
+}

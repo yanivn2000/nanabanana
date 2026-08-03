@@ -1,0 +1,39 @@
+{
+  "destination_id": 8,
+  "city": "Amsterdam",
+  "streets": [
+    {
+      "name_local": "Wolvenstraat",
+      "name_en": "De 9 Straatjes (The Nine Streets)",
+      "name_he": "תשעת הרחובות",
+      "kind": "cluster",
+      "best_for_he": "בוטיקים וסמטאות תעלות",
+      "vibe_he": "רשת של תשע סמטאות קסומות בין התעלות — בוטיקים עצמאיים, קונספט-סטורים, בתי קפה קטנים וגלריות. לב הקניות הקטנות של אמסטרדם.",
+      "dwell_min": 60,
+      "approx_lat": 52.3688,
+      "approx_lng": 4.8853
+    },
+    {
+      "name_local": "Kalverstraat",
+      "name_en": "Kalverstraat",
+      "name_he": "קלוורסטראט",
+      "kind": "street",
+      "best_for_he": "רחוב קניות ראשי",
+      "vibe_he": "רחוב הקניות ההולך-רגל המרכזי והעתיק של אמסטרדם — רשתות אופנה, קהל צפוף ואנרגיה עירונית.",
+      "dwell_min": 45,
+      "approx_lat": 52.3690,
+      "approx_lng": 4.8905
+    },
+    {
+      "name_local": "Haarlemmerstraat",
+      "name_en": "Haarlemmerstraat",
+      "name_he": "הארלמרסטראט",
+      "kind": "street",
+      "best_for_he": "אוכל וחנויות מקומיות",
+      "vibe_he": "רחוב מקומי ואופנתי מצפון למרכז — מעדניות, מאפיות, בוטיקים ובתי קפה שאמסטרדמים באמת אוהבים.",
+      "dwell_min": 40,
+      "approx_lat": 52.3835,
+      "approx_lng": 4.8930
+    }
+  ]
+}
