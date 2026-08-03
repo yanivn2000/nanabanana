@@ -4,7 +4,13 @@
 // city page's capacity promise ("N ימים מספיקים לכ-…") and the heuristic
 // builder's per-day count, so what's promised is what gets built.
 export const PACE_PER_DAY: Record<string, number> = { "רגוע": 4, "בינוני": 5, "אינטנסיבי": 6 };
-export const paceToPerDay = (pace?: string): number => PACE_PER_DAY[pace ?? ""] ?? 5;
+// `pace` may be a legacy label (רגוע/בינוני/אינטנסיבי) or, now, a direct
+// attractions-per-day number (as a string, e.g. "3"…"6"). Prefer the number.
+export const paceToPerDay = (pace?: string | number): number => {
+  const n = typeof pace === "number" ? pace : Number(pace);
+  if (Number.isFinite(n) && n >= 1 && n <= 12) return Math.round(n);
+  return PACE_PER_DAY[(pace as string) ?? ""] ?? 5;
+};
 
 export type StopKind = "nature" | "food" | "culture" | "rest" | "shopping";
 

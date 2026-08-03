@@ -21,7 +21,7 @@ export type FamilyProfile = {
   kids: Kid[];
   interests: string[];     // טבע, אוכל, תרבות, קניות, ספורט, חופים
   dislikes: string[];
-  pace: "רגוע" | "בינוני" | "אינטנסיבי";
+  pace: string;   // legacy label (רגוע/בינוני/אינטנסיבי) OR a per-day count as a string ("3"…"6")
   budget: "חסכוני" | "בינוני" | "מפנק";
   dailyDriveHours: number;
   lodging: string;         // מלון / אירבנב / צימר

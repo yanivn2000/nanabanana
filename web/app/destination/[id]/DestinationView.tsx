@@ -15,11 +15,10 @@ import { useProfile, useTrips, useCitySelection, type Choice } from "@/lib/store
 const RADIUS_HOURS = [0.5, 1, 2, 3];
 const RADIUS_HE = ["קרוב מאוד", "עד שעה", "עד שעתיים", "גם רחוק"];
 
-// Trip pace (existing profile parameter). PACE_PER_DAY is the shared capacity
-// source (city page promise == heuristic builder output).
-const PACES = ["רגוע", "בינוני", "אינטנסיבי"] as const;
-type Pace = (typeof PACES)[number];
-import { PACE_PER_DAY } from "@/lib/trip-types";
+// Trip pace is now a direct attractions-per-day number (3–6) instead of the old
+// רגוע/בינוני/אינטנסיבי labels. paceToPerDay reads either (number wins).
+const PER_DAY_MIN = 3, PER_DAY_MAX = 6;
+import { paceToPerDay } from "@/lib/trip-types";
 import { deriveTaste, tasteScore, coarseFits, audienceFit, INTEREST_TASTE, INTEREST_CATS, GOVERNING_INTERESTS } from "@/lib/taste";
 import { PROFILES, PROFILE_HE, PROFILE_EMOJI, type Profile } from "@/lib/shortpath";
 
@@ -424,10 +423,10 @@ export function DestinationView({
   // stale per-city marks; the explore-mode bottom bar builds from marks.
   const [buildDays, setBuildDays] = useState(4);
   const [buildRadius, setBuildRadius] = useState(1);
-  const [buildPace, setBuildPace] = useState<Pace>("בינוני");
+  const [perDay, setPerDay] = useState(() => Math.min(PER_DAY_MAX, Math.max(PER_DAY_MIN, paceToPerDay(profile?.pace as string))));   // attractions per day (3–6)
   const [building, setBuilding] = useState(false);
-  // Open the build modal seeded with the traveler's saved pace.
-  const openBuild = () => { setBuildPace((profile.pace as Pace) ?? "בינוני"); setBuildOpen(true); };
+  // Open the build modal seeded with the traveler's saved pace (as a per-day count).
+  const openBuild = () => { setBuildOpen(true); };
   const PAGE = 200;
   const [visibleCount, setVisibleCount] = useState(PAGE);
   // Editorial city browse: the long flat list is split into tabs — "שכונות" (with a
@@ -441,7 +440,7 @@ export function DestinationView({
   // pick-minimum, no progress meter).
   // Capacity follows the chosen pace, so the estimate matches what the builder
   // will actually schedule (רגוע ~4/day, בינוני ~5, אינטנסיבי ~6).
-  const buildCapacity = buildDays * PACE_PER_DAY[buildPace];
+  const buildCapacity = buildDays * perDay;
   const overPick = yesCount > buildCapacity;
 
   const router = useRouter();
@@ -741,7 +740,7 @@ export function DestinationView({
         const res = await fetch("/api/itinerary", { method: "POST", headers: { "content-type": "application/json" },
           body: JSON.stringify({ mode: "generate", city: dest.city, days: buildDays, month: new Date().getMonth() + 1,
             taste: buildTaste, isFamily: profile.kids.length > 0 || audience === "families",
-            pace: buildPace, walkPref: profile.walkPref, interests: [...boosts], audience,
+            pace: String(perDay), walkPref: profile.walkPref, interests: [...boosts], audience,
             ...(areaList.length ? { areaGroups: areaList.map((a) => a.member_ids), areaIds: areaList.map((a) => a.id) } : {}) }) });
         const data = await res.json().catch(() => null);
         if (cancelled || !data?.itinerary) return;
@@ -867,7 +866,7 @@ export function DestinationView({
       destinationId: dest.id,
       days: buildDays,
       month: new Date().getMonth() + 1,   // a default season; exact dates are set on the trip page
-      profile: { ...profile, pace: buildPace, taste: buildTaste, dailyDriveHours: RADIUS_HOURS[buildRadius] },
+      profile: { ...profile, pace: String(perDay), taste: buildTaste, dailyDriveHours: RADIUS_HOURS[buildRadius] },
       ...(chosenInterests.length ? { interests: chosenInterests } : {}),
       ...(audience ? { audience } : {}),
       ...(yesFinal.length || noFinal.length ? { selection: { yes: yesFinal, no: noFinal } } : {}),
@@ -999,20 +998,10 @@ export function DestinationView({
         <div>
           <div className="mb-1.5 flex items-center justify-between text-[13px]">
             <span className="font-medium text-[var(--text-2)]">קצב הטיול</span>
-            <span className="text-[12px] text-[var(--text-3)]">~{PACE_PER_DAY[buildPace]} ביום</span>
+            <span className="font-semibold text-[var(--brand-ink)]">~{perDay} אטרקציות ביום</span>
           </div>
-          <div className="flex gap-1 rounded-full bg-[var(--surface)] p-1">
-            {PACES.map((p) => {
-              const on = buildPace === p;
-              return (
-                <button key={p} onClick={() => setBuildPace(p)}
-                  className="flex-1 rounded-full py-1 text-[12.5px] font-medium transition"
-                  style={{ background: on ? "var(--brand)" : "transparent", color: on ? "#fff" : "var(--text-2)" }}>
-                  {p}
-                </button>
-              );
-            })}
-          </div>
+          <input type="range" min={PER_DAY_MIN} max={PER_DAY_MAX} value={perDay} dir="ltr" aria-label="אטרקציות ביום"
+            onChange={(e) => setPerDay(Number(e.target.value))} className="w-full accent-[var(--brand)]" />
         </div>
       </div>
     </div>
@@ -1880,7 +1869,7 @@ export function DestinationView({
             <div className="mb-5 flex flex-wrap gap-x-4 gap-y-1 rounded-[var(--radius-sm)] bg-[var(--surface-2)] px-3.5 py-2.5 text-[13px] font-medium text-[var(--text-2)]">
               <span>📅 {buildDays} ימים</span>
               <span>🚗 {RADIUS_HE[buildRadius]}</span>
-              <span>⚡ {buildPace} · ~{PACE_PER_DAY[buildPace]} ביום</span>
+              <span>⚡ ~{perDay} אטרקציות ביום</span>
             </div>
             <div className="flex gap-2">
               {overPick && (
