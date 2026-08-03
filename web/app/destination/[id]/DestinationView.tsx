@@ -471,8 +471,10 @@ export function DestinationView({
   // Two ways in: "choose" (the default — pick an audience) and "short" (an audience
   // is chosen → the calibratable topic chips + one-tap build). The old "explore /
   // הכל" deep-editor mode was retired; its filters live next to the search now.
-  // Editorial drops the "who is the trip for?" step: default to adults, and the
-  // "עם ילדים" tab's ♥ flips it to families (see the tab bar). Classic keeps the picker.
+  // Editorial drops the "who is the trip for?" step: default to adults. The
+  // "עם ילדים" CATEGORY is the family mode — selecting it flips the trip to
+  // families (kid-friendly places shown + family sort); any other category is
+  // adults. (No more per-category ♥ "boost" — categories just filter now.)
   const [audience, setAudience] = useState<Profile | null>(() => editorial ? "adults" : null);
   const [boosts, setBoosts] = useState<Set<string>>(new Set());
   // Two flows: GUIDED (default — audience → topics → the system pre-marks → you
@@ -564,6 +566,11 @@ export function DestinationView({
   // top tab ("__areas" or an interest key); areaTab is the chosen neighbourhood.
   const [cityTab, setCityTab] = useState<string>("__must");
   const [areaTab, setAreaTab] = useState<number | null>(null);
+  // Editorial: the "עם ילדים" category IS the family toggle (its ♥ was removed).
+  // Selecting it builds a family-fit trip; any other category reverts to adults.
+  useEffect(() => {
+    if (editorial) setAudience(cityTab === "__kids" ? "families" : "adults");
+  }, [editorial, cityTab]);
   const yesCount = Object.values(choices).filter((c) => c === "yes").length;
   // Likes are optional refinements now — the governed build works from audience +
   // topics alone, so building is always available once an audience is chosen (no
@@ -1066,33 +1073,14 @@ export function DestinationView({
       : t.key === "__areas" ? areas.length
       : t.key === "__kids" ? attractions.filter((a) => matchesInterest(a, "ילדים")).length
       : attractions.filter((a) => matchesInterest(a, t.key)).length;
-    const isKids = t.key === "__kids";
-    const isInterest = t.key !== "__must" && t.key !== "__areas" && t.key !== "__all" && !isKids;
-    const hasHeart = isInterest || isKids;
-    const boosted = isKids ? audience === "families" : (isInterest && boosts.has(t.key));
     return (
-      <div key={t.key}
-        className="flex shrink-0 items-center overflow-hidden rounded-full border shadow-[var(--shadow)] transition"
+      <button key={t.key} onClick={() => setCityTab(t.key)}
+        className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium shadow-[var(--shadow)] transition"
         style={active ? { background: "var(--brand)", borderColor: "transparent", color: "#fff" }
-          : boosted ? { background: "var(--accent-soft)", borderColor: "var(--accent)", color: "var(--accent-ink)" }
           : { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)", boxShadow: "none" }}>
-        <button onClick={() => setCityTab(t.key)}
-          className={`flex items-center gap-1.5 py-1.5 ps-3.5 text-[13.5px] font-medium ${hasHeart ? "pe-1.5" : "pe-3.5"}`}>
-          <span aria-hidden>{t.emoji}</span> {t.label}
-          <span className={`text-[11.5px] ${active || boosted ? "opacity-80" : "opacity-60"}`}>{count}</span>
-        </button>
-        {hasHeart && (
-          <button onClick={(e) => { e.stopPropagation();
-              if (isKids) setAudience(audience === "families" ? "adults" : "families");
-              else setBoosts((s) => { const n = new Set(s); if (n.has(t.key)) n.delete(t.key); else n.add(t.key); return n; }); }}
-            aria-pressed={boosted}
-            title={isKids ? (boosted ? "בטלו התאמה לילדים" : "התאימו את הטיול לטיול עם ילדים") : (boosted ? "בטלו הדגשה" : "הדגישו — יסומן אוטומטית בטיול")}
-            className="grid size-8 shrink-0 place-items-center pe-1.5"
-            style={{ color: active ? "#fff" : boosted ? "var(--accent)" : "var(--text-3)" }}>
-            <Heart size={15} fill={boosted ? "currentColor" : "none"} />
-          </button>
-        )}
-      </div>
+        <span aria-hidden>{t.emoji}</span> {t.label}
+        <span className={`text-[11.5px] ${active ? "opacity-80" : "opacity-60"}`}>{count}</span>
+      </button>
     );
   };
   // The three trip settings, pulled OUT of the build modal to sit above the
@@ -1247,33 +1235,18 @@ export function DestinationView({
       : t.key === "__areas" ? areas.length
       : t.key === "__kids" ? attractions.filter((a) => matchesInterest(a, "ילדים")).length
       : attractions.filter((a) => matchesInterest(a, t.key)).length;
-    const isKids = t.key === "__kids";
-    const isInterest = t.key !== "__must" && t.key !== "__areas" && t.key !== "__all" && !isKids;
-    const hasHeart = isInterest || isKids;
-    const boosted = isKids ? audience === "families" : (isInterest && boosts.has(t.key));
     const Icon = CAT_ICON[t.key];
     return (
       <div key={t.key} className="flex items-center overflow-hidden rounded-[10px] transition"
-        style={active ? { background: "var(--brand)", color: "#fff" }
-          : boosted ? { background: "var(--accent-soft)", color: "var(--accent-ink)" } : {}}>
+        style={active ? { background: "var(--brand)", color: "#fff" } : {}}>
         <button onClick={() => { setCityTab(t.key); setSelectedOnly(false); }}
-          className="flex flex-1 items-center gap-2 px-2.5 py-2 text-right text-[13.5px] font-medium">
+          className="flex w-full items-center gap-2 px-2.5 py-2 text-right text-[13.5px] font-medium">
           <span aria-hidden className="grid w-5 place-items-center">
-            {Icon ? <Icon size={16} strokeWidth={1.75} style={{ color: active ? "#fff" : boosted ? "var(--accent)" : "var(--brand)" }} /> : t.emoji}
+            {Icon ? <Icon size={16} strokeWidth={1.75} style={{ color: active ? "#fff" : "var(--brand)" }} /> : t.emoji}
           </span>
           <span className="flex-1 truncate opacity-0 transition-opacity duration-150 group-hover:opacity-100">{t.label}</span>
-          <span className={`text-[11.5px] opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${active || boosted ? "" : "text-[var(--text-3)]"}`}>{count}</span>
+          <span className={`text-[11.5px] opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${active ? "" : "text-[var(--text-3)]"}`}>{count}</span>
         </button>
-        {hasHeart && (
-          <button onClick={(e) => { e.stopPropagation();
-              if (isKids) setAudience(audience === "families" ? "adults" : "families");
-              else setBoosts((s) => { const n = new Set(s); if (n.has(t.key)) n.delete(t.key); else n.add(t.key); return n; }); }}
-            aria-pressed={boosted} title={isKids ? "התאמה לילדים" : "הדגישו תחום"}
-            className="grid size-8 shrink-0 place-items-center pe-1.5"
-            style={{ color: active ? "#fff" : boosted ? "var(--accent)" : "var(--text-3)" }}>
-            <Heart size={14} fill={boosted ? "currentColor" : "none"} />
-          </button>
-        )}
       </div>
     );
   };
