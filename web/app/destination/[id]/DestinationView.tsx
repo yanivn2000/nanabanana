@@ -785,6 +785,10 @@ export function DestinationView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cityTabItems, query, selectedOnly, attractions, choices]);
   const cityGridItems = cityScoped.slice(0, visibleCount);
+  // "נקה" is context-aware: remove from the trip only the in-trip attractions
+  // currently VISIBLE (the active category/search), not every pick in the city.
+  const visibleTripIds = useMemo(() => cityScoped.filter((a) => choices[a.id] === "yes").map((a) => a.id), [cityScoped, choices]);
+  const clearVisible = () => { if (visibleTripIds.length) setMany(visibleTripIds, null); };
   const cityTabLabel = cityTab === "__areas" ? (activeArea?.name_he || activeArea?.name_en || "שכונה")
     : (cityTabs.find((t) => t.key === cityTab)?.label ?? "");
   // Bulk marks over the matched set (the primary view).
@@ -1019,6 +1023,15 @@ export function DestinationView({
                 </button>
               )}
             </div>
+            {/* clear (brand-orange) — removes from the trip ONLY the in-trip attractions
+                visible under the current category/search, not every pick. */}
+            {visibleTripIds.length > 0 && (
+              <button onClick={clearVisible} title="הסר מהטיול את מה שמופיע כאן"
+                className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] font-medium transition hover:bg-[var(--accent-soft)]"
+                style={{ borderColor: "var(--accent)", color: "var(--accent-ink)", background: "var(--surface)" }}>
+                <X size={14} /> נקה · {visibleTripIds.length}
+              </button>
+            )}
             {/* "רק אתרי חובה" sits with the sort/filters controls; default OFF so the
                 browse opens on ALL attractions once an audience is picked. */}
             {!editorial && !soloInterest && !selectedOnly && (
@@ -1075,7 +1088,8 @@ export function DestinationView({
   // (defaults are today's values, so doing nothing still works).
   const tripSettingsEl = (
     <div className="mb-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3.5 lg:p-4">
-      <div className="grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-3">
+      <div className="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:gap-5">
+      <div className="grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-3 lg:w-[70%]">
         <div>
           <div className="mb-1.5 flex items-center justify-between text-[13px]">
             <span className="font-medium text-[var(--text-2)]">כמה ימים?</span>
@@ -1100,6 +1114,17 @@ export function DestinationView({
           <input type="range" min={PER_DAY_MIN} max={PER_DAY_MAX} value={perDay} dir="ltr" aria-label="אטרקציות ביום"
             onChange={(e) => setPerDay(Number(e.target.value))} className="w-full accent-[var(--brand)]" />
         </div>
+      </div>
+      {/* the build CTA lives with the settings it depends on — 30% of the bar */}
+      <div className="lg:w-[30%]">
+        <span className={`inline-flex w-full rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
+          <button onClick={() => openBuild()} disabled={!canBuild} title={buildTitle}
+            className="flex w-full items-center justify-center gap-1.5 rounded-full px-4 py-3 text-[15px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
+            style={canBuild ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" } : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
+            <Sparkles size={16} /> בנו לי טיול{buildCountSuffix}
+          </button>
+        </span>
+      </div>
       </div>
     </div>
   );
@@ -1323,17 +1348,6 @@ export function DestinationView({
             ❤️ {communityCount} טיולים
           </Link>
         )}
-        <button onClick={clearAllChoices} disabled={yesCount === 0}
-          className="flex items-center justify-center gap-1 rounded-full border border-[var(--border)] px-3 py-2 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f] disabled:cursor-not-allowed disabled:opacity-40">
-          <X size={13} /> נקה
-        </button>
-        <span className={`inline-flex rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
-          <button onClick={() => openBuild()} disabled={!canBuild} title={buildTitle}
-            className="flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-2.5 text-[13px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
-            style={canBuild ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" } : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
-            <Sparkles size={15} /> בנו לי טיול{buildCountSuffix}
-          </button>
-        </span>
       </div>
     </div>
   );
@@ -1652,7 +1666,7 @@ export function DestinationView({
       <div className={`lg:flex lg:items-start lg:gap-5 lg:ps-8 ${showBrowse ? "" : "hidden"}`}>
         {/* right column (desktop): the category menu */}
         <aside className="hidden lg:order-1 lg:block lg:w-[230px] lg:shrink-0">
-          <div className="lg:sticky lg:top-[72px] lg:max-h-[calc(100dvh-88px)] lg:overflow-y-auto lg:pb-4">
+          <div className="lg:sticky lg:top-[72px] lg:pb-4">
             {categoryMenuEl}
           </div>
         </aside>
