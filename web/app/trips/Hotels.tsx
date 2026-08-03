@@ -5,8 +5,9 @@ import { useHotels, uid, type Hotel, type Segment } from "@/lib/store";
 import { BedDouble, Plus, Trash2, MapPin, Loader2, X, Link2 } from "lucide-react";
 
 export function Hotels({
-  tripId, onFocus, segments, countryHint,
-}: { tripId: string; onFocus?: (h: Hotel) => void; segments?: Segment[]; countryHint?: string }) {
+  tripId, onFocus, segments, countryHint, open: openProp, onOpenChange, hideAddButton,
+}: { tripId: string; onFocus?: (h: Hotel) => void; segments?: Segment[]; countryHint?: string;
+     open?: boolean; onOpenChange?: (v: boolean) => void; hideAddButton?: boolean }) {
   const { hotels, add, remove, link, assign, loaded } = useHotels();
   const tripHotels = hotels.filter((h) => h.tripId === tripId);
   const unassigned = hotels.filter((h) => !h.tripId);
@@ -33,7 +34,9 @@ export function Hotels({
     return s ? (s.cityHe || s.city) : null;
   };
 
-  const [open, setOpen] = useState(false);
+  const [openInternal, setOpenInternal] = useState(false);
+  const open = openProp ?? openInternal;              // controllable so the day-tabs bar can open the form
+  const setOpen = onOpenChange ?? setOpenInternal;
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [checkIn, setCheckIn] = useState("");
@@ -80,7 +83,7 @@ export function Hotels({
     <section className="mt-2">
       <div className="mb-1 flex items-center justify-between">
         <p className="eyebrow">{multi ? "מלונות הטיול" : "מלון הטיול"}</p>
-        {!open && !atLimit && (
+        {!open && !atLimit && !hideAddButton && (
           <button onClick={() => setOpen(true)}
             className="flex items-center gap-1 text-[14px] text-[var(--accent-ink)]">
             <Plus size={15} /> הוסף מלון
@@ -117,13 +120,6 @@ export function Hotels({
             {busy ? "מאתר…" : "הוסף ואתר במפה"}
           </button>
         </div>
-      )}
-
-      {loaded && tripHotels.length === 0 && !open && (
-        <button onClick={() => setOpen(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-card)] border border-dashed border-[var(--border)] bg-[var(--surface)] py-4 text-[15px] font-medium text-[var(--text-2)]">
-          <Plus size={18} /> הוסיפו את המלון שהזמנתם
-        </button>
       )}
 
       <div className="flex flex-col gap-2.5">

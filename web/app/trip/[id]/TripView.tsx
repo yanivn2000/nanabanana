@@ -222,6 +222,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
   const [dayIdx, setDayIdx] = useState(0);                 // one day on screen — pager
   const [mobileTab, setMobileTab] = useState<"plan" | "map">("plan");
   const [datesOpen, setDatesOpen] = useState(false);         // dates aren't permanent — a popover
+  const [hotelOpen, setHotelOpen] = useState(false);         // hotel form — opened from the day-tabs bar
   const [focus, setFocus] = useState<{ lat: number; lng: number; n: number; keepZoom?: boolean } | null>(null);
   // A bank ("לא נכנסו") card the user is pointing at — highlight its marker on the map,
   // exactly like hovering a scheduled stop lights up its pin.
@@ -284,6 +285,8 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
   // Per-trip travelers override the global profile (different group per trip).
   const tripProfile = trip?.profile ?? globalProfile;
   const tripHotels = hotels.filter((h) => h.tripId === tripId);
+  // One hotel per city (mirrors Hotels.tsx) — hide the "הוסף מלון" affordance once full.
+  const hotelAtLimit = tripHotels.length >= ((trip?.segments?.length ?? 1) > 1 ? trip!.segments!.length : 1);
   // City for attractions/API: English destination, or derived from a linked hotel.
   const city = trip?.city || tripHotels[0]?.city;
   // Can build once we know WHERE: a destination (preferences) or a located hotel
@@ -1243,7 +1246,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
           ? "sticky top-0 z-20 mt-3 bg-[var(--surface)]/92 backdrop-blur-lg lg:top-[64px] lg:mt-4 lg:px-8"
           : "mt-1.5 lg:pl-8 lg:pr-[204px]"}`}>
           {!editorial && <span className="hidden shrink-0 text-[12px] font-semibold text-[var(--text-3)] sm:block">ימי הטיול</span>}
-          <div className={`-mx-5 flex overflow-x-auto px-5 sm:mx-0 sm:px-0 ${editorial ? "w-full gap-0 border-b border-[var(--border)]" : "gap-1.5"}`} style={{ scrollbarWidth: "none" }}>
+          <div className={`-mx-5 flex overflow-x-auto px-5 sm:mx-0 sm:px-0 ${editorial ? "min-w-0 flex-1 gap-0 border-b border-[var(--border)]" : "gap-1.5"}`} style={{ scrollbarWidth: "none" }}>
             {allDays.map((d, i) => {
               const on = i === curIdx;
               const today = i === todayIndex;
@@ -1279,6 +1282,14 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
               );
             })}
           </div>
+          {/* quick "add hotel" — lives in the day-tabs bar; opens the hotel form in
+              the rail. Hidden once the trip already has its hotel(s). */}
+          {editorial && !hotelAtLimit && (
+            <button onClick={() => setHotelOpen(true)} title="הוסיפו את המלון שהזמנתם"
+              className="flex shrink-0 items-center gap-1 self-center rounded-full border border-[var(--accent)] px-3 py-1.5 text-[12.5px] font-medium text-[var(--accent-ink)] transition hover:bg-[var(--accent-soft)]">
+              <Plus size={13} /> הוסף מלון
+            </button>
+          )}
         </div>
       )}
 
@@ -2196,6 +2207,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
               anchor is the first thing set; adding/moving one re-anchors each day. */}
           <div className="px-5 pb-5 lg:px-0">
             <Hotels tripId={tripId} segments={trip?.segments} countryHint={trip?.country}
+              open={hotelOpen} onOpenChange={setHotelOpen} hideAddButton
               onFocus={(h) => h.lat != null && h.lng != null && setFocus({ lat: h.lat, lng: h.lng, n: Date.now() })} />
           </div>
 
