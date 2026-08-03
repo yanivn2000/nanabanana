@@ -464,11 +464,18 @@ export function DestinationView({
     return m;
   }, [streets]);
   // Streets matching the search box (name en/he) — surfaced above the cards so a
-  // traveller can find & add "Oxford Street" / "ניין סטריט" directly.
+  // traveller can find & add "Oxford Street" / "תשעת הרחובות" directly. Hebrew
+  // construct/gender changes the last letter (תשעה↔תשעת), so also match on the
+  // stem (query minus its final letter) to be forgiving.
   const matchedStreets = useMemo(() => {
     const raw = query.trim(); const q = raw.toLowerCase();
-    if (!raw) return [];
-    return streets.filter((s) => (s.name_en ?? "").toLowerCase().includes(q) || (s.name_he ?? "").includes(raw));
+    if (raw.length < 2) return [];
+    const heStem = raw.length >= 3 && /[֐-׿]/.test(raw) ? raw.slice(0, -1) : null;
+    return streets.filter((s) => {
+      const en = (s.name_en ?? "").toLowerCase();
+      const he = s.name_he ?? "";
+      return en.includes(q) || he.includes(raw) || (heStem != null && he.includes(heStem));
+    });
   }, [streets, query]);
   // Open the build modal seeded with the traveler's saved pace (as a per-day count).
   const openBuild = () => { setBuildOpen(true); };
@@ -1544,7 +1551,9 @@ export function DestinationView({
 
           {sortedItems.length === 0 && (
             <p className="py-10 text-center text-[15px] text-[var(--text-3)]">
-              {mapOnly ? "אין מקומות באזור המפה הנוכחי — הקטינו זום או הזיזו" : "אין תוצאות לסינון הזה"}
+              {mapOnly ? "אין מקומות באזור המפה הנוכחי — הקטינו זום או הזיזו"
+                : matchedStreets.length > 0 ? "מצאנו רחוב שמתאים לחיפוש 🛣️ (למעלה) — אין אטרקציות בשם הזה"
+                : "אין תוצאות לסינון הזה"}
             </p>
           )}
 
