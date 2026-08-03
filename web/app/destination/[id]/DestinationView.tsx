@@ -972,6 +972,50 @@ export function DestinationView({
       </div>
     );
   };
+  // The three trip settings, pulled OUT of the build modal to sit above the
+  // browse tabs — always visible, three fields to set before "בנו לי טיול"
+  // (defaults are today's values, so doing nothing still works).
+  const tripSettingsEl = (
+    <div className="mb-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-2)] p-3.5 lg:p-4">
+      <div className="grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-3">
+        <div>
+          <div className="mb-1.5 flex items-center justify-between text-[13px]">
+            <span className="font-medium text-[var(--text-2)]">כמה ימים?</span>
+            <span className="font-semibold text-[var(--brand-ink)]">{buildDays}</span>
+          </div>
+          <input type="range" min={2} max={7} value={buildDays} dir="ltr" aria-label="כמה ימים"
+            onChange={(e) => setBuildDays(Number(e.target.value))} className="w-full accent-[var(--brand)]" />
+        </div>
+        <div>
+          <div className="mb-1.5 flex items-center justify-between text-[13px]">
+            <span className="font-medium text-[var(--text-2)]">מרחק נסיעה ליום</span>
+            <span className="font-semibold text-[var(--brand-ink)]">{RADIUS_HE[buildRadius]}</span>
+          </div>
+          <input type="range" min={0} max={3} value={buildRadius} dir="ltr" aria-label="מרחק נסיעה ליום"
+            onChange={(e) => setBuildRadius(Number(e.target.value))} className="w-full accent-[var(--brand)]" />
+        </div>
+        <div>
+          <div className="mb-1.5 flex items-center justify-between text-[13px]">
+            <span className="font-medium text-[var(--text-2)]">קצב הטיול</span>
+            <span className="text-[12px] text-[var(--text-3)]">~{PACE_PER_DAY[buildPace]} ביום</span>
+          </div>
+          <div className="flex gap-1 rounded-full bg-[var(--surface)] p-1">
+            {PACES.map((p) => {
+              const on = buildPace === p;
+              return (
+                <button key={p} onClick={() => setBuildPace(p)}
+                  className="flex-1 rounded-full py-1 text-[12.5px] font-medium transition"
+                  style={{ background: on ? "var(--brand)" : "transparent", color: on ? "#fff" : "var(--text-2)" }}>
+                  {p}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const cityTabsEl = (
     <>
           {/* browse tags in THREE rows on 80% of the width; the primary action
@@ -1365,6 +1409,7 @@ export function DestinationView({
           shown on desktop (lg overrides), so the tabs never disappear on wide screens. */}
       {editorial && (
         <div className={`px-5 pt-1 lg:px-8 ${showBrowse ? "" : "hidden lg:block"}`}>
+          {tripSettingsEl}
           {cityTabsEl}
           {searchBarEl}
         </div>
@@ -1829,39 +1874,11 @@ export function DestinationView({
                   : "לא סימנתם מקומות — נבחר את החובה-לביקור שמתאימים לכם. תמיד אפשר לסמן כן/לא כדי לכוון."}
               </p>
             )}
-            <div className="mb-4">
-              <div className="mb-1.5 flex items-center justify-between text-[13.5px]">
-                <span>כמה ימים?</span><span className="font-medium text-[var(--brand-ink)]">{buildDays} ימים</span>
-              </div>
-              <input type="range" min={2} max={7} value={buildDays} dir="ltr"
-                onChange={(e) => setBuildDays(Number(e.target.value))}
-                className="w-full accent-[var(--brand)]" />
-            </div>
-            <div className="mb-5">
-              <div className="mb-1.5 flex items-center justify-between text-[13.5px]">
-                <span>מרחק נסיעה ליום</span><span className="font-medium text-[var(--brand-ink)]">{RADIUS_HE[buildRadius]}</span>
-              </div>
-              <input type="range" min={0} max={3} value={buildRadius} dir="ltr"
-                onChange={(e) => setBuildRadius(Number(e.target.value))}
-                className="w-full accent-[var(--brand)]" />
-            </div>
-            <div className="mb-5">
-              <div className="mb-1.5 flex items-center justify-between text-[13.5px]">
-                <span>קצב הטיול</span>
-                <span className="text-[var(--text-3)]">~{PACE_PER_DAY[buildPace]} אטרקציות ביום</span>
-              </div>
-              <div className="flex gap-1 rounded-full bg-[var(--surface-2)] p-1">
-                {PACES.map((p) => {
-                  const on = buildPace === p;
-                  return (
-                    <button key={p} onClick={() => setBuildPace(p)}
-                      className="flex-1 rounded-full py-1.5 text-[13px] font-medium transition"
-                      style={{ background: on ? "var(--brand)" : "transparent", color: on ? "#fff" : "var(--text-2)" }}>
-                      {p}
-                    </button>
-                  );
-                })}
-              </div>
+            {/* recap of the settings chosen above the tabs (the sliders live there now) */}
+            <div className="mb-5 flex flex-wrap gap-x-4 gap-y-1 rounded-[var(--radius-sm)] bg-[var(--surface-2)] px-3.5 py-2.5 text-[13px] font-medium text-[var(--text-2)]">
+              <span>📅 {buildDays} ימים</span>
+              <span>🚗 {RADIUS_HE[buildRadius]}</span>
+              <span>⚡ {buildPace} · ~{PACE_PER_DAY[buildPace]} ביום</span>
             </div>
             <div className="flex gap-2">
               {overPick && (
