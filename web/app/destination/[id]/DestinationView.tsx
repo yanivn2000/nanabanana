@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect, useRef, Fragment } from "react";
 import Link from "next/link";
-import { ChevronRight, Search, Sparkles, ChevronDown, SlidersHorizontal, Check, MapPin, X, Loader2, Heart, ExternalLink } from "lucide-react";
+import { ChevronRight, Search, Sparkles, ChevronDown, Check, MapPin, X, Loader2, Heart, ExternalLink } from "lucide-react";
 import { googleMapsPin } from "@/lib/geo";
 import { MapClient } from "@/components/MapClient";
 import { CityPoster } from "@/components/CityPoster";
@@ -481,7 +481,6 @@ export function DestinationView({
   const [bounds, setBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
   // Desktop tags row: sort order + the "more filters" popover.
   const [sort] = useState<SortKey>("match");   // default sort; the picker was removed
-  const [filtersOpen, setFiltersOpen] = useState(false);
   // Per-city yes/maybe/no marks (the "city profile") + the build modal.
   const { create } = useTrips();
   const { choices, setChoice, setMany, clear, loaded: selLoaded } = useCitySelection(dest.id);
@@ -907,7 +906,6 @@ export function DestinationView({
   }, [attractions, choices, profile.dislikes, flags, insights, mapOnly, bounds, query]);
 
   // Active popover filters (for the "פילטרים · N" badge).
-  const moreFilterCount = (flags.free ? 1 : 0) + (flags.indoor ? 1 : 0) + (flags.withInsights ? 1 : 0) + (mapOnly ? 1 : 0);
 
   // Interest-tile counts (ALL interests are always shown so they double as the
   // profile editor) + popover filter counts. A tile's count is a STABLE FACT —
@@ -1004,37 +1002,6 @@ export function DestinationView({
                 <button onClick={() => setQuery("")} aria-label="נקה חיפוש" className="shrink-0 text-[var(--text-3)] transition hover:text-[var(--text)]">
                   <X size={16} />
                 </button>
-              )}
-            </div>
-            {/* filters popover */}
-            <div className="relative shrink-0">
-              <button onClick={() => { setFiltersOpen((o) => !o); }}
-                className="flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] transition"
-                style={{ borderColor: moreFilterCount ? "var(--brand)" : "var(--border)",
-                         background: moreFilterCount ? "var(--brand-soft)" : "var(--surface)",
-                         color: moreFilterCount ? "var(--brand-ink)" : "var(--text-2)" }}>
-                <SlidersHorizontal size={15} /> פילטרים{moreFilterCount ? ` · ${moreFilterCount}` : ""}
-                <ChevronDown size={14} className={filtersOpen ? "rotate-180" : ""} />
-              </button>
-              {filtersOpen && (
-                <div className="absolute left-0 z-40 mt-1 w-60 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]">
-                  {([["free", "חינם"], ["indoor", "מקורה"],
-                     ...(isFamily ? [["top", "מומלץ למשפחות"]] : []),
-                     ["withInsights", "💬 עם תובנות מטיילים"]] as [keyof typeof flags, string][]).map(([k, label]) => (
-                    <button key={k} onClick={() => toggleFlag(k)}
-                      className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]">
-                      <span style={{ color: flags[k] ? "var(--brand-ink)" : "var(--text-2)", fontWeight: flags[k] ? 600 : 400 }}>
-                        {label} <span className="text-[var(--text-3)]">{flagCount[k]}</span>
-                      </span>
-                      {flags[k] && <Check size={15} className="text-[var(--brand)]" />}
-                    </button>
-                  ))}
-                  <button onClick={() => setMapOnly((v) => !v)}
-                    className="flex w-full items-center justify-between rounded-md px-2.5 py-2 text-right text-[13.5px] transition hover:bg-[var(--surface-2)]">
-                    <span style={{ color: mapOnly ? "var(--brand-ink)" : "var(--text-2)", fontWeight: mapOnly ? 600 : 400 }}>📍 רק מה שעל המפה</span>
-                    {mapOnly && <Check size={15} className="text-[var(--brand)]" />}
-                  </button>
-                </div>
               )}
             </div>
             {/* "רק אתרי חובה" sits with the sort/filters controls; default OFF so the
@@ -1257,15 +1224,17 @@ export function DestinationView({
   // neighbourhood sublist, then the primary actions.
   const categoryMenuEl = (
     <div className="flex flex-col gap-0.5">
-      {/* the trip counter — everything picked so far; click to show only those */}
+      {/* "בטיול" — a chip like every other category row; filters the grid to the
+          attractions already in the trip. */}
       <button onClick={() => setSelectedOnly((v) => !v)} aria-pressed={selectedOnly}
         title="הצג רק מה שנבחר לטיול"
-        className="mb-1.5 flex items-center justify-between rounded-[10px] px-3 py-2.5 text-[14px] font-bold transition"
-        style={selectedOnly ? { background: "var(--brand)", color: "#fff" }
-          : { background: "var(--brand-soft)", color: "var(--brand-ink)" }}>
-        <span className="flex items-center gap-1.5"><Heart size={14} fill="currentColor" /> בטיול</span>
-        <span className="rounded-full px-2 py-0.5 text-[12.5px] tabular-nums"
-          style={selectedOnly ? { background: "rgba(255,255,255,.22)" } : { background: "var(--brand)", color: "#fff" }}>{pickedCount}</span>
+        className="flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-right text-[13.5px] font-medium transition"
+        style={selectedOnly ? { background: "var(--brand)", color: "#fff" } : {}}>
+        <span aria-hidden className="grid w-5 place-items-center">
+          <Heart size={14} fill="currentColor" style={{ color: selectedOnly ? "#fff" : "var(--brand)" }} />
+        </span>
+        <span className="flex-1 truncate">בטיול</span>
+        <span className={`text-[11.5px] ${selectedOnly ? "opacity-80" : "text-[var(--text-3)]"}`}>{pickedCount}</span>
       </button>
       {cityTabs.filter((t) => t.key === "__all" || t.key === "__must").map(renderTabRow)}
       <div className="my-1 h-px bg-[var(--border)]" />
@@ -1297,6 +1266,29 @@ export function DestinationView({
           })}
         </div>
       )}
+      {/* filters — free / indoor / with-insights / on-the-map, as a vertical list */}
+      <div className="mt-3 flex flex-col gap-0.5 border-t border-[var(--border)] pt-3">
+        <p className="px-1 pb-0.5 text-[11.5px] font-semibold text-[var(--text-3)]">סינון</p>
+        {(([["free", "חינם"], ["indoor", "מקורה"],
+           ...(isFamily ? [["top", "מומלץ למשפחות"]] : []),
+           ["withInsights", "💬 עם תובנות מטיילים"]]) as [keyof typeof flags, string][]).map(([k, label]) => (
+          <button key={k} onClick={() => toggleFlag(k)} aria-pressed={flags[k]}
+            className="flex items-center justify-between rounded-[10px] px-2.5 py-1.5 text-[13px] transition"
+            style={flags[k] ? { background: "var(--brand-soft)", color: "var(--brand-ink)", fontWeight: 600 } : { color: "var(--text-2)" }}>
+            <span>{label}</span>
+            <span className="flex items-center gap-1.5">
+              <span className="text-[11.5px] text-[var(--text-3)]">{flagCount[k]}</span>
+              {flags[k] && <Check size={13} className="text-[var(--brand)]" />}
+            </span>
+          </button>
+        ))}
+        <button onClick={() => setMapOnly((v) => !v)} aria-pressed={mapOnly}
+          className="flex items-center justify-between rounded-[10px] px-2.5 py-1.5 text-[13px] transition"
+          style={mapOnly ? { background: "var(--brand-soft)", color: "var(--brand-ink)", fontWeight: 600 } : { color: "var(--text-2)" }}>
+          <span>📍 רק מה שעל המפה</span>
+          {mapOnly && <Check size={13} className="text-[var(--brand)]" />}
+        </button>
+      </div>
       {/* primary actions */}
       <div className="mt-3 flex flex-col gap-2 border-t border-[var(--border)] pt-3">
         {passes.length > 0 && (
@@ -1632,9 +1624,9 @@ export function DestinationView({
       {editorial && (
         <div className={`px-5 pt-1 lg:px-8 ${showBrowse ? "" : "hidden lg:block"}`}>
           {tripSettingsEl}
-          {/* mobile keeps the horizontal category chips; desktop uses the right menu */}
+          {/* mobile keeps the horizontal category chips; desktop uses the right menu.
+              The search moved INTO the middle (attractions) column below. */}
           <div className="lg:hidden">{cityTabsEl}</div>
-          {searchBarEl}
         </div>
       )}
       <div className={`lg:flex lg:items-start lg:gap-5 lg:ps-8 ${showBrowse ? "" : "hidden"}`}>
@@ -1663,6 +1655,8 @@ export function DestinationView({
 
         {/* attraction cards — a grid on desktop, single column on mobile */}
         <section id="picks" className="scroll-mt-[120px] px-5 lg:order-2 lg:min-w-0 lg:flex-1 lg:px-4 lg:pb-16">
+          {/* search — scoped to this (attractions) column only */}
+          {editorial && searchBarEl}
           {/* streets — matched by the search box, or the ones already picked. A street
               is its own entity; picking one adds it to the trip (streetIds). */}
           {(matchedStreets.length > 0 || streetPicks.size > 0) && (
