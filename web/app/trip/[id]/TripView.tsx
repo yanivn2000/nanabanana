@@ -1351,18 +1351,20 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
       {itinerary && day && (
         <div className={`mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-[var(--border)] px-5 pb-2 ${editorial ? "lg:mt-3 lg:px-8" : "lg:pl-8 lg:pr-[204px]"}`}>
           {!editorial && <h2 className="serif text-[15px] font-bold leading-tight lg:text-[16px]">{dayLabels[curIdx]}</h2>}
-          {/* move the whole day earlier / later in the trip order. RTL: right
-              arrow = earlier day (toward יום 1), left arrow = later. */}
+          {/* REORDER the whole day within the trip (not day navigation — that's the
+              tabs above). A visible "הזז יום" label so it doesn't read as paging.
+              RTL: right arrow = earlier day (toward יום 1), left arrow = later. */}
           {allDays.length > 1 && (
-            <span className="flex items-center gap-0.5" title="הזזת היום בסדר הימים">
-              <button onClick={() => moveDay(curIdx, -1)} disabled={curIdx === 0} aria-label="הקדם את היום"
-                className="grid size-6 place-items-center rounded-md border border-[var(--border)] text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)] disabled:opacity-30">
+            <span className="flex items-center gap-1 rounded-full border border-[var(--border)] py-0.5 pe-2 ps-0.5" title="שינוי מיקום היום בסדר הטיול">
+              <button onClick={() => moveDay(curIdx, -1)} disabled={curIdx === 0} aria-label="הזז את היום מוקדם יותר"
+                className="grid size-6 place-items-center rounded-full text-[var(--text-2)] transition hover:text-[var(--brand-ink)] disabled:opacity-30">
                 <ChevronRight size={14} />
               </button>
-              <button onClick={() => moveDay(curIdx, 1)} disabled={curIdx === allDays.length - 1} aria-label="אחר את היום"
-                className="grid size-6 place-items-center rounded-md border border-[var(--border)] text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)] disabled:opacity-30">
+              <button onClick={() => moveDay(curIdx, 1)} disabled={curIdx === allDays.length - 1} aria-label="הזז את היום מאוחר יותר"
+                className="grid size-6 place-items-center rounded-full text-[var(--text-2)] transition hover:text-[var(--brand-ink)] disabled:opacity-30">
                 <ChevronLeft size={14} />
               </button>
+              <span className="text-[12px] font-medium text-[var(--text-3)]">הזז יום</span>
             </span>
           )}
           {/* update the day's density from the trip's attraction "bank": more pulls
