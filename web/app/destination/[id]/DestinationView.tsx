@@ -484,6 +484,7 @@ export function DestinationView({
   }, []);
   const [mapOnly, setMapOnly] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);   // "סינון" dropdown next to the search
+  const [catOpen, setCatOpen] = useState(false);   // mobile category dropdown (replaces the scattered pills)
   const [bounds, setBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null);
   // Desktop tags row: sort order + the "more filters" popover.
   const [sort] = useState<SortKey>("match");   // default sort; the picker was removed
@@ -1106,13 +1107,14 @@ export function DestinationView({
           </div>
   );
   // One category-tab pill — used across the three tag rows.
+  const tabCount = (key: string) => key === "__all" ? attractions.length
+    : key === "__must" ? attractions.filter((a) => a.must_see === 1).length
+    : key === "__areas" ? areas.length
+    : key === "__kids" ? attractions.filter((a) => matchesInterest(a, "ילדים")).length
+    : attractions.filter((a) => matchesInterest(a, key)).length;
   const renderTab = (t: { key: string; label: string; emoji: string }) => {
     const active = cityTab === t.key;
-    const count = t.key === "__all" ? attractions.length
-      : t.key === "__must" ? attractions.filter((a) => a.must_see === 1).length
-      : t.key === "__areas" ? areas.length
-      : t.key === "__kids" ? attractions.filter((a) => matchesInterest(a, "ילדים")).length
-      : attractions.filter((a) => matchesInterest(a, t.key)).length;
+    const count = tabCount(t.key);
     return (
       <button key={t.key} onClick={() => setCityTab(t.key)}
         className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13.5px] font-medium shadow-[var(--shadow)] transition"
@@ -1198,44 +1200,69 @@ export function DestinationView({
               <p className="mb-0.5 rounded-[13px] bg-[var(--accent-soft)] px-4 py-3 text-[14.5px] font-medium leading-relaxed text-[var(--text)] shadow-[var(--shadow)]">
                 סמנו ב־<span className="inline-flex translate-y-0.5 items-center font-semibold text-[var(--accent-ink)]"><Heart size={14} fill="currentColor" /></span> את המקומות שתרצו בטיול — אתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> מסומנים בכוכב כהמלצה, אבל אתם בוחרים מה נכנס. בחרו לפחות <b>{buildCapacity}</b> ({buildDays} ימים × הקצב), ואז “בנו לי טיול”.
               </p>
-              <div className="flex flex-wrap gap-2">
-                {cityTabs.filter((t) => t.key === "__all" || t.key === "__must").map(renderTab)}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {cityTabs.filter((t) => t.key !== "__all" && t.key !== "__must" && t.key !== "__areas").map(renderTab)}
-              </div>
+              {/* categories as ONE dropdown (mobile) instead of a scattered pill wall */}
+              {(() => {
+                const cats = cityTabs.filter((t) => t.key !== "__areas");
+                const cur = cats.find((t) => t.key === cityTab) ?? cats.find((t) => t.key === "__must") ?? cats[0];
+                return (
+                  <div className="relative">
+                    <button onClick={() => setCatOpen((v) => !v)} aria-expanded={catOpen}
+                      className="flex w-full items-center justify-between gap-2 rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 text-[14px] font-medium text-[var(--text-2)] shadow-[var(--shadow)]">
+                      <span className="flex items-center gap-1.5"><span aria-hidden>{cur?.emoji}</span>{cur?.label}<span className="text-[12px] text-[var(--text-3)]">{cur ? tabCount(cur.key) : ""}</span></span>
+                      <ChevronDown size={16} className={`shrink-0 transition ${catOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    {catOpen && (
+                      <>
+                        <div className="fixed inset-0 z-[40]" onClick={() => setCatOpen(false)} />
+                        <div className="absolute z-[41] mt-1 flex max-h-[52vh] w-full flex-col gap-0.5 overflow-y-auto rounded-[14px] border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]">
+                          {cats.map((t) => {
+                            const active = cityTab === t.key && !selectedOnly;
+                            return (
+                              <button key={t.key} onClick={() => { setCityTab(t.key); setSelectedOnly(false); setCatOpen(false); }}
+                                className="flex items-center gap-2 rounded-[10px] px-3 py-2.5 text-right text-[14px] transition"
+                                style={active ? { background: "var(--brand)", color: "#fff" } : { color: "var(--text-2)" }}>
+                                <span aria-hidden className="w-5 text-center">{t.emoji}</span>
+                                <span className="flex-1">{t.label}</span>
+                                <span className={`text-[12px] ${active ? "text-white/80" : "text-[var(--text-3)]"}`}>{tabCount(t.key)}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
-            {/* left 20% — the primary actions, stacked. Pass/community badges sit on top. */}
-            <div className="mt-3 flex flex-wrap gap-2 lg:mt-0 lg:w-1/5 lg:flex-col">
+            {/* mobile action row — compact pills. The build CTA is the floating
+                half-width button (added separately), so it isn't repeated here. */}
+            <div className="mt-2.5 flex flex-wrap gap-2">
               {passes.length > 0 && (
                 <button onClick={() => setShowPasses((v) => !v)}
-                  className="flex flex-1 items-center justify-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-3 py-2 text-[12.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
+                  className="flex items-center justify-center gap-1 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand-soft)]">
                   💳 כרטיס חוסך כסף {showPasses ? "▴" : "▾"}
                 </button>
               )}
               {communityCount > 0 && (
                 <Link href={`/destination/${dest.id}/trips`}
-                  className="flex flex-1 items-center justify-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-3 py-2 text-[12.5px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
+                  className="flex items-center justify-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-3 py-1.5 text-[12.5px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
                   ❤️ {communityCount} טיולים
                 </Link>
               )}
-              <button onClick={toggleSelectedOnly} disabled={yesCount === 0}
-                className="flex-1 rounded-full border px-3 py-2 text-[12.5px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
-                style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)", color: selectedOnly ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
-                {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
-              </button>
-              <button onClick={clearAllChoices} disabled={pickedCount === 0}
-                title="נקה את כל הסימונים ששמורים לעיר"
-                className="flex flex-1 items-center justify-center gap-1 rounded-full border border-[var(--border)] px-3 py-2 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f] disabled:cursor-not-allowed disabled:opacity-40">
-                <X size={13} /> נקה
-              </button>
-              <span className={`inline-flex flex-1 rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
-                <button onClick={() => openBuild()} disabled={!canBuild} title={buildTitle}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-2 text-[13px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
-                  style={canBuild ? { background: "var(--accent)", boxShadow: "0 4px 12px rgba(198,79,38,.28)" } : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
-                  <Sparkles size={15} /> בנו לי טיול{buildCountSuffix}
+              {yesCount > 0 && (
+                <button onClick={toggleSelectedOnly}
+                  className="rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition"
+                  style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)", color: selectedOnly ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
+                  {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
                 </button>
-              </span>
+              )}
+              {pickedCount > 0 && (
+                <button onClick={clearAllChoices}
+                  title="נקה את כל הסימונים ששמורים לעיר"
+                  className="flex items-center justify-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f]">
+                  <X size={13} /> נקה
+                </button>
+              )}
             </div>
           </div>
     </>
@@ -1317,7 +1344,7 @@ export function DestinationView({
     </div>
   );
   return (
-    <main className="mx-auto w-full max-w-[440px] pb-28 lg:max-w-none lg:pb-20">
+    <main className="mx-auto w-full max-w-[440px] pb-44 lg:max-w-none lg:pb-20">
       {isEditor && (
         <div className="sticky top-0 z-40 flex items-center justify-center gap-2 bg-[#3d2c0a] px-4 py-1.5 text-center text-[12.5px] font-medium text-[var(--amber-fill)]">
           <span>✎ מצב עורך — דרגו כל אטרקציה: חשיבות (חובה / אולי / ממש לא) והתאמה לילדים. השינויים נשמרים מיד.</span>
@@ -1598,7 +1625,7 @@ export function DestinationView({
         </aside>
         {/* map — a narrow sticky rail on desktop (far side); full-width strip on mobile.
             Shrinks when the category rail is hovered (peer-hover) to lend it room. */}
-        <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-3 lg:mt-3 lg:!h-[calc(100dvh-200px)] lg:top-[154px] lg:w-[360px] lg:shrink-0 lg:border-y-0 lg:rounded-[14px] lg:border lg:transition-[width,height] peer-hover:lg:w-[216px]`}>
+        <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[150px] border-y" : "h-0"} lg:order-3 lg:mt-3 lg:!h-[calc(100dvh-200px)] lg:top-[154px] lg:w-[360px] lg:shrink-0 lg:border-y-0 lg:rounded-[14px] lg:border lg:transition-[width,height] peer-hover:lg:w-[216px]`}>
           <MapClient attractions={editorial ? cityScoped : displayItems} center={[dest.lat, dest.lng]} selected={selected}
             picks={pickedAttractions} fitNonce={fitNonce} onBounds={setBounds} hoveredId={hoveredId} focus={areaFocus} />
           {pickedAttractions.length > 0 && (
@@ -1918,8 +1945,8 @@ export function DestinationView({
                   <div role="button" tabIndex={0}
                     onClick={() => setSelected(isSel ? null : a)}
                     onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(isSel ? null : a); } }}
-                    className={`flex flex-1 cursor-pointer text-right ${isSel ? "flex-col sm:flex-row sm:items-stretch sm:min-h-[260px] sm:max-h-[58vh] lg:max-h-[calc((100dvh-164px)*0.8)]" : "flex-col"}`}>
-                    <div className={`relative w-full overflow-hidden bg-[var(--surface-2)] ${isSel ? "aspect-[16/10] sm:aspect-auto sm:w-[44%] sm:shrink-0" : "aspect-[16/10]"}`}>
+                    className={`flex flex-1 cursor-pointer text-right ${isSel ? "flex-col sm:flex-row sm:items-stretch sm:min-h-[260px] sm:max-h-[58vh] lg:max-h-[calc((100dvh-164px)*0.8)]" : "flex-row lg:flex-col"}`}>
+                    <div className={`relative overflow-hidden bg-[var(--surface-2)] ${isSel ? "aspect-[16/10] w-full sm:aspect-auto sm:w-[44%] sm:shrink-0" : "aspect-square w-[116px] shrink-0 lg:aspect-[16/10] lg:w-full"}`}>
                       {a.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={isSel ? hiResImage(a.image_url, 1100) : bigImage(a.image_url, 400)} alt="" loading="lazy"
@@ -1975,7 +2002,7 @@ export function DestinationView({
                         </div>
                       )}
                       {tip && (
-                        <p className="mt-1.5 flex items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)]">
+                        <p className={`mt-1.5 items-start gap-1 text-[12.5px] leading-snug text-[var(--brand-ink)] ${isSel ? "flex" : "hidden lg:flex"}`}>
                           <span className="shrink-0">💡</span>
                           <span className={isSel ? "" : "line-clamp-2"}>טיפ מטיילים: {tip}</span>
                         </p>
@@ -2054,7 +2081,7 @@ export function DestinationView({
       {/* persistent build bar — the flow's finish line, always visible so the
           goal is unmistakable: mark attractions, then build. Progress fills
           toward the minimum; the CTA activates once there are enough picks. */}
-      <div className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 shadow-[0_-8px_20px_rgba(16,29,43,0.08)] lg:px-8 ${showBrowse && !topCtaVisible ? "" : "hidden"}`}>
+      <div className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-2.5 shadow-[0_-8px_20px_rgba(16,29,43,0.08)] lg:px-8 ${showBrowse && !topCtaVisible ? "hidden lg:block" : "hidden"}`}>
         <div className="mx-auto max-w-[1600px]">
           <div className="flex items-center justify-end gap-3">
             <div className="flex shrink-0 items-center gap-2">
@@ -2091,6 +2118,20 @@ export function DestinationView({
           </div>
         </div>
       </div>
+
+      {/* MOBILE build CTA — a half-width floating button, always present (even at the
+          top), sitting just above the app's bottom nav so "build" is one tap away. */}
+      {showBrowse && (
+        <div className="fixed inset-x-0 bottom-[72px] z-40 flex justify-center px-4 lg:hidden">
+          <span className={`inline-flex w-1/2 min-w-[200px] rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
+            <button onClick={() => openBuild()} disabled={!canBuild} title={buildTitle}
+              className="flex w-full items-center justify-center gap-1.5 rounded-full px-4 py-3 text-[14px] font-semibold text-white shadow-[0_6px_20px_rgba(198,79,38,0.4)] transition disabled:cursor-not-allowed"
+              style={canBuild ? { background: "var(--accent)" } : { background: "var(--surface-2)", color: "var(--text-3)", border: "1px solid var(--border)" }}>
+              <Sparkles size={16} /> בנו לי טיול{buildCountSuffix}
+            </button>
+          </span>
+        </div>
+      )}
 
       {/* build modal — days + distance, then hand off to the trip page */}
       {buildOpen && (
