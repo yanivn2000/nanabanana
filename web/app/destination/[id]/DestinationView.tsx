@@ -506,10 +506,15 @@ export function DestinationView({
   // Selections persist across visits (by design) — so give a way to wipe them
   // all, not just the current view. Confirm first: it kills the whole city's
   // marks, including ones hidden by the active filters.
+  // Streets persist in their OWN localStorage key (see streetKey below), separate
+  // from the attraction choices — so a plain clear() would leave phantom street
+  // picks that still count toward pickedCount but never show in the "בטיול" view.
+  // Wipe both here so "נקה" truly zeroes the selection.
   const clearAllChoices = () => {
-    const n = Object.keys(choices).length;
+    const n = Object.keys(choices).length + streetPicks.size;
     if (window.confirm(`למחוק את כל ${n} הסימונים ששמרתם לעיר הזו (כולל מביקורים קודמים)?`)) {
       clear();
+      clearStreetPicks();
       setSelectedOnly(false);
     }
   };
@@ -534,6 +539,10 @@ export function DestinationView({
     try { localStorage.setItem(streetKey, JSON.stringify([...next])); } catch { /* ignore */ }
     return next;
   });
+  const clearStreetPicks = () => {
+    setStreetPicks(new Set());
+    try { localStorage.removeItem(streetKey); } catch { /* ignore */ }
+  };
   const [openStreetId, setOpenStreetId] = useState<number | null>(null);   // which street card is expanded
   const streetsById = useMemo(() => new Map(streets.map((s) => [s.id, s])), [streets]);
   const streetsByArea = useMemo(() => {
@@ -728,7 +737,7 @@ export function DestinationView({
   const cityTabs = useMemo(() => [
     { key: "__all", label: "הכל", emoji: "🔎" },
     { key: "__must", label: "אתרי חובה", emoji: "⭐" },
-    ...(areas.length ? [{ key: "__areas", label: "שכונות", emoji: "🏘️" }] : []),
+    ...(areas.length ? [{ key: "__areas", label: "שכונות/אזורים", emoji: "🏘️" }] : []),
     { key: "__kids", label: "עם ילדים", emoji: "👨‍👩‍👧" },
     ...govInterests.map((it) => ({ key: it.key, label: it.label, emoji: it.emoji })),
   ], [areas.length, govInterests]);
@@ -755,19 +764,40 @@ export function DestinationView({
   // Search is SCOPED to the active tab — typing in "מוזיאונים" searches only museums,
   // in a neighbourhood only that area; the "הכל" tab holds every attraction, so it's
   // where a city-wide search lives.
+  // cityScoped = the tab's attractions after search + the "סינון" flags (free /
+  // indoor / family / insights). This feeds the MAP, so it must NOT be narrowed by
+  // "רק מה שעל המפה": the map auto-fits to its markers, so filtering it by its own
+  // viewport would create a zoom-lock feedback loop. The map-viewport narrowing is
+  // applied only to the LIST, in cityListItems below.
   const cityScoped = useMemo(() => {
     // "בטיול" (selectedOnly) overrides the category — show ONLY what's in the trip,
     // across the whole city, and nothing else.
     const base = selectedOnly ? mustFirst(attractions.filter((a) => choices[a.id] === "yes")) : cityTabItems;
     const q = query.trim().toLowerCase();
-    if (!q) return base;
-    return base.filter((a) => `${a.name_he ?? ""} ${a.name_en} ${descriptor(a)}`.toLowerCase().includes(q));
+    // The "סינון" dropdown must actually narrow the editorial grid — not just the
+    // count line. Apply the same predicate the flat list uses so every filter works.
+    return base.filter((a) => {
+      if (q && !`${a.name_he ?? ""} ${a.name_en} ${descriptor(a)}`.toLowerCase().includes(q)) return false;
+      if (flags.free && a.cost_level !== 0) return false;
+      if (flags.indoor && !(a.indoor_outdoor === "indoor" || a.indoor_outdoor === "both")) return false;
+      if (flags.top && (a.family_score ?? 0) < 8) return false;
+      if (flags.withInsights && !insights[a.id]?.length) return false;
+      return true;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cityTabItems, query, selectedOnly, attractions, choices]);
-  const cityGridItems = cityScoped.slice(0, visibleCount);
+  }, [cityTabItems, query, selectedOnly, attractions, choices, flags, insights]);
+  // The LIST additionally honours "רק מה שעל המפה" — narrowed to the current map
+  // viewport. Kept separate from cityScoped so the map itself is never filtered by
+  // its own bounds (which would lock the zoom).
+  const cityListItems = useMemo(() => {
+    if (!mapOnly || !bounds) return cityScoped;
+    return cityScoped.filter((a) => a.lat != null && a.lng != null &&
+      a.lat <= bounds.north && a.lat >= bounds.south && a.lng <= bounds.east && a.lng >= bounds.west);
+  }, [cityScoped, mapOnly, bounds]);
+  const cityGridItems = cityListItems.slice(0, visibleCount);
   // "נקה" is context-aware: remove from the trip only the in-trip attractions
   // currently VISIBLE (the active category/search), not every pick in the city.
-  const visibleTripIds = useMemo(() => cityScoped.filter((a) => choices[a.id] === "yes").map((a) => a.id), [cityScoped, choices]);
+  const visibleTripIds = useMemo(() => cityListItems.filter((a) => choices[a.id] === "yes").map((a) => a.id), [cityListItems, choices]);
   const clearVisible = () => { if (visibleTripIds.length) setMany(visibleTripIds, null); };
   const cityTabLabel = cityTab === "__areas" ? (activeArea?.name_he || activeArea?.name_en || "שכונה")
     : (cityTabs.find((t) => t.key === cityTab)?.label ?? "");
@@ -1193,7 +1223,7 @@ export function DestinationView({
                 style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)", color: selectedOnly ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
                 {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
               </button>
-              <button onClick={clearAllChoices} disabled={yesCount === 0}
+              <button onClick={clearAllChoices} disabled={pickedCount === 0}
                 title="נקה את כל הסימונים ששמורים לעיר"
                 className="flex flex-1 items-center justify-center gap-1 rounded-full border border-[var(--border)] px-3 py-2 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f] disabled:cursor-not-allowed disabled:opacity-40">
                 <X size={13} /> נקה
@@ -1374,7 +1404,7 @@ export function DestinationView({
                                color: selectedOnly ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
                       {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
                     </button>
-                    <button onClick={clearAllChoices} disabled={yesCount === 0}
+                    <button onClick={clearAllChoices} disabled={pickedCount === 0}
                       title="נקה את כל הסימונים ששמורים לעיר"
                       className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-[var(--border)] disabled:hover:text-[var(--text-3)]">
                       <X size={13} /> נקה
@@ -1655,12 +1685,16 @@ export function DestinationView({
             </div>
           </div>
 
-          {(flags.withInsights || mapOnly) && (
-            <p className="pt-3 text-[13px] text-[var(--brand-ink)] lg:pt-4">
-              {mapOnly ? `מציג ${sortedItems.length} מקומות באזור המפה — הזיזו/הגדילו את המפה`
-                       : `מציג רק מקומות עם תובנות מטיילים (${sortedItems.length})`}
-            </p>
-          )}
+          {(flags.withInsights || mapOnly) && (() => {
+            // Count what's actually shown: editorial renders cityScoped, the flat list sortedItems.
+            const shown = editorial ? cityListItems.length : sortedItems.length;
+            return (
+              <p className="pt-3 text-[13px] text-[var(--brand-ink)] lg:pt-4">
+                {mapOnly ? `מציג ${shown} מקומות באזור המפה — הזיזו/הגדילו את המפה`
+                         : `מציג רק מקומות עם תובנות מטיילים (${shown})`}
+              </p>
+            );
+          })()}
 
           {sortedItems.length === 0 && (
             <p className="py-10 text-center text-[15px] text-[var(--text-3)]">
@@ -1832,7 +1866,9 @@ export function DestinationView({
           <div className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-2 lg:pt-4 xl:grid-cols-3">
             {cityGridItems.length === 0 && (
               <p className="col-span-full py-6 text-center text-[13.5px] text-[var(--text-3)]">
-                {query.trim() ? `לא נמצאו תוצאות ל"${query.trim()}"${cityTab === "__all" ? "" : ` תחת "${cityTabLabel}" — נסו בטאב "הכל"`}.` : "אין כאן מקומות עדיין."}
+                {query.trim() ? `לא נמצאו תוצאות ל"${query.trim()}"${cityTab === "__all" ? "" : ` תחת "${cityTabLabel}" — נסו בטאב "הכל"`}.`
+                  : mapOnly ? "אין מקומות באזור המפה הנוכחי — הקטינו זום או הזיזו את המפה."
+                  : "אין כאן מקומות עדיין."}
               </p>
             )}
             {cityGridItems.map((a) => {
@@ -1999,15 +2035,17 @@ export function DestinationView({
         <div className="mx-auto max-w-[1600px]">
           <div className="flex items-center justify-end gap-3">
             <div className="flex shrink-0 items-center gap-2">
-              {yesCount > 0 && (
+              {pickedCount > 0 && (
                 <>
-                  <button onClick={toggleSelectedOnly}
-                    className="hidden items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition sm:flex"
-                    style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)",
-                             color: selectedOnly ? "#fff" : "var(--brand-ink)",
-                             borderColor: selectedOnly ? "var(--brand)" : "var(--brand)" }}>
-                    {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
-                  </button>
+                  {yesCount > 0 && (
+                    <button onClick={toggleSelectedOnly}
+                      className="hidden items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition sm:flex"
+                      style={{ background: selectedOnly ? "var(--brand)" : "var(--surface)",
+                               color: selectedOnly ? "#fff" : "var(--brand-ink)",
+                               borderColor: selectedOnly ? "var(--brand)" : "var(--brand)" }}>
+                      {selectedOnly ? "הצג הכל" : "הצג נבחרים"}
+                    </button>
+                  )}
                   <button onClick={clearAllChoices} title="נקה את כל הסימונים ששמורים לעיר"
                     className="flex items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-[12.5px] text-[var(--text-3)] transition hover:border-[#c0453f] hover:text-[#c0453f]">
                     <X size={13} /> נקה
