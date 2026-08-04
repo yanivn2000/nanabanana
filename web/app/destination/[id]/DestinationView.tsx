@@ -155,7 +155,8 @@ function StreetCard({ s, picked, expanded, onToggle, onOpen }: {
 }) {
   const HDR = "linear-gradient(140deg, color-mix(in srgb, var(--brand) 22%, var(--surface-2)), var(--surface-2) 72%)";
   return (
-    <div className={`group flex scroll-mt-24 flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition ${expanded ? "sm:col-span-2 xl:col-span-3" : ""}`}
+    <div data-street-id={s.id}
+      className={`group flex scroll-mt-24 flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition ${expanded ? "sm:col-span-2 xl:col-span-3" : ""}`}
       style={{ borderColor: picked ? "var(--brand)" : "var(--border)", boxShadow: picked ? "0 0 0 1.5px var(--brand)" : undefined }}>
       <div role="button" tabIndex={0} onClick={onOpen}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
@@ -551,6 +552,18 @@ export function DestinationView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [streets.length, streetPicks]);
   const [openStreetId, setOpenStreetId] = useState<number | null>(null);   // which street card is expanded
+  // Expanding a street card makes it full-width, so the grid reflows it onto its own
+  // row (often below the fold). Scroll it into view — same as an attraction card —
+  // so it doesn't just "open below" where you can't see it. Query AFTER the reflow
+  // (inside rAF) by data-street-id, so we grab the card at its final position.
+  useEffect(() => {
+    if (openStreetId == null) return;
+    // useEffect runs after paint, so the expanded (full-width) card is already at its
+    // final position — scroll straight to it (no rAF, which browsers throttle when the
+    // tab isn't foreground).
+    const el = document.querySelector(`[data-street-id="${openStreetId}"]`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [openStreetId]);
   const streetsById = useMemo(() => new Map(streets.map((s) => [s.id, s])), [streets]);
   const streetsByArea = useMemo(() => {
     const m = new Map<number, Street[]>();
