@@ -906,7 +906,9 @@ export function DestinationView({
   // Mobile: the 240px sticky map strip eats most of the screen — let the
   // traveler collapse it. Desktop always shows the map rail. A window resize
   // event after the toggle makes Leaflet re-measure its container.
-  const [mapOpen, setMapOpen] = useState(true);
+  // On phone the map is HIDDEN by default (it ate the screen) — a toggle shows it.
+  // Desktop always shows it (the map column's lg:!h override ignores this flag).
+  const [mapOpen, setMapOpen] = useState(false);
   const toggleMap = () => {
     setMapOpen((v) => !v);
     window.setTimeout(() => window.dispatchEvent(new Event("resize")), 350);
@@ -1073,9 +1075,20 @@ export function DestinationView({
                 )}
               </div>
             )}
-            {/* "רק מה שעל המפה" — a plain on/off toggle (replaces the old סינון dropdown) */}
+            {/* mobile: show/hide the map (hidden by default so it doesn't eat the screen).
+                Desktop always shows the map, so this toggle is hidden there. */}
             {editorial && (
-              <button onClick={() => setMapOnly((v) => !v)} aria-pressed={mapOnly}
+              <button onClick={toggleMap} aria-pressed={mapOpen}
+                className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] font-medium transition lg:hidden"
+                style={mapOpen ? { background: "var(--brand-soft)", borderColor: "var(--brand)", color: "var(--brand-ink)" }
+                  : { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}>
+                <MapIcon size={15} /> {mapOpen ? "הסתר מפה" : "הצג מפה"}
+              </button>
+            )}
+            {/* "רק מה שעל המפה" — a plain on/off toggle (replaces the old סינון dropdown).
+                Enabling it reveals the map (mobile) so the viewport filter makes sense. */}
+            {editorial && (
+              <button onClick={() => { const nv = !mapOnly; setMapOnly(nv); if (nv && !mapOpen) toggleMap(); }} aria-pressed={mapOnly}
                 className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] font-medium transition"
                 style={mapOnly ? { background: "var(--brand)", borderColor: "var(--brand)", color: "#fff" }
                   : { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}>
