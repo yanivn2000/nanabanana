@@ -1,0 +1,17 @@
+{
+  "destination_id": 51,
+  "city": "Tivat",
+  "streets": [
+    {
+      "name_local": "Šetalište Pine",
+      "name_en": "Pine Promenade",
+      "name_he": "טיילת פּינֶה",
+      "kind": "street",
+      "best_for_he": "טיילת חוף הים של טיבט",
+      "vibe_he": "טיילת החוף המרכזית של טיבט, המשתרעת לאורך המים מפורטו מונטנגרו ועד פארק היער — בתי קפה, דקלים, ספסלים ונוף אל היאכטות וההרים. המקום לטיול ערב ולשקיעה על המפרץ.",
+      "dwell_min": 40,
+      "approx_lat": 42.4320,
+      "approx_lng": 18.6940
+    }
+  ]
+}
