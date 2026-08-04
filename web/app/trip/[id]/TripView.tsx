@@ -156,14 +156,20 @@ function retimeStops(stops: Stop[]): Stop[] {
       clock += travelMinutes(haversineKm(from[0], from[1], dest[0], dest[1]));
     }
   });
+  // Lunch safety net: a day too short to cross noon in the loop still gets one — but
+  // it must go AFTER the last stop at (or past) noon, never spliced early. The old
+  // splice-at-index-1 jammed a fixed 12:00 lunch in front of a stop still timed 10:30,
+  // which read as "lunch at 12:00, then a 10:30 attraction". Append + advance the clock
+  // so the order (and the dinner below) stay strictly increasing.
+  if (!lunchDone) {
+    const t = Math.max(round30(clock), LUNCH_AFTER_MIN);
+    out.push({ name: "הפסקת צהריים", kind: "food", time: fmtClock(t), duration: durationHe(LUNCH_MIN), note: "מסעדה מקומית באזור" });
+    clock = t + LUNCH_MIN;
+  }
   // Dinner is a fixed evening slot: if the day never reached 19:30 (ended earlier), pin it
   // there anyway so every day has a dinner. It's still draggable + fillable afterwards.
   if (!dinnerDone) {
-    out.push({ name: "ארוחת ערב", kind: "food", time: fmtClock(DINNER_AT_MIN), duration: durationHe(DINNER_MIN), note: "מסעדה מקומית באזור" });
-  }
-  // Same safety net for lunch (a very short day that never reached noon still gets it).
-  if (!lunchDone) {
-    out.splice(Math.min(1, out.length), 0, { name: "הפסקת צהריים", kind: "food", time: fmtClock(LUNCH_AFTER_MIN), duration: durationHe(LUNCH_MIN), note: "מסעדה מקומית באזור" });
+    out.push({ name: "ארוחת ערב", kind: "food", time: fmtClock(Math.max(round30(clock), DINNER_AT_MIN)), duration: durationHe(DINNER_MIN), note: "מסעדה מקומית באזור" });
   }
   return out;
 }
@@ -596,12 +602,23 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId, hotelKey, itinerary]);
   // Every day carries lunch + a fixed 19:30 dinner. Trips built before dinner existed gain
-  // it on load (retimeStops inserts any missing meal slot). Converges: once all days have a
-  // dinner the guard short-circuits, so this never loops.
+  // it on load (retimeStops inserts any missing meal slot). We ALSO self-heal any day whose
+  // stop times aren't strictly increasing — older builds/edits (and the fixed lunch-splice
+  // bug) could persist an out-of-order day (e.g. lunch 12:00 before a 10:30 stop); a day
+  // with dinner would otherwise never be re-timed. Converges: once every day has a dinner
+  // AND is monotonic the guard short-circuits, so this never loops.
   useEffect(() => {
-    if (!itinerary || itinerary.days.every((d) => d.stops.some(isDinnerSlot))) return;
+    if (!itinerary) return;
+    const needsFix = (d: { stops: Stop[] }) => {
+      if (!d.stops.some(isDinnerSlot)) return true;
+      const t = d.stops
+        .map((s) => { if (!s.time) return null; const [h, m] = s.time.split(":").map(Number); return (h || 0) * 60 + (m || 0); })
+        .filter((x): x is number => x != null);
+      return t.some((v, i) => i > 0 && v < t[i - 1]);   // any time earlier than the one before it
+    };
+    if (!itinerary.days.some(needsFix)) return;
     const it: Itinerary = JSON.parse(JSON.stringify(itinerary));
-    for (const d of it.days) if (!d.stops.some(isDinnerSlot)) d.stops = retimeStops(d.stops);
+    for (const d of it.days) if (needsFix(d)) d.stops = retimeStops(d.stops);
     update(tripId, { itinerary: it });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId, itinerary]);
@@ -1568,10 +1585,11 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                            : "-mx-2 flex gap-2 rounded-[12px] px-2 lg:gap-3"}`}
                          style={{ background: !editorial && isActive ? `color-mix(in srgb, ${col} 12%, transparent)` : undefined,
                                   boxShadow: editorial && isActive ? `0 0 0 2px color-mix(in srgb, ${col} 45%, transparent), var(--shadow)` : undefined }}
-                         onMouseEnter={() => { if (ci != null) { setActive(ci);
-                           // slide the map toward the hovered stop (keeping the day
-                           // overview) — same idea as a bank card centring its place.
-                           if (s.lat != null && s.lng != null) setFocus({ lat: s.lat, lng: s.lng, n: Date.now(), keepZoom: true }); } }}
+                         // Hover just HIGHLIGHTS this stop's marker (activeIdx) — it no
+                         // longer pans the map. Panning to the hovered stop pushed the
+                         // day's other stops off-screen, so you could never see the whole
+                         // day at once; the map stays framed to all the day's stops.
+                         onMouseEnter={() => { if (ci != null) setActive(ci); }}
                          onMouseLeave={() => setActive(null)}
                          onClick={() => hasDetails && setExpanded(isOpen ? null : key)}>
                       {/* leading controls — both appear on row hover, side by side with a
