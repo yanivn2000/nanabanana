@@ -1,0 +1,28 @@
+{
+  "destination_id": 62,
+  "city": "Tirana",
+  "streets": [
+    {
+      "name_local": "Bulevardi Dëshmorët e Kombit",
+      "name_en": "Dëshmorët e Kombit Boulevard",
+      "name_he": "השדרה הגדולה (דשמורט אה קומביט)",
+      "kind": "street",
+      "best_for_he": "השדרה המרכזית של טירנה",
+      "vibe_he": "השדרה הגדולה והמרכזית של טירנה, המשתרעת מכיכר סקנדרבג ועד הפארק הגדול — רחבה, מוצלת עצים ומוקפת בבנייני ממשל, אוניברסיטה, הפירמידה והמזרקות. עורק הטקסים, הטיול והבילוי של העיר.",
+      "dwell_min": 40,
+      "approx_lat": 41.3245,
+      "approx_lng": 19.8195
+    },
+    {
+      "name_local": "Rruga Ibrahim Rugova",
+      "name_en": "Blloku District",
+      "name_he": "רובע בלוקו",
+      "kind": "cluster",
+      "best_for_he": "רובע הבילוי האופנתי",
+      "vibe_he": "הרובע האסור לשעבר של הבכירים הקומוניסטים, שהפך לאזור הבילוי התוסס והאופנתי בטירנה — בָּרים, בתי קפה מגניבים, מסעדות, בוטיקים וחיי לילה. לב האנרגיה הצעירה והקוסמופוליטית של העיר.",
+      "dwell_min": 45,
+      "approx_lat": 41.3210,
+      "approx_lng": 19.8170
+    }
+  ]
+}

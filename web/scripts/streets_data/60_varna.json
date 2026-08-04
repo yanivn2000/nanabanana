@@ -1,0 +1,28 @@
+{
+  "destination_id": 60,
+  "city": "Varna",
+  "streets": [
+    {
+      "name_local": "Knyaz Boris I Boulevard",
+      "name_en": "Knyaz Boris I Boulevard",
+      "name_he": "שדרת קניאז בוריס הראשון",
+      "kind": "street",
+      "best_for_he": "רחוב הקניות הראשי להולכי רגל",
+      "vibe_he": "השדרה הראשית להולכי רגל של וארנה, המחברת את מרכז העיר לגן הימי — מותגי אופנה, בתי קפה, מסעדות ואמני רחוב. עורק הקניות והטיול התוסס של 'בירת הים' של בולגריה.",
+      "dwell_min": 40,
+      "approx_lat": 43.2055,
+      "approx_lng": 27.9165
+    },
+    {
+      "name_local": "Slivnitsa Boulevard",
+      "name_en": "Slivnitsa Boulevard",
+      "name_he": "שדרת סליבניצה",
+      "kind": "street",
+      "best_for_he": "השדרה אל הים",
+      "vibe_he": "שדרה תוססת המחברת את כיכר העצמאות אל הכניסה לגן הימי ולחוף — מסעדות, בָּרים, גלריות ומלונות. הרחוב שבו העיר יורדת אל הים, מלא חיים בערבי הקיץ.",
+      "dwell_min": 30,
+      "approx_lat": 43.2040,
+      "approx_lng": 27.9230
+    }
+  ]
+}
