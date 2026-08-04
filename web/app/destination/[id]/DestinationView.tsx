@@ -471,10 +471,9 @@ export function DestinationView({
   // Two ways in: "choose" (the default — pick an audience) and "short" (an audience
   // is chosen → the calibratable topic chips + one-tap build). The old "explore /
   // הכל" deep-editor mode was retired; its filters live next to the search now.
-  // Audience (מבוגרים / עם ילדים) is an EXPLICIT choice with NO default — the
-  // traveller sets it via the toggle in the settings bar, and the build is gated
-  // until they do. (No implicit "adults", no per-category coupling.)
-  const [audience, setAudience] = useState<Profile | null>(null);
+  // "טיול עם ילדים?" — a כן/לא toggle in the settings bar. Default = לא (adults).
+  // (No per-category coupling; the toggle is the single source of truth.)
+  const [audience, setAudience] = useState<Profile | null>(() => editorial ? "adults" : null);
   const [boosts, setBoosts] = useState<Set<string>>(new Set());
   // Two flows: GUIDED (default — audience → topics → the system pre-marks → you
   // adjust) and MANUAL/"בנייה חופשית" (steps ①② off — you pick every place yourself
@@ -728,9 +727,7 @@ export function DestinationView({
   // default that makes every trip identical.
   // Picked places count attractions + explicitly-picked streets (a street is a stop).
   const pickedCount = yesCount + streetPicks.size;
-  // Editorial requires an explicit audience (מבוגרים / עם ילדים) — no default — AND
-  // enough picks, before the trip can be built.
-  const canBuild = editorial ? (audience != null && pickedCount >= buildCapacity) : (manual ? yesCount >= MANUAL_MIN : readyToBuild);
+  const canBuild = editorial ? (pickedCount >= buildCapacity) : (manual ? yesCount >= MANUAL_MIN : readyToBuild);
   // Floor of places needed before the build unlocks (for the CTA count + tooltip).
   const needToBuild = editorial ? buildCapacity : manual ? MANUAL_MIN : 0;
   // CTA suffix: while short of the floor, show progress (2/20); once buildable,
@@ -739,9 +736,7 @@ export function DestinationView({
     ? ` · ${pickedCount}/${needToBuild}`
     : pickedCount > 0 ? ` (${pickedCount})` : "";
   const buildTitle = canBuild ? ""
-    : editorial ? (audience == null
-        ? "בחרו קהל — מבוגרים או עם ילדים"
-        : `בחרו עוד ${Math.max(0, needToBuild - pickedCount)} מקומות לטיול (${pickedCount}/${needToBuild})`)
+    : editorial ? `בחרו עוד ${Math.max(0, needToBuild - pickedCount)} מקומות לטיול (${pickedCount}/${needToBuild})`
     : manual ? `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`
     : !audience ? "קודם בחרו בשביל מי הטיול"
     : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : "";
@@ -1165,16 +1160,16 @@ export function DestinationView({
             onChange={(e) => setPerDay(Number(e.target.value))} className="w-full accent-[var(--brand)]" />
         </div>
       </div>
-      {/* audience — an EXPLICIT choice (no default); the build is gated until it's set */}
-      <div className="lg:shrink-0">
-        <div className="mb-1.5 text-[13px] font-medium text-[var(--text-2)]">בשביל מי הטיול?</div>
-        <div className={`inline-flex items-center gap-1 rounded-full border p-0.5 transition ${audience == null ? "pulse-attn" : ""}`}
-          style={{ borderColor: audience == null ? "var(--accent)" : "var(--border)", background: "var(--surface-2)" }}>
-          {([["adults", "💑 מבוגרים"], ["families", "👨‍👩‍👧 עם ילדים"]] as [Profile, string][]).map(([a, label]) => {
+      {/* "טיול עם ילדים?" — כן/לא (default: לא). Inline label so the toggle sits on
+          the same horizontal line as the "בנו לי טיול" button (items-center row). */}
+      <div className="flex items-center gap-2.5 lg:shrink-0">
+        <span className="whitespace-nowrap text-[13.5px] font-medium text-[var(--text-2)]">טיול עם ילדים?</span>
+        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)] p-0.5">
+          {([["families", "כן"], ["adults", "לא"]] as [Profile, string][]).map(([a, label]) => {
             const on = audience === a;
             return (
               <button key={a} onClick={() => setAudience(a)} aria-pressed={on}
-                className="rounded-full px-3 py-1.5 text-[13px] font-semibold transition"
+                className="rounded-full px-4 py-1.5 text-[13.5px] font-semibold transition"
                 style={{ background: on ? "var(--brand)" : "transparent", color: on ? "#fff" : "var(--text-2)" }}>
                 {label}
               </button>
