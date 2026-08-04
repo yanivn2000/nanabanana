@@ -160,7 +160,7 @@ function StreetCard({ s, picked, expanded, onToggle, onOpen }: {
       style={{ borderColor: picked ? "var(--brand)" : "var(--border)", boxShadow: picked ? "0 0 0 1.5px var(--brand)" : undefined }}>
       <div role="button" tabIndex={0} onClick={onOpen}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
-        className={`flex flex-1 cursor-pointer text-right ${expanded ? "flex-col sm:flex-row sm:items-stretch sm:min-h-[260px]" : "flex-col"}`}>
+        className={`flex flex-1 cursor-pointer text-right ${expanded ? "flex-col sm:flex-row sm:items-stretch sm:min-h-[240px] sm:max-h-[44vh]" : "flex-col"}`}>
         <div className={`relative w-full overflow-hidden ${expanded ? "aspect-[16/10] sm:aspect-auto sm:w-[44%] sm:shrink-0" : "aspect-[16/10]"}`}
           style={s.image_url ? undefined : { background: HDR }}>
           {s.image_url ? (

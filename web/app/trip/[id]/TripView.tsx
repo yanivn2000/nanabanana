@@ -1627,12 +1627,12 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                           <img src={editorial ? ((isOpen ? hiResImage(s.image, 1200) : bigImage(s.image, 960)) ?? s.image) : s.image} alt="" loading="lazy"
                             onError={editorial ? (e) => { const t = e.currentTarget; if (s.image && t.src !== s.image) t.src = s.image; } : undefined}
                             className={editorial
-                              ? `w-full bg-[var(--surface-2)] object-cover ${isOpen ? "h-[190px] lg:h-full lg:min-h-[240px]" : "h-[190px]"}`
+                              ? `w-full bg-[var(--surface-2)] object-cover ${isOpen ? "h-[190px] lg:h-[42vh] lg:min-h-[240px]" : "h-[190px]"}`
                               : "size-12 rounded-[12px] object-cover"} />
                         ) : editorial ? (
                           // no photo yet — a calm category-tinted gradient (not flat grey) at
                           // full photo height, so the card still reads as intentional.
-                          <div className={`grid w-full place-items-center border-b border-[var(--border)] ${isOpen ? "h-[190px] lg:h-full lg:min-h-[240px]" : "h-[190px]"}`}
+                          <div className={`grid w-full place-items-center border-b border-[var(--border)] ${isOpen ? "h-[190px] lg:h-[42vh] lg:min-h-[240px]" : "h-[190px]"}`}
                             style={{ background: `linear-gradient(140deg, color-mix(in srgb, ${catColor(s.cat || "attraction")} 24%, var(--surface-2)), var(--surface-2) 74%)` }}>
                             <StopIcon kind={s.kind} />
                           </div>
