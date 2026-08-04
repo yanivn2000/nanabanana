@@ -471,11 +471,10 @@ export function DestinationView({
   // Two ways in: "choose" (the default — pick an audience) and "short" (an audience
   // is chosen → the calibratable topic chips + one-tap build). The old "explore /
   // הכל" deep-editor mode was retired; its filters live next to the search now.
-  // Editorial drops the "who is the trip for?" step: default to adults. The
-  // "עם ילדים" CATEGORY is the family mode — selecting it flips the trip to
-  // families (kid-friendly places shown + family sort); any other category is
-  // adults. (No more per-category ♥ "boost" — categories just filter now.)
-  const [audience, setAudience] = useState<Profile | null>(() => editorial ? "adults" : null);
+  // Audience (מבוגרים / עם ילדים) is an EXPLICIT choice with NO default — the
+  // traveller sets it via the toggle in the settings bar, and the build is gated
+  // until they do. (No implicit "adults", no per-category coupling.)
+  const [audience, setAudience] = useState<Profile | null>(null);
   const [boosts, setBoosts] = useState<Set<string>>(new Set());
   // Two flows: GUIDED (default — audience → topics → the system pre-marks → you
   // adjust) and MANUAL/"בנייה חופשית" (steps ①② off — you pick every place yourself
@@ -567,11 +566,6 @@ export function DestinationView({
   // top tab ("__areas" or an interest key); areaTab is the chosen neighbourhood.
   const [cityTab, setCityTab] = useState<string>("__must");
   const [areaTab, setAreaTab] = useState<number | null>(null);
-  // Editorial: the "עם ילדים" category IS the family toggle (its ♥ was removed).
-  // Selecting it builds a family-fit trip; any other category reverts to adults.
-  useEffect(() => {
-    if (editorial) setAudience(cityTab === "__kids" ? "families" : "adults");
-  }, [editorial, cityTab]);
   const yesCount = Object.values(choices).filter((c) => c === "yes").length;
   // Likes are optional refinements now — the governed build works from audience +
   // topics alone, so building is always available once an audience is chosen (no
@@ -734,7 +728,9 @@ export function DestinationView({
   // default that makes every trip identical.
   // Picked places count attractions + explicitly-picked streets (a street is a stop).
   const pickedCount = yesCount + streetPicks.size;
-  const canBuild = editorial ? (pickedCount >= buildCapacity) : (manual ? yesCount >= MANUAL_MIN : readyToBuild);
+  // Editorial requires an explicit audience (מבוגרים / עם ילדים) — no default — AND
+  // enough picks, before the trip can be built.
+  const canBuild = editorial ? (audience != null && pickedCount >= buildCapacity) : (manual ? yesCount >= MANUAL_MIN : readyToBuild);
   // Floor of places needed before the build unlocks (for the CTA count + tooltip).
   const needToBuild = editorial ? buildCapacity : manual ? MANUAL_MIN : 0;
   // CTA suffix: while short of the floor, show progress (2/20); once buildable,
@@ -743,7 +739,9 @@ export function DestinationView({
     ? ` · ${pickedCount}/${needToBuild}`
     : pickedCount > 0 ? ` (${pickedCount})` : "";
   const buildTitle = canBuild ? ""
-    : editorial ? `בחרו עוד ${Math.max(0, needToBuild - pickedCount)} מקומות לטיול (${pickedCount}/${needToBuild})`
+    : editorial ? (audience == null
+        ? "בחרו קהל — מבוגרים או עם ילדים"
+        : `בחרו עוד ${Math.max(0, needToBuild - pickedCount)} מקומות לטיול (${pickedCount}/${needToBuild})`)
     : manual ? `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`
     : !audience ? "קודם בחרו בשביל מי הטיול"
     : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : "";
@@ -1141,7 +1139,7 @@ export function DestinationView({
   const tripSettingsEl = (
     <div>
       <div className="flex flex-col gap-3.5 lg:flex-row lg:items-center lg:gap-5">
-      <div className="grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-3 lg:w-[70%]">
+      <div className="grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-3 lg:flex-1">
         <div>
           <div className="mb-1.5 flex items-center justify-between text-[13px]">
             <span className="font-medium text-[var(--text-2)]">כמה ימים?</span>
@@ -1167,8 +1165,25 @@ export function DestinationView({
             onChange={(e) => setPerDay(Number(e.target.value))} className="w-full accent-[var(--brand)]" />
         </div>
       </div>
-      {/* the build CTA lives with the settings it depends on — 30% of the bar */}
-      <div className="lg:w-[30%]">
+      {/* audience — an EXPLICIT choice (no default); the build is gated until it's set */}
+      <div className="lg:shrink-0">
+        <div className="mb-1.5 text-[13px] font-medium text-[var(--text-2)]">בשביל מי הטיול?</div>
+        <div className={`inline-flex items-center gap-1 rounded-full border p-0.5 transition ${audience == null ? "pulse-attn" : ""}`}
+          style={{ borderColor: audience == null ? "var(--accent)" : "var(--border)", background: "var(--surface-2)" }}>
+          {([["adults", "💑 מבוגרים"], ["families", "👨‍👩‍👧 עם ילדים"]] as [Profile, string][]).map(([a, label]) => {
+            const on = audience === a;
+            return (
+              <button key={a} onClick={() => setAudience(a)} aria-pressed={on}
+                className="rounded-full px-3 py-1.5 text-[13px] font-semibold transition"
+                style={{ background: on ? "var(--brand)" : "transparent", color: on ? "#fff" : "var(--text-2)" }}>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {/* the build CTA lives with the settings it depends on */}
+      <div className="lg:w-[190px] lg:shrink-0">
         <span className={`inline-flex w-full rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
           <button onClick={() => openBuild()} disabled={!canBuild} title={buildTitle}
             className="flex w-full items-center justify-center gap-1.5 rounded-full px-4 py-3 text-[15px] font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed"
