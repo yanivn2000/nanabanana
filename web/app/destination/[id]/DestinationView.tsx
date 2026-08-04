@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect, useRef, Fragment } from "react";
 import Link from "next/link";
 import { ChevronRight, Search, Sparkles, ChevronDown, Check, MapPin, X, Loader2, Heart, ExternalLink,
   Compass, Star, Map as MapIcon, Baby, Palette, UtensilsCrossed, Trees, Wine, Landmark, Building2, Watch, Gem, FerrisWheel, Waves,
-  Coins, Umbrella, MessageCircle, SlidersHorizontal } from "lucide-react";
+  Coins, Umbrella, MessageCircle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 // Elegant outline icons per category (brand-coloured, stroke-only) — a Booking-ish
@@ -974,6 +974,14 @@ export function DestinationView({
 
   // Hoisted so editorial can place them in a full-width bar above BOTH columns
   // (tabs on top, search below); classic keeps the search inside the list column.
+  // The display-filter toggles (free / indoor / [family] / insights). They live in
+  // the right category rail now; the search-row keeps only the areas select + the
+  // "רק מה שעל המפה" toggle.
+  const filterRows: [keyof typeof flags, string, LucideIcon][] = [
+    ["free", "חינם", Coins], ["indoor", "מקורה", Umbrella],
+    ...(isFamily ? [["top", "מומלץ למשפחות", Baby] as [keyof typeof flags, string, LucideIcon]] : []),
+    ["withInsights", "עם תובנות מטיילים", MessageCircle],
+  ];
   const searchBarEl = (
           <div className="flex flex-wrap items-center gap-2 pt-3">
             {/* live search — filters as you type; ✕ clears */}
@@ -988,57 +996,58 @@ export function DestinationView({
                 </button>
               )}
             </div>
-            {/* filters — a dropdown between the search and "נקה" (moved out of the
-                category rail). Free / indoor / [family] / insights / on-the-map. */}
-            {editorial && (() => {
-              const rows: [keyof typeof flags, string, LucideIcon][] = [
-                ["free", "חינם", Coins], ["indoor", "מקורה", Umbrella],
-                ...(isFamily ? [["top", "מומלץ למשפחות", Baby] as [keyof typeof flags, string, LucideIcon]] : []),
-                ["withInsights", "עם תובנות מטיילים", MessageCircle],
-              ];
-              const nActive = rows.filter(([k]) => flags[k]).length + (mapOnly ? 1 : 0);
-              return (
-                <div className="relative shrink-0">
-                  <button onClick={() => setFiltersOpen((v) => !v)} aria-expanded={filtersOpen}
-                    className="flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] font-medium transition"
-                    style={nActive > 0 ? { background: "var(--brand-soft)", borderColor: "var(--brand)", color: "var(--brand-ink)" }
-                      : { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}>
-                    <SlidersHorizontal size={15} /> סינון
-                    {nActive > 0 && <span className="grid size-5 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-bold text-white">{nActive}</span>}
-                    <ChevronDown size={14} className={`transition ${filtersOpen ? "rotate-180" : ""}`} />
-                  </button>
-                  {filtersOpen && (
-                    <>
-                      <div className="fixed inset-0 z-[40]" onClick={() => setFiltersOpen(false)} />
-                      <div className="absolute z-[41] mt-1 flex w-[230px] flex-col gap-0.5 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]"
-                        style={{ insetInlineStart: 0 }}>
-                        {rows.map(([k, label, Icon]) => (
-                          <button key={k} onClick={() => toggleFlag(k)} aria-pressed={flags[k]}
+            {/* neighbourhoods / areas selector — between the search and the map toggle.
+                First option clears back to "all"; picking one scopes the browse to that
+                area (same as the old __areas tab, which now lives ONLY here). */}
+            {editorial && areas.length > 0 && (
+              <div className="relative shrink-0">
+                <button onClick={() => setFiltersOpen((v) => !v)} aria-expanded={filtersOpen}
+                  className="flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] font-medium transition"
+                  style={cityTab === "__areas"
+                    ? { background: "var(--brand-soft)", borderColor: "var(--brand)", color: "var(--brand-ink)" }
+                    : { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}>
+                  <MapIcon size={15} />
+                  <span className="max-w-[160px] truncate">{cityTab === "__areas" && activeArea ? (activeArea.name_he || activeArea.name_en) : "כל השכונות/אזורים"}</span>
+                  <ChevronDown size={14} className={`transition ${filtersOpen ? "rotate-180" : ""}`} />
+                </button>
+                {filtersOpen && (
+                  <>
+                    <div className="fixed inset-0 z-[40]" onClick={() => setFiltersOpen(false)} />
+                    <div className="absolute z-[41] mt-1 flex max-h-[340px] w-[248px] flex-col gap-0.5 overflow-y-auto rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow)]"
+                      style={{ insetInlineStart: 0 }}>
+                      <button onClick={() => { setCityTab("__must"); setAreaTab(null); setFiltersOpen(false); }}
+                        className="flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-right text-[13px] transition"
+                        style={cityTab !== "__areas" ? { background: "var(--brand-soft)", color: "var(--brand-ink)", fontWeight: 600 } : { color: "var(--text-2)" }}>
+                        <span className="flex-1 truncate">כל השכונות/אזורים</span>
+                        {cityTab !== "__areas" && <Check size={13} className="shrink-0 text-[var(--brand)]" />}
+                      </button>
+                      {areas.map((area) => {
+                        const on = cityTab === "__areas" && activeArea?.id === area.id;
+                        return (
+                          <button key={area.id} onClick={() => { setCityTab("__areas"); setAreaTab(area.id); setFiltersOpen(false); }}
                             className="flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-right text-[13px] transition"
-                            style={flags[k] ? { background: "var(--brand-soft)", color: "var(--brand-ink)", fontWeight: 600 } : { color: "var(--text-2)" }}>
-                            <span aria-hidden className="grid w-5 shrink-0 place-items-center">
-                              <Icon size={15} strokeWidth={1.75} style={{ color: flags[k] ? "var(--brand)" : "var(--text-3)" }} />
-                            </span>
-                            <span className="flex-1 truncate">{label}</span>
-                            <span className="text-[11.5px] text-[var(--text-3)]">{flagCount[k]}</span>
-                            {flags[k] && <Check size={13} className="shrink-0 text-[var(--brand)]" />}
+                            style={on ? { background: "var(--brand-soft)", color: "var(--brand-ink)", fontWeight: 600 } : { color: "var(--text-2)" }}>
+                            <span className="flex-1 truncate">{area.name_he || area.name_en}</span>
+                            <span className="text-[11.5px] text-[var(--text-3)]">{area.member_ids.length}</span>
+                            {on && <Check size={13} className="shrink-0 text-[var(--brand)]" />}
                           </button>
-                        ))}
-                        <button onClick={() => setMapOnly((v) => !v)} aria-pressed={mapOnly}
-                          className="flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-right text-[13px] transition"
-                          style={mapOnly ? { background: "var(--brand-soft)", color: "var(--brand-ink)", fontWeight: 600 } : { color: "var(--text-2)" }}>
-                          <span aria-hidden className="grid w-5 shrink-0 place-items-center">
-                            <MapPin size={15} strokeWidth={1.75} style={{ color: mapOnly ? "var(--brand)" : "var(--text-3)" }} />
-                          </span>
-                          <span className="flex-1 truncate">רק מה שעל המפה</span>
-                          {mapOnly && <Check size={13} className="shrink-0 text-[var(--brand)]" />}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })()}
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+            {/* "רק מה שעל המפה" — a plain on/off toggle (replaces the old סינון dropdown) */}
+            {editorial && (
+              <button onClick={() => setMapOnly((v) => !v)} aria-pressed={mapOnly}
+                className="flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13.5px] font-medium transition"
+                style={mapOnly ? { background: "var(--brand)", borderColor: "var(--brand)", color: "#fff" }
+                  : { background: "var(--surface)", borderColor: "var(--border)", color: "var(--text-2)" }}>
+                <MapPin size={15} /> רק מה שעל המפה
+                {mapOnly && <Check size={14} />}
+              </button>
+            )}
             {/* clear (brand-orange) — removes from the trip ONLY the in-trip attractions
                 visible under the current category/search, not every pick. */}
             {visibleTripIds.length > 0 && (
@@ -1161,48 +1170,6 @@ export function DestinationView({
               <div className="flex flex-wrap gap-2">
                 {cityTabs.filter((t) => t.key !== "__all" && t.key !== "__must" && t.key !== "__areas").map(renderTab)}
               </div>
-              <div className="flex flex-wrap gap-2">
-                {cityTabs.filter((t) => t.key === "__areas").map(renderTab)}
-              </div>
-              {/* neighbourhood sub-tabs open directly under "שכונות" */}
-              {cityTab === "__areas" && areas.length > 0 && (
-                <>
-                  <div className="mt-0.5 flex flex-wrap gap-2">
-                    {areas.map((area) => {
-                      const active = (activeArea?.id ?? null) === area.id;
-                      const toured = chosenAreas.has(area.id);
-                      return (
-                        <div key={area.id}
-                          className={`flex shrink-0 items-center overflow-hidden rounded-full border transition ${active ? "border-transparent ring-1 ring-[var(--brand)]" : toured ? "border-[var(--accent)]" : "border-[var(--border)] shadow-[var(--shadow)]"}`}
-                          style={active ? { background: "var(--brand-soft)" } : toured ? { background: "var(--accent-soft)" } : { background: "var(--surface)" }}>
-                          <button onClick={() => setAreaTab(area.id)}
-                            className={`py-1 ps-3 pe-1 text-[12.5px] font-medium ${active ? "text-[var(--brand-ink)]" : "text-[var(--text-3)] hover:text-[var(--brand-ink)]"}`}>
-                            {area.name_he || area.name_en} <span className="opacity-60">{area.member_ids.length}</span>
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); toggleAreaHeart(area.id); }} disabled={!heartsEnabled}
-                            aria-pressed={toured} title={heartsEnabled ? "טיילו בכל השכונה" : "בחרו קהל ותחום קודם"}
-                            className="grid size-7 shrink-0 place-items-center pe-1.5 disabled:opacity-40"
-                            style={{ color: toured ? "var(--accent)" : "var(--text-3)" }}>
-                            <Heart size={13} fill={toured ? "currentColor" : "none"} />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {activeArea?.vibe_he && (
-                    <p className="mt-1 px-1 text-[13px] leading-snug text-[var(--text-2)]">{activeArea.vibe_he}</p>
-                  )}
-                  {/* the active neighbourhood's streets — pick one to add it to the trip */}
-                  {activeArea && (streetsByArea.get(activeArea.id)?.length ?? 0) > 0 && (
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <span className="text-[12px] font-medium text-[var(--text-3)]">🛣️ רחובות בשכונה:</span>
-                      {streetsByArea.get(activeArea.id)!.map((s) => (
-                        <StreetPill key={s.id} s={s} picked={streetPicks.has(s.id)} onToggle={() => toggleStreet(s.id)} />
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
             </div>
             {/* left 20% — the primary actions, stacked. Pass/community badges sit on top. */}
             <div className="mt-3 flex flex-wrap gap-2 lg:mt-0 lg:w-1/5 lg:flex-col">
@@ -1283,34 +1250,21 @@ export function DestinationView({
       {cityTabs.filter((t) => t.key === "__all" || t.key === "__must").map(renderTabRow)}
       <div className="my-1 h-px bg-[var(--border)]" />
       {cityTabs.filter((t) => t.key !== "__all" && t.key !== "__must" && t.key !== "__areas").map(renderTabRow)}
+      {/* display filters — moved here from the old "סינון" dropdown (free / indoor /
+          [family] / insights). Areas now live in a select next to the search. */}
       <div className="my-1 h-px bg-[var(--border)]" />
-      {cityTabs.filter((t) => t.key === "__areas").map(renderTabRow)}
-      {cityTab === "__areas" && areas.length > 0 && (
-        <div className="mt-0.5 flex flex-col gap-0.5 pe-2">
-          {areas.map((area) => {
-            const active = (activeArea?.id ?? null) === area.id;
-            const toured = chosenAreas.has(area.id);
-            return (
-              <div key={area.id} className="flex items-center overflow-hidden rounded-[8px]"
-                style={active ? { background: "var(--brand-soft)" } : toured ? { background: "var(--accent-soft)" } : {}}>
-                <button onClick={() => setAreaTab(area.id)}
-                  className="flex flex-1 items-center gap-1.5 px-2 py-1.5 text-right text-[12.5px]"
-                  style={{ color: active ? "var(--brand-ink)" : "var(--text-3)" }}>
-                  <span className="flex-1 truncate">{area.name_he || area.name_en}</span>
-                  <span className="opacity-60">{area.member_ids.length}</span>
-                </button>
-                <button onClick={(e) => { e.stopPropagation(); toggleAreaHeart(area.id); }} disabled={!heartsEnabled}
-                  aria-pressed={toured} title="טיילו בכל השכונה"
-                  className="grid size-7 shrink-0 place-items-center disabled:opacity-40"
-                  style={{ color: toured ? "var(--accent)" : "var(--text-3)" }}>
-                  <Heart size={12} fill={toured ? "currentColor" : "none"} />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      {/* (filters moved OUT of the rail into a "סינון" dropdown next to the search) */}
+      {filterRows.map(([k, label, Icon]) => (
+        <button key={k} onClick={() => toggleFlag(k)} aria-pressed={flags[k]}
+          title={label}
+          className="flex items-center gap-2 rounded-[10px] px-2.5 py-2 text-right text-[13.5px] font-medium transition"
+          style={flags[k] ? { background: "var(--brand)", color: "#fff" } : {}}>
+          <span aria-hidden className="grid w-5 place-items-center">
+            <Icon size={16} strokeWidth={1.75} style={{ color: flags[k] ? "#fff" : "var(--brand)" }} />
+          </span>
+          <span className="flex-1 truncate opacity-0 transition-opacity duration-150 group-hover:opacity-100">{label}</span>
+          <span className={`text-[11.5px] opacity-0 transition-opacity duration-150 group-hover:opacity-100 ${flags[k] ? "" : "text-[var(--text-3)]"}`}>{flagCount[k]}</span>
+        </button>
+      ))}
       {/* primary actions — hidden when the rail is collapsed to icons */}
       <div className="mt-3 flex flex-col gap-2 border-t border-[var(--border)] pt-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
         {passes.length > 0 && (
@@ -1610,7 +1564,7 @@ export function DestinationView({
         </aside>
         {/* map — a narrow sticky rail on desktop (far side); full-width strip on mobile.
             Shrinks when the category rail is hovered (peer-hover) to lend it room. */}
-        <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-3 lg:!h-[calc(100dvh-156px)] lg:top-[140px] lg:w-[360px] lg:shrink-0 lg:border-y-0 lg:border-s lg:transition-[width,height] peer-hover:lg:w-[216px]`}>
+        <div className={`relative sticky top-0 z-10 w-full overflow-hidden border-[var(--border)] transition-[height] duration-300 ${mapOpen ? "h-[240px] border-y" : "h-0"} lg:order-3 lg:mt-3 lg:!h-[calc(100dvh-200px)] lg:top-[154px] lg:w-[360px] lg:shrink-0 lg:border-y-0 lg:rounded-[14px] lg:border lg:transition-[width,height] peer-hover:lg:w-[216px]`}>
           <MapClient attractions={editorial ? cityScoped : displayItems} center={[dest.lat, dest.lng]} selected={selected}
             picks={pickedAttractions} fitNonce={fitNonce} onBounds={setBounds} hoveredId={hoveredId} focus={areaFocus} />
           {pickedAttractions.length > 0 && (
@@ -1630,6 +1584,38 @@ export function DestinationView({
         <section id="picks" className="scroll-mt-[120px] px-5 lg:order-2 lg:min-w-0 lg:flex-1 lg:px-4 lg:pb-16">
           {/* search — scoped to this (attractions) column only */}
           {editorial && searchBarEl}
+          {/* area context — shown when a neighbourhood/area is chosen in the select:
+              its vibe, a "tour the whole area" heart, and its streets to pick. (Moved
+              here from the old __areas sub-tabs.) */}
+          {editorial && cityTab === "__areas" && activeArea && (
+            <div className="mt-3 rounded-[14px] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 shadow-[var(--shadow)]">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-[15px] font-semibold">{activeArea.name_he || activeArea.name_en}
+                  <span className="ms-1.5 text-[12.5px] font-normal text-[var(--text-3)]">{activeArea.member_ids.length} מקומות</span>
+                </span>
+                <button onClick={() => toggleAreaHeart(activeArea.id)} disabled={!heartsEnabled}
+                  aria-pressed={chosenAreas.has(activeArea.id)}
+                  title={heartsEnabled ? "טיילו בכל השכונה" : "בחרו קהל קודם"}
+                  className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-medium transition disabled:opacity-40"
+                  style={chosenAreas.has(activeArea.id)
+                    ? { background: "var(--accent-soft)", borderColor: "var(--accent)", color: "var(--accent-ink)" }
+                    : { borderColor: "var(--border)", color: "var(--text-2)" }}>
+                  <Heart size={13} fill={chosenAreas.has(activeArea.id) ? "currentColor" : "none"} /> טיילו בכל השכונה
+                </button>
+              </div>
+              {activeArea.vibe_he && (
+                <p className="mt-1 text-[13px] leading-snug text-[var(--text-2)]">{activeArea.vibe_he}</p>
+              )}
+              {(streetsByArea.get(activeArea.id)?.length ?? 0) > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="text-[12px] font-medium text-[var(--text-3)]">🛣️ רחובות בשכונה:</span>
+                  {streetsByArea.get(activeArea.id)!.map((s) => (
+                    <StreetPill key={s.id} s={s} picked={streetPicks.has(s.id)} onToggle={() => toggleStreet(s.id)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {/* streets — matched by the search box, or the ones already picked. A street
               is its own entity; picking one adds it to the trip (streetIds). */}
           {(matchedStreets.length > 0 || streetPicks.size > 0) && (
