@@ -156,7 +156,7 @@ function StreetCard({ s, picked, expanded, onToggle, onOpen }: {
   const HDR = "linear-gradient(140deg, color-mix(in srgb, var(--brand) 22%, var(--surface-2)), var(--surface-2) 72%)";
   return (
     <div data-street-id={s.id}
-      className={`group flex scroll-mt-24 flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition ${expanded ? "sm:col-span-2 xl:col-span-3" : ""}`}
+      className={`group flex scroll-mt-[150px] flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition ${expanded ? "sm:col-span-2 xl:col-span-3" : ""}`}
       style={{ borderColor: picked ? "var(--brand)" : "var(--border)", boxShadow: picked ? "0 0 0 1.5px var(--brand)" : undefined }}>
       <div role="button" tabIndex={0} onClick={onOpen}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
@@ -1909,7 +1909,7 @@ export function DestinationView({
                   data-aid={a.id}
                   ref={isSel ? selCardRef : undefined}
                   onMouseEnter={() => setHoveredId(a.id)} onMouseLeave={() => setHoveredId((h) => (h === a.id ? null : h))}
-                  className={`group flex scroll-mt-24 flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition hover:-translate-y-0.5 ${isSel ? "sm:col-span-2 xl:col-span-3" : ""}`}
+                  className={`group flex scroll-mt-[150px] flex-col overflow-hidden rounded-[var(--radius-card)] border bg-[var(--surface)] text-right shadow-[var(--shadow)] transition hover:-translate-y-0.5 ${isSel ? "sm:col-span-2 xl:col-span-3" : ""}`}
                   style={{ borderColor: choice === "yes" || isSel ? "var(--brand)" : "var(--border)",
                            boxShadow: isSel ? "0 0 0 1.5px var(--brand)" : undefined }}>
                   {/* clickable body — selects the place and flies the map. A div (not a

@@ -1576,7 +1576,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 return (
                   <div key={si} ref={(el) => { stopRefs.current[si] = el; }}
                        data-drop-idx={si}
-                       className={`scroll-mt-24 ${isOpen && editorial ? "lg:col-span-3" : ""} ${drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}`}
+                       className={`scroll-mt-[180px] ${isOpen && editorial ? "lg:col-span-3" : ""} ${drag?.kind === "stop" && drag.si === si ? "opacity-40" : ""}`}
                        style={dragOverSi === si && drag && !(drag.kind === "stop" && drag.si === si)
                          ? { boxShadow: `inset 0 ${drag.kind === "bank" || (drag.kind === "stop" && drag.si > si) ? 3 : -3}px 0 0 var(--brand)` } : undefined}>
                     <>
