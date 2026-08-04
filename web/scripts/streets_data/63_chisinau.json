@@ -1,0 +1,17 @@
+{
+  "destination_id": 63,
+  "city": "Chisinau",
+  "streets": [
+    {
+      "name_local": "Bulevardul Ștefan cel Mare",
+      "name_en": "Ștefan cel Mare Boulevard",
+      "name_he": "שדרת סטפן הגדול",
+      "kind": "street",
+      "best_for_he": "השדרה הראשית של קישינב",
+      "vibe_he": "העורק המרכזי של קישינב, המשתרע לאורך העיר — לצדו הקתדרלה, שער הניצחון, בניין הממשלה, הפארק המרכזי, אולם העוגב, חנויות ובתי קפה. שדרת הטיול, הקניות והחיים הפועמת של הבירה המולדבית.",
+      "dwell_min": 45,
+      "approx_lat": 47.0235,
+      "approx_lng": 28.8330
+    }
+  ]
+}

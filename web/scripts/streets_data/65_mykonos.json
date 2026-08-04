@@ -1,0 +1,17 @@
+{
+  "destination_id": 65,
+  "city": "Mykonos",
+  "streets": [
+    {
+      "name_local": "Matogianni",
+      "name_en": "Matoyianni Street",
+      "name_he": "מאטוֹיאני",
+      "kind": "street",
+      "best_for_he": "רחוב הקניות והבילוי הראשי",
+      "vibe_he": "הרחוב הראשי והתוסס של חוֹרה — סמטה מרוצפת ולבנה מלאה בוטיקים של מעצבים, מותגי יוקרה, גלריות, מסעדות ובָּרים. לב הקניות, האופנה והזוהר של מיקונוס, שוקק חיים עד השעות הקטנות.",
+      "dwell_min": 45,
+      "approx_lat": 37.4455,
+      "approx_lng": 25.3285
+    }
+  ]
+}

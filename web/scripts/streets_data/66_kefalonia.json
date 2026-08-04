@@ -1,0 +1,17 @@
+{
+  "destination_id": 66,
+  "city": "Kefalonia",
+  "streets": [
+    {
+      "name_local": "Lithostroto",
+      "name_en": "Lithostroto Street",
+      "name_he": "ליתוֹסטרוֹטוֹ",
+      "kind": "street",
+      "best_for_he": "רחוב הקניות של ארגוֹסטוֹלי",
+      "vibe_he": "הרחוב הראשי המרוצף להולכי רגל של ארגוֹסטוֹלי — חנויות, בתי קפה, גלריות ומגדל פעמונים ונציאני בקצהו. לב הקניות והטיול של בירת האי, תוסס במיוחד בערבי הקיץ.",
+      "dwell_min": 35,
+      "approx_lat": 38.1745,
+      "approx_lng": 20.4895
+    }
+  ]
+}
