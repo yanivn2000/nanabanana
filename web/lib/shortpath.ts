@@ -1,75 +1,8 @@
-import type { Attraction } from "./db";
-import { coarseFits, tasteScore, INTEREST_TASTE } from "./taste";
-
-// The short curated path — "what people like you loved". For a profile, keep the
-// audience-eligible places (fit >= floor), rank by consensus = worthiness × fit,
-// take the top N. Optional taste boosts re-rank within. Pure + client-safe
-// (types only) so DestinationView can compute it live from the loaded data.
-
 // UI audiences the traveller picks. The biggest real split is with-kids vs without,
 // so couples + friends are ONE choice ("זוגות וחברים"); families stay separate. The
 // data layer still stores all three per-audience fits — "adults" reads whichever of
-// couples/friends fits BEST for each place (a nightlife spot via friends, a wine bar
-// via couples), so merging the button keeps, not loses, the per-audience signal.
+// couples/friends fits BEST for each place, so merging the button keeps the signal.
 export type Profile = "families" | "adults";
 export const PROFILES: Profile[] = ["families", "adults"];
 export const PROFILE_HE: Record<Profile, string> = { families: "משפחות", adults: "זוגות וחברים" };
 export const PROFILE_EMOJI: Record<Profile, string> = { families: "👨‍👩‍👧", adults: "💑" };
-
-// UI audience → the per-place fit (0-100). "adults" = the stronger of couples/friends.
-const fitFor = (a: Attraction, p: Profile): number =>
-  p === "families" ? (a.audience_fit?.families ?? 0)
-    : Math.max(a.audience_fit?.couples ?? 0, a.audience_fit?.friends ?? 0);
-const bonusFor = (a: Attraction, p: Profile): number =>
-  p === "families" ? (a.admin_bonus?.families ?? 0)
-    : Math.max(a.admin_bonus?.couples ?? 0, a.admin_bonus?.friends ?? 0);
-
-const FIT_FLOOR = 35; // below this, the place is not shown for that audience at all
-
-// Interests for the taste tilt (boost within the audience-eligible set).
-export const INTERESTS: { key: string; label: string; emoji: string; match: (a: Attraction) => boolean }[] = [
-  { key: "museum", label: "מוזיאונים ואמנות", emoji: "🖼️", match: (a) => a.category === "museum" || a.audience_fit?.type === "cultural" },
-  { key: "food", label: "אוכל ושווקים", emoji: "🍽️", match: (a) => a.audience_fit?.type === "foodie" },
-  { key: "nature", label: "טבע ופארקים", emoji: "🌳", match: (a) => a.category === "nature" || a.audience_fit?.type === "outdoors" },
-  { key: "family", label: "חוויה ומשפחה", emoji: "🎡", match: (a) => a.audience_fit?.type === "family" },
-  { key: "culture", label: "אווירה והיסטוריה", emoji: "🎭", match: (a) => ["cultural", "social", "hidden_gem"].includes(a.audience_fit?.type ?? "") },
-];
-
-// curation (editor-must / must_see) IS the notability signal when traveller data is thin
-function curation(a: Attraction): number {
-  if (a.must_see === 1) return 1;
-  if (a.editor_rank === "maybe") return 0.5;
-  return 0;
-}
-
-export type ShortPathItem = { a: Attraction; score: number; boosted: boolean };
-
-export function shortPath(
-  attractions: Attraction[], travCount: (id: number) => number,
-  profile: Profile, boosts: Set<string>, n = 24
-): { path: ShortPathItem[]; excluded: number; eligible: number } {
-  const withFit = attractions.filter((a) => a.audience_fit && a.editor_rank !== "no");
-  const maxTrav = Math.max(1, ...withFit.map((a) => travCount(a.id)));
-  const worth = (a: Attraction) => {
-    const t = travCount(a.id);
-    const ts = t ? Math.log1p(t) / Math.log1p(maxTrav) : 0;
-    return Math.min(1, 0.10 + 0.28 * ts + 0.28 * (a.notable ? 1 : 0) + 0.34 * curation(a));
-  };
-  const consensus = (a: Attraction) =>
-    Math.round(100 * worth(a) * (fitFor(a, profile) / 100)) + bonusFor(a, profile);
-  const eligible = withFit.filter((a) => fitFor(a, profile) >= FIT_FLOOR);
-  // The boost keys are GOVERNING_INTERESTS chip keys (Hebrew, shared with the build).
-  // Match a place by its taste-tags OR coarse category — the same signal the build
-  // route uses — so the on-screen list and the built trip agree on what's "on-theme".
-  const boostW: Record<string, number> = {};
-  for (const k of boosts) for (const t of (INTEREST_TASTE[k] ?? [])) boostW[t] = (boostW[t] ?? 0) + 1;
-  const boostMatch = (a: Attraction) =>
-    boosts.size > 0 && (tasteScore(a.taste_tags, boostW) > 0 || coarseFits(a.category, a.subcategory, [...boosts]));
-  const scored = eligible.map((a) => ({ a, base: consensus(a), boosted: boostMatch(a) }));
-  scored.sort((x, y) => (y.base + (y.boosted ? 20 : 0)) - (x.base + (x.boosted ? 20 : 0)));
-  return {
-    path: scored.slice(0, n).map((s) => ({ a: s.a, score: s.base, boosted: s.boosted })),
-    excluded: withFit.length - eligible.length,
-    eligible: eligible.length,
-  };
-}

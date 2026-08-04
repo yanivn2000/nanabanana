@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, interestCandidates, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds, approvedStreetsForCity } from "@/lib/db";
+import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds, approvedStreetsForCity } from "@/lib/db";
 import { annotateDaysWithAreas } from "@/lib/cluster";
 import type { Attraction, Destination, Street } from "@/lib/db";
 import { refOf, synthId, isRealAttraction } from "@/lib/place";
@@ -16,7 +16,7 @@ import { checkRateLimit } from "@/lib/db";
 import { rateLimit } from "@/lib/ratelimit";
 import * as Sentry from "@sentry/nextjs";
 import { paceToPerDay } from "@/lib/trip-types";
-import { rankByTaste, tasteEmphasis, tasteScore, coarseFits, interestTasteMap, INTEREST_KEYWORDS, INTEREST_TASTE, INTEREST_CATS } from "@/lib/taste";
+import { rankByTaste, tasteEmphasis } from "@/lib/taste";
 import { haversineKm, estimateLeg } from "@/lib/geo";
 import { reachPenalty } from "@/lib/brain/policy";
 import type { Itinerary as ItineraryT } from "@/lib/trip-types";
@@ -313,9 +313,6 @@ export async function POST(req: NextRequest) {
   const areaMemberRows = areaMemberIds.length ? await attractionsByIds(areaMemberIds) : [];
   const seen = new Set(base.map((a) => a.id));
   let pool = [...base, ...[...picks, ...areaMemberRows].filter((p) => { if (seen.has(p.id)) return false; seen.add(p.id); return true; })];
-  // Chosen interest chips (GOVERNING_INTERESTS keys) — govern the pick alongside
-  // taste, and drive the coarse fallback + theme reservation below.
-  const interests = Array.isArray(body.interests) ? body.interests.filter((s): s is string => typeof s === "string") : [];
   const audience = body.audience === "families" || body.audience === "adults" ? body.audience : undefined;
   // A couples/friends trip should NOT include clearly kid-only places — a theme park /
   // zoo / aquarium / water-park, or a heavily family-skewed audience_fit (families ≫
@@ -330,27 +327,12 @@ export async function POST(req: NextRequest) {
     const fam = af.families ?? 0, adu = Math.max(af.couples ?? 0, af.friends ?? 0);
     return fam >= 75 && fam - adu >= 30;
   };
-  if (audience === "adults" && !interests.includes("פארקי שעשועים") && !interests.includes("ילדים")) {
+  if (audience === "adults") {
     pool = pool.filter((a) => pickIds.includes(a.id) || !isKidOnly(a));
   }
-  // Thin-interest rescue: nightlife/niche-shop venues rank too low to reach the base
-  // pool, so an explicitly chosen thin interest would surface NOTHING. Fetch the best
-  // matches directly (union across chosen interests, quality-first) and guarantee them
-  // as candidates below — the theme reservation then reserves its share of them.
-  // Fetch PER interest (not one union query with a shared limit) — otherwise in a
-  // multi-interest build a dense theme (museums) eats the whole limit and a thin one
-  // (nightlife) fetches nothing. Each interest gets its own slice; then dedup.
-  const interestRows = interests.length
-    ? Object.values(Object.fromEntries(
-        (await Promise.all(interests.map((k) => interestCandidates(dest.id, {
-          tags: INTEREST_TASTE[k] ?? [], cats: INTEREST_CATS[k]?.cats ?? [],
-          subs: INTEREST_CATS[k]?.subs ?? [], kws: INTEREST_KEYWORDS[k] ?? [],
-        }, Math.max(10, 3 * (body.days ?? 4))))))
-        .flat().map((a) => [a.id, a] as const)))
-    : [];
   // Wider pool (was 50) so the clusterer has a long tail of minor places to pull
   // in as "free gems" on the walking path (cluster.ts pass B).
-  const rankedByTaste = rankByTaste(pool, body.taste, 90, isFamily, interests, audience);
+  const rankedByTaste = rankByTaste(pool, body.taste, 90, isFamily, [], audience);
   // Reach demotion (metro only): push far outliers (a 12km-away park) down the ranking
   // by ~penalty/8 positions, so walkable days don't sprawl. Mirrors the eval. car_base
   // is exempt — its far places become car day-trips. (See brain/policy#reachPenalty.)
@@ -371,7 +353,7 @@ export async function POST(req: NextRequest) {
   // them regardless of rank position). Deduped, coords required.
   const haveA = new Set(rankedReach.map((a) => a.id));
   const guaranteedExtra: Attraction[] = [];
-  for (const a of [...areaMemberRows, ...picks, ...interestRows]) {
+  for (const a of [...areaMemberRows, ...picks]) {
     if (a.lat == null || a.lng == null || haveA.has(a.id)) continue;
     haveA.add(a.id); guaranteedExtra.push(a);
   }
@@ -397,21 +379,14 @@ export async function POST(req: NextRequest) {
   // them as the day's top candidates (they were an explicit "כן").
   const streetRows = Array.isArray(body.streetIds) && body.streetIds.length
     ? await streetsByIds(body.streetIds.filter((n) => typeof n === "number")) : [];
-  // Streets now enter AUTOMATICALLY (there's no manual street-picking strip):
-  //  • a chosen neighbourhood pulls its own streets — "I'm already in the area, of
-  //    course I'll walk its main streets" (independent of interests);
-  //  • the "אדריכלות ורחובות" interest pulls the city's top worthy streets, so "I
-  //    love walking pretty streets" delivers streets even without choosing an area.
-  // Deduped against each other + any legacy body.streetIds (saved trips).
+  // A chosen neighbourhood auto-pulls its own streets — "I'm already in the area, of
+  // course I'll walk its main streets". Deduped against any legacy body.streetIds.
   const chosenAreaIds = Array.isArray(body.areaIds) ? body.areaIds.filter((n): n is number => typeof n === "number") : [];
-  const wantStreetInterest = interests.includes("אדריכלות");
-  if (chosenAreaIds.length || wantStreetInterest) {
+  if (chosenAreaIds.length) {
     const allStreets = await approvedStreetsForCity(dest.id);
     const have = new Set(streetRows.map((s) => s.id));
     const add: typeof allStreets = [];
-    const take = (s: (typeof allStreets)[number]) => { if (!have.has(s.id)) { have.add(s.id); add.push(s); } };
-    if (chosenAreaIds.length) allStreets.filter((s) => s.area_id != null && chosenAreaIds.includes(s.area_id)).forEach(take);
-    if (wantStreetInterest) allStreets.filter((s) => s.lat != null).slice(0, 5).forEach(take);
+    for (const s of allStreets) if (s.area_id != null && chosenAreaIds.includes(s.area_id) && !have.has(s.id)) { have.add(s.id); add.push(s); }
     streetRows.push(...add);
   }
   const streetStops = streetRows.map(streetAsStop);
@@ -423,28 +398,14 @@ export async function POST(req: NextRequest) {
   // streetStops prepend). Gated to !sel — the selection path already guarantees
   // must-sees via its fillers, so it's left untouched.
   let reservedIds: Set<number> | undefined;
-  let guaranteeIds: Set<number> | undefined;   // chosen-theme stops the clusterer may drop (scattered)
   let orderedFill: Attraction[] = attractions;
   if (!sel) {
     const rDays = body.days ?? 4;
     const RESERVE_ICONS = Math.max(3, rDays);
-    // THEME BUDGET: guarantee ~2 themed stops per day, SPLIT across the chosen
-    // interests — so fewer interests = deeper focus on each (a single-interest trip
-    // leans hard into that one topic instead of a token 2), and more interests share
-    // the same budget. The overlap with the city's must-sees (a museum-lover's MNAC)
-    // fills the icon backbone too, so the ~2/day themed layer sits on top of the icons.
-    const themeBudget = 2 * rDays;
-    const perInterest = interests.length ? Math.max(1, Math.round(themeBudget / interests.length)) : 0;
-    // Each chosen interest → the DB category bucket(s) it emphasises. Drives the
-    // diversity floor + balance caps below (so the fill can't flood one category).
-    const INT_CATS: Record<string, string[]> = {
-      "מוזיאונים": ["museum"], "אוכל": ["food", "shopping"], "טבע": ["nature"],
-      // "attraction" is a catch-all where many cities file monuments/landmarks
-      // (Lisbon tags its historic sites there), so history/architecture claim it too.
-      "חיי לילה": ["food"], "היסטוריה": ["historic", "attraction"], "אדריכלות": ["historic", "attraction"],
-      "וינטג'": ["shopping"], "פארקי שעשועים": ["nature"], "חופים": ["nature"],
-    };
-    const chosenCats = new Set(interests.flatMap((it) => INT_CATS[it] ?? []));
+    // Pick-driven build: no interests are chosen, so nothing is "chosen" category-wise
+    // — the diversity floor covers all majors and the balance caps treat every
+    // category evenly.
+    const chosenCats = new Set<string>();
     const catBucket = (a: Attraction) => (a.category === "tourism" ? "historic" : (a.category ?? "attraction"));
     const inRange = new Set(attractions.map((a) => a.id));
     const chosen = new Set<number>();
@@ -476,29 +437,6 @@ export async function POST(req: NextRequest) {
         if (!chosen.has(a.id)) { chosen.add(a.id); reserved.push(a); cnt++; }
       }
     }
-    // Theme guarantee: up to `perInterest` matching stops per chosen interest — by
-    // taste-tag, by coarse category, OR by a name keyword (markets are often mis-tagged
-    // as generic places). A thin interest that can't fill its share just yields fewer
-    // (the ranking fill takes the rest) rather than inventing places.
-    const themeIds = new Set<number>();
-    for (const it of interests) {
-      const w = interestTasteMap(it), kws = INTEREST_KEYWORDS[it] ?? [];
-      let k = 0;
-      // interestRows first (quality-ordered thin-interest venues), then the ranked
-      // pool — so a chosen thin interest reserves its best venues before generic fill.
-      for (const a of [...interestRows, ...attractions]) {
-        if (k >= perInterest) break;
-        if (chosen.has(a.id)) continue;
-        const nm = a.name_he || a.name_en || "";
-        const match = (a.taste_tags && tasteScore(a.taste_tags, w) > 0)
-          || coarseFits(a.category, a.subcategory, [it])
-          || kws.some((kw) => nm.includes(kw));
-        if (match) { chosen.add(a.id); reserved.push(a); themeIds.add(a.id); k++; }
-      }
-    }
-    // The theme-reserved stops are the ones the guarantee pass protects from the
-    // proximity clusterer dropping them (a scattered bar / peripheral park).
-    guaranteeIds = themeIds;
     // DIVERSITY FLOOR: guarantee ~1 top-ranked stop of each MAJOR category the
     // traveller did NOT choose, so no trip is one-note ("even without picking
     // museums, one museum is good"). Chosen categories get the emphasis instead.
@@ -584,10 +522,7 @@ export async function POST(req: NextRequest) {
   // pace+2). So when the picks fit the trip's total capacity they all land instead
   // of a thin day + banked central picks. Truly far picks (>8km) still bank.
   const pickGuarantee = anchorIds && anchorIds.size ? anchorIds : undefined;
-  const mergedGuarantee = guaranteeIds || pickGuarantee
-    ? new Set<number>([...(guaranteeIds ?? []), ...(pickGuarantee ?? [])])
-    : undefined;
-  const buildOpts = { ...optsFor(dest, rules), reservedIds, guaranteeIds: mergedGuarantee };
+  const buildOpts = { ...optsFor(dest, rules), reservedIds, guaranteeIds: pickGuarantee };
   const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary =>
     d.mobility === "car_base"
       ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp, buildOpts)
@@ -676,7 +611,7 @@ export async function POST(req: NextRequest) {
     const segAttrs = await Promise.all(
       segs.map(async (x) => ({
         ...x,
-        attractions: rankByTaste(await topAttractions(x.dest.id, 150), body.taste, 90, isFamily, interests, audience),
+        attractions: rankByTaste(await topAttractions(x.dest.id, 150), body.taste, 90, isFamily, [], audience),
         insights: await insightsForDestination(x.dest.id),
         // each segment's OWN Brain techniques (avoids/dwell/lunch/centre)
         opts: optsFor(x.dest, await brainRulesForDest(x.dest.id)),
