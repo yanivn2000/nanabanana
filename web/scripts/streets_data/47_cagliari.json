@@ -1,0 +1,39 @@
+{
+  "destination_id": 47,
+  "city": "Cagliari",
+  "streets": [
+    {
+      "name_local": "Via Roma",
+      "name_en": "Via Roma",
+      "name_he": "ויה רומא",
+      "kind": "street",
+      "best_for_he": "טיילת הנמל עם קשתות",
+      "vibe_he": "השדרה הראשית לאורך הנמל — שורת קשתות אלגנטית מתחתיה בתי קפה, מסעדות וחנויות, מול הים והספינות. הרחוב שבו קליארי נפגשת, מטיילת ושותה קפה מול המפרץ.",
+      "dwell_min": 40,
+      "approx_lat": 39.2138,
+      "approx_lng": 9.1130
+    },
+    {
+      "name_local": "Corso Vittorio Emanuele II",
+      "name_en": "Corso Vittorio Emanuele II",
+      "name_he": "קורסו ויטוריו אמנואלה",
+      "kind": "street",
+      "best_for_he": "רחוב הבילוי של סטמפאצ'ה",
+      "vibe_he": "העורק ההיסטורי של רובע סטמפאצ'ה — רחוב תוסס העולה מהעיר התחתית, מלא בָּרים, מסעדות, חנויות עתיקות ואווירת לילה מקומית. לב הבילוי הצעיר של קליארי.",
+      "dwell_min": 35,
+      "approx_lat": 39.2170,
+      "approx_lng": 9.1095
+    },
+    {
+      "name_local": "Via Giuseppe Manno",
+      "name_en": "Via Manno",
+      "name_he": "ויה מאנו",
+      "kind": "street",
+      "best_for_he": "רחוב הקניות הראשי",
+      "vibe_he": "רחוב הקניות המרכזי המחבר את הבאסטיונה למרינה — בוטיקים, רשתות אופנה ובתי קפה על מדרכה מרוצפת, עם נוף אל הים בקצהו. פעים ואלגנטי, לב המסחר של העיר.",
+      "dwell_min": 35,
+      "approx_lat": 39.2148,
+      "approx_lng": 9.1152
+    }
+  ]
+}
