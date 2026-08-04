@@ -147,20 +147,6 @@ function HeartToggle({ liked, onClick, disabled }: { liked: boolean; onClick: ()
 
 // A pickable STREET chip — streets are their own entity (own id space), picked
 // here and sent to the build as streetIds. Brand-filled + ✓ when it's in the trip.
-function StreetPill({ s, picked, onToggle }: { s: Street; picked: boolean; onToggle: () => void }) {
-  return (
-    <button onClick={onToggle} aria-pressed={picked}
-      title={s.area_name_he ? `רחוב · ${s.area_name_he}` : "רחוב"}
-      className="flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13.5px] font-medium transition"
-      style={{ background: picked ? "var(--brand)" : "var(--surface)", color: picked ? "#fff" : "var(--text-2)",
-               borderColor: picked ? "var(--brand)" : "var(--border)" }}>
-      <span aria-hidden>🛣️</span>
-      <span className="max-w-[170px] truncate">{s.name_he || s.name_en}</span>
-      {picked && <Check size={13} />}
-    </button>
-  );
-}
-
 // A full street CARD — some streets are attractions in their own right, so they
 // get the same treatment as a place: a photo (or a brand-tinted placeholder), the
 // vibe as the story, a "רוצה בטיול" toggle, and click-to-expand to a wide card.
@@ -543,6 +529,27 @@ export function DestinationView({
     setStreetPicks(new Set());
     try { localStorage.removeItem(streetKey); } catch { /* ignore */ }
   };
+  // Self-heal stale picks. A pick can only be MADE from a shown attraction/street,
+  // so a saved id that's no longer in the city pool means the place was removed or
+  // re-ided (a re-ingest) — it then sits in the count with no card to show or clear
+  // ("3/20" you can't find). London, re-ingested the most, is where this surfaced.
+  // Drop those dangling picks once the pool has loaded so the count is honest.
+  useEffect(() => {
+    if (!selLoaded || attractions.length === 0) return;
+    const dangling = Object.keys(choices).map(Number).filter((id) => !attrById.has(id));
+    if (dangling.length) setMany(dangling, null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selLoaded, attractions.length]);
+  useEffect(() => {
+    if (streets.length === 0 || streetPicks.size === 0) return;
+    const valid = new Set(streets.map((s) => s.id));
+    if ([...streetPicks].some((id) => !valid.has(id))) {
+      const pruned = [...streetPicks].filter((id) => valid.has(id));
+      setStreetPicks(new Set(pruned));
+      try { localStorage.setItem(streetKey, JSON.stringify(pruned)); } catch { /* ignore */ }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [streets.length, streetPicks]);
   const [openStreetId, setOpenStreetId] = useState<number | null>(null);   // which street card is expanded
   const streetsById = useMemo(() => new Map(streets.map((s) => [s.id, s])), [streets]);
   const streetsByArea = useMemo(() => {
@@ -795,6 +802,20 @@ export function DestinationView({
       a.lat <= bounds.north && a.lat >= bounds.south && a.lng <= bounds.east && a.lng >= bounds.west);
   }, [cityScoped, mapOnly, bounds]);
   const cityGridItems = cityListItems.slice(0, visibleCount);
+  // Streets that render AS cards inside the grid: the selected area's streets, or —
+  // in "בטיול" — every street you PICKED (so a picked street is a visible, removable
+  // card, never an invisible "+1"). Honours the same search + map-viewport filters.
+  const gridStreets = useMemo(() => {
+    const base = selectedOnly ? streets.filter((s) => streetPicks.has(s.id))
+      : cityTab === "__areas" && activeArea ? (streetsByArea.get(activeArea.id) ?? []) : [];
+    const q = query.trim().toLowerCase();
+    return base.filter((s) => {
+      if (q && !`${s.name_he ?? ""} ${s.name_en}`.toLowerCase().includes(q)) return false;
+      if (mapOnly && bounds && !(s.lat != null && s.lng != null &&
+        s.lat <= bounds.north && s.lat >= bounds.south && s.lng <= bounds.east && s.lng >= bounds.west)) return false;
+      return true;
+    });
+  }, [selectedOnly, streets, streetPicks, cityTab, activeArea, streetsByArea, query, mapOnly, bounds]);
   // "נקה" is context-aware: remove from the trip only the in-trip attractions
   // currently VISIBLE (the active category/search), not every pick in the city.
   const visibleTripIds = useMemo(() => cityListItems.filter((a) => choices[a.id] === "yes").map((a) => a.id), [cityListItems, choices]);
@@ -1606,19 +1627,12 @@ export function DestinationView({
               {activeArea.vibe_he && (
                 <p className="mt-1 text-[13px] leading-snug text-[var(--text-2)]">{activeArea.vibe_he}</p>
               )}
-              {(streetsByArea.get(activeArea.id)?.length ?? 0) > 0 && (
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="text-[12px] font-medium text-[var(--text-3)]">🛣️ רחובות בשכונה:</span>
-                  {streetsByArea.get(activeArea.id)!.map((s) => (
-                    <StreetPill key={s.id} s={s} picked={streetPicks.has(s.id)} onToggle={() => toggleStreet(s.id)} />
-                  ))}
-                </div>
-              )}
             </div>
           )}
-          {/* streets — matched by the search box, or the ones already picked. A street
-              is its own entity; picking one adds it to the trip (streetIds). */}
-          {(matchedStreets.length > 0 || streetPicks.size > 0) && (
+          {/* streets — matched by the search box, or the ones already picked. In an
+              area view the area's streets render AS cards inside the grid below, so
+              this separate strip is hidden there to avoid showing them twice. */}
+          {cityTab !== "__areas" && !selectedOnly && (matchedStreets.length > 0 || streetPicks.size > 0) && (
             <div className="mb-4 mt-3 lg:mt-4">
               <p className="mb-2 text-[13px] font-semibold text-[var(--text-2)]">
                 🛣️ רחובות{query.trim() ? ` · תוצאות ל"${query.trim()}"` : " שבחרתם"}
@@ -1682,7 +1696,7 @@ export function DestinationView({
             );
           })()}
 
-          {sortedItems.length === 0 && (
+          {!editorial && sortedItems.length === 0 && (
             <p className="py-10 text-center text-[15px] text-[var(--text-3)]">
               {mapOnly ? "אין מקומות באזור המפה הנוכחי — הקטינו זום או הזיזו"
                 : matchedStreets.length > 0 ? "מצאנו רחוב שמתאים לחיפוש 🛣️ (למעלה) — אין אטרקציות בשם הזה"
@@ -1850,7 +1864,7 @@ export function DestinationView({
           ) : (
           <>
           <div className="grid grid-cols-1 gap-4 pt-3 sm:grid-cols-2 lg:pt-4 xl:grid-cols-3">
-            {cityGridItems.length === 0 && (
+            {cityGridItems.length === 0 && gridStreets.length === 0 && (
               <p className="col-span-full py-6 text-center text-[13.5px] text-[var(--text-3)]">
                 {query.trim() ? `לא נמצאו תוצאות ל"${query.trim()}"${cityTab === "__all" ? "" : ` תחת "${cityTabLabel}" — נסו בטאב "הכל"`}.`
                   : mapOnly ? "אין מקומות באזור המפה הנוכחי — הקטינו זום או הזיזו את המפה."
@@ -1997,6 +2011,16 @@ export function DestinationView({
                 </Fragment>
               );
             })}
+            {/* streets render AS cards in the grid — same treatment as an attraction
+                (photo · story · "רוצה בטיול"). In an AREA view: that area's streets.
+                In "בטיול" (selectedOnly): the streets you PICKED — so every place that
+                counts toward the trip is visible & removable here, streets included
+                (otherwise a picked street is an invisible "+1" you can't find). */}
+            {gridStreets.map((s) => (
+              <StreetCard key={`st-${s.id}`} s={s} picked={streetPicks.has(s.id)} expanded={openStreetId === s.id}
+                onToggle={() => toggleStreet(s.id)}
+                onOpen={() => setOpenStreetId((cur) => (cur === s.id ? null : s.id))} />
+            ))}
           </div>
           </>
           )}
