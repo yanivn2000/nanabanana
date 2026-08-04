@@ -1,0 +1,5 @@
+{"destination_id":43,"city":"Los Angeles","streets":[
+{"name_local":"Hollywood Boulevard","name_en":"Hollywood Boulevard","name_he":"שדרת הוליווד","kind":"street","best_for_he":"לב הוליווד ההיסטורי","vibe_he":"השדרה המפורסמת של הוליווד — שדרת הכוכבים, התיאטרון הסיני, אולם דולבי של טקס האוסקר וחנויות מזכרות, בלב תעשיית הבידור.","dwell_min":45,"approx_lat":34.1016,"approx_lng":-118.3287},
+{"name_local":"Olvera Street","name_en":"Olvera Street","name_he":"רחוב אולברה","kind":"street","best_for_he":"הרחוב המקסיקני העתיק","vibe_he":"הסמטה המרוצפת העתיקה של לוס אנג'לס — שוק מקסיקני צבעוני עם דוכני מלאכה, מסעדות ומוזיקת מריאצ'י, ליבה של העיר משנת 1781.","dwell_min":35,"approx_lat":34.0577,"approx_lng":-118.2378},
+{"name_local":"Broadway","name_en":"Broadway (Historic Core)","name_he":"ברודוויי (הליבה ההיסטורית)","kind":"street","best_for_he":"רובע התיאטראות ההיסטורי","vibe_he":"הרחוב עם ריכוז תיאטראות הראווה הגדול בעולם מתחילת המאה ה-20, ה-Grand Central Market ההיסטורי ואדריכלות ארט-דקו משוחזרת.","dwell_min":40,"approx_lat":34.0492,"approx_lng":-118.2500}
+]}

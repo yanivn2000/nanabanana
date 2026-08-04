@@ -188,15 +188,18 @@ def load(conn):
             AND (a.tagline_he IS NULL OR a.tagline_he='') AND (a.description_he IS NULL OR a.description_he='')
             AND a.subcategory NOT IN ({FILLER}) AND a.lat IS NOT NULL ORDER BY d.id""").fetchall()
     if SET=="notable":
-        # shown, non-must-see, no description yet, but HAS a wiki source -> straight to Hebrew
-        return conn.execute("""SELECT a.id,a.name_he,a.name_en,a.lat,a.lng,d.country,a.info_sources
+        # shown, non-must-see, no description yet, but HAS a wiki source -> straight to Hebrew.
+        # --city scopes to one destination (so a first pass can prioritise a few cities).
+        cityclause = "AND (d.city ILIKE %s OR d.city_he ILIKE %s)" if CITY else ""
+        params = ([f"%{CITY}%", f"%{CITY}%"]) if CITY else []
+        return conn.execute(f"""SELECT a.id,a.name_he,a.name_en,a.lat,a.lng,d.country,a.info_sources
           FROM attractions a JOIN destinations d ON d.id=a.destination_id
           WHERE (a.quality_keep=1 OR a.quality_keep IS NULL) AND (a.is_duplicate IS NULL OR a.is_duplicate=0)
             AND (a.is_component IS NULL OR a.is_component=0)
             AND (a.must_see IS NULL OR a.must_see=0)
             AND (a.description_he IS NULL OR a.description_he='')
             AND a.info_sources IS NOT NULL AND a.info_sources::text NOT IN ('[]','null')
-            AND a.lat IS NOT NULL ORDER BY d.id""").fetchall()
+            AND a.lat IS NOT NULL {cityclause} ORDER BY d.id""", tuple(params)).fetchall()
     # set=mustsee. RELONG also picks up must-sees that already have a (short) desc,
     # to lengthen them; CITY scopes to one destination. Never blanks an existing desc
     # (main() only writes on a Hebrew hit).

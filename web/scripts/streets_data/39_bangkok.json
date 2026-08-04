@@ -1,0 +1,5 @@
+{"destination_id":39,"city":"Bangkok","streets":[
+{"name_local":"ถนนเยาวราช","name_en":"Yaowarat Road","name_he":"כביש יאוואראט (צ'יינה טאון)","kind":"street","best_for_he":"צ'יינה טאון ואוכל רחוב","vibe_he":"עורק הזהב של צ'יינה טאון בנגקוק — שלטי ניאון ענקיים, חנויות זהב ומיטב אוכל הרחוב הסיני-תאילנדי שמתעורר בלילה.","dwell_min":50,"approx_lat":13.7405,"approx_lng":100.5100},
+{"name_local":"ถนนสีลม","name_en":"Silom Road","name_he":"כביש סילום","kind":"street","best_for_he":"עסקים, שווקים וחיי לילה","vibe_he":"עורק העסקים והבילוי של בנגקוק — גורדי שחקים ומשרדים ביום, שוק לילה תוסס ובידור סואן אחרי החשכה.","dwell_min":40,"approx_lat":13.7248,"approx_lng":100.5340},
+{"name_local":"ถนนเจริญกรุง","name_en":"Charoen Krung Road","name_he":"כביש צ'ארון קרונג","kind":"street","best_for_he":"הרובע היצירתי והנהר","vibe_he":"הכביש המודרני הראשון של בנגקוק לאורך הנהר — רובע יצירתי מתחדש עם גלריות, בתי קפה, מקדשים ובתי מסחר ותיקים.","dwell_min":40,"approx_lat":13.7280,"approx_lng":100.5140}
+]}

@@ -1,0 +1,72 @@
+{
+  "destination_id": 34,
+  "city": "Frankfurt",
+  "streets": [
+    {
+      "name_local": "Zeil",
+      "name_en": "Zeil",
+      "name_he": "צייל",
+      "kind": "street",
+      "best_for_he": "רחוב הקניות הראשי",
+      "vibe_he": "השדרה להולכי רגל ואחד מרחובות הקניות הסואנים בגרמניה — כלבו MyZeil המרהיב, רשתות אופנה וכיכרות הקונסטבלרוואכה וההאופטוואכה בשני קצותיו.",
+      "dwell_min": 50,
+      "approx_lat": 50.1147,
+      "approx_lng": 8.6845
+    },
+    {
+      "name_local": "Große Bockenheimer Straße",
+      "name_en": "Freßgass",
+      "name_he": "פרסגאס",
+      "kind": "street",
+      "best_for_he": "אוכל וקולינריה",
+      "vibe_he": "\"סמטת הזלילה\" של פרנקפורט — רחוב מעדניות, בתי קפה, דוכני יין ואוכל שמחבר בין האופרה לרחוב הקניות, לב הקולינריה העירונית.",
+      "dwell_min": 40,
+      "approx_lat": 50.1156,
+      "approx_lng": 8.6740
+    },
+    {
+      "name_local": "Braubachstraße",
+      "name_en": "Braubachstraße",
+      "name_he": "בראובאכשטראסה",
+      "kind": "street",
+      "best_for_he": "אמנות ועיר עתיקה",
+      "vibe_he": "רחוב אלגנטי בעיר העתיקה ליד הרֶמֶר, שורה של גלריות אמנות, חנויות עתיקות ובתי מלאכה — פינה שקטה ומעודנת בין הכיכרות ההיסטוריות.",
+      "dwell_min": 30,
+      "approx_lat": 50.1112,
+      "approx_lng": 8.6840
+    },
+    {
+      "name_local": "Schweizer Straße",
+      "name_en": "Schweizer Straße",
+      "name_he": "שווייצר שטראסה",
+      "kind": "street",
+      "best_for_he": "בילוי שכונתי בזאקסנהאוזן",
+      "vibe_he": "העורק הראשי של זאקסנהאוזן — רחוב שכונתי אופנתי עם בוטיקים, בתי קפה ומסעדות, במרחק הליכה מגדת הנהר ומוזיאוני המוזיאומספר.",
+      "dwell_min": 40,
+      "approx_lat": 50.1012,
+      "approx_lng": 8.6795
+    },
+    {
+      "name_local": "Berger Straße",
+      "name_en": "Berger Straße",
+      "name_he": "ברגר שטראסה",
+      "kind": "street",
+      "best_for_he": "חיי לילה ואווירה מקומית",
+      "vibe_he": "הרחוב התוסס של רובע נורדנד/בורנהיים — ברים, בתי קפה, בירה של מבשלות מקומיות ואווירה בוהמיינית אמיתית הרחק מהתיירות.",
+      "dwell_min": 45,
+      "approx_lat": 50.1235,
+      "approx_lng": 8.7010
+    },
+    {
+      "name_local": "Alt-Sachsenhausen",
+      "name_en": "Alt-Sachsenhausen",
+      "name_he": "אלט-זאקסנהאוזן",
+      "kind": "cluster",
+      "best_for_he": "רובע יין התפוחים",
+      "vibe_he": "אשכול סמטאות מרוצפות של פונדקי יין-התפוחים (אֶּבְּלְווֹי) ההיסטוריים — האווירה המסורתית ביותר של פרנקפורט, מלאה טברנות עץ וחצרות פנימיות.",
+      "dwell_min": 55,
+      "approx_lat": 50.1035,
+      "approx_lng": 8.6895
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "destination_id": 48,
+  "city": "Copenhagen",
+  "streets": [
+    {
+      "name_local": "Strøget",
+      "name_en": "Strøget",
+      "name_he": "סטרו'אה",
+      "kind": "street",
+      "best_for_he": "רחוב הקניות הראשי",
+      "vibe_he": "אחת מטיילות הקניות להולכי רגל הארוכות באירופה — משתרעת מכיכר העירייה עד ניוהאבן, מלאה חנויות, אמני רחוב, כיכרות ומזרקות.",
+      "dwell_min": 55,
+      "approx_lat": 55.6787,
+      "approx_lng": 12.5757
+    },
+    {
+      "name_local": "Nyhavn",
+      "name_en": "Nyhavn",
+      "name_he": "ניוהאבן",
+      "kind": "cluster",
+      "best_for_he": "תעלה צבעונית ואוכל",
+      "vibe_he": "תעלת הנמל האייקונית עם בתי העץ הצבעוניים, סירות ישנות ושורת מסעדות ובָּרים — הפוסטקארד של קופנהגן, מושלם לשקיעה.",
+      "dwell_min": 45,
+      "approx_lat": 55.6799,
+      "approx_lng": 12.5913
+    },
+    {
+      "name_local": "Jægersborggade",
+      "name_en": "Jægersborggade",
+      "name_he": "ייגרסבורגגאדה",
+      "kind": "street",
+      "best_for_he": "רחוב אינדי בנרברו",
+      "vibe_he": "הרחוב הכי היפסטרי בקופנהגן — בוטיקים עצמאיים, קרמיקה, בתי קפה של קלייה מקומית ומאפייה מהמובחרות בעיר, בלב רובע נרברו הצעיר.",
+      "dwell_min": 40,
+      "approx_lat": 55.6942,
+      "approx_lng": 12.5490
+    },
+    {
+      "name_local": "Værnedamsvej",
+      "name_en": "Værnedamsvej",
+      "name_he": "וורנדאמסוויי",
+      "kind": "street",
+      "best_for_he": "רחוב קולינרי",
+      "vibe_he": "\"הרחוב הצרפתי\" של ורסטרברו — חנויות גבינות ויין, מעדניות, פרחים ובתי קפה קטנים, אווירה שכונתית מקסימה הרחק מהתיירים.",
+      "dwell_min": 35,
+      "approx_lat": 55.6720,
+      "approx_lng": 12.5540
+    },
+    {
+      "name_local": "Istedgade",
+      "name_en": "Istedgade",
+      "name_he": "איסטדגאדה",
+      "kind": "street",
+      "best_for_he": "בילוי ואווירה עירונית",
+      "vibe_he": "הרחוב התוסס של ורסטרברו — מבָּרים ומסעדות אופנתיות בקצה אחד לאווירה גולמית וצבעונית בקצה השני, אחד הרחובות החיים בעיר.",
+      "dwell_min": 40,
+      "approx_lat": 55.6690,
+      "approx_lng": 12.5560
+    },
+    {
+      "name_local": "Gråbrødretorv",
+      "name_en": "Gråbrødretorv",
+      "name_he": "גראברודרטורב",
+      "kind": "cluster",
+      "best_for_he": "כיכר בתי קפה ציורית",
+      "vibe_he": "כיכר מרוצפת קסומה ברובע הלטיני, מוקפת בתים צבעוניים ומרפסות בתי קפה ומסעדות — פינת ישיבה אהובה בלב העיר העתיקה.",
+      "dwell_min": 30,
+      "approx_lat": 55.6797,
+      "approx_lng": 12.5720
+    }
+  ]
+}
