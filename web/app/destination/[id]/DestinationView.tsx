@@ -32,7 +32,7 @@ const RADIUS_HE = ["קרוב מאוד", "עד שעה", "עד שעתיים", "ג�
 // רגוע/בינוני/אינטנסיבי labels. paceToPerDay reads either (number wins).
 const PER_DAY_MIN = 3, PER_DAY_MAX = 6;
 import { paceToPerDay } from "@/lib/trip-types";
-import { deriveTaste, tasteScore, coarseFits, audienceFit, INTEREST_TASTE, INTEREST_CATS, GOVERNING_INTERESTS } from "@/lib/taste";
+import { deriveTaste, tasteScore, audienceFit, INTEREST_TASTE, INTEREST_CATS, GOVERNING_INTERESTS } from "@/lib/taste";
 import { PROFILES, PROFILE_HE, PROFILE_EMOJI, type Profile } from "@/lib/shortpath";
 
 // Below this audience-fit (0-100) a place is "less relevant" for the chosen
@@ -474,7 +474,6 @@ export function DestinationView({
   // "טיול עם ילדים?" — a כן/לא toggle in the settings bar. Default = לא (adults).
   // (No per-category coupling; the toggle is the single source of truth.)
   const [audience, setAudience] = useState<Profile | null>(() => editorial ? "adults" : null);
-  const [boosts, setBoosts] = useState<Set<string>>(new Set());
   // Two flows: GUIDED (default — audience → topics → the system pre-marks → you
   // adjust) and MANUAL/"בנייה חופשית" (steps ①② off — you pick every place yourself
   // from a blank slate; the trip is EXACTLY your ❤, and the bank holds all ⭐ must-sees).
@@ -633,78 +632,47 @@ export function DestinationView({
   // Within each group, places WITH a photo come before the (still under-enriched)
   // image-less long tail, so the browse never opens on empty cards. The chosen
   // sort then orders within those sub-groups.
-  // The audience topic chips ("כיילו") — a taste tilt that LEADS matching places
-  // within the matched set (they no longer hard-filter to a curated 24).
-  const boostMatch = useMemo(() => {
-    if (!boosts.size) return null;
-    const w: Record<string, number> = {};
-    for (const k of boosts) for (const t of (INTEREST_TASTE[k] ?? [])) w[t] = (w[t] ?? 0) + 1;
-    return (a: Attraction) => tasteScore(a.taste_tags, w) > 0 || coarseFits(a.category, a.subcategory, [...boosts]);
-  }, [boosts]);
-
-  const { sortedItems, dimmedIds, matchedIds, emphCount } = useMemo(() => {
+  const { sortedItems, dimmedIds, matchedIds } = useMemo(() => {
     const img = (a: Attraction) => (a.image_url ? 1 : 0);
     // Editor importance tier: "ממש לא" floors it (0); effective must-see leads
-    // (4); "אולי" is a real mid boost (3); everything else normal (2).
+    // (4); "אולי" is a real mid tier (3); everything else normal (2).
     const tier = (a: Attraction) =>
       a.editor_rank === "no" ? 0 : a.must_see === 1 ? 4 : a.editor_rank === "maybe" ? 3 : 2;
-    // Within a tier, a chosen topic chip leads (the audience-flow calibration).
-    const boostTier = (a: Attraction) => (boostMatch && boostMatch(a) ? 1 : 0);
     const within = (a: Attraction, b: Attraction) => {
       if (sort === "name") return (a.name_he || a.name_en).localeCompare(b.name_he || b.name_en, "he");
       if (sort === "match" && cityTasteTagged) return tasteScore(b.taste_tags, taste) - tasteScore(a.taste_tags, taste);
       return (b.family_score ?? 0) - (a.family_score ?? 0);
     };
     const cmp = (a: Attraction, b: Attraction) =>
-      tier(b) - tier(a) || boostTier(b) - boostTier(a) || img(b) - img(a) || within(a, b);
-    // "matched" = fits the chosen audience (couples/friends or families) and isn't
-    // an explicit ✕-dislike. What doesn't fit drops BELOW the divider — still fully
-    // markable, never hidden and never greyed.
-    // "matched" = fits the chosen audience and isn't an explicit ✕-dislike. The
-    // topic chips (boosts) only re-order within the matched set (via boostTier above),
-    // they don't narrow it — everything stays visible, the off-fit tail below the divider.
+      tier(b) - tier(a) || img(b) - img(a) || within(a, b);
+    // "matched" = fits the chosen audience and isn't an explicit ✕-dislike. What
+    // doesn't fit drops BELOW the divider — still fully markable, never hidden.
     const audienceOk = (a: Attraction) => !audience || audienceFit(a, audience) >= AUDIENCE_FIT_FLOOR;
     const notDisliked = (a: Attraction) => !profile.dislikes.some((it) => matchesInterest(a, it));
     const isMatch = (a: Attraction) => audienceOk(a) && notDisliked(a);
     const matched: Attraction[] = [], dimmed: Attraction[] = [];
     for (const a of listItems) ((selectedOnly || soloInterest || isMatch(a)) ? matched : dimmed).push(a);
     matched.sort(cmp); dimmed.sort(cmp);
-    // How many of the audience-fit pool also match the chosen topic chips — the
-    // number the topics actually move (they emphasise within the pool, don't shrink it).
-    const emphCount = boostMatch ? matched.filter((a) => boostMatch(a)).length : 0;
-    return { sortedItems: [...matched, ...dimmed], dimmedIds: new Set(dimmed.map((a) => a.id)), matchedIds: matched.map((a) => a.id), emphCount };
-  }, [listItems, sort, cityTasteTagged, taste, profile.dislikes, selectedOnly, soloInterest, audience, boostMatch]);
+    return { sortedItems: [...matched, ...dimmed], dimmedIds: new Set(dimmed.map((a) => a.id)), matchedIds: matched.map((a) => a.id) };
+  }, [listItems, sort, cityTasteTagged, taste, profile.dislikes, selectedOnly, soloInterest, audience]);
 
-  // Header counts = the audience-fit POOL, computed straight from all attractions —
-  // deliberately IGNORING the view filters (רק אתרי חובה / search / flags) so toggling
-  // a display filter never moves the number (it's "how many fit you", not "how many are
-  // shown"). Standalone only (area members are counted inside their neighbourhood).
+  // Header count = the audience-fit POOL, computed straight from all attractions —
+  // deliberately IGNORING the view filters so toggling a display filter never moves
+  // the number (it's "how many fit you", not "how many are shown").
   const poolStats = useMemo(() => {
-    if (!audience) return { total: 0, emph: 0 };
-    let total = 0, emph = 0;
+    if (!audience) return { total: 0 };
+    let total = 0;
     for (const a of attractions) {
       if (allAreaMemberIds.has(a.id)) continue;
       if (audienceFit(a, audience) < AUDIENCE_FIT_FLOOR) continue;
       if (profile.dislikes.some((it) => matchesInterest(a, it))) continue;
       total++;
-      if (boostMatch && boostMatch(a)) emph++;
     }
-    return { total, emph };
-  }, [attractions, audience, profile.dislikes, boostMatch, allAreaMemberIds]);
-
-  // How many of the attractions the system actually put IN the trip (the pre-marked
-  // ❤) match the chosen topics — the honest "your emphasis added N places" number,
-  // NOT how many such places exist city-wide. Includes ones pulled beyond the browse
-  // list (interest venues), as long as they were marked.
-  const emphInTrip = useMemo(() => {
-    if (!boostMatch) return 0;
-    let n = 0;
-    for (const a of attractions) if (choices[a.id] === "yes" && boostMatch(a)) n++;
-    return n;
-  }, [attractions, choices, boostMatch]);
+    return { total };
+  }, [attractions, audience, profile.dislikes, allAreaMemberIds]);
 
   // Paginate: show PAGE at a time; reset to page 1 on any change.
-  useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, selectedOnly, soloInterest, profile.interests, profile.dislikes, audience, boosts, cityTab, areaTab]);
+  useEffect(() => { setVisibleCount(PAGE); }, [query, mustOnly, flags, mapOnly, sort, selectedOnly, soloInterest, profile.interests, profile.dislikes, audience, cityTab, areaTab]);
   // Never leave the traveler stranded in an empty "selected only" view.
   useEffect(() => { if (selectedOnly && yesCount + streetPicks.size === 0) setSelectedOnly(false); }, [selectedOnly, yesCount, streetPicks]);
   const visible = sortedItems.slice(0, visibleCount);
@@ -718,8 +686,8 @@ export function DestinationView({
   // Editorial has no funnel: audience is pre-set, so building unlocks the moment ANYTHING
   // is hearted — a topic, a neighbourhood, or a specific place.
   const readyToBuild = editorial
-    ? (boosts.size > 0 || yesCount > 0 || audience === "families")   // any category ♥ (topic / "עם ילדים"), a place, or a neighbourhood
-    : (!!audience && boosts.size > 0);
+    ? (yesCount > 0 || audience === "families")   // a place hearted, or a family trip
+    : !!audience;
   // MANUAL flow: the build unlocks once ≥MANUAL_MIN places are marked (we don't know
   // the trip length yet, so a flat floor). GUIDED: audience + a topic.
   // Editorial: nothing is pre-marked, so the traveller must actively pick enough
@@ -738,8 +706,7 @@ export function DestinationView({
   const buildTitle = canBuild ? ""
     : editorial ? `בחרו עוד ${Math.max(0, needToBuild - pickedCount)} מקומות לטיול (${pickedCount}/${needToBuild})`
     : manual ? `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`
-    : !audience ? "קודם בחרו בשביל מי הטיול"
-    : boosts.size === 0 ? "הדגישו לפחות תחום אחד שאתם אוהבים" : "";
+    : !audience ? "קודם בחרו בשביל מי הטיול" : "";
   // Hearts are interactive only when picking makes sense: always in manual, and in
   // guided ONLY after the system has something to pre-mark (audience + a topic).
   // Editorial makes hearts the primary selection (♥ on tabs / neighbourhoods / cards),
@@ -852,57 +819,21 @@ export function DestinationView({
   // While the preview recomputes, the list below fades out → in, so a topic click
   // reads as "we're re-choosing your places" rather than an abrupt jump.
   const [previewing, setPreviewing] = useState(false);
-  const boostsKey = [...boosts].sort().join(",");
-  const areasKey = [...chosenAreas].sort().join(",");
-  // Editorial pre-marks every must-see ❤ on entry (they're "חובה"); keeping them OUT of
-  // the preview's auto-pick set means clearing topics never un-marks them.
-  const mustSeeSet = useMemo(() => new Set(editorial ? attractions.filter((a) => a.must_see === 1).map((a) => a.id) : []), [attractions, editorial]);
+  // The trip is pick-driven (WYSIWYG): the traveller marks what they want, and there
+  // is no topic/interest auto-pick preview any more. This effect only clears stale
+  // system auto-marks (from older sessions) so a fresh visit starts from the
+  // traveller's own marks.
   useEffect(() => {
     if (!selLoaded) return;   // wait for the saved marks to load before touching them
-    if (manual) { setPreviewing(false); return; }   // manual: the user owns every mark — never auto-clear/pre-mark
+    if (manual) return;       // manual: the user owns every mark
     if (!audience) {
-      // Fresh / "choose" mode: wipe ALL of this city's marks. They only exist because
-      // of an audience-driven auto-pick — nothing legit is marked before an audience is
-      // picked — so a new visit (or refresh) always starts clean, incl. old orphans.
       if (Object.values(choices).some((c) => c === "yes")) clear();
       autoPickRef.current = new Set();
-      setPreviewing(false);
       return;
     }
-    if (boosts.size === 0) {
-      // audience but no topics → drop just the system's auto-marks, keep manual ones.
-      if (autoPickRef.current.size) { setMany([...autoPickRef.current], null); autoPickRef.current = new Set(); }
-      setPreviewing(false);
-      return;
-    }
-    let cancelled = false;
-    setPreviewing(true);   // fade the list out immediately on a topic/audience change
-    const t = setTimeout(async () => {
-      try {
-        const buildTaste: Record<string, number> = { ...taste };
-        for (const k of boosts) for (const tg of (INTEREST_TASTE[k] ?? [])) buildTaste[tg] = (buildTaste[tg] ?? 0) + 3;
-        const areaList = areas.filter((a) => chosenAreas.has(a.id));
-        const res = await fetch("/api/itinerary", { method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ mode: "generate", city: dest.city, days: buildDays, month: new Date().getMonth() + 1,
-            taste: buildTaste, isFamily: profile.kids.length > 0 || audience === "families",
-            pace: String(perDay), walkPref: profile.walkPref, interests: [...boosts], audience,
-            ...(areaList.length ? { areaGroups: areaList.map((a) => a.member_ids), areaIds: areaList.map((a) => a.id) } : {}) }) });
-        const data = await res.json().catch(() => null);
-        if (cancelled || !data?.itinerary) return;
-        const ids = new Set<number>();
-        for (const d of data.itinerary.days ?? [])
-          for (const s of d.stops ?? [])
-            if (s.id != null && attrById.has(s.id)) ids.add(s.id);
-        const stale = [...autoPickRef.current].filter((id) => !ids.has(id));
-        if (stale.length) setMany(stale, null);
-        if (ids.size) setMany([...ids], "yes");
-        // keep must-see out of the auto-pick set so they stay ❤ when topics change
-        autoPickRef.current = new Set([...ids].filter((id) => !mustSeeSet.has(id)));
-      } catch { /* preview is best-effort */ } finally { if (!cancelled) setPreviewing(false); }
-    }, 500);
-    return () => { cancelled = true; clearTimeout(t); };
+    if (autoPickRef.current.size) { setMany([...autoPickRef.current], null); autoPickRef.current = new Set(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [audience, boostsKey, areasKey, buildDays, dest.city, selLoaded, manual]);
+  }, [audience, selLoaded, manual]);
   // NOTE: we deliberately DON'T pre-mark must-sees on entry anymore — starting with
   // everything selected made travellers lazy and every trip identical. Entry starts
   // empty; the traveller picks what they want (must-sees are badged ⭐ to guide them),
@@ -989,18 +920,10 @@ export function DestinationView({
     const chosenAreaList = areas.filter((a) => chosenAreas.has(a.id));
     const chosenAreaGroups = chosenAreaList.map((a) => a.member_ids);
     const chosenAreaIds = chosenAreaList.map((a) => a.id);
-    // Streets are no longer hand-picked — the server auto-includes a chosen area's
-    // streets + (for the "אדריכלות ורחובות" interest) the city's top streets.
-    // The chosen interest chips GOVERN the build. In the short/couples flow they live
-    // in `boosts` (which the couple actually clicks); in explore mode they're the
-    // profile interests. Fold their taste weights into the build taste (a couple never
-    // sets profile.interests, so without this the chips wouldn't reach the engine), and
-    // pass the raw keys as `interests` for the route's coarse fallback + reservation.
-    // Manual build = the marks ARE the trip; send no interests/audience so the server
-    // takes the strict WYSIWYG selection path (governed=false) and nothing un-picked enters.
-    const chosenInterests = manual ? [] : (boosts.size ? [...boosts] : (profile.interests ?? []));
+    // The trip is PICK-DRIVEN (WYSIWYG): the marks ARE the trip. No interests are
+    // sent, so the server takes the strict selection path and nothing un-picked enters.
+    // (Streets auto-include from a chosen area on the server.)
     const buildTaste = { ...taste };
-    if (boosts.size) for (const k of boosts) for (const t of (INTEREST_TASTE[k] ?? [])) buildTaste[t] = (buildTaste[t] ?? 0) + 3;
     const trip = create({
       title: `טיול ל${dest.city_he || dest.city}`,
       mode: "preferences",
@@ -1011,7 +934,6 @@ export function DestinationView({
       days: buildDays,
       month: new Date().getMonth() + 1,   // a default season; exact dates are set on the trip page
       profile: { ...profile, pace: String(perDay), taste: buildTaste, dailyDriveHours: RADIUS_HOURS[buildRadius] },
-      ...(chosenInterests.length ? { interests: chosenInterests } : {}),
       ...(audience ? { audience } : {}),
       ...(yesFinal.length || noFinal.length ? { selection: { yes: yesFinal, no: noFinal } } : {}),
       ...(chosenAreaGroups.length ? { areaGroups: chosenAreaGroups, areaIds: chosenAreaIds } : {}),
@@ -1507,7 +1429,7 @@ export function DestinationView({
                     {PROFILES.map((p) => {
                       const on = audience === p;
                       return (
-                        <button key={p} onClick={() => { setAudience(on ? null : p); setBoosts(new Set()); }}
+                        <button key={p} onClick={() => setAudience(on ? null : p)}
                           className="rounded-full border px-3.5 py-1.5 text-[13.5px] font-semibold transition"
                           style={{ background: on ? "var(--brand)" : "var(--surface)", color: on ? "#fff" : "var(--text-2)",
                                    borderColor: on ? "var(--brand)" : "var(--border)" }}>
@@ -1525,42 +1447,6 @@ export function DestinationView({
               </div>
               )}
 
-              {/* short mode — taste calibration + one-tap build, transparent (no card).
-                  In editorial this row is REPLACED by a ♥ on each topic/neighbourhood tab. */}
-              {!manual && mode === "short" && !editorial && (
-                <div className="flex flex-col gap-2.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="flex items-center gap-1.5 text-[13.5px] font-semibold text-[var(--text-2)]">
-                      <span className={`grid size-5 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-[11px] font-bold text-white ${boosts.size === 0 ? "pulse-attn" : ""}`}>2</span>
-                      הדגישו מה שאוהבים:
-                    </span>
-                    {/* select-all shortcut — leads the row: pick everything in one tap */}
-                    {(() => {
-                      const allOn = govInterests.length > 0 && govInterests.every((it) => boosts.has(it.key));
-                      return (
-                        <button onClick={() => setBoosts(allOn ? new Set() : new Set(govInterests.map((it) => it.key)))}
-                          className="rounded-full border px-3 py-1 text-[12.5px] font-semibold transition"
-                          style={{ background: allOn ? "var(--brand)" : "var(--surface)",
-                                   color: allOn ? "#fff" : "var(--brand-ink)", borderColor: "var(--brand)" }}>
-                          {allOn ? "✓ הכל" : "הכל"}
-                        </button>
-                      );
-                    })()}
-                    {govInterests.map((it) => {
-                      const on = boosts.has(it.key);
-                      return (
-                        <button key={it.key}
-                          onClick={() => setBoosts((s) => { const n = new Set(s); if (n.has(it.key)) n.delete(it.key); else n.add(it.key); return n; })}
-                          className="rounded-full border px-3 py-1 text-[12.5px] font-medium transition"
-                          style={{ background: on ? "var(--text)" : "var(--surface)", color: on ? "#fff" : "var(--text-2)",
-                                   borderColor: on ? "var(--text)" : "var(--border)" }}>
-                          {it.emoji} {it.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
               {!manual && mode === "choose" && (
                 <p className="text-[13px] text-[var(--text-3)]">בחרו למי הטיול — ונראה לכם את המקומות שהכי אהובים על אנשים כמוכם.</p>
               )}
@@ -1800,7 +1686,6 @@ export function DestinationView({
               <b className="text-[var(--text)]">{poolStats.total}</b> מקומות בודדים
               {areas.length > 0 && <> {"+ "}<b className="text-[var(--brand-ink)]">{areas.length}</b> שכונות</>}
               {" "}מתאימים ל{PROFILE_HE[audience ?? "adults"]}
-              {boosts.size > 0 && <> · <b className="text-[var(--accent-ink)]">{emphInTrip}</b> מודגשים בטיול לפי הבחירה שלכם</>}
             </p>
           )}
 
