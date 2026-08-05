@@ -870,7 +870,21 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
       tagline_he: manualTypeLabel(addType).he, must_see: 0, manual: true as const,
       ...(price != null && price > 0 ? { priceEur: price } : {}),
     };
-    update(tripId, { leftOut: [entry as NonNullable<NonNullable<typeof trip>["leftOut"]>[number], ...(trip?.leftOut ?? [])] });
+    // The button says "הוסף מקום ליום זה", so it goes straight into THIS day, at the
+    // end — not into the bank for a second drag. Written in one update() because
+    // insertBankAt reads trip.leftOut, which this tick's state wouldn't have yet.
+    if (itinerary) {
+      const stop: Stop = {
+        name, kind: CAT_TO_KIND[addType] ?? "culture", time: "", duration: "",
+        id, lat: coords?.lat, lng: coords?.lng, tagline: entry.tagline_he,
+        cat: addType, manual: true, ...(price != null && price > 0 ? { priceEur: price } : {}),
+      };
+      const it: Itinerary = JSON.parse(JSON.stringify(itinerary));
+      it.days[curIdx].stops = retimeStops([...it.days[curIdx].stops, stop]);
+      update(tripId, { itinerary: it });
+    } else {
+      update(tripId, { leftOut: [entry as NonNullable<NonNullable<typeof trip>["leftOut"]>[number], ...(trip?.leftOut ?? [])] });
+    }
     setAddName(""); setAddLink(""); setAddAddress(""); setAddType("food"); setAddPrice(""); setAddCoords(null); setAddMsg(null); setAddOpen(false);
   };
   const deleteManualPlace = (id: number) =>
@@ -1165,7 +1179,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
       </label>
       <button onClick={addManualPlace} disabled={!addName.trim()}
         className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-[13.5px] font-medium text-white transition hover:opacity-90 disabled:opacity-40">
-        <Plus size={14} /> הוסף לבנק
+        <Plus size={14} /> הוסף ליום זה
       </button>
     </div>
   );
