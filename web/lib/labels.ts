@@ -96,17 +96,58 @@ export function stopColor(i: number): string {
 
 // Group destinations under regions (ticket #14). Maps a country (English, as
 // stored) to a Hebrew region; REGION_ORDER sets the display order.
+// Every country we serve (and the obvious next ones) gets a real region — "אחר"
+// is a bug, not a bucket. Grouped the way an Israeli traveller thinks about the
+// map (Greece+Cyprus are their own shelf; the Balkans are not "eastern Europe").
 const COUNTRY_REGION: Record<string, string> = {
-  Germany: "מרכז אירופה", Austria: "מרכז אירופה", Czechia: "מרכז אירופה",
-  "Czech Republic": "מרכז אירופה", Hungary: "מרכז אירופה", Switzerland: "מרכז אירופה",
-  France: "מערב אירופה", Netherlands: "מערב אירופה", "United Kingdom": "מערב אירופה",
-  Spain: "מערב אירופה", Portugal: "מערב אירופה",
-  Italy: "דרום אירופה", Greece: "דרום אירופה", Cyprus: "דרום אירופה",
-  Georgia: "מזרח אירופה וקווקז",
   Israel: "ישראל",
+  // Greece + Cyprus — the islands shelf, a category of its own for this audience.
+  Greece: "יוון וקפריסין", Cyprus: "יוון וקפריסין",
+  // Western Europe
+  "United Kingdom": "מערב אירופה", France: "מערב אירופה", Netherlands: "מערב אירופה",
+  Belgium: "מערב אירופה", Ireland: "מערב אירופה", Luxembourg: "מערב אירופה",
+  // Central Europe (incl. the Visegrád states — Poland belongs here, not in "אחר")
+  Germany: "מרכז אירופה", Austria: "מרכז אירופה", Switzerland: "מרכז אירופה",
+  Czechia: "מרכז אירופה", "Czech Republic": "מרכז אירופה", Hungary: "מרכז אירופה",
+  Poland: "מרכז אירופה", Slovakia: "מרכז אירופה", Slovenia: "מרכז אירופה",
+  // Southern Europe / Iberia
+  Italy: "דרום אירופה", Spain: "דרום אירופה", Portugal: "דרום אירופה", Malta: "דרום אירופה",
+  // The Balkans — the whole peninsula, incl. Bulgaria + Romania
+  Croatia: "הבלקן", Serbia: "הבלקן", Montenegro: "הבלקן", Albania: "הבלקן",
+  Bulgaria: "הבלקן", Romania: "הבלקן", "Bosnia and Herzegovina": "הבלקן",
+  "North Macedonia": "הבלקן",
+  // Eastern Europe + the Caucasus
+  Georgia: "מזרח אירופה והקווקז", Moldova: "מזרח אירופה והקווקז",
+  Ukraine: "מזרח אירופה והקווקז", Armenia: "מזרח אירופה והקווקז",
+  Azerbaijan: "מזרח אירופה והקווקז", Latvia: "מזרח אירופה והקווקז",
+  Lithuania: "מזרח אירופה והקווקז", Estonia: "מזרח אירופה והקווקז",
+  // Scandinavia
+  Denmark: "סקנדינביה", Sweden: "סקנדינביה", Norway: "סקנדינביה",
+  Finland: "סקנדינביה", Iceland: "סקנדינביה",
+  // Middle East
+  "United Arab Emirates": "המזרח התיכון", Jordan: "המזרח התיכון",
+  Egypt: "המזרח התיכון", Turkey: "המזרח התיכון", Qatar: "המזרח התיכון",
+  Oman: "המזרח התיכון", Bahrain: "המזרח התיכון", "Saudi Arabia": "המזרח התיכון",
+  // Asia
+  Japan: "אסיה", "South Korea": "אסיה", Thailand: "אסיה", Vietnam: "אסיה",
+  Philippines: "אסיה", China: "אסיה", Singapore: "אסיה", India: "אסיה",
+  Indonesia: "אסיה", Malaysia: "אסיה", "Sri Lanka": "אסיה", Nepal: "אסיה",
+  Cambodia: "אסיה", Laos: "אסיה", Taiwan: "אסיה",
+  // Americas
+  "United States": "ארצות הברית",
+  Canada: "צפון אמריקה", Mexico: "צפון אמריקה",
+  Argentina: "דרום אמריקה", Brazil: "דרום אמריקה", Chile: "דרום אמריקה",
+  Peru: "דרום אמריקה", Colombia: "דרום אמריקה",
+  // Africa + Oceania
+  Morocco: "אפריקה", "South Africa": "אפריקה", Kenya: "אפריקה", Tanzania: "אפריקה",
+  Australia: "אוקיאניה", "New Zealand": "אוקיאניה",
 };
+// Display order — closest / most-flown first for an Israeli traveller, then out.
+// Empty regions are dropped by the list, so this can stay ahead of the catalogue.
 export const REGION_ORDER = [
-  "מערב אירופה", "מרכז אירופה", "דרום אירופה", "מזרח אירופה וקווקז", "ישראל", "אחר",
+  "ישראל", "יוון וקפריסין", "דרום אירופה", "מערב אירופה", "מרכז אירופה",
+  "הבלקן", "מזרח אירופה והקווקז", "סקנדינביה", "המזרח התיכון", "אסיה",
+  "ארצות הברית", "צפון אמריקה", "דרום אמריקה", "אפריקה", "אוקיאניה", "אחר",
 ];
 export function regionOf(country: string | null | undefined): string {
   return (country && COUNTRY_REGION[country]) || "אחר";
