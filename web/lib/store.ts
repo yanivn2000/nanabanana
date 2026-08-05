@@ -261,6 +261,23 @@ export function useTrips(): {
   // refs so create/update/remove compute + push synchronously off the latest state
   const tripsRef = useRef<Trip[]>([]);
   const userIdRef = useRef<string | null>(null);
+  // Coalesce rapid edits into ONE server write per trip every few seconds. Every
+  // upsert rewrites the trip's whole jsonb row, and a write per drag/retime is what
+  // bloated the 51-row trips table to 207MB of dead TOAST and stalled production
+  // (2026-08-05). localStorage still updates instantly; only the server write is
+  // deferred, and a write lost to a closed tab self-heals via the on-load push-up.
+  const syncTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const scheduleSync = (id: string) => {
+    const m = syncTimers.current;
+    const t = m.get(id);
+    if (t) clearTimeout(t);
+    m.set(id, setTimeout(() => {
+      m.delete(id);
+      const uid = userIdRef.current;
+      const cur = tripsRef.current.find((x) => x.id === id);
+      if (uid && cur && !cur.preview) upsertServerTrip(uid, cur);
+    }, 2500));
+  };
 
   // localStorage is the instant, offline-safe copy; server is the cross-device one.
   const applyLocal = (next: Trip[]) => {
@@ -323,7 +340,8 @@ export function useTrips(): {
       if (!cur) return;
       const updated: Trip = { ...cur, ...patch, updatedAt: Date.now() };
       applyLocal(tripsRef.current.map((x) => (x.id === id ? updated : x)));
-      if (userIdRef.current && !updated.preview) upsertServerTrip(userIdRef.current, updated);
+      // debounced — see scheduleSync; create/remove stay immediate.
+      if (userIdRef.current && !updated.preview) scheduleSync(id);
     },
     remove: (id) => {
       applyLocal(tripsRef.current.filter((x) => x.id !== id));
