@@ -207,6 +207,13 @@ export async function topAttractions(destinationId: number, limit = 40): Promise
          AND (a.is_duplicate IS NULL OR a.is_duplicate = 0)
          AND (a.is_component IS NULL OR a.is_component = 0)
          AND (ep.rank IS NULL OR ep.rank <> 'no')
+         -- A non-must-see filler needs real content to be a stop: a curated
+         -- must-see (or editor 'must'/'maybe') always qualifies; anything else
+         -- must carry a Hebrew description, so content-less OSM noise (e.g. the
+         -- ~130 unvisitable "Palais X" in Vienna, micro-gardens) never pads a day.
+         AND (COALESCE(${EFF_MUST}, 0) = 1
+              OR ep.rank = 'maybe'
+              OR (a.description_he IS NOT NULL AND char_length(a.description_he) >= 40))
        ORDER BY ${EDITOR_ORDER},
                 COALESCE(a.quality_keep = 1, false) DESC,
                 ${NOTABLE} DESC,
