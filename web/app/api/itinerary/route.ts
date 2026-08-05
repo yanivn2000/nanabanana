@@ -254,6 +254,7 @@ export async function POST(req: NextRequest) {
     // heuristic, so the paid API is never spent without the user asking (and can
     // be quota-gated later). revise always uses the AI (it's an AI edit).
     ai?: boolean;
+    seed?: number;   // exact-reproduction seed for the variety layer (absent = fresh random)
   };
   try {
     body = await req.json();
@@ -539,8 +540,13 @@ export async function POST(req: NextRequest) {
         .filter((s) => s.evening && !streetRows.some((r) => r.id === s.id))
         .map(streetAsStop)
     : [];
+  // Variety: every build gets a fresh seed (or an explicit body.seed for exact
+  // reproduction), so two couples with identical settings — or the same traveller
+  // pressing 'בנה מחדש' — get genuinely different mid-tier picks.
+  const seed = typeof body.seed === "number" ? (body.seed >>> 0) : (Math.floor(Math.random() * 0x7fffffff) >>> 0);
   const buildOpts = { ...optsFor(dest, rules), reservedIds, guaranteeIds: pickGuarantee,
     mustIncludeIds: mustInclude, dayMinutes: pace.minutes,
+    seed, varietyJitter: rules.varietyJitter,
     ...(eveningSpots.length ? { eveningSpots, eveningStartMin: rules.eveningStart } : {}) };
   const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary =>
     d.mobility === "car_base"

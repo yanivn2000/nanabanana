@@ -55,7 +55,37 @@ export type BuildOpts = {
   // slot. The route only passes these for couples, in cities that have them.
   eveningSpots?: Attraction[];
   eveningStartMin?: number;   // evening_slot technique — earliest evening-slot clock
+  // Build variety (variety_jitter technique): same parameters should not produce
+  // the SAME trip every time. seed drives a deterministic PRNG (same seed → same
+  // trip, so the Brain eval stays reproducible); varietyJitter is the shuffle
+  // window in rank positions (0 = off). Reserved/❤/guaranteed ids never move.
+  seed?: number;
+  varietyJitter?: number;
 };
+
+// Deterministic PRNG (mulberry32) — the variety layer must be reproducible from
+// its seed, so a saved seed can rebuild the exact same trip.
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+// Rank-window shuffle: each unprotected item drifts up to ±strength positions
+// from its value rank. Neighbours swap, clear winners stay on top, and which
+// mid-tier places make the candidate cut varies between builds — variety without
+// quality loss. Protected ids (the traveller's picks, the reservation icons)
+// keep their exact rank.
+function jitterOrder(pool: Attraction[], seed: number, strength: number, keep?: Set<number>): Attraction[] {
+  const rng = mulberry32(seed);
+  return pool
+    .map((a, i) => ({ a, k: keep?.has(a.id) ? i : i + (rng() - 0.5) * 2 * strength }))
+    .sort((x, y) => x.k - y.k)
+    .map((x) => x.a);
+}
 // A picked street is a full stop, not a transition. It enters the build as a
 // synthetic attraction: a namespaced id in the "street" range (its own id space,
 // so it can never collide with a real attraction id) + its canonical ref, and
@@ -206,10 +236,19 @@ export function buildHeuristicItinerary(
   // so the family re-sort keeps the icons in the candidate window without a blanket
   // must-see boost.
   const rsv = opts?.reservedIds;
-  const poolAll = isFamily
+  const poolRanked = isFamily
     ? [...filtered].sort((a, b) =>
         (Number(rsv?.has(b.id) ?? false) - Number(rsv?.has(a.id) ?? false)) || (familyFit(b) - familyFit(a)))
     : filtered;
+  // Variety layer: jitter the ranked order inside a ±N-position window so two
+  // builds with identical parameters differ in their mid-tier picks. The
+  // traveller's ❤/reserved/guaranteed stops keep their exact rank — variety must
+  // never cost a promise. Off when no seed/strength (saved modules, tests).
+  const jStrength = opts?.varietyJitter ?? 0;
+  const protectedIds = new Set<number>([...(rsv ?? []), ...(opts?.mustIncludeIds ?? []), ...(opts?.guaranteeIds ?? [])]);
+  const poolAll = jStrength > 0 && opts?.seed != null
+    ? jitterOrder(poolRanked, opts.seed, jStrength, protectedIds)
+    : poolRanked;
 
   // Nightlife is an EVENING activity — it must NOT compete with markets/museums for
   // daytime proximity slots. Pull the CHOSEN nightlife venues out of the day pool and

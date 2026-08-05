@@ -142,6 +142,13 @@ export const RULE_KINDS: Record<string, { title: string; help: string; he: (p: R
     params: [{ key: "maxPerDay", type: "number", label: "מקס׳ ליום" }, { key: "detourMin", type: "number", label: "עיקוף (דק׳)" }],
     applies: "cluster free-gem pass",
   },
+  variety_jitter: {
+    title: "גיוון בין בניות",
+    help: "כמה שונות מותרת בין שתי בניות עם אותם פרמטרים. כל מקום בשכבת-ההשלמה יכול לזוז עד N מיקומים בדירוג בכל בנייה — כך שני זוגות עם אותן הגדרות לא יקבלו יומן זהה, בלי לפגוע באיכות: אתרי-החובה, הבחירות (❤) והעוגנים לא זזים לעולם. 0 = כבוי (טיול זהה בכל בנייה).",
+    he: (p) => `גיוון: מקום יכול לזוז עד ${p.strength ?? 5} מיקומים בדירוג בין בניות`,
+    params: [{ key: "strength", type: "number", label: "חלון (מיקומים)" }],
+    applies: "builder pool order (seeded, reproducible)",
+  },
   same_place_km: {
     title: "מרחק \"אותו מקום\"",
     help: "המרחק (במטרים) שמתחתיו שתי עצירות נחשבות לאותו מקום ולא יופיעו פעמיים באותו יום — למשל מבצר והגבעה שהוא יושב עליה, או אגם והמזח שלו. מונע כפילות; המוח שומר את בעל-הערך מבין השניים.",
@@ -218,7 +225,7 @@ export const KIND_GROUP: Record<string, (typeof GROUP_ORDER)[number]> = {
   day_ender_last: "קהל וסינון", season_filter: "קהל וסינון", avoid_category: "קהל וסינון",
   day_window: "תחושת-יום", lunch: "תחושת-יום", visit_minutes: "תחושת-יום", evening_slot: "תחושת-יום",
   daytrip_threshold: "מבנה-הטיול", daytrip_budget: "מבנה-הטיול", daytrip_max_stops: "מבנה-הטיול",
-  free_gems: "מבנה-הטיול", same_place_km: "מבנה-הטיול",
+  free_gems: "מבנה-הטיול", same_place_km: "מבנה-הטיול", variety_jitter: "מבנה-הטיול",
   quality_bar: "כיול-הביקורת", dimension_weight: "כיול-הביקורת", min_must_see: "כיול-הביקורת",
   min_audience_fit: "כיול-הביקורת", max_same_type_run: "כיול-הביקורת", day_walk_band: "כיול-הביקורת",
   custom: "הערות",
@@ -250,6 +257,7 @@ export type BrainRules = {
   daytripPerDays: number;
   daytripMaxStops: number;
   samePlaceMeters: number;
+  varietyJitter: number;   // variety_jitter — rank window for build-to-build variety (0=off)
   freeGemMaxPerDay: number;
   freeGemDetourMin: number;
   // Tier-3 critic calibration (from quality_bar / dimension_weight / min_* / day_walk_band).
@@ -277,7 +285,7 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
     seasonFilter: false,
     avoid: { families: [...AUDIENCE_PREFS.families.avoid], adults: [...AUDIENCE_PREFS.adults.avoid] },
     dayStartMin: 9 * 60 + 30, lunchAfterMin: 12 * 60, lunchMinutes: 60, eveningStart: 21 * 60, dwell: { ...DWELL_DEFAULT },
-    daytripThresholdKm: 18, daytripPerDays: 2, daytripMaxStops: 5, samePlaceMeters: 90, freeGemMaxPerDay: 3, freeGemDetourMin: 4,
+    daytripThresholdKm: 18, daytripPerDays: 2, daytripMaxStops: 5, samePlaceMeters: 90, varietyJitter: 5, freeGemMaxPerDay: 3, freeGemDetourMin: 4,
     weights: { ...WEIGHTS }, qualityBar: QUALITY_BAR, minMustSee: THRESHOLDS.minMustSeePerTrip,
     minAudienceFit: THRESHOLDS.minAudienceFit, maxSameTypeRun: THRESHOLDS.maxSameTypeRun,
     dayWalkIdeal: DAY_WALK.ideal, dayWalkFlag: DAY_WALK.flag,
@@ -324,6 +332,7 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
         if (q.detourMin != null) rules.freeGemDetourMin = Number(q.detourMin);
         break;
       case "same_place_km": if (q.meters != null) rules.samePlaceMeters = Number(q.meters); break;
+      case "variety_jitter": if (q.strength != null) rules.varietyJitter = Number(q.strength); break;
       case "quality_bar": if (q.score != null) rules.qualityBar = Number(q.score); break;
       case "dimension_weight": if (q.dimension && q.weight != null) rules.weights[String(q.dimension)] = Number(q.weight); break;
       case "min_must_see": if (q.count != null) rules.minMustSee = Number(q.count); break;
