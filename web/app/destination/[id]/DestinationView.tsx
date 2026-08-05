@@ -28,10 +28,8 @@ import { useNavTitle } from "@/components/NavTitle";
 const RADIUS_HOURS = [0.5, 1, 2, 3];
 const RADIUS_HE = ["קרוב מאוד", "עד שעה", "עד שעתיים", "גם רחוק"];
 
-// Trip pace is now a direct attractions-per-day number (3–6) instead of the old
-// רגוע/בינוני/אינטנסיבי labels. paceToPerDay reads either (number wins).
-const PER_DAY_MIN = 3, PER_DAY_MAX = 6;
-import { paceToPerDay } from "@/lib/trip-types";
+// Trip pace is a MODE (רגיל / רגוע מאוד), not a per-day count — days fill by time.
+import { paceMode, PACE_MODES, type PaceMode } from "@/lib/trip-types";
 import { deriveTaste, tasteScore, audienceFit, INTEREST_TASTE, INTEREST_CATS, GOVERNING_INTERESTS } from "@/lib/taste";
 import { PROFILES, PROFILE_HE, PROFILE_EMOJI, type Profile } from "@/lib/shortpath";
 
@@ -511,7 +509,11 @@ export function DestinationView({
   // stale per-city marks; the explore-mode bottom bar builds from marks.
   const [buildDays, setBuildDays] = useState(4);
   const [buildRadius, setBuildRadius] = useState(1);
-  const [perDay, setPerDay] = useState(() => Math.min(PER_DAY_MAX, Math.max(PER_DAY_MIN, paceToPerDay(profile?.pace as string))));   // attractions per day (3–6)
+  // Pace is a MODE now, not a number: "רגיל" fills the day to dinner, "רגוע מאוד"
+  // winds down late afternoon. Default רגיל; the control is hidden (the profile
+  // still carries a saved value, so a traveller who once chose calm keeps it).
+  const pace: PaceMode = paceMode(profile?.pace as string);
+  const perDay = PACE_MODES[pace].maxStops;   // capacity estimate only
   const [building, setBuilding] = useState(false);
   // Streets the traveller explicitly picked (search / neighbourhood). Streets have
   // their own id space; they go to the build as `streetIds`. Persisted per city.
@@ -1006,7 +1008,7 @@ export function DestinationView({
       destinationId: dest.id,
       days: buildDays,
       month: new Date().getMonth() + 1,   // a default season; exact dates are set on the trip page
-      profile: { ...profile, pace: String(perDay), taste: buildTaste, dailyDriveHours: RADIUS_HOURS[buildRadius] },
+      profile: { ...profile, pace, taste: buildTaste, dailyDriveHours: RADIUS_HOURS[buildRadius] },
       ...(audience ? { audience } : {}),
       ...(yesFinal.length || noFinal.length ? { selection: { yes: yesFinal, no: noFinal } } : {}),
       ...(chosenAreaGroups.length ? { areaGroups: chosenAreaGroups, areaIds: chosenAreaIds } : {}),
@@ -1167,14 +1169,11 @@ export function DestinationView({
           <input type="range" min={0} max={3} value={buildRadius} dir="ltr" aria-label="מרחק נסיעה ליום"
             onChange={(e) => setBuildRadius(Number(e.target.value))} className="w-full accent-[var(--brand)]" />
         </div>
-        <div>
-          <div className="mb-1.5 flex items-center justify-between text-[13px]">
-            <span className="font-medium text-[var(--text-2)]">קצב הטיול</span>
-            <span className="font-semibold text-[var(--brand-ink)]">~{perDay} אטרקציות ביום</span>
-          </div>
-          <input type="range" min={PER_DAY_MIN} max={PER_DAY_MAX} value={perDay} dir="ltr" aria-label="אטרקציות ביום"
-            onChange={(e) => setPerDay(Number(e.target.value))} className="w-full accent-[var(--brand)]" />
-        </div>
+        {/* The pace slider is GONE by design: "N attractions a day" was a false
+            promise — Big Ben is ten minutes from the pavement, the Rijksmuseum is
+            three hours. Days now fill by TIME up to dinner and the traveller
+            removes what they don't want. The engine keeps two modes (רגיל /
+            רגוע מאוד); רגיל is the default and nothing here needs to ask. */}
       </div>
       {/* "טיול עם ילדים?" — כן/לא (default: לא). Inline label so the toggle sits on
           the same horizontal line as the "בנו לי טיול" button (items-center row). */}

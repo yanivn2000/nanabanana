@@ -15,7 +15,7 @@ import { reviseHeuristic, arrangeDay } from "@/lib/revise-heuristic";
 import { checkRateLimit } from "@/lib/db";
 import { rateLimit } from "@/lib/ratelimit";
 import * as Sentry from "@sentry/nextjs";
-import { paceToPerDay } from "@/lib/trip-types";
+import { paceBudget } from "@/lib/trip-types";
 import { rankByTaste, tasteEmphasis } from "@/lib/taste";
 import { haversineKm, estimateLeg } from "@/lib/geo";
 import { reachPenalty } from "@/lib/brain/policy";
@@ -312,7 +312,11 @@ export async function POST(req: NextRequest) {
   // The Brain's techniques (brain_principles) for this city — the builder obeys these.
   const rules = await brainRulesForDest(dest.id);
   // heuristic stops/day. Families get at least their pace-rule floor (fuller day).
-  const perDay = isFamily ? Math.max(paceToPerDay(body.pace), rules.paceStops.families) : paceToPerDay(body.pace);
+  // Day shape: fill by TIME up to dinner (paceBudget), not by a stop count — a
+  // drive-by landmark and a three-hour museum are not each "one attraction".
+  // perDay survives only as a runaway guard on how many stops a day may hold.
+  const pace = paceBudget(body.pace);
+  const perDay = isFamily ? Math.max(pace.maxStops, rules.paceStops.families) : pace.maxStops;
   // Base pool = top 150; then fold in the traveler's exact picks AND the members of
   // any chosen neighbourhoods (even ones ranked below 150) so a chosen place / area
   // member is always a real build candidate.
@@ -546,7 +550,8 @@ export async function POST(req: NextRequest) {
   // picked) are mandatory: the builder places every one of them in a day. This is
   // the product promise behind "המערכת תשלים את השאר" — what you chose is IN.
   const mustInclude = pickIds.length ? new Set(pickIds) : undefined;
-  const buildOpts = { ...optsFor(dest, rules), reservedIds, guaranteeIds: pickGuarantee, mustIncludeIds: mustInclude };
+  const buildOpts = { ...optsFor(dest, rules), reservedIds, guaranteeIds: pickGuarantee,
+    mustIncludeIds: mustInclude, dayMinutes: pace.minutes };
   const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary =>
     d.mobility === "car_base"
       ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp, buildOpts)

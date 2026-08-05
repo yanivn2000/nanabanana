@@ -12,6 +12,36 @@ export const paceToPerDay = (pace?: string | number): number => {
   return PACE_PER_DAY[(pace as string) ?? ""] ?? 5;
 };
 
+// --- Day shape ---------------------------------------------------------------
+// A stop count is a poor proxy for a day: Big Ben is ten minutes from the
+// pavement, the Rijksmuseum is three hours. So a day is filled by TIME, up to
+// dinner, and the traveller removes what they don't want. Two modes only:
+//
+//   רגיל      — the default: tour until dinner (~19:30, the client drops the
+//               dinner slot at the first stop boundary past it, so it lands
+//               19:30-20:30 depending on how the last stop falls).
+//   רגוע מאוד — a deliberately light day that winds down late afternoon.
+//
+// minutes = the touring budget (dwell + travel) EXCLUDING the lunch break;
+// maxStops is only a runaway guard — time is what binds.
+export type PaceMode = "calm" | "normal";
+export const PACE_MODES: Record<PaceMode, { he: string; minutes: number; maxStops: number }> = {
+  normal: { he: "רגיל", minutes: 540, maxStops: 8 },      // 09:30 → ~19:30 minus lunch
+  calm:   { he: "רגוע מאוד", minutes: 330, maxStops: 5 }, // 09:30 → ~16:00 minus lunch
+};
+export const DEFAULT_PACE: PaceMode = "normal";
+// Read a mode off whatever the profile carries (new key, legacy label, or the
+// old per-day number — only the very lightest of those means "calm").
+export const paceMode = (pace?: string | number): PaceMode => {
+  if (pace === "calm" || pace === "רגוע מאוד") return "calm";
+  if (pace === "normal" || pace === "רגיל") return "normal";
+  const n = typeof pace === "number" ? pace : Number(pace);
+  if (Number.isFinite(n)) return n <= 3 ? "calm" : "normal";
+  if (pace === "רגוע") return "calm";
+  return DEFAULT_PACE;
+};
+export const paceBudget = (pace?: string | number) => PACE_MODES[paceMode(pace)];
+
 export type StopKind = "nature" | "food" | "culture" | "rest" | "shopping";
 
 export type Stop = {

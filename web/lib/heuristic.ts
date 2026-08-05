@@ -38,6 +38,9 @@ export type BuildOpts = {
   // Interest/must-see reservation (from the build route): these ids are pinned to
   // the FRONT of the pool so the family familyFit re-sort can't drop the icons.
   reservedIds?: Set<number>;
+  // How much of the day to fill: touring minutes (dwell + travel, lunch excluded).
+  // Set from the pace mode so a day runs until dinner instead of stopping at N stops.
+  dayMinutes?: number;
   // Chosen-theme stops the proximity clusterer tends to drop because they're
   // geographically scattered (nightlife bars, peripheral parks). After clustering,
   // the best few unscheduled ones are force-inserted into their nearest day so a
@@ -198,7 +201,12 @@ export function buildHeuristicItinerary(
   // walkable neighbourhood. seedGroups (chosen-neighbourhood tour) force one day
   // per area. The per-day budget is derived from the pace.
   const dwell = opts?.dwell ?? DWELL_DEFAULT;
-  const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes: perDay * 84, perDay, seedGroups,
+  // The day is filled by TIME (touring minutes up to dinner), not by a stop count —
+  // a drive-by landmark and a three-hour museum are not "one attraction" each. The
+  // caller passes the mode's budget via opts.dayMinutes; perDay stays only as a
+  // runaway guard so time is what actually binds.
+  const dayMinutes = opts?.dayMinutes ?? perDay * 84;
+  const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes, perDay, seedGroups,
     freeMax: opts?.freeGemMaxPerDay, freeDetour: opts?.freeGemDetourMin, dwell, center: opts?.center });
 
   // Per-day techniques: drop same-place dups + cap types (e.g. ≤2 museums/day), then
