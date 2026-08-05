@@ -444,7 +444,7 @@ export function buildCarBaseItinerary(
   const allDays = [...cityItin.days, ...tripDayObjs].map((d, i) => ({ ...d, label: `יום ${i + 1}`, carBase: true }));
   return {
     title: `טיול ב${city}`,
-    subtitle: `${allDays.length} ימים · ${country} · כולל ${effTripDays} ${effTripDays === 1 ? "יום טיול ברכב" : "ימי טיול ברכב"}`,
+    subtitle: `${allDays.length} ימים · ${country} · טיול ברכב שכור · ${effTripDays} ${effTripDays === 1 ? "יום מחוץ לעיר" : "ימים מחוץ לעיר"}`,
     days: allDays,
   };
 }

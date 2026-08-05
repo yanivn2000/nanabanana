@@ -143,5 +143,15 @@ export function orientDay(day: Attraction[], includeEnders = true): Attraction[]
     return v;
   };
   const rev = [...day].reverse();
-  return inversions(rev) < inversions(day) ? rev : day;
+  const iv = inversions(day), ivR = inversions(rev);
+  if (ivR !== iv) return ivR < iv ? rev : day;
+  // Time-phase tie (the common case — most stops are "anytime"): choose the
+  // direction that ENDS on the strongest anchor, mirroring the critic's own
+  // weak-ender test (highlight / active). A day that can close on the fortress,
+  // viewpoint or headline sight does — instead of fizzling on a minor stop.
+  // Reversing still preserves every adjacency, so the route is never torn.
+  const strength = (a: Attraction) =>
+    (isActiveAnchor(a) ? 2 : 0) + (a.must_see === 1 ? 2 : 0) +
+    (Math.max(a.audience_fit?.families ?? 0, a.audience_fit?.couples ?? 0, a.audience_fit?.friends ?? 0) >= 70 ? 1 : 0);
+  return strength(rev[rev.length - 1]) > strength(day[day.length - 1]) ? rev : day;
 }

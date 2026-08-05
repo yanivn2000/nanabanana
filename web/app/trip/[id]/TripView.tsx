@@ -286,6 +286,10 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
 
   const trip = trips.find((t) => t.id === tripId);
   const itinerary = trip?.itinerary ?? null;
+  // A car_base build marks EVERY day carBase — surface it as a trip-level fact
+  // ("this is a rental-car trip"), not something the traveller must infer from
+  // the day-trip banners alone (Salzburg/Crete are car trips throughout).
+  const carTrip = !!itinerary?.days?.some((d) => (d as { carBase?: boolean }).carBase);
   // Trip built from an Explore selection → show the two tiers (anchor / "אם יש זמן").
   const fromSelection = !!trip?.selection;
   // Per-trip travelers override the global profile (different group per trip).
@@ -1166,6 +1170,11 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
               <span className="text-[13.5px] text-[var(--text-2)]">
                 {[cityHe, trip?.days ? `${trip.days} ימים` : null, trip?.month ? MONTHS_HE[trip.month - 1] : null].filter(Boolean).join(" · ")}
               </span>
+              {carTrip && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] px-2 py-0.5 text-[12px] text-[var(--text-2)]">
+                  <Car size={12} /> טיול ברכב שכור
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -1191,6 +1200,11 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
               : cityHe}
             {trip?.days ? ` · ${trip.days} ימים` : ""}
             {trip?.month ? ` · ${MONTHS_HE[trip.month - 1]}` : ""}
+          </span>
+        )}
+        {carTrip && (
+          <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] px-2 py-0.5 text-[12px] text-[var(--text-2)]">
+            <Car size={12} /> טיול ברכב שכור
           </span>
         )}
         {/* dates — a compact chip that opens a small editor, not permanent inputs */}
