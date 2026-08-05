@@ -1,0 +1,28 @@
+{
+  "destination_id": 37,
+  "city": "Sofia",
+  "streets": [
+    {
+      "name_local": "Vitosha Boulevard",
+      "name_en": "Vitosha Boulevard",
+      "name_he": "שדרת ויטושה",
+      "kind": "street",
+      "best_for_he": "רחוב הקניות הראשי להולכי רגל",
+      "vibe_he": "השדרה הראשית להולכי רגל של סופיה, המכוונת אל הר ויטושה שברקע — מותגי אופנה, בתי קפה, מסעדות ומרפסות. עורק הקניות, הטיול והבילוי הפועם של העיר, עם נוף להר בקצהו.",
+      "dwell_min": 40,
+      "approx_lat": 42.6910,
+      "approx_lng": 23.3195
+    },
+    {
+      "name_local": "Graf Ignatiev Street",
+      "name_en": "Graf Ignatiev Street",
+      "name_he": "רחוב גראף איגנטייב",
+      "kind": "street",
+      "best_for_he": "רחוב מקומי תוסס",
+      "vibe_he": "אחד הרחובות התוססים והאהובים על הסופיינים ('גראפא') — שוק פרחים, גלידריות ותיקות, בתי קפה, חנויות וקרונות חשמל שחולפים. אווירה מקומית אותנטית, הרחק ממסלול התיירים הראשי.",
+      "dwell_min": 30,
+      "approx_lat": 42.6880,
+      "approx_lng": 23.3245
+    }
+  ]
+}
