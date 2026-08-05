@@ -1347,6 +1347,7 @@ export type AdminTrip = {
   stop_count: number; day_count: number; has_itinerary: boolean;
   created_at: string | null; updated_at: string | null;
   user_signed_up: string | null;   // when this account first appeared
+  origin_country: string | null; device: string | null;   // coarse origin (no IP)
 };
 
 // One row per PERSON. A raw user_id says nothing; this says who they are in
@@ -1385,6 +1386,8 @@ export async function adminTrips(limit = 500): Promise<AdminTrip[]> {
             COALESCE((t.data ->> 'days')::int, t.days) AS days,
             COALESCE((t.data ->> 'month')::int, t.month) AS month,
             t.created_at, t.updated_at, u.created_at AS user_signed_up,
+            t.data -> 'origin' ->> 'country' AS origin_country,
+            t.data -> 'origin' ->> 'device'  AS device,
             (t.data -> 'itinerary' IS NOT NULL) AS has_itinerary,
             COALESCE(jsonb_array_length(t.data -> 'itinerary' -> 'days'), 0)::int AS day_count,
             COALESCE((
@@ -1396,4 +1399,13 @@ export async function adminTrips(limit = 500): Promise<AdminTrip[]> {
        LEFT JOIN auth.users u ON u.id = t.user_id
       ORDER BY t.updated_at DESC NULLS LAST
       LIMIT $1`, [limit]);
+}
+
+// One user's full trip (the whole stored object) — the admin "view this trip"
+// panel. Keyed by the pair that identifies a row: account + client trip id.
+export async function adminTripDetail(userId: string, clientId: string): Promise<Record<string, unknown> | null> {
+  const rows = await query<{ data: Record<string, unknown> }>(
+    `SELECT t.data FROM trips t WHERE t.user_id::text = $1 AND t.client_id = $2 LIMIT 1`,
+    [userId, clientId]);
+  return rows[0]?.data ?? null;
 }

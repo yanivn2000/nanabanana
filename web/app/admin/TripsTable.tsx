@@ -8,8 +8,9 @@
 // key alone says nothing; grouped, it tells you how many real people there are,
 // when they arrived and how much they built.
 import { useEffect, useState } from "react";
-import { Search, RefreshCw, User, Users } from "lucide-react";
+import { Search, RefreshCw, User, Users, Eye, X } from "lucide-react";
 import type { AdminTrip, AdminTripUser } from "@/lib/db";
+import type { Itinerary } from "@/lib/trip-types";
 
 const fmtDate = (s: string | null) =>
   s ? new Date(s).toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", year: "2-digit" }) : "—";
@@ -27,6 +28,18 @@ export function TripsTable() {
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<"trips" | "users">("users");
+  // The trip the admin opened to read (full stored object, fetched on demand —
+  // the list stays light and no itinerary travels until it's actually wanted).
+  const [open, setOpen] = useState<{ t: AdminTrip; data: { itinerary?: Itinerary } | null } | null>(null);
+
+  const openTrip = async (tr: AdminTrip) => {
+    setOpen({ t: tr, data: null });
+    try {
+      const r = await fetch(`/api/admin/trips?user=${encodeURIComponent(tr.user_id)}&trip=${encodeURIComponent(tr.client_id)}`, { cache: "no-store" });
+      const j = await r.json();
+      setOpen({ t: tr, data: j.trip ?? null });
+    } catch { setOpen({ t: tr, data: null }); }
+  };
 
   const load = async () => {
     setBusy(true);
@@ -143,12 +156,65 @@ export function TripsTable() {
               <span className="truncate text-[12px] text-[var(--text-3)]" title={t.user_id}>
                 {userLabel(t)}
               </span>
+              {/* coarse origin — only on trips built since we started recording it */}
+              {(t.origin_country || t.device) && (
+                <span className="shrink-0 rounded bg-[var(--surface-2)] px-1.5 py-0.5 text-[11.5px] text-[var(--text-3)]"
+                  title="מדינה ומכשיר — נתונים לא-אישיים (ללא כתובת IP)">
+                  {t.origin_country ?? "??"} · {t.device === "mobile" ? "📱" : "🖥"}
+                </span>
+              )}
               <span className="ms-auto shrink-0 text-[12px] text-[var(--text-3)]"
                 title={`נוצר ${fmtDate(t.created_at)}`}>
                 עודכן {fmtWhen(t.updated_at)}
               </span>
+              <button onClick={() => openTrip(t)} title="צפייה ביומן המסע"
+                className="flex shrink-0 items-center gap-1 rounded-full border border-[var(--border)] px-2 py-1 text-[12px] transition hover:border-[var(--brand)]">
+                <Eye size={13} /> צפה
+              </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* read-only viewer — the itinerary exactly as the traveller has it */}
+      {open && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setOpen(null)}>
+          <div className="max-h-[85vh] w-full max-w-2xl overflow-auto rounded-[var(--radius)] bg-[var(--surface)] p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <h3 className="serif text-[19px] font-bold">{open.t.title || "ללא כותרת"}</h3>
+                <p className="text-[13px] text-[var(--text-2)]">
+                  {[open.t.city_he || open.t.city, open.t.days ? `${open.t.days} ימים` : null,
+                    open.t.email || `אורח · ${open.t.user_id.slice(0, 6)}`].filter(Boolean).join(" · ")}
+                </p>
+              </div>
+              <button onClick={() => setOpen(null)} className="rounded-full p-1 hover:bg-[var(--surface-2)]" aria-label="סגירה">
+                <X size={18} />
+              </button>
+            </div>
+            {!open.data && <p className="py-6 text-center text-[14px] text-[var(--text-3)]">טוען…</p>}
+            {open.data && !open.data.itinerary?.days?.length &&
+              <p className="py-6 text-center text-[14px] text-[var(--text-3)]">לטיול הזה אין יומן בנוי.</p>}
+            {open.data?.itinerary?.days?.map((d, i) => (
+              <div key={i} className="mb-3 rounded-[var(--radius-sm)] border border-[var(--border)] p-2.5">
+                <div className="mb-1.5 flex items-baseline gap-2">
+                  <span className="text-[14px] font-semibold">{d.label || `יום ${i + 1}`}</span>
+                  {d.dayTrip && <span className="rounded bg-[var(--amber-soft)] px-1.5 py-0.5 text-[11.5px]">🚗 יום טיול</span>}
+                  <span className="text-[12px] text-[var(--text-3)]">{d.stops?.length ?? 0} עצירות</span>
+                </div>
+                <ol className="flex flex-col gap-1">
+                  {d.stops?.map((s, j) => (
+                    <li key={j} className="flex items-baseline gap-2 text-[13px]">
+                      <span className="w-11 shrink-0 font-mono text-[12px] text-[var(--text-3)]">{s.time || "—"}</span>
+                      <span className={s.kind === "food" && !s.id ? "text-[var(--text-3)]" : ""}>{s.name}</span>
+                      {s.duration && <span className="text-[12px] text-[var(--text-3)]">· {s.duration}</span>}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </section>

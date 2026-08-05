@@ -560,6 +560,14 @@ export async function POST(req: NextRequest) {
   // `opts.list` overrides the match list (neighbourhood builds pass the full area
   // pool so every area member resolves); `opts.surfaceIds`/`detailRows` say which
   // un-scheduled places land in "לא נכנסו ליומן" (default: the traveller's "כן").
+  // Coarse, NON-PERSONAL origin for product analytics: country + device class,
+  // straight off the edge headers. Deliberately NO IP and no city-level geo —
+  // an IP is personal data under GDPR and would need its own legal basis.
+  const ua = req.headers.get("user-agent") ?? "";
+  const origin = {
+    country: req.headers.get("x-vercel-ip-country") || null,
+    device: /Mobile|Android|iPhone|iPad/i.test(ua) ? "mobile" : "desktop",
+  };
   const respondGenerate = (itin: Itinerary, engine?: string,
     opts?: { list?: Attraction[]; surfaceIds?: Set<number>; detailRows?: Attraction[] }) => {
     const scheduled = new Set<number>();
@@ -632,7 +640,7 @@ export async function POST(req: NextRequest) {
       ...bankMusts.map(detailOf),
       ...bankRest.map(detailOf),
     ].slice(0, bankCap);
-    return NextResponse.json({ itinerary: withDetails, ...(engine ? { engine } : {}), leftOut });
+    return NextResponse.json({ itinerary: withDetails, ...(engine ? { engine } : {}), leftOut, origin });
   };
 
   // Attach DB details to an existing itinerary — no AI, so it works without

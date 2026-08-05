@@ -215,6 +215,9 @@ export type Trip = {
   // inspection click left a permanent trip in the account (that's what filled the
   // trips table with 🧠-titled rows).
   preview?: boolean;
+  // Where this trip was built from — country + device class only, captured once
+  // from the edge headers. Deliberately coarse: no IP, no city-level geo.
+  origin?: { country: string | null; device: string };
 };
 
 export const MONTHS_HE = [

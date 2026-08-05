@@ -441,7 +441,10 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
         // keep the "X ימים" label in sync with what was actually built (a
         // neighbourhood build sets its own day count = areas + extra days).
         ...(data.itinerary?.days?.length ? { days: data.itinerary.days.length } : {}),
-        ...(data.leftOut !== undefined ? { leftOut: data.leftOut } : {}) });
+        ...(data.leftOut !== undefined ? { leftOut: data.leftOut } : {}),
+        // Coarse, non-personal origin (country + mobile/desktop) stamped once on
+        // the first build, for product analytics in the admin. Never an IP.
+        ...(data.origin && !trip?.origin ? { origin: data.origin } : {}) });
       // deterministic revise couldn't act on a free-text request → surface the hint.
       if (data.note) setError(data.note);
     } catch {
