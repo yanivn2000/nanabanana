@@ -101,8 +101,8 @@ export function stopColor(i: number): string {
 // map (Greece+Cyprus are their own shelf; the Balkans are not "eastern Europe").
 const COUNTRY_REGION: Record<string, string> = {
   Israel: "ישראל",
-  // Greece + Cyprus — the islands shelf, a category of its own for this audience.
-  Greece: "יוון וקפריסין", Cyprus: "יוון וקפריסין",
+  // Greece + Cyprus — south-eastern Europe; a shelf of its own for this audience.
+  Greece: "דרום-מזרח אירופה", Cyprus: "דרום-מזרח אירופה",
   // Western Europe
   "United Kingdom": "מערב אירופה", France: "מערב אירופה", Netherlands: "מערב אירופה",
   Belgium: "מערב אירופה", Ireland: "מערב אירופה", Luxembourg: "מערב אירופה",
@@ -145,9 +145,13 @@ const COUNTRY_REGION: Record<string, string> = {
 // Display order — closest / most-flown first for an Israeli traveller, then out.
 // Empty regions are dropped by the list, so this can stay ahead of the catalogue.
 export const REGION_ORDER = [
-  "ישראל", "יוון וקפריסין", "דרום אירופה", "מערב אירופה", "מרכז אירופה",
-  "הבלקן", "מזרח אירופה והקווקז", "סקנדינביה", "המזרח התיכון", "אסיה",
-  "ארצות הברית", "צפון אמריקה", "דרום אמריקה", "אפריקה", "אוקיאניה", "אחר",
+  // Owner's running order: west → centre → Balkans → east → south-east, then the
+  // rest of Europe, then out. דרום אירופה (Italy/Iberia, 11 cities) sits third —
+  // it wasn't in the brief but it's too popular to bury below the smaller shelves.
+  "מערב אירופה", "מרכז אירופה", "דרום אירופה", "הבלקן",
+  "מזרח אירופה והקווקז", "דרום-מזרח אירופה", "סקנדינביה", "המזרח התיכון",
+  "אסיה", "ארצות הברית", "צפון אמריקה", "דרום אמריקה",
+  "אפריקה", "אוקיאניה", "ישראל", "אחר",
 ];
 export function regionOf(country: string | null | undefined): string {
   return (country && COUNTRY_REGION[country]) || "אחר";

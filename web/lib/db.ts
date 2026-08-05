@@ -142,8 +142,11 @@ const DEST_SELECT = `SELECT dest.id, dest.city, dest.country, dest.city_he,
   LEFT JOIN attractions a ON a.destination_id = dest.id`;
 
 export async function listDestinations(): Promise<Destination[]> {
+  // `hidden` cities are kept out of the public catalogue (home page, sitemap) —
+  // their own /destination/[id] page still works, so existing trips and links
+  // never break. Toggled per city from the admin.
   return query<Destination>(
-    `${DEST_SELECT} GROUP BY dest.id ORDER BY attraction_count DESC`
+    `${DEST_SELECT} WHERE NOT dest.hidden GROUP BY dest.id ORDER BY attraction_count DESC`
   );
 }
 
@@ -331,7 +334,8 @@ export async function destinationSummaries(): Promise<DestinationSummary[]> {
         count(*) FILTER (WHERE a.subcategory='zoo')::int        AS zoo,
         count(*) FILTER (WHERE a.must_see=1)::int          AS must_see
       FROM destinations d JOIN attractions a ON a.destination_id = d.id
-      WHERE (a.quality_keep = 1 OR a.quality_keep IS NULL)
+      WHERE NOT d.hidden
+        AND (a.quality_keep = 1 OR a.quality_keep IS NULL)
         AND (a.is_duplicate IS NULL OR a.is_duplicate = 0)
       GROUP BY d.id ORDER BY total DESC`
   );
@@ -560,7 +564,7 @@ export type AdminDestination = {
   lat: number; lng: number; description_he: string | null;
   best_months: number[] | null; israeli_popularity_score: number | null;
   timezone: string | null; currency: string | null; language: string | null;
-  mobility: string; ingest_radius_km: number;
+  mobility: string; ingest_radius_km: number; hidden: boolean;
   shown_count: number; must_count: number; editor_ranked: number; img_pct: number; he_pct: number;
   area_count: number; street_count: number;
   transit_synced_at: string | null; edge_count: number; transit_edge_count: number;
@@ -571,7 +575,7 @@ export async function adminDestinations(): Promise<AdminDestination[]> {
   return query<AdminDestination>(
     `SELECT d.id, d.city, d.country, d.region, d.city_he, d.country_he, d.lat, d.lng,
             d.description_he, d.best_months, d.israeli_popularity_score,
-            d.timezone, d.currency, d.language, d.mobility, d.ingest_radius_km, d.transit_synced_at,
+            d.timezone, d.currency, d.language, d.mobility, d.ingest_radius_km, d.hidden, d.transit_synced_at,
             (SELECT count(*)::int FROM attraction_edges e WHERE e.destination_id = d.id) AS edge_count,
             (SELECT count(*)::int FROM attraction_edges e WHERE e.destination_id = d.id AND e.transit_mode IS NOT NULL) AS transit_edge_count,
             count(a.id) FILTER (WHERE ${SHOWN})::int AS shown_count,
@@ -593,7 +597,7 @@ export async function adminDestinations(): Promise<AdminDestination[]> {
 const DEST_EDITABLE = new Set([
   "city", "country", "region", "city_he", "country_he", "lat", "lng",
   "description_he", "best_months", "israeli_popularity_score",
-  "timezone", "currency", "language", "mobility", "ingest_radius_km",
+  "timezone", "currency", "language", "mobility", "ingest_radius_km", "hidden",
 ]);
 
 export async function updateDestination(id: number, fields: Record<string, unknown>): Promise<boolean> {
