@@ -39,13 +39,12 @@ export function HomeTrips() {
     </Link>
   );
 
+  // "לא יודעים לאן?" (/recommend) is off the home row — the city catalogue right
+  // below already answers "where to", so the tile competed with it. /recommend
+  // itself still lives at its own URL.
   const ctas = (
-    <>
-      <CtaTile href="/recommend" bg="var(--accent-soft)" ink="var(--accent-ink)"
-        Icon={Sparkles} title="לא יודעים לאן?" sub="המלצת יעד לפי המשפחה" />
-      <CtaTile href="/now" bg="var(--brand-soft)" ink="var(--brand-ink)"
-        Icon={Compass} title="אני בטיול עכשיו" sub="מה קרוב אליי + ניווט" />
-    </>
+    <CtaTile href="/now" bg="var(--brand-soft)" ink="var(--brand-ink)"
+      Icon={Compass} title="אני בטיול עכשיו" sub="מה קרוב אליי + ניווט" />
   );
 
   const Head = (

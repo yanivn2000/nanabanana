@@ -1120,6 +1120,56 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
     );
   }
 
+  // The "add my own place" form — declared here so the toggle can live up in the
+  // day's "הוסיפו:" row while the form renders right beneath it.
+  const manualPlaceForm = (
+    <div className="mt-2 rounded-[12px] border border-[var(--border)] bg-[var(--surface-2)] p-3">
+      {/* Name — on blur we try to locate it automatically (like the hotel form),
+          so a well-known place needs no address at all. */}
+      <input value={addName} onChange={(e) => { setAddName(e.target.value); setAddCoords(null); }}
+        onBlur={(e) => { const v = e.target.value.trim(); if (v && !addCoords && !addAddress.trim()) geocodePlace(v, { fillName: false }); }}
+        placeholder="שם המקום (למשל: מסעדת דישום)"
+        className="w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13.5px] outline-none focus:border-[var(--brand)]" />
+      {/* Location — TWO ways, either/or: type an address, OR paste a Google-Maps link. */}
+      <p className="mt-2 text-[11.5px] text-[var(--text-3)]">מיקום — כתובת או קישור (או פשוט השם למעלה, וננסה לאתר):</p>
+      <input value={addAddress} onChange={(e) => { setAddAddress(e.target.value); setAddCoords(null); }}
+        onBlur={(e) => e.target.value.trim() && !addCoords && geocodePlace(e.target.value)}
+        placeholder={`כתובת / עיר (למשל: דרך ג'אפה 5, ${cityHe || "העיר"})`}
+        className={`mt-1 w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[var(--brand)] ${addFlash ? "field-flash" : ""}`} />
+      <div className="mt-1 flex items-center gap-2">
+        <span className="shrink-0 text-[11px] text-[var(--text-3)]">או</span>
+        <input value={addLink} onChange={(e) => setAddLink(e.target.value)}
+          onBlur={(e) => e.target.value.trim() && resolvePlace(e.target.value)}
+          onPaste={(e) => { const v = e.clipboardData.getData("text"); if (v.trim()) setTimeout(() => resolvePlace(v), 0); }}
+          placeholder="הדביקו קישור מגוגל מפה"
+          className="min-w-0 flex-1 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[var(--brand)]" dir="ltr" />
+        <button onClick={() => resolvePlace(addLink)} disabled={addBusy || !addLink.trim()}
+          className="shrink-0 rounded-[9px] border border-[var(--border)] px-3 py-2 text-[12.5px] text-[var(--text-2)] transition hover:border-[var(--brand)] disabled:opacity-40">
+          {addBusy ? "…" : "פענח"}
+        </button>
+      </div>
+      {addMsg && <p className={`mt-1.5 text-[12px] ${addMsg.ok ? "text-[var(--brand-ink)]" : "text-[var(--text-3)]"}`}>{addMsg.text}</p>}
+      <div className="mt-2.5 flex flex-wrap gap-1.5">
+        {MANUAL_TYPES.map((t) => (
+          <button key={t.key} onClick={() => setAddType(t.key)}
+            className={`rounded-full border px-2.5 py-1 text-[12px] transition ${addType === t.key ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-ink)]" : "border-[var(--border)] text-[var(--text-2)] hover:border-[var(--brand)]"}`}>
+            {t.emoji} {t.he}
+          </button>
+        ))}
+      </div>
+      <label className="mt-2.5 flex items-center gap-2 text-[12.5px] text-[var(--text-2)]">
+        <span className="shrink-0">מחיר משוער לאדם (€):</span>
+        <input type="number" min={0} inputMode="numeric" value={addPrice}
+          onChange={(e) => setAddPrice(e.target.value)} placeholder="לא חובה"
+          className="w-24 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[var(--brand)]" dir="ltr" />
+      </label>
+      <button onClick={addManualPlace} disabled={!addName.trim()}
+        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-[13.5px] font-medium text-white transition hover:opacity-90 disabled:opacity-40">
+        <Plus size={14} /> הוסף לבנק
+      </button>
+    </div>
+  );
+
   return (
     <main className="mx-auto w-full max-w-[440px] pb-24 lg:max-w-[1600px] lg:pb-16">
       {/* THREE THIN ROWS — the map + itinerary are the hero and fill the first
@@ -1564,7 +1614,15 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                   className="flex items-center gap-1.5 rounded-full bg-[var(--brand-soft)] px-3.5 py-1.5 font-semibold text-[var(--brand-ink)] shadow-[var(--shadow)] transition hover:bg-[var(--brand)] hover:text-white disabled:opacity-40 disabled:shadow-none disabled:hover:bg-[var(--brand-soft)] disabled:hover:text-[var(--brand-ink)]">
                   <Coffee size={13} /> מנוחה במלון
                 </button>
+                {/* Adding your own place belongs HERE, next to the other "add to this
+                    day" actions — not buried at the bottom of the bank where it used to
+                    sit. The form itself opens directly below this row. */}
+                <button onClick={() => { setFillKey(null); setAddOpen((v) => !v); }}
+                  className="flex items-center gap-1.5 rounded-full border border-[var(--border)] px-3.5 py-1.5 font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
+                  {addOpen ? <X size={13} /> : <Plus size={13} />} {addOpen ? "סגור" : "הוסף מקום ליום זה"}
+                </button>
               </div>
+              {addOpen && <div className="pt-3">{manualPlaceForm}</div>}
               {/* editorial: a fixed 3-column grid — every stop (attractions AND meal
                   breaks) is one equal cube, 3 per row, all stretched to a uniform row
                   height (lg:items-stretch + lg:h-full on each card). Plain stack otherwise. */}
@@ -2036,59 +2094,8 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                     <p className="text-[13px] font-bold text-[var(--text-2)]">
                       מקומות שהוספתי{(trip?.leftOut ?? []).some((l) => l.manual) ? ` · ${(trip?.leftOut ?? []).filter((l) => l.manual).length}` : ""}
                     </p>
-                    <button onClick={() => { setFillKey(null); setAddOpen((v) => !v); }}
-                      className="flex items-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-2)] transition hover:border-[var(--brand)] hover:text-[var(--brand-ink)]">
-                      {addOpen ? <X size={13} /> : <Plus size={13} />} {addOpen ? "סגור" : "הוסף מקום"}
-                    </button>
                   </div>
 
-                  {addOpen && (
-                    <div className="mt-2 rounded-[12px] border border-[var(--border)] bg-[var(--surface-2)] p-3">
-                      {/* Name — on blur we try to locate it automatically (like the hotel form),
-                          so a well-known place needs no address at all. */}
-                      <input value={addName} onChange={(e) => { setAddName(e.target.value); setAddCoords(null); }}
-                        onBlur={(e) => { const v = e.target.value.trim(); if (v && !addCoords && !addAddress.trim()) geocodePlace(v, { fillName: false }); }}
-                        placeholder="שם המקום (למשל: מסעדת דישום)"
-                        className="w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13.5px] outline-none focus:border-[var(--brand)]" />
-                      {/* Location — TWO ways, either/or: type an address, OR paste a Google-Maps link. */}
-                      <p className="mt-2 text-[11.5px] text-[var(--text-3)]">מיקום — כתובת או קישור (או פשוט השם למעלה, וננסה לאתר):</p>
-                      <input value={addAddress} onChange={(e) => { setAddAddress(e.target.value); setAddCoords(null); }}
-                        onBlur={(e) => e.target.value.trim() && !addCoords && geocodePlace(e.target.value)}
-                        placeholder={`כתובת / עיר (למשל: דרך ג'אפה 5, ${cityHe || "העיר"})`}
-                        className={`mt-1 w-full rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[var(--brand)] ${addFlash ? "field-flash" : ""}`} />
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="shrink-0 text-[11px] text-[var(--text-3)]">או</span>
-                        <input value={addLink} onChange={(e) => setAddLink(e.target.value)}
-                          onBlur={(e) => e.target.value.trim() && resolvePlace(e.target.value)}
-                          onPaste={(e) => { const v = e.clipboardData.getData("text"); if (v.trim()) setTimeout(() => resolvePlace(v), 0); }}
-                          placeholder="הדביקו קישור מגוגל מפה"
-                          className="min-w-0 flex-1 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[var(--brand)]" dir="ltr" />
-                        <button onClick={() => resolvePlace(addLink)} disabled={addBusy || !addLink.trim()}
-                          className="shrink-0 rounded-[9px] border border-[var(--border)] px-3 py-2 text-[12.5px] text-[var(--text-2)] transition hover:border-[var(--brand)] disabled:opacity-40">
-                          {addBusy ? "…" : "פענח"}
-                        </button>
-                      </div>
-                      {addMsg && <p className={`mt-1.5 text-[12px] ${addMsg.ok ? "text-[var(--brand-ink)]" : "text-[var(--text-3)]"}`}>{addMsg.text}</p>}
-                      <div className="mt-2.5 flex flex-wrap gap-1.5">
-                        {MANUAL_TYPES.map((t) => (
-                          <button key={t.key} onClick={() => setAddType(t.key)}
-                            className={`rounded-full border px-2.5 py-1 text-[12px] transition ${addType === t.key ? "border-[var(--brand)] bg-[var(--brand-soft)] text-[var(--brand-ink)]" : "border-[var(--border)] text-[var(--text-2)] hover:border-[var(--brand)]"}`}>
-                            {t.emoji} {t.he}
-                          </button>
-                        ))}
-                      </div>
-                      <label className="mt-2.5 flex items-center gap-2 text-[12.5px] text-[var(--text-2)]">
-                        <span className="shrink-0">מחיר משוער לאדם (€):</span>
-                        <input type="number" min={0} inputMode="numeric" value={addPrice}
-                          onChange={(e) => setAddPrice(e.target.value)} placeholder="לא חובה"
-                          className="w-24 rounded-[9px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[var(--brand)]" dir="ltr" />
-                      </label>
-                      <button onClick={addManualPlace} disabled={!addName.trim()}
-                        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-[13.5px] font-medium text-white transition hover:opacity-90 disabled:opacity-40">
-                        <Plus size={14} /> הוסף לבנק
-                      </button>
-                    </div>
-                  )}
 
                   {(trip?.leftOut ?? []).filter((p) => p.manual).length > 0 && (
                     <div className="mt-2 flex flex-col gap-2">
@@ -2214,18 +2221,60 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                   </div>
                   );
                 };
+                // DESKTOP-ONLY square variant — 3 per row, mirroring the itinerary's
+                // editorial grid. A photo shelf reads much faster than a stack of thin
+                // rows when the bank runs to 18+ places. Stripped to the essentials:
+                // photo, name, and the one action ("+ הוסף ליום זה"). Details/drag stay
+                // on the row list, which is what mobile keeps showing.
+                const bankCube = (p: (typeof nonManual)[number]) => (
+                  <div key={p.id}
+                    onMouseEnter={() => {
+                      setHoverBankId(p.id);
+                      if (p.lat != null && p.lng != null && !nearbyExtras.some((e) => e.id === p.id))
+                        setFocus({ lat: p.lat, lng: p.lng, n: Date.now() });
+                    }}
+                    onMouseLeave={() => setHoverBankId(null)}
+                    className={`flex flex-col overflow-hidden rounded-[10px] border bg-[var(--surface-2)] transition-colors ${hoverBankId === p.id ? "border-[var(--brand)]" : "border-[var(--border)]"}`}>
+                    {p.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={bigImage(p.image_url, 480)} alt="" loading="lazy"
+                        onError={(e) => { const t = e.currentTarget; if (p.image_url && t.src !== p.image_url) t.src = p.image_url; }}
+                        className="aspect-square w-full bg-[var(--surface-2)] object-cover" />
+                    ) : (
+                      <div className="grid aspect-square w-full place-items-center bg-[var(--surface-2)] text-[var(--text-3)]"><MapPin size={22} /></div>
+                    )}
+                    <div className="flex flex-1 flex-col gap-2 p-2.5">
+                      <span className="line-clamp-2 text-[14px] font-semibold leading-snug">
+                        {p.must_see === 1 && <span className="ml-1 align-middle text-[var(--accent-ink)]" title="אתר חובה">⭐</span>}
+                        {p.name_he || p.name_en}
+                      </span>
+                      <button onClick={() => addToDay(p.id)} disabled={!!busy}
+                        className="mt-auto flex items-center justify-center gap-1 rounded-full bg-[var(--brand-soft)] px-2.5 py-1.5 text-[12.5px] font-medium text-[var(--brand-ink)] transition hover:bg-[var(--brand)] hover:text-white disabled:opacity-40"
+                        title="הוסף ליום זה">
+                        <Plus size={13} /> הוסף ליום זה
+                      </button>
+                    </div>
+                  </div>
+                );
+                // Same list, two presentations: cubes from lg up, the draggable rows below.
+                const bankGroup = (list: typeof nonManual) => (
+                  <>
+                    <div className="hidden lg:grid lg:grid-cols-3 lg:items-stretch lg:gap-4">{list.map(bankCube)}</div>
+                    <div className="flex flex-col gap-2 lg:hidden">{list.map(bankCard)}</div>
+                  </>
+                );
                 return (
                   <>
                     {mine.length > 0 && (
                       <div className="mt-3">
                         <p className="mb-1.5 text-[13px] font-bold text-[var(--text-2)]">אטרקציות שבחרת ולא נכנסו לטיול · {mine.length}</p>
-                        <div className="flex flex-col gap-2">{mine.map(bankCard)}</div>
+                        {bankGroup(mine)}
                       </div>
                     )}
                     {suggested.length > 0 && (
                       <div className="mt-3">
                         <p className="mb-1.5 text-[13px] font-bold text-[var(--text-2)]">אטרקציות חובה נוספות שאולי יעניינו אותך · {suggested.length}</p>
-                        <div className="flex flex-col gap-2">{suggested.map(bankCard)}</div>
+                        {bankGroup(suggested)}
                       </div>
                     )}
                   </>
