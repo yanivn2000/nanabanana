@@ -64,12 +64,22 @@ export const dwellMinutes = (a: Attraction, cfg: DwellCfg = DWELL_DEFAULT): numb
 // trips without dropping good museums.
 const HEAVY_HISTORY_RX = /היטלר|נאצי|\bnazi\b|holocaust|שואה|גסטפו|dokumentation.?obersalzberg|אוברזלצברג|מחנה ריכוז|concentration camp|kz\b|memorial/i;
 export const isHeavyHistory = (a: Attraction) => HEAVY_HISTORY_RX.test(blob(a));
+// Memorial/monument detection for the max_type_per_day 'memorial' cap — a day of
+// three memorials is a remembrance tour, not a trip (Warsaw day 1 was exactly
+// that). Subcategory when OSM typed it; name regex for the rest. It's a CAP (2/day
+// by default), not a ban, so statues that anchor a square still fit.
+// NB: \b is ASCII-only in JS regexes — it never matches next to Hebrew letters,
+// so the Hebrew alternatives run bare (פסל  with a trailing space, not \bפסל ).
+const MEMORIAL_RX = /memorial|monument\b|mausoleum|cenotaph|אנדרט|מאוזוליאום|גלעד|פסל |יד ושם/i;
+export const isMemorial = (a: Attraction) =>
+  a.subcategory === "memorial" || a.subcategory === "monument" || MEMORIAL_RX.test(blob(a));
 
 // Single matcher used by rule kinds (avoid_category, max_type_per_day). Handles the
 // keyword pseudo-types ('heavy_history', 'active') and plain category / experience-type.
 export function stopMatchesType(a: Attraction, t: string): boolean {
   if (t === "heavy_history") return isHeavyHistory(a);
   if (t === "active") return isActiveAnchor(a);
+  if (t === "memorial") return isMemorial(a);
   return a.category === t || a.audience_fit?.type === t;
 }
 

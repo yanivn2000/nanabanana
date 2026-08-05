@@ -4,7 +4,7 @@ import { listDestinations, topAttractions, areasForDestination, brainRulesForDes
 import { annotateDaysWithAreas } from "@/lib/cluster";
 import { buildCarBaseItinerary, buildHeuristicItinerary, streetAsStop } from "@/lib/heuristic";
 import { qualityCheck, type Quality } from "@/lib/brain/quality";
-import { critiqueTrip } from "@/lib/brain/critique";
+import { critiqueTrip, type Issue } from "@/lib/brain/critique";
 import { haversineKm } from "@/lib/geo";
 import { BRAIN_VERSION, poolValue, reachPenalty, type Audience } from "@/lib/brain/policy";
 
@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
     // WITH it, exactly like the consumer route, and then checks every day ends there.
     const eveningSpots = (await approvedStreetsForCity(id)).filter((s) => s.evening).map(streetAsStop);
     const eveningIds = new Set(eveningSpots.map((s) => s.id));
+    // For the audience-identity check: the built stop-id set per audience.
+    const builtIds: Partial<Record<Audience, Set<number>>> = {};
     for (const audience of AUDIENCES) {
       const isFamily = audience === "families";
       const pace = rules.paceStops[audience];
@@ -76,12 +78,29 @@ export async function POST(req: NextRequest) {
       const crit = critiqueTrip(richDays, audience, { cityMustCount, rules, dayMeta, eveningCity: eveningSpots.length > 0 });
       const quality: Quality | undefined = b.quality ? qualityCheck(richDays, audience, rules, { cityMustCount,
         ...(eveningSpots.length ? { eveningEnds: dayMeta.map((m) => m.eveningEnd) } : {}) }) : undefined;
+      builtIds[audience] = new Set(richDays.flat().map((a) => a.id));
       report.push({
         cityId: id, city: dest.city_he || dest.city, cityEn: dest.city, country: dest.country, audience, days,
         score: crit.score, needsWork: crit.needsWork, stops: crit.stops,
         dims: crit.dims, issues: crit.issues, itinerary, quality,
         daysNames: richDays.map((d) => d.map((a) => ({ name: a.name_he || a.name_en, must: a.must_see === 1, cat: a.category }))),
       });
+    }
+    // AUDIENCE-IDENTITY CHECK: the family and couples builds should differ — if the
+    // stop sets overlap ≥80% (Jaccard) the city has no audience signal (audience_fit
+    // holes) and "מותאם לקהל" is an empty promise. Flag BOTH rows of this city.
+    const fam = builtIds.families, adu = builtIds.adults;
+    if (fam?.size && adu?.size) {
+      const inter = [...fam].filter((x) => adu.has(x)).length;
+      const jac = inter / (fam.size + adu.size - inter);
+      if (jac >= 0.8) {
+        const pct = Math.round(jac * 100);
+        for (const row of report.slice(-2) as { issues: Issue[]; quality?: Quality }[]) {
+          row.issues.push({ dim: "audienceIdentity", severity: "warn",
+            msg: `הטיול זהה כמעט לגמרי לשני הקהלים (${pct}% חפיפה) — חסר סיגנל התאמת-קהל בעיר` });
+          row.quality?.conformance.push({ ok: false, msg: `זהות בין קהלים: ${pct}% חפיפה בין עם/בלי ילדים — להשלים audience_fit` });
+        }
+      }
     }
   }
   // summary

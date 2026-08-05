@@ -79,6 +79,21 @@ export function critiqueTrip(
     });
   }
 
+  // 1c) thin day — a NON-final day with ≤2 stops and under ~5h of touring reads as
+  // a hole in the plan (Paphos's lone-waterpark day 2). The LAST day is exempt by
+  // policy: it's the going-home day and is supposed to be lighter. A single big
+  // anchor (a 2½h+ palace/market) still passes via the minutes test.
+  {
+    const dwellCfg = R?.dwell ?? DWELL_DEFAULT;
+    days.forEach((d, i) => {
+      if (i === days.length - 1 || !d.length) return;
+      const mins = d.reduce((s, a) => s + dwellMinutes(a, dwellCfg), 0);
+      if (d.length <= 2 && mins < 300)
+        issues.push({ dim: "thinDay", severity: "warn", day: i + 1,
+          msg: `יום ${i + 1} דל — ${d.length} עצירות (~${Math.round(mins / 60)} שע׳) בלי עוגן גדול; כדאי להשלים או למזג` });
+    });
+  }
+
   // 2) must-see coverage — hits enough of the city's real must-sees.
   {
     const mustInTrip = all.filter((a) => a.must_see === 1).length;
