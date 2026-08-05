@@ -562,6 +562,7 @@ export type AdminDestination = {
   timezone: string | null; currency: string | null; language: string | null;
   mobility: string; ingest_radius_km: number;
   shown_count: number; must_count: number; editor_ranked: number; img_pct: number; he_pct: number;
+  area_count: number; street_count: number;
   transit_synced_at: string | null; edge_count: number; transit_edge_count: number;
 };
 
@@ -576,6 +577,8 @@ export async function adminDestinations(): Promise<AdminDestination[]> {
             count(a.id) FILTER (WHERE ${SHOWN})::int AS shown_count,
             count(a.id) FILTER (WHERE ${SHOWN} AND a.must_see = 1)::int AS must_count,
             (SELECT count(*)::int FROM editor_picks ep WHERE ep.destination_id = d.id AND ep.rank IS NOT NULL) AS editor_ranked,
+            (SELECT count(*)::int FROM areas ar WHERE ar.destination_id = d.id AND ar.approved) AS area_count,
+            (SELECT count(*)::int FROM streets st WHERE st.destination_id = d.id AND st.approved) AS street_count,
             COALESCE(round(100.0 * count(a.id) FILTER (WHERE ${SHOWN} AND a.image_url IS NOT NULL)
               / NULLIF(count(a.id) FILTER (WHERE ${SHOWN}), 0))::int, 0) AS img_pct,
             COALESCE(round(100.0 * count(a.id) FILTER (WHERE ${SHOWN} AND a.name_he IS NOT NULL)
@@ -1327,4 +1330,47 @@ export async function updateStreet(id: number, fields: Record<string, unknown>):
   const sets = entries.map(([k], i) => `${k} = $${i + 2}`).join(", ");
   await query(`UPDATE streets SET ${sets} WHERE id = $1`, [id, ...entries.map(([, v]) => v)]);
   return true;
+}
+
+// --- Admin: all users' trips ------------------------------------------------
+// The owner's view of what people are actually building. The `trips` table lives
+// in this same Postgres, so this server-side query sees every row (RLS applies to
+// the anon/authenticated Supabase clients, not to this connection) — which is why
+// the route MUST gate on isAdmin(). Users are mostly anonymous (email is null);
+// we surface a short user key so trips can be grouped per person without
+// pretending we know who they are.
+export type AdminTrip = {
+  user_id: string; email: string | null; is_anonymous: boolean;
+  client_id: string; title: string | null; city: string | null; city_he: string | null;
+  country: string | null; destination_id: number | null;
+  days: number | null; month: number | null;
+  stop_count: number; day_count: number; has_itinerary: boolean;
+  created_at: string | null; updated_at: string | null;
+};
+
+export async function adminTrips(limit = 500): Promise<AdminTrip[]> {
+  return query<AdminTrip>(
+    `SELECT t.user_id::text AS user_id, u.email, COALESCE(u.is_anonymous, false) AS is_anonymous,
+            t.client_id,
+            -- the live trip lives in the data jsonb; the flat columns are a legacy
+            -- mirror newer clients no longer write, so read the jsonb first.
+            COALESCE(t.data ->> 'title', t.title) AS title,
+            COALESCE(t.data ->> 'city', t.city) AS city,
+            COALESCE(t.data ->> 'cityHe', t.city_he) AS city_he,
+            COALESCE(t.data ->> 'country', t.country) AS country,
+            COALESCE((t.data ->> 'destinationId')::int, t.destination_id) AS destination_id,
+            COALESCE((t.data ->> 'days')::int, t.days) AS days,
+            COALESCE((t.data ->> 'month')::int, t.month) AS month,
+            t.created_at, t.updated_at,
+            (t.data -> 'itinerary' IS NOT NULL) AS has_itinerary,
+            COALESCE(jsonb_array_length(t.data -> 'itinerary' -> 'days'), 0)::int AS day_count,
+            COALESCE((
+              SELECT sum(jsonb_array_length(d -> 'stops'))::int
+                FROM jsonb_array_elements(t.data -> 'itinerary' -> 'days') AS d
+               WHERE jsonb_typeof(d -> 'stops') = 'array'
+            ), 0)::int AS stop_count
+       FROM trips t
+       LEFT JOIN auth.users u ON u.id = t.user_id
+      ORDER BY t.updated_at DESC NULLS LAST
+      LIMIT $1`, [limit]);
 }

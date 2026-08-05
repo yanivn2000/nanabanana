@@ -7,6 +7,7 @@ import { InsightsIngest } from "./InsightsIngest";
 import { AttractionsTable } from "./AttractionsTable";
 import { AreasTable } from "./AreasTable";
 import { StreetsTable } from "./StreetsTable";
+import { TripsTable } from "./TripsTable";
 import { GraphTable } from "./GraphTable";
 import { BrainEval } from "./BrainEval";
 import { PrinciplesTable } from "./PrinciplesTable";
@@ -25,6 +26,7 @@ const TABS = [
   { key: "insights", label: "📥 תובנות" },
   { key: "moderation", label: "🚩 מודרציה" },
   { key: "content", label: "🖼️ תוכן" },
+  { key: "trips", label: "🧳 טיולי משתמשים" },
   { key: "feedback", label: "💬 פידבק" },
   { key: "posters", label: "🖼️ פוסטרים" },
 ] as const;
@@ -106,7 +108,14 @@ function CityRow({ d }: { d: AdminDestination }) {
         <span className="hidden w-24 shrink-0 text-[12.5px] text-[var(--text-3)] sm:block">{d.region ?? "—"}</span>
         <span className="flex flex-1 flex-wrap justify-end gap-1.5 text-[12px]">
           <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5">{d.shown_count.toLocaleString("he-IL")} מוצגים</span>
-          <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 text-[var(--brand-ink)]">⭐ {d.must_count}</span>
+          <span className="rounded bg-[var(--brand-soft)] px-1.5 py-0.5 text-[var(--brand-ink)]"
+            title={`${d.must_count} אתרי חובה`}>⭐ {d.must_count}</span>
+          {/* content coverage at a glance — a city with 0 areas / 0 streets still
+              needs curation, and that used to be invisible from this row. */}
+          <span className={`rounded px-1.5 py-0.5 ${d.area_count ? "bg-[var(--surface-2)]" : "bg-[var(--danger-soft,#fde8e8)] text-[var(--danger,#a33)]"}`}
+            title={`${d.area_count} שכונות/אזורים מאושרים`}>🏘 {d.area_count}</span>
+          <span className={`rounded px-1.5 py-0.5 ${d.street_count ? "bg-[var(--surface-2)]" : "bg-[var(--danger-soft,#fde8e8)] text-[var(--danger,#a33)]"}`}
+            title={`${d.street_count} רחובות מאושרים`}>🛣 {d.street_count}</span>
           {d.editor_ranked > 0 && <span className="rounded bg-[var(--amber-soft)] px-1.5 py-0.5">✎ {d.editor_ranked} דורגו</span>}
           <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5">🖼 {d.img_pct}%</span>
           <span className="rounded bg-[var(--surface-2)] px-1.5 py-0.5">עב׳ {d.he_pct}%</span>
@@ -278,6 +287,8 @@ export function AdminView({ destinations, feedback, email, version }: {
       {tab === "moderation" && <Moderation />}
 
       {tab === "content" && <ContentGaps />}
+
+      {tab === "trips" && <TripsTable />}
 
       {tab === "feedback" && (
         <section className="flex flex-col gap-2">
