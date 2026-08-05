@@ -73,6 +73,13 @@ export const isHeavyHistory = (a: Attraction) => HEAVY_HISTORY_RX.test(blob(a));
 const MEMORIAL_RX = /memorial|monument\b|mausoleum|cenotaph|אנדרט|מאוזוליאום|גלעד|פסל |יד ושם/i;
 export const isMemorial = (a: Attraction) =>
   a.subcategory === "memorial" || a.subcategory === "monument" || MEMORIAL_RX.test(blob(a));
+// Unmistakable KIDS anchors — water/theme parks and toy stores. Used by the global
+// 'adults avoid kids_anchor' technique so a couples trip never gets a lone-waterpark
+// day (Paphos) or a toy-store morning (FAO שוורץ/נינטנדו in NY). Deliberately
+// narrow: zoos, aquariums and cable cars are NOT here — couples genuinely go.
+const KIDS_ANCHOR_RX = /water ?park|theme ?park|amusement park|luna ?park|toy ?store|fao schwarz|nintendo|kidzania|legoland|לונה פארק|פארק מים|פארק שעשועים|חנות צעצועים/i;
+export const isKidsAnchor = (a: Attraction) =>
+  a.subcategory === "water_park" || a.subcategory === "theme_park" || KIDS_ANCHOR_RX.test(blob(a));
 
 // Single matcher used by rule kinds (avoid_category, max_type_per_day). Handles the
 // keyword pseudo-types ('heavy_history', 'active') and plain category / experience-type.
@@ -80,6 +87,7 @@ export function stopMatchesType(a: Attraction, t: string): boolean {
   if (t === "heavy_history") return isHeavyHistory(a);
   if (t === "active") return isActiveAnchor(a);
   if (t === "memorial") return isMemorial(a);
+  if (t === "kids_anchor") return isKidsAnchor(a);
   return a.category === t || a.audience_fit?.type === t;
 }
 

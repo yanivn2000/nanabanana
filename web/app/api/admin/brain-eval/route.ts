@@ -99,10 +99,19 @@ export async function POST(req: NextRequest) {
       const jac = inter / (fam.size + adu.size - inter);
       if (jac >= 0.8) {
         const pct = Math.round(jac * 100);
+        // Two different diseases, two different cures: a THIN pool (both audiences
+        // take everything there is) needs content enrichment; a big pool building
+        // identically needs audience_fit data. attractions is already the worthy
+        // pool (topAttractions applies the content bar).
+        const thin = attractions.length <= Math.max(fam.size, adu.size) * 1.4;
+        const msg = thin
+          ? `הטיול זהה לשני הקהלים (${pct}% חפיפה) — המאגר דק (${attractions.length} מקומות ראויים): להעשיר תוכן בעיר`
+          : `הטיול זהה כמעט לגמרי לשני הקהלים (${pct}% חפיפה) — חסר סיגנל התאמת-קהל בעיר`;
         for (const row of report.slice(-2) as { issues: Issue[]; quality?: Quality }[]) {
-          row.issues.push({ dim: "audienceIdentity", severity: "warn",
-            msg: `הטיול זהה כמעט לגמרי לשני הקהלים (${pct}% חפיפה) — חסר סיגנל התאמת-קהל בעיר` });
-          row.quality?.conformance.push({ ok: false, msg: `זהות בין קהלים: ${pct}% חפיפה בין עם/בלי ילדים — להשלים audience_fit` });
+          row.issues.push({ dim: "audienceIdentity", severity: "warn", msg });
+          row.quality?.conformance.push({ ok: false, msg: thin
+            ? `זהות בין קהלים (מאגר דק, ${attractions.length} ראויים) — נדרשת העשרת תוכן`
+            : `זהות בין קהלים: ${pct}% חפיפה בין עם/בלי ילדים — להשלים audience_fit` });
         }
       }
     }

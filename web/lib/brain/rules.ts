@@ -19,7 +19,7 @@ export const TYPE_HE: Record<string, string> = {
   heavy_history: "היסטוריה כבדה (שואה/נאצים)", active: "אטרקציות פעילות",
   cultural: "אתרי תרבות", culture: "אתרי תרבות", attraction: "אטרקציות", nature: "טבע",
   viewpoint: "תצפיות", food: "אוכל", shopping: "קניות", market: "שווקים", nightlife: "חיי לילה",
-  bar: "ברים", romantic: "רומנטי", social: "חברתי", outdoors: "טבע/חוץ",
+  bar: "ברים", romantic: "רומנטי", social: "חברתי", outdoors: "טבע/חוץ", kids_anchor: "אטרקציות-ילדים מובהקות (פארק מים/שעשועים/צעצועים)",
 };
 const th = (t: unknown) => TYPE_HE[String(t)] ?? String(t);
 const AUD_HE: Record<string, string> = { families: "עם ילדים", adults: "בלי ילדים" };

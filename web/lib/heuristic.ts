@@ -228,7 +228,9 @@ export function buildHeuristicItinerary(
   // happen on the pool BEFORE clustering.
   const filtered = attractions
     .filter((a) => opts?.seasonFilter === false || isInSeason(a, opts?.month))
-    .filter((a) => !isAvoided(a, opts?.avoidCats));
+    // An explicit ❤ pick beats the audience avoid-list: "כל בחירה נכנסת ליומן"
+    // outranks "מבוגרים בלי פארקי-מים" when the traveller chose one on purpose.
+    .filter((a) => !isAvoided(a, opts?.avoidCats) || !!opts?.mustIncludeIds?.has(a.id));
   // The input is already taste-ranked; for kids, re-sort by family_score. (An active
   // anchor per family day is enforced by the critic flag + the higher family pace,
   // NOT by a ranking boost — a boost distorted must-see coverage. v1.2.) The route's
