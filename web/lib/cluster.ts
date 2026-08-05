@@ -85,6 +85,21 @@ export function dayWalkMinutes(day: Attraction[]): number {
   return sum;
 }
 
+// Leg-aware day distances for the critic. On a CAR day only short hops are walked
+// (park → walk the site cluster → drive on); long legs are drives, not "hours of
+// walking". Returns walking (min + km, walkable legs only on car days) and the
+// driven km so the critic can report each honestly.
+export function dayLegStats(day: Attraction[], car = false, walkableKm = 1.3):
+  { walkMin: number; walkKm: number; driveKm: number } {
+  let walkMin = 0, walkKm = 0, driveKm = 0;
+  for (let i = 0; i < day.length - 1; i++) {
+    const km = gapKm(day[i], day[i + 1]);
+    if (car && km > walkableKm) driveKm += km;
+    else { walkKm += km; walkMin += walkBetween(day[i], day[i + 1]); }
+  }
+  return { walkMin, walkKm, driveKm };
+}
+
 // Drop "same place" stops within a day — two things < ~90m apart are one visit
 // (a landmark and its own hill/square/garden, e.g. Hohensalzburg + Festungsberg).
 // Keeps the more valuable of the pair so the fortress wins over the hill.

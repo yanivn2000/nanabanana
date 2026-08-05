@@ -6,7 +6,7 @@
 // it. Operates on the clustered attractions (rich: coords, category, must_see,
 // audience_fit), which is the real day structure.
 import type { Attraction } from "../db";
-import { dayWalkMinutes } from "../cluster";
+import { dayLegStats } from "../cluster";
 import { AUDIENCE_PREFS, DAY_WALK, PACE_STOPS, QUALITY_BAR, THRESHOLDS, WEIGHTS, audienceFitScore, type Audience } from "./policy";
 import { DWELL_DEFAULT, dwellMinutes, isActiveAnchor, isSoftFun, stopMatchesType } from "./traits";
 import type { BrainRules } from "./rules";
@@ -28,7 +28,8 @@ const expType = (a: Attraction) => a.audience_fit?.type || a.category;
 // Minutes a stop takes (visit), matching the clusterer's dwell model.
 
 export function critiqueTrip(
-  days: Attraction[][], audience: Audience, ctx: { cityMustCount: number; rules?: BrainRules }
+  days: Attraction[][], audience: Audience,
+  ctx: { cityMustCount: number; rules?: BrainRules; dayMeta?: { car?: boolean }[] }
 ): Critique {
   const prefs = AUDIENCE_PREFS[audience];
   const all = days.flat();
@@ -46,14 +47,19 @@ export function critiqueTrip(
   const weights = R?.weights ?? WEIGHTS;
   const qualityBar = R?.qualityBar ?? QUALITY_BAR;
 
-  // 1) walkability — each day within the comfort band.
+  // 1) walkability — each day within the comfort band. Car days (ctx.dayMeta)
+  // count only walkable hops as WALKING — the long legs are drives, reported as
+  // ק"מ נסיעה instead of flagging a 17km "walk" nobody takes. Messages carry km
+  // so the editor can judge terrain, not just minutes.
   {
     let sum = 0;
     days.forEach((d, i) => {
-      const w = dayWalkMinutes(d);
+      const car = !!ctx.dayMeta?.[i]?.car;
+      const { walkMin: w, walkKm, driveKm } = dayLegStats(d, car);
       // 100 at ideal, linearly down to 0 at 2×flag.
       sum += clamp(100 - Math.max(0, w - dayWalkIdeal) / (2 * dayWalkFlag - dayWalkIdeal) * 100);
-      if (w > dayWalkFlag) issues.push({ dim: "walkability", severity: "warn", day: i + 1, msg: `יום ${i + 1}: ${Math.round(w)} דק׳ הליכה — יותר מדי` });
+      if (w > dayWalkFlag) issues.push({ dim: "walkability", severity: "warn", day: i + 1,
+        msg: `יום ${i + 1}: ${Math.round(w)} דק׳ הליכה (${walkKm.toFixed(1)} ק״מ${car && driveKm > 0 ? ` + ${driveKm.toFixed(0)} ק״מ נסיעה` : ""}) — יותר מדי` });
     });
     dims.walkability = days.length ? Math.round(sum / days.length) : 0;
   }
@@ -133,7 +139,12 @@ export function critiqueTrip(
   //    over-penalised the former).
   {
     const dwell = R?.dwell ?? DWELL_DEFAULT;
-    const times = days.map((d) => d.reduce((s, a) => s + dwellMinutes(a, dwell), 0) + dayWalkMinutes(d));
+    // Day time = dwell + walking + DRIVING (car legs at ~45 km/h + parking), so a
+    // one-beach car day with an hour's drive isn't scored as an empty day.
+    const times = days.map((d, i) => {
+      const { walkMin, driveKm } = dayLegStats(d, !!ctx.dayMeta?.[i]?.car);
+      return d.reduce((s, a) => s + dwellMinutes(a, dwell), 0) + walkMin + (driveKm / 45) * 60 + (driveKm > 0 ? 8 : 0);
+    });
     const mean = times.reduce((s, n) => s + n, 0) / Math.max(1, times.length);
     const std = Math.sqrt(times.reduce((s, n) => s + (n - mean) ** 2, 0) / Math.max(1, times.length));
     dims.balance = clamp(100 - (std / THRESHOLDS.balanceTimeStdMax) * 100);
@@ -145,7 +156,7 @@ export function critiqueTrip(
   //    in walkability; here reward days whose stops are geographically compact).
   {
     let sum = 0;
-    days.forEach((d) => { const w = dayWalkMinutes(d); sum += clamp(100 - w / 2); });
+    days.forEach((d, i) => { const { walkMin: w } = dayLegStats(d, !!ctx.dayMeta?.[i]?.car); sum += clamp(100 - w / 2); });
     dims.coherence = days.length ? Math.round(sum / days.length) : 0;
   }
 

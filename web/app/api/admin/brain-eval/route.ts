@@ -59,7 +59,10 @@ export async function POST(req: NextRequest) {
       const byId = new Map(attractions.map((a) => [a.id, a]));
       const richDays: Attraction[][] = itinerary.days.map((d) =>
         d.stops.map((s) => (s.id != null ? byId.get(s.id) : undefined)).filter((a): a is Attraction => !!a));
-      const crit = critiqueTrip(richDays, audience, { cityMustCount, rules });
+      // Car-awareness for the critic: on a car_base trip EVERY day is driven; a
+      // dayTrip is driven in any city. Long legs then read as נסיעה, not הליכה.
+      const dayMeta = itinerary.days.map((d) => ({ car: carBase || !!d.dayTrip }));
+      const crit = critiqueTrip(richDays, audience, { cityMustCount, rules, dayMeta });
       const quality: Quality | undefined = b.quality ? qualityCheck(richDays, audience, rules, { cityMustCount }) : undefined;
       report.push({
         cityId: id, city: dest.city_he || dest.city, cityEn: dest.city, country: dest.country, audience, days,
