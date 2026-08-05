@@ -24,7 +24,10 @@ function periodLabel(t: Trip): string | null {
 
 export default function TripsPage() {
   const [p, , profileLoaded] = useProfile();
-  const { trips, remove, loaded } = useTrips();
+  const { trips: allTrips, remove, loaded } = useTrips();
+  // Brain-eval / module previews are inspection artefacts, not the traveller's
+  // trips — they render at /trip/[id] but never appear in a trip list.
+  const trips = allTrips.filter((t) => !t.preview);
   const [onlyShared, setOnlyShared] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 

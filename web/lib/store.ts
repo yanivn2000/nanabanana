@@ -209,6 +209,12 @@ export type Trip = {
   hotelAnchorKey?: string;
   createdAt: number;
   updatedAt?: number;      // last time the trip was changed (stamped on every update)
+  // A THROWAWAY trip — the Brain-eval / module "open as a real trip page" preview.
+  // Kept in localStorage only so /trip/[id] can render it, never synced to the
+  // server and never listed as one of the traveller's trips. Without this every
+  // inspection click left a permanent trip in the account (that's what filled the
+  // trips table with 🧠-titled rows).
+  preview?: boolean;
 };
 
 export const MONTHS_HE = [
@@ -305,7 +311,8 @@ export function useTrips(): {
     create: (t) => {
       const trip: Trip = { ...t, id: uid(), createdAt: Date.now(), updatedAt: Date.now() };
       applyLocal([trip, ...tripsRef.current]);
-      if (userIdRef.current) upsertServerTrip(userIdRef.current, trip);
+      // preview builds stay local — inspecting the Brain must not create user data
+      if (userIdRef.current && !trip.preview) upsertServerTrip(userIdRef.current, trip);
       return trip;
     },
     update: (id, patch) => {
@@ -313,7 +320,7 @@ export function useTrips(): {
       if (!cur) return;
       const updated: Trip = { ...cur, ...patch, updatedAt: Date.now() };
       applyLocal(tripsRef.current.map((x) => (x.id === id ? updated : x)));
-      if (userIdRef.current) upsertServerTrip(userIdRef.current, updated);
+      if (userIdRef.current && !updated.preview) upsertServerTrip(userIdRef.current, updated);
     },
     remove: (id) => {
       applyLocal(tripsRef.current.filter((x) => x.id !== id));

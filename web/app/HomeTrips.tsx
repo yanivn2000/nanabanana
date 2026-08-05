@@ -11,7 +11,8 @@ import { CityPoster } from "@/components/CityPoster";
 // and the destinations below peek above the fold. (Trips are built by entering a
 // city, not a blank new-trip form.) Client-side (trips live in localStorage).
 export function HomeTrips() {
-  const { trips, loaded } = useTrips();
+  const { trips: allTrips, loaded } = useTrips();
+  const trips = allTrips.filter((t) => !t.preview);   // hide inspection previews
 
   // one horizontal, scroll-on-overflow row of fixed square tiles
   const Row = ({ children }: { children: React.ReactNode }) => (

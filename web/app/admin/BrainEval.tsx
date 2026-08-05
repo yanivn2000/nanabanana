@@ -59,6 +59,7 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
       city: m.city ?? "", cityHe: m.city_he ?? m.city ?? "", country: m.country ?? "",
       destinationId: m.destination_id ?? undefined,
       days: m.days, month: new Date().getMonth() + 1, itinerary: m.itinerary, engine: "module",
+      preview: true,   // inspection only — never becomes a saved user trip
     });
     window.open(`/trip/${trip.id}`, "_blank");
   };
@@ -85,6 +86,7 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
       title: `🧠 ${t.city} · ${AUD_HE[t.audience]}`, mode: "preferences",
       city: t.cityEn, cityHe: t.city, country: t.country, destinationId: t.cityId,
       days: t.days, month: new Date().getMonth() + 1, itinerary: t.itinerary, engine: "heuristic",
+      preview: true,   // inspection only — never becomes a saved user trip
     });
     window.open(`/trip/${trip.id}`, "_blank");
   };
