@@ -1346,7 +1346,30 @@ export type AdminTrip = {
   days: number | null; month: number | null;
   stop_count: number; day_count: number; has_itinerary: boolean;
   created_at: string | null; updated_at: string | null;
+  user_signed_up: string | null;   // when this account first appeared
 };
+
+// One row per PERSON. A raw user_id says nothing; this says who they are in
+// product terms — guest or signed in, when they arrived, how much they built.
+export type AdminTripUser = {
+  user_id: string; email: string | null; is_anonymous: boolean;
+  signed_up: string | null; trips: number; built: number;
+  first_trip: string | null; last_trip: string | null; cities: string | null;
+};
+
+export async function adminTripUsers(): Promise<AdminTripUser[]> {
+  return query<AdminTripUser>(
+    `SELECT t.user_id::text AS user_id, u.email, COALESCE(u.is_anonymous, false) AS is_anonymous,
+            u.created_at AS signed_up,
+            count(*)::int AS trips,
+            count(*) FILTER (WHERE t.data -> 'itinerary' -> 'days' IS NOT NULL)::int AS built,
+            min(t.created_at) AS first_trip, max(t.updated_at) AS last_trip,
+            string_agg(DISTINCT COALESCE(t.data ->> 'cityHe', t.city_he), ', ') AS cities
+       FROM trips t
+       LEFT JOIN auth.users u ON u.id = t.user_id
+      GROUP BY t.user_id, u.email, u.is_anonymous, u.created_at
+      ORDER BY count(*) DESC`);
+}
 
 export async function adminTrips(limit = 500): Promise<AdminTrip[]> {
   return query<AdminTrip>(
@@ -1361,7 +1384,7 @@ export async function adminTrips(limit = 500): Promise<AdminTrip[]> {
             COALESCE((t.data ->> 'destinationId')::int, t.destination_id) AS destination_id,
             COALESCE((t.data ->> 'days')::int, t.days) AS days,
             COALESCE((t.data ->> 'month')::int, t.month) AS month,
-            t.created_at, t.updated_at,
+            t.created_at, t.updated_at, u.created_at AS user_signed_up,
             (t.data -> 'itinerary' IS NOT NULL) AS has_itinerary,
             COALESCE(jsonb_array_length(t.data -> 'itinerary' -> 'days'), 0)::int AS day_count,
             COALESCE((
