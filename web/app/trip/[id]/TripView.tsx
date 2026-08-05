@@ -85,6 +85,20 @@ const DINNER_AT_MIN = 19 * 60 + 30, DINNER_MIN = 90;
 // (Stop.meal carries the slot name). Used to decide whether to auto-insert the slot.
 const isLunchSlot = (s: Stop) => s.kind === "food" && (s.name === "הפסקת צהריים" || s.meal === "הפסקת צהריים");
 const isDinnerSlot = (s: Stop) => s.kind === "food" && (s.name === "ארוחת ערב" || s.meal === "ארוחת ערב");
+// A tip must not contradict the stop's actual slot: "הגיעו מוקדם בבוקר" under a
+// 21:00 פיאצה נבונה reads as a mistake, not advice. Time-of-day advice that
+// disagrees with the scheduled hour is hidden (the place itself is fine at either
+// hour — only the stale line goes). Tips that mention BOTH ends stay.
+const MORNING_TIP_RX = /בוקר|מוקדם|לפני ההמונים|בשעות הפתיחה/;
+const EVENING_TIP_RX = /ערב|שקיעה|לילה|חשיכה|מואר/;
+function noteFitsSlot(note: string | undefined, time: string | undefined): boolean {
+  if (!note || !time) return true;
+  const h = Number(time.split(":")[0]);
+  if (!Number.isFinite(h)) return true;
+  if (h >= 17 && MORNING_TIP_RX.test(note) && !EVENING_TIP_RX.test(note)) return false;
+  if (h > 0 && h < 15 && EVENING_TIP_RX.test(note) && !MORNING_TIP_RX.test(note)) return false;
+  return true;
+}
 const fmtClock = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 // A saved-trip timestamp (ms) → short Hebrew date + time, e.g. "23.7.26, 14:05".
 const fmtStamp = (ms?: number) => (ms ? new Date(ms).toLocaleString("he-IL", { day: "numeric", month: "numeric", year: "2-digit", hour: "2-digit", minute: "2-digit" }) : "");
@@ -1849,7 +1863,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                             {s.tagline && <p className="mb-2 text-[14.5px] italic text-[var(--text-2)]">{s.tagline}</p>}
                             {s.description && <p className="mb-2 text-[14px] leading-relaxed text-[var(--text-2)]">{s.description}</p>}
                             {/* traveler tip stays with the content, above the action links */}
-                            {s.note && <p className="mb-2 text-[13.5px] leading-snug text-[var(--brand-ink)]">💡 {s.note}</p>}
+                            {s.note && noteFitsSlot(s.note, s.time) && <p className="mb-2 text-[13.5px] leading-snug text-[var(--brand-ink)]">💡 {s.note}</p>}
                             {(s.bestTime || s.dress || s.cost != null) && (
                               <div className="mb-1 flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-[var(--text-2)]">
                                 {s.bestTime && <span><span className="text-[var(--text-3)]">מתי: </span>{s.bestTime}</span>}
@@ -1876,7 +1890,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                             )}
                           </div>
                         )}
-                        {s.note && !isOpen && <p className="mt-1.5 line-clamp-2 text-[13.5px] leading-snug text-[var(--text-2)]">{s.note}</p>}
+                        {s.note && !isOpen && noteFitsSlot(s.note, s.time) && <p className="mt-1.5 line-clamp-2 text-[13.5px] leading-snug text-[var(--text-2)]">{s.note}</p>}
                         {/* A logistical meal BREAK has no place of its own — offer "restaurants
                             nearby", centred on the last stop before it. A real/added restaurant
                             (has its own id) IS the place, so it gets no such link. */}
