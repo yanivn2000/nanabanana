@@ -424,15 +424,27 @@ export function buildCarBaseItinerary(
   if (tripDays < 1) return buildHeuristicItinerary(city, country, days, inCity, isFamily, perDay, walkPref, undefined, opts);
 
   const cityItin = buildHeuristicItinerary(city, country, cityDays, inCity, isFamily, perDay, walkPref, undefined, opts);
-  const tripDayObjs = clusters.slice(0, tripDays).map((cl, i) =>
-    dayTripToDay(cl, city, cityDays + i + 1, isFamily, { dayStartMin: opts?.dayStartMin, dwell: opts?.dwell ?? DWELL_DEFAULT }));
+  // The allotment (cityDays) is an ASSUMPTION — a thin in-city pool (a base town
+  // like Crete/Lefkada with ~8 urban stops) packs into fewer real days. Two
+  // consequences handled here:
+  //  1) Promote extra day-trip clusters into the freed days, so a 5-day request
+  //     stays a 5-day trip when the region has more worthy clusters.
+  //  2) Number day-trip days from the ACTUAL city-day count (not the allotment),
+  //     so labels never skip ("יום 1 · יום 4 · יום 5").
+  const actualCityDays = cityItin.days.length;
+  const freed = Math.max(0, cityDays - actualCityDays);
+  const effTripDays = Math.min(clusters.length, tripDays + freed);
+  const tripDayObjs = clusters.slice(0, effTripDays).map((cl, i) =>
+    dayTripToDay(cl, city, actualCityDays + i + 1, isFamily, { dayStartMin: opts?.dayStartMin, dwell: opts?.dwell ?? DWELL_DEFAULT }));
 
   // A car_base trip is a rental-car trip throughout: mark every day so between-stop
-  // legs read as driving, not public transit.
-  const allDays = [...cityItin.days, ...tripDayObjs].map((d) => ({ ...d, carBase: true }));
+  // legs read as driving, not public transit. Re-label sequentially as a final
+  // guard — even when no extra cluster exists the trip is merely shorter, never
+  // gap-numbered.
+  const allDays = [...cityItin.days, ...tripDayObjs].map((d, i) => ({ ...d, label: `יום ${i + 1}`, carBase: true }));
   return {
     title: `טיול ב${city}`,
-    subtitle: `${days} ימים · ${country} · כולל ${tripDays} ${tripDays === 1 ? "יום טיול ברכב" : "ימי טיול ברכב"}`,
+    subtitle: `${allDays.length} ימים · ${country} · כולל ${effTripDays} ${effTripDays === 1 ? "יום טיול ברכב" : "ימי טיול ברכב"}`,
     days: allDays,
   };
 }
