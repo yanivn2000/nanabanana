@@ -1,8 +1,9 @@
 // Heuristic itinerary builder — a real day-by-day plan from DB attractions,
 // WITHOUT Claude. Used as a fallback until ANTHROPIC_API_KEY is configured;
 // the AI version (smart scheduling + real "why") replaces it when available.
-import type { Attraction } from "./db";
+import type { Attraction, Street } from "./db";
 import type { Itinerary, Stop, StopKind } from "./trip-types";
+import { refOf, synthId } from "./place";
 import { descriptor } from "./labels";
 import { familyFit } from "./taste";
 import { clusterIntoDays, dayWalkMinutes, dropSamePlace, orderPath } from "./cluster";
@@ -49,7 +50,35 @@ export type BuildOpts = {
   // The traveller's explicit ❤ picks — MANDATORY stops. Every one of them is
   // placed in a day (never left to the bank), whatever the geography.
   mustIncludeIds?: Set<number>;
+  // Curated evening spots (evening streets/squares as street-stops) — for a
+  // no-kids trip each day ends with the nearest unused one as a soft after-dinner
+  // slot. The route only passes these for couples, in cities that have them.
+  eveningSpots?: Attraction[];
+  eveningStartMin?: number;   // evening_slot technique — earliest evening-slot clock
 };
+// A picked street is a full stop, not a transition. It enters the build as a
+// synthetic attraction: a namespaced id in the "street" range (its own id space,
+// so it can never collide with a real attraction id) + its canonical ref, and
+// its curated dwell via visit_minutes. Lives here (not in a route file) so both
+// the consumer build route and the Brain eval convert streets the same way.
+export function streetAsStop(s: Street): Attraction {
+  const g = s.geometry;
+  const ends: [[number, number], [number, number]] | null =
+    g && g.length > 1 ? [g[0], g[g.length - 1]] : null;
+  return {
+    ends, path: g ?? null,
+    id: synthId("street", s.id), ref: refOf("street", s.id),
+    name_he: s.name_he, name_en: s.name_en, lat: s.lat, lng: s.lng,
+    category: "attraction", subcategory: "street", indoor_outdoor: null,
+    family_score: null, tips_he: s.vibe_he, website: null, duration_minutes: null,
+    visit_minutes: s.dwell_min ?? 45, image_url: s.image_url ?? null, tagline_he: s.best_for_he,
+    best_season: null, best_time_he: null, time_of_day: null, dress_he: null,
+    cost_level: null, must_see: 1, osm_must_see: null, editor_rank: null,
+    editor_kids: null, description_he: null, taste_tags: null, audience_fit: null,
+    admin_bonus: null, notable: false, info_sources: null,
+  };
+}
+
 const isAvoided = (a: Attraction, avoid?: string[]) => !!avoid?.some((t) => stopMatchesType(a, t));
 // Drop stops beyond the per-day cap of a type (keeps the earlier = higher-value ones).
 function capTypePerDay(day: Attraction[], caps?: { type: string; max: number }[]): Attraction[] {
@@ -70,6 +99,7 @@ const KIND_FROM_CAT: Record<string, StopKind> = {
 
 const DAY_START_MIN = 9 * 60 + 30;   // 09:30
 const LUNCH_AFTER_MIN = 12 * 60;     // drop the meal break at the first stop past 12:00
+const EVENING_AT_MIN = 21 * 60;      // evening street/square slot — after the 19:30+90 dinner
 const LUNCH_MIN = 60;
 const fmtClock = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 // Time between stops — walk vs transit, shared with the editor via geo.travelMinutes.
@@ -272,8 +302,13 @@ export function buildHeuristicItinerary(
     const counts: Record<string, number> = {};
     for (const a of picks) for (const c of caps ?? []) if (stopMatchesType(a, c.type)) counts[c.type] = (counts[c.type] ?? 0) + 1;
     const underCap = (a: Attraction) => (caps ?? []).every((c) => !stopMatchesType(a, c.type) || (counts[c.type] ?? 0) < c.max);
+    // The backfill honours the day's TIME budget, not just the stop count — perDay
+    // is only the runaway guard. Without this, topping a day up "to 8 stops" with
+    // heavy dwells (2½h markets, 2h museums) ran the clock to 23:30 and the evening
+    // slot landed at 01:30. Estimate = dwells + a rough 12min/hop for travel.
+    const estMinutes = () => picks.reduce((s, a) => s + dwellMinutes(a, dwell), 0) + Math.max(0, picks.length - 1) * 12;
     const fill = (maxKm: number) => {
-      while (picks.length < perDay) {
+      while (picks.length < perDay && estMinutes() < dayMinutes) {
         const cand = pool
           .filter((a) => !usedIds.has(a.id))
           .map((a) => ({ a, d: nearAnyKm(a, picks) }))
@@ -388,6 +423,7 @@ export function buildHeuristicItinerary(
     // EVENING nightlife slot: after the day's sightseeing, add the nearest un-used
     // chosen bar/club as a night stop (≥ ~20:30) — so nightlife lands at night and
     // never competes with daytime markets/museums for a proximity slot.
+    let nightPlaced = false;
     if (nightVenues.length && picks.length) {
       const last = picks[picks.length - 1];
       const cand = nightVenues
@@ -396,12 +432,44 @@ export function buildHeuristicItinerary(
         .sort((x, y) => x.km - y.km)[0];
       if (cand) {
         usedNight.add(cand.v.id);
+        nightPlaced = true;
         const v = cand.v;
         const nightClock = Math.max(round30(clock) + 60, 20 * 60 + 30);   // after the day, ≥ 20:30
         stops.push({
           name: v.name_he || v.name_en, kind: kindOf(v), time: fmtClock(nightClock),
           duration: durationHe(dwellMinutes(v, dwell)), note: v.tips_he || descriptor(v),
           id: v.id, lat: v.lat, lng: v.lng, image: v.image_url, tagline: v.tagline_he,
+        });
+      }
+    }
+    // EVENING street/square slot (couples): a soft after-dinner recommendation as a
+    // real itinerary slot — the nearest curated evening street/square (ברי הריסות,
+    // כיכר ערב, טיילת) not used on another day. Skipped when the traveller's own
+    // nightlife pick already fills the evening. Same slot mechanics as above, but
+    // sourced from the editor-curated evening layer, not from OSM bar rows.
+    if (!nightPlaced && opts?.eveningSpots?.length && picks.length) {
+      const last = picks[picks.length - 1];
+      // Prefer a spot no other day used; when the city has fewer evening spots
+      // than the trip has days, REUSE the nearest one — every no-kids day must
+      // still end at an evening place (revisiting ליידספליין twice beats ending
+      // a day with nothing).
+      const evPool = opts.eveningSpots.filter((v) => !usedIds.has(v.id));
+      const evFresh = evPool.filter((v) => !usedNight.has(v.id));
+      const cand = (evFresh.length ? evFresh : evPool)
+        .map((v) => ({ v, km: haversineKm(last.lat as number, last.lng as number, v.lat as number, v.lng as number) }))
+        .sort((x, y) => x.km - y.km)[0];
+      // A day that somehow still overran past ~22:00 gets NO evening slot (a 01:30
+      // stop is nonsense) — the Brain's eveningEnd check then flags that day, which
+      // is the right signal: fix the day, don't decorate it.
+      if (cand && round30(clock) + 60 <= 22 * 60 + 30) {
+        usedNight.add(cand.v.id);
+        const v = cand.v;
+        const evClock = Math.max(round30(clock) + 60, opts?.eveningStartMin ?? EVENING_AT_MIN);
+        stops.push({
+          name: v.name_he || v.name_en, kind: kindOf(v), time: fmtClock(evClock),
+          duration: durationHe(dwellMinutes(v, dwell)), note: v.tips_he || descriptor(v),
+          id: v.id, lat: v.lat, lng: v.lng, image: v.image_url, tagline: v.tagline_he,
+          ...(v.path ? { path: v.path } : {}),
         });
       }
     }

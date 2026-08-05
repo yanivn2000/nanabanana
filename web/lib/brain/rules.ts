@@ -94,6 +94,13 @@ export const RULE_KINDS: Record<string, { title: string; help: string; he: (p: R
     params: [{ key: "after", type: "time", label: "לא לפני" }, { key: "minutes", type: "number", label: "משך (דק׳)" }],
     applies: "scheduler — lunch insertion",
   },
+  evening_slot: {
+    title: "משבצת ערב לזוגות",
+    help: "בטיול ללא ילדים, כל יום מקבל המלצת-ערב אחת אחרי ארוחת הערב — רחוב/כיכר ערב שאצר העורך (ברי הריסות, כיכר עם מסעדות, טיילת מוארת). נכנסת כמשבצת רגילה ביומן, מהקרובה ביותר לסוף היום, בלי חזרות בין ימים. פועלת רק בערים שבהן סומנו מקומות-ערב (רחובות עם 🌙); אם המטייל בחר בעצמו בר/מועדון — הבחירה שלו קודמת.",
+    he: (p) => `בטיול זוגות: המלצת-ערב ביומן החל מ-${p.start || "21:00"}`,
+    params: [{ key: "start", type: "time", label: "לא לפני" }],
+    applies: "builder — after-dinner evening slot (couples)",
+  },
   visit_minutes: {
     title: "משך ביקור לפי אופי המקום",
     help: "כמה זמן שוהים בכל עצירה — לפי סוג המקום, לא לפי נתון OSM הלא-אמין. 'עוברים ומסתכלים' (גשר, תצפית, כיכר, אנדרטה) לוקח דקות ספורות; מקום 'רגיל' (כנסייה, גן) כחצי שעה; 'עומק' (מוזיאון, ארמון, גן-חיות) שעה-שעתיים; 'שוק' הוא עוגן של חצי יום. ערכים אלה קובעים כמה עצירות נכנסות ליום ואיך נראים הזמנים.",
@@ -209,7 +216,7 @@ export const GROUP_ORDER = ["קהל וסינון", "תחושת-יום", "מבנ�
 export const KIND_GROUP: Record<string, (typeof GROUP_ORDER)[number]> = {
   pace_stops: "קהל וסינון", max_type_per_day: "קהל וסינון", active_anchor_required: "קהל וסינון",
   day_ender_last: "קהל וסינון", season_filter: "קהל וסינון", avoid_category: "קהל וסינון",
-  day_window: "תחושת-יום", lunch: "תחושת-יום", visit_minutes: "תחושת-יום",
+  day_window: "תחושת-יום", lunch: "תחושת-יום", visit_minutes: "תחושת-יום", evening_slot: "תחושת-יום",
   daytrip_threshold: "מבנה-הטיול", daytrip_budget: "מבנה-הטיול", daytrip_max_stops: "מבנה-הטיול",
   free_gems: "מבנה-הטיול", same_place_km: "מבנה-הטיול",
   quality_bar: "כיול-הביקורת", dimension_weight: "כיול-הביקורת", min_must_see: "כיול-הביקורת",
@@ -236,6 +243,7 @@ export type BrainRules = {
   dayStartMin: number;
   lunchAfterMin: number;
   lunchMinutes: number;
+  eveningStart: number;   // evening_slot — earliest clock for the couples evening slot
   dwell: DwellCfg;   // visit_minutes technique — dwell per stop bucket
   // Tier-2 structure (from daytrip_* / free_gems / same_place_km).
   daytripThresholdKm: number;
@@ -268,7 +276,7 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
     dayEnderLast: false,
     seasonFilter: false,
     avoid: { families: [...AUDIENCE_PREFS.families.avoid], adults: [...AUDIENCE_PREFS.adults.avoid] },
-    dayStartMin: 9 * 60 + 30, lunchAfterMin: 12 * 60, lunchMinutes: 60, dwell: { ...DWELL_DEFAULT },
+    dayStartMin: 9 * 60 + 30, lunchAfterMin: 12 * 60, lunchMinutes: 60, eveningStart: 21 * 60, dwell: { ...DWELL_DEFAULT },
     daytripThresholdKm: 18, daytripPerDays: 2, daytripMaxStops: 5, samePlaceMeters: 90, freeGemMaxPerDay: 3, freeGemDetourMin: 4,
     weights: { ...WEIGHTS }, qualityBar: QUALITY_BAR, minMustSee: THRESHOLDS.minMustSeePerTrip,
     minAudienceFit: THRESHOLDS.minAudienceFit, maxSameTypeRun: THRESHOLDS.maxSameTypeRun,
@@ -299,6 +307,7 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
         break;
       }
       case "day_window": rules.dayStartMin = timeToMin(q.start, rules.dayStartMin); break;
+      case "evening_slot": rules.eveningStart = timeToMin(q.start, rules.eveningStart); break;
       case "lunch":
         rules.lunchAfterMin = timeToMin(q.after, rules.lunchAfterMin);
         if (q.minutes != null) rules.lunchMinutes = Number(q.minutes);

@@ -24,7 +24,13 @@ const isEngaging = (a: Attraction, aud: Audience) => isActiveAnchor(a) || isSoft
 export type QualityFinding = { ok: boolean; msg: string };
 export type Quality = { conformance: QualityFinding[]; fun: string[]; suggestions: string[] };
 
-export function qualityCheck(days: Attraction[][], audience: Audience, rules: BrainRules, ctx: { cityMustCount: number }): Quality {
+export function qualityCheck(
+  days: Attraction[][], audience: Audience, rules: BrainRules,
+  // eveningEnds[i]: day i of the BUILT itinerary ends at an evening street/square
+  // (computed by the caller from the full stop list — richDays can't see synthetic
+  // street stops). Present only when the city has a curated evening layer.
+  ctx: { cityMustCount: number; eveningEnds?: boolean[] }
+): Quality {
   const conformance: QualityFinding[] = [];
   const fun: string[] = [];
   const suggestions = new Set<string>();
@@ -46,6 +52,14 @@ export function qualityCheck(days: Attraction[][], audience: Audience, rules: Br
   conformance.push(must >= rules.minMustSee
     ? { ok: true, msg: `${must} אתרי-חובה (סף ${rules.minMustSee})` }
     : { ok: false, msg: `רק ${must} אתרי-חובה — מתחת לסף ${rules.minMustSee}` });
+  // Evening ending (evening_slot technique) — a no-kids day ends at a curated
+  // evening street/square. Reported only when the city has the layer.
+  if (audience !== "families" && ctx.eveningEnds) {
+    const missing = ctx.eveningEnds.map((ok, i) => (ok ? null : i + 1)).filter((n): n is number => n != null);
+    conformance.push(missing.length
+      ? { ok: false, msg: `ימים בלי סיום-ערב (🌙): ${missing.map((n) => `יום ${n}`).join(", ")}` }
+      : { ok: true, msg: "כל יום מסתיים במקום-ערב (🌙)" });
+  }
   const weakFit = flat.filter((a) => audienceFitScore(a.audience_fit, audience) < rules.minAudienceFit).length;
   if (flat.length && weakFit > flat.length / 2)
     conformance.push({ ok: false, msg: `רוב העצירות (${weakFit}/${flat.length}) בהתאמה נמוכה ל${audience === "families" ? "משפחות" : "מבוגרים"}` });

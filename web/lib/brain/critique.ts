@@ -29,7 +29,10 @@ const expType = (a: Attraction) => a.audience_fit?.type || a.category;
 
 export function critiqueTrip(
   days: Attraction[][], audience: Audience,
-  ctx: { cityMustCount: number; rules?: BrainRules; dayMeta?: { car?: boolean }[] }
+  // dayMeta.eveningEnd: the built day's LAST real stop is an evening street/square
+  // (or the traveller's own nightlife pick). eveningCity: the city has a curated
+  // evening layer at all — without it the check stays silent (nothing to demand).
+  ctx: { cityMustCount: number; rules?: BrainRules; dayMeta?: { car?: boolean; eveningEnd?: boolean }[]; eveningCity?: boolean }
 ): Critique {
   const prefs = AUDIENCE_PREFS[audience];
   const all = days.flat();
@@ -62,6 +65,18 @@ export function critiqueTrip(
         msg: `יום ${i + 1}: ${Math.round(w)} דק׳ הליכה (${walkKm.toFixed(1)} ק״מ${rideKm > 0 ? ` + ${rideKm.toFixed(0)} ק״מ ${car ? "נסיעה" : "במטרו"}` : ""}) — יותר מדי` });
     });
     dims.walkability = days.length ? Math.round(sum / days.length) : 0;
+  }
+
+  // 1b) evening ending (no-kids trips): every day should END at an evening
+  // street/square (the 🌙 layer) or at the traveller's own nightlife pick — the
+  // evening_slot product promise. Only checked where the city HAS curated evening
+  // spots; a city without them gets a curation nudge, not per-day noise.
+  if (audience !== "families" && ctx.eveningCity) {
+    days.forEach((_, i) => {
+      if (!ctx.dayMeta?.[i]?.eveningEnd)
+        issues.push({ dim: "eveningEnd", severity: "warn", day: i + 1,
+          msg: `יום ${i + 1} לא מסתיים במקום-ערב (רחוב/כיכר 🌙) — טיול זוגות אמור להיגמר בבילוי ערב` });
+    });
   }
 
   // 2) must-see coverage — hits enough of the city's real must-sees.

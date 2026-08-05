@@ -327,19 +327,18 @@ export function clusterIntoDays(
     }
     const tour = twoOpt(nnPath(candidates, start));
 
-    // Cut the tour into `days` contiguous chunks of `perDay` stops each — so the trip
-    // honours the chosen pace EVENLY (intensive really means ~perDay/day, not "6 short
-    // stops on one day, 3 museums on another"). Because the tour is one 2-opt walking
-    // path, contiguous count-slices are also geographically tight (each day a stretch of
-    // the route). Realized day length stays sane downstream: the ≤N-museums/day cap
-    // trims the heaviest stops, so no time ceiling is needed here (it only lopsided the
-    // last day by dumping overflow onto it).
+    // Cut the tour into `days` contiguous chunks — by stop count (~perDay, the even
+    // pace) AND by the day's time budget. Count alone let two 2½h markets land in one
+    // slice and run the clock to 23:30 (the museums/day cap doesn't see markets), so a
+    // chunk closes at whichever limit hits first. When the LAST day is full, the rest
+    // of the tour stays unplaced — it flows to the bank, which is where overflow
+    // belongs now (the day must end at dinner/evening, not swallow the tail).
     let cur: Attraction[] = [], time = 0;
     for (const x of tour) {
-      const leg = cur.length ? walkBetween(cur[cur.length - 1], x) : 0;
-      if (cur.length >= perDay && groups.length < days - 1) {
-        groups.push({ stops: cur, time });
-        cur = []; time = 0;
+      let leg = cur.length ? walkBetween(cur[cur.length - 1], x) : 0;
+      if (cur.length && (cur.length >= perDay || time + visitMin(x, dwell) + leg > budget)) {
+        if (groups.length < days - 1) { groups.push({ stops: cur, time }); cur = []; time = 0; leg = 0; }
+        else break;   // last day at capacity — remaining tour stops go to the bank
       }
       cur.push(x); placed.add(x.id); time += visitMin(x, dwell) + (cur.length > 1 ? leg : 0);
     }

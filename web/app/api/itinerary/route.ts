@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds, approvedStreetsForCity } from "@/lib/db";
 import { annotateDaysWithAreas } from "@/lib/cluster";
-import type { Attraction, Destination, Street } from "@/lib/db";
+import type { Attraction, Destination } from "@/lib/db";
 import { refOf, synthId, isRealAttraction } from "@/lib/place";
 import { wikiUrl, mergeCat } from "@/lib/labels";
 import {
@@ -10,7 +10,7 @@ import {
   generateMultiItinerary,
   reviseItinerary,
 } from "@/lib/ai";
-import { buildHeuristicItinerary, buildMultiHeuristicItinerary, buildCarBaseItinerary } from "@/lib/heuristic";
+import { buildHeuristicItinerary, buildMultiHeuristicItinerary, buildCarBaseItinerary, streetAsStop } from "@/lib/heuristic";
 import { reviseHeuristic, arrangeDay } from "@/lib/revise-heuristic";
 import { checkRateLimit } from "@/lib/db";
 import { rateLimit } from "@/lib/ratelimit";
@@ -160,27 +160,8 @@ function partitionBySelection(
 }
 
 
-// A picked street is a full stop, not a transition. It enters the build as a
-// synthetic attraction: a namespaced id in the "street" range (its own id space,
-// so it can never collide with a real attraction id) + its canonical ref, and
-// its curated dwell via visit_minutes.
-function streetAsStop(s: Street): Attraction {
-  const g = s.geometry;
-  const ends: [[number, number], [number, number]] | null =
-    g && g.length > 1 ? [g[0], g[g.length - 1]] : null;
-  return {
-    ends, path: g ?? null,
-    id: synthId("street", s.id), ref: refOf("street", s.id),
-    name_he: s.name_he, name_en: s.name_en, lat: s.lat, lng: s.lng,
-    category: "attraction", subcategory: "street", indoor_outdoor: null,
-    family_score: null, tips_he: s.vibe_he, website: null, duration_minutes: null,
-    visit_minutes: s.dwell_min ?? 45, image_url: null, tagline_he: s.best_for_he,
-    best_season: null, best_time_he: null, time_of_day: null, dress_he: null,
-    cost_level: null, must_see: 1, osm_must_see: null, editor_rank: null,
-    editor_kids: null, description_he: null, taste_tags: null, audience_fit: null,
-    admin_bonus: null, notable: false, info_sources: null,
-  };
-}
+// streetAsStop moved to lib/heuristic.ts so the Brain eval can build with the
+// evening street layer through the same conversion.
 
 // Match each itinerary stop back to its DB attraction and attach details
 // (image, website, coords, tagline, time/dress/cost) for the expandable view.
@@ -550,8 +531,17 @@ export async function POST(req: NextRequest) {
   // picked) are mandatory: the builder places every one of them in a day. This is
   // the product promise behind "המערכת תשלים את השאר" — what you chose is IN.
   const mustInclude = pickIds.length ? new Set(pickIds) : undefined;
+  // Couples evening layer: the editor-curated evening streets/squares (streets.evening)
+  // become soft after-dinner slots — one per day, nearest-first. Families skip it, and
+  // a street the traveller already picked isn't offered twice.
+  const eveningSpots = !isFamily
+    ? (await approvedStreetsForCity(dest.id))
+        .filter((s) => s.evening && !streetRows.some((r) => r.id === s.id))
+        .map(streetAsStop)
+    : [];
   const buildOpts = { ...optsFor(dest, rules), reservedIds, guaranteeIds: pickGuarantee,
-    mustIncludeIds: mustInclude, dayMinutes: pace.minutes };
+    mustIncludeIds: mustInclude, dayMinutes: pace.minutes,
+    ...(eveningSpots.length ? { eveningSpots, eveningStartMin: rules.eveningStart } : {}) };
   const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary =>
     d.mobility === "car_base"
       ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp, buildOpts)

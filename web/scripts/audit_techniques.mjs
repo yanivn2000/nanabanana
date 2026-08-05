@@ -13,6 +13,8 @@ const FILES = [
 // Anything not here is flagged for review — expose it as a technique or classify it.
 const KNOWN = {
   DAY_START_MIN: "fallback:day_window", LUNCH_AFTER_MIN: "fallback:lunch", LUNCH_MIN: "fallback:lunch",
+  EVENING_AT_MIN: "fallback:evening_slot",
+  STRETCH_M: "engine (long-street trim span)",
   VISIT_DEFAULT: "fallback:visit_default", VISIT_MIN: "engine (visit clamp)", VISIT_MAX: "engine (visit clamp)",
   CANDIDATES_PER_DAY: "engine (tour seeding)", FREE_DETOUR: "fallback:free_gems", FREE_MAX_PER_DAY: "fallback:free_gems",
   IN_CITY_KM: "fallback:daytrip_threshold", DRIVE_KMH: "engine (drive-time model)",

@@ -1277,6 +1277,7 @@ export type Street = {
   kind: string | null; best_for_he: string | null; vibe_he: string | null;
   lat: number | null; lng: number | null; geometry: [number, number][] | null;
   osm_id: number | null; area_id: number | null; approved: boolean;
+  evening: boolean;   // editor-curated evening street/square — feeds the couples evening slot
   dwell_min: number | null; length_m: number | null;
   image_url?: string | null;
   area_name_he?: string | null;
@@ -1284,7 +1285,7 @@ export type Street = {
 export async function streetsForCity(destId: number): Promise<Street[]> {
   return query<Street>(
     `SELECT s.id, s.destination_id, s.name_en, s.name_he, s.kind, s.best_for_he, s.vibe_he,
-            s.lat, s.lng, s.geometry, s.osm_id, s.area_id, s.approved, s.dwell_min, s.length_m, s.image_url,
+            s.lat, s.lng, s.geometry, s.osm_id, s.area_id, s.approved, s.evening, s.dwell_min, s.length_m, s.image_url,
             a.name_he AS area_name_he
        FROM streets s LEFT JOIN areas a ON a.id = s.area_id
       WHERE s.destination_id = $1
@@ -1294,7 +1295,7 @@ export async function streetsForCity(destId: number): Promise<Street[]> {
 export async function approvedStreetsForCity(destId: number): Promise<Street[]> {
   return query<Street>(
     `SELECT s.id, s.destination_id, s.name_en, s.name_he, s.kind, s.best_for_he, s.vibe_he,
-            s.lat, s.lng, s.geometry, s.osm_id, s.area_id, s.approved, s.dwell_min, s.length_m, s.image_url,
+            s.lat, s.lng, s.geometry, s.osm_id, s.area_id, s.approved, s.evening, s.dwell_min, s.length_m, s.image_url,
             a.name_he AS area_name_he
        FROM streets s LEFT JOIN areas a ON a.id = s.area_id
       WHERE s.destination_id = $1 AND s.approved = true AND s.lat IS NOT NULL
@@ -1322,12 +1323,12 @@ export async function streetsByIds(ids: number[]): Promise<Street[]> {
   if (!ids.length) return [];
   return query<Street>(
     `SELECT s.id, s.destination_id, s.name_en, s.name_he, s.kind, s.best_for_he, s.vibe_he,
-            s.lat, s.lng, s.geometry, s.osm_id, s.area_id, s.approved, s.dwell_min, s.length_m,
+            s.lat, s.lng, s.geometry, s.osm_id, s.area_id, s.approved, s.evening, s.dwell_min, s.length_m,
             NULL::text AS area_name_he
        FROM streets s WHERE s.id = ANY($1::int[]) AND s.approved = true AND s.lat IS NOT NULL`,
     [ids]);
 }
-const STREET_EDITABLE = new Set(["name_he", "name_en", "kind", "best_for_he", "vibe_he", "area_id", "approved", "dwell_min"]);
+const STREET_EDITABLE = new Set(["name_he", "name_en", "kind", "best_for_he", "vibe_he", "area_id", "approved", "evening", "dwell_min"]);
 export async function updateStreet(id: number, fields: Record<string, unknown>): Promise<boolean> {
   const entries = Object.entries(fields).filter(([k]) => STREET_EDITABLE.has(k));
   if (!entries.length) return false;

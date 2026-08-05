@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { editorEmail } from "@/lib/admin";
-import { listDestinations, topAttractions, areasForDestination, brainRulesForDest, type Attraction } from "@/lib/db";
+import { listDestinations, topAttractions, areasForDestination, brainRulesForDest, approvedStreetsForCity, type Attraction } from "@/lib/db";
 import { annotateDaysWithAreas } from "@/lib/cluster";
-import { buildCarBaseItinerary, buildHeuristicItinerary } from "@/lib/heuristic";
+import { buildCarBaseItinerary, buildHeuristicItinerary, streetAsStop } from "@/lib/heuristic";
 import { qualityCheck, type Quality } from "@/lib/brain/quality";
 import { critiqueTrip } from "@/lib/brain/critique";
 import { haversineKm } from "@/lib/geo";
@@ -34,6 +34,10 @@ export async function POST(req: NextRequest) {
     const cityMustCount = attractions.filter((a) => a.must_see === 1).length;
     const areas = await areasForDestination(id);
     const rules = await brainRulesForDest(id);   // the Brain's techniques for this city
+    // The curated evening layer (streets.evening) — the eval builds couples trips
+    // WITH it, exactly like the consumer route, and then checks every day ends there.
+    const eveningSpots = (await approvedStreetsForCity(id)).filter((s) => s.evening).map(streetAsStop);
+    const eveningIds = new Set(eveningSpots.map((s) => s.id));
     for (const audience of AUDIENCES) {
       const isFamily = audience === "families";
       const pace = rules.paceStops[audience];
@@ -48,7 +52,8 @@ export async function POST(req: NextRequest) {
       const buildOpts = { month, seasonFilter: rules.seasonFilter, dayEnderLast: rules.dayEnderLast, maxTypePerDay: rules.maxTypePerDay, avoidCats: rules.avoid[audience] ?? [],
         dayStartMin: rules.dayStartMin, lunchAfterMin: rules.lunchAfterMin, lunchMinutes: rules.lunchMinutes, dwell: rules.dwell,
         daytripThresholdKm: rules.daytripThresholdKm, daytripPerDays: rules.daytripPerDays, daytripMaxStops: rules.daytripMaxStops,
-        samePlaceMeters: rules.samePlaceMeters, freeGemMaxPerDay: rules.freeGemMaxPerDay, freeGemDetourMin: rules.freeGemDetourMin };
+        samePlaceMeters: rules.samePlaceMeters, freeGemMaxPerDay: rules.freeGemMaxPerDay, freeGemDetourMin: rules.freeGemDetourMin,
+        ...(!isFamily && eveningSpots.length ? { eveningSpots, eveningStartMin: rules.eveningStart } : {}) };
       // Build via the REAL consumer engine so the eval reflects exactly what a
       // traveller gets (dwell model, dedup, car day-trips) — one source of truth.
       const itinerary = carBase
@@ -61,9 +66,16 @@ export async function POST(req: NextRequest) {
         d.stops.map((s) => (s.id != null ? byId.get(s.id) : undefined)).filter((a): a is Attraction => !!a));
       // Car-awareness for the critic: on a car_base trip EVERY day is driven; a
       // dayTrip is driven in any city. Long legs then read as נסיעה, not הליכה.
-      const dayMeta = itinerary.days.map((d) => ({ car: carBase || !!d.dayTrip }));
-      const crit = critiqueTrip(richDays, audience, { cityMustCount, rules, dayMeta });
-      const quality: Quality | undefined = b.quality ? qualityCheck(richDays, audience, rules, { cityMustCount }) : undefined;
+      // eveningEnd is read off the BUILT stop list (street stops are synthetic, so
+      // richDays can't see them): the day's last real stop is an evening street.
+      const dayMeta = itinerary.days.map((d) => {
+        const real = d.stops.filter((s) => s.id != null);
+        const lastId = real.length ? real[real.length - 1].id : null;
+        return { car: carBase || !!d.dayTrip, eveningEnd: lastId != null && eveningIds.has(lastId) };
+      });
+      const crit = critiqueTrip(richDays, audience, { cityMustCount, rules, dayMeta, eveningCity: eveningSpots.length > 0 });
+      const quality: Quality | undefined = b.quality ? qualityCheck(richDays, audience, rules, { cityMustCount,
+        ...(eveningSpots.length ? { eveningEnds: dayMeta.map((m) => m.eveningEnd) } : {}) }) : undefined;
       report.push({
         cityId: id, city: dest.city_he || dest.city, cityEn: dest.city, country: dest.country, audience, days,
         score: crit.score, needsWork: crit.needsWork, stops: crit.stops,
