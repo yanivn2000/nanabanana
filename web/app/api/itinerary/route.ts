@@ -121,7 +121,8 @@ function partitionBySelection(
   taste: Record<string, number> | undefined,
   selection: { yes: number[]; no: number[] },
   isFamily: boolean,
-  strict = false
+  strict = false,
+  capacity = 0
 ): { anchors: Attraction[]; fillers: Attraction[]; anchorIds: Set<number> } {
   const yes = new Set(selection.yes);
   const no = new Set(selection.no);
@@ -134,11 +135,27 @@ function partitionBySelection(
   // explore keeps the plain taste order.
   const anchors = strict ? roundRobinByType(ranked) : ranked;
   const anchorIds = new Set(anchors.map((a) => a.id));
-  // strict (WYSIWYG): the ❤ ARE the trip — build ONLY from them, NO fillers, so an
-  // un-liked place (even a must-see) never enters and un-liking one removes it.
-  // Non-strict (legacy explore): fillers top up the days with must-sees ("אם יש זמן").
-  const fillers = strict ? [] : rankByTaste(
-    avail.filter((a) => a.must_see === 1 && !anchorIds.has(a.id)), taste, 40, isFamily);
+  // The ❤ picks are MANDATORY (guaranteed into the days downstream, never banked).
+  // Fillers only TOP UP the remaining capacity so a traveller who picked 3 places
+  // for a 4-day trip still gets a full plan — the system completes the rest with
+  // the city's must-sees and best-ranked places. Under-picking is normal, not an
+  // error; over-picking still needs no filler (capacity already spent).
+  // "לא" places never return, so un-liking a must-see still removes it for good.
+  const room = strict ? Math.max(0, capacity - anchors.length) : 40;
+  const fillerPool = avail.filter((a) => !anchorIds.has(a.id));
+  let fillers: Attraction[] = [];
+  if (room > 0) {
+    if (strict) {
+      // Rank by taste first, THEN float must-sees up (a stable partition — ranking
+      // last would bury the icons). A thin city may not have enough must-sees to
+      // fill the days, so the best of the rest follows.
+      const ranked2 = rankByTaste(fillerPool, taste, Math.max(60, room * 3), isFamily);
+      fillers = [...ranked2.filter((a) => a.must_see === 1), ...ranked2.filter((a) => a.must_see !== 1)]
+        .slice(0, room + 6);   // a little slack so the clusterer can choose by geography
+    } else {
+      fillers = rankByTaste(fillerPool.filter((a) => a.must_see === 1), taste, 40, isFamily);
+    }
+  }
   return { anchors, fillers, anchorIds };
 }
 
@@ -372,8 +389,11 @@ export async function POST(req: NextRequest) {
   // nothing un-marked enters. `attractions` (not `pool`) so interest/area picks past the
   // top pool are found. Falls back to the governed reservation only if there are no marks.
   const hasMarks = (body.selection?.yes?.length ?? 0) > 0;
+  // Trip capacity = days × pace. Picks fill it; the system tops up the remainder,
+  // so "בנו לי טיול" works from the very first pick (or none at all).
+  const selCapacity = (body.days ?? 4) * perDay;
   const sel = body.selection && (hasMarks || !governed)
-    ? partitionBySelection(hasMarks ? attractions : pool, body.taste, body.selection, isFamily, hasMarks)
+    ? partitionBySelection(hasMarks ? attractions : pool, body.taste, body.selection, isFamily, hasMarks, selCapacity)
     : null;
   // Streets the traveller picked lead the build list, so the clusterer treats
   // them as the day's top candidates (they were an explicit "כן").
@@ -522,7 +542,11 @@ export async function POST(req: NextRequest) {
   // pace+2). So when the picks fit the trip's total capacity they all land instead
   // of a thin day + banked central picks. Truly far picks (>8km) still bank.
   const pickGuarantee = anchorIds && anchorIds.size ? anchorIds : undefined;
-  const buildOpts = { ...optsFor(dest, rules), reservedIds, guaranteeIds: pickGuarantee };
+  // The EXPLICIT ❤ picks (not the must-see fallback anchorIds uses when nothing was
+  // picked) are mandatory: the builder places every one of them in a day. This is
+  // the product promise behind "המערכת תשלים את השאר" — what you chose is IN.
+  const mustInclude = pickIds.length ? new Set(pickIds) : undefined;
+  const buildOpts = { ...optsFor(dest, rules), reservedIds, guaranteeIds: pickGuarantee, mustIncludeIds: mustInclude };
   const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary =>
     d.mobility === "car_base"
       ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp, buildOpts)
@@ -546,6 +570,34 @@ export async function POST(req: NextRequest) {
     // the worthy UNSCHEDULED attractions, must-see FIRST — so the trip page can always
     // show "here's what's in reserve" (not just for explicit-pick builds). Streets are
     // excluded (isRealAttraction), as are already-scheduled stops.
+    // SAFETY NET (engine-agnostic): a place the traveller explicitly ❤-picked is a
+    // mandatory stop — it belongs IN the plan, never in the bank. The heuristic
+    // already guarantees this via mustIncludeIds; this catches any other engine
+    // (AI) and any late drop: each unscheduled pick is appended to the day whose
+    // stops it is nearest to. Only real attractions with coords (streets/areas keep
+    // their existing bank behaviour).
+    const unplacedPicks = picks.filter((a) => yesSet.has(a.id) && !scheduled.has(a.id)
+      && a.lat != null && a.lng != null && withDetails.days.length > 0);
+    for (const a of unplacedPicks) {
+      let bestD = 0, bestKm = Infinity;
+      withDetails.days.forEach((day, di) => {
+        for (const s of day.stops) {
+          if (s.lat == null || s.lng == null) continue;
+          const km = haversineKm(a.lat!, a.lng!, s.lat, s.lng);
+          if (km < bestKm) { bestKm = km; bestD = di; }
+        }
+      });
+      const day = withDetails.days[bestD];
+      day.stops.push({
+        name: a.name_he || a.name_en || "", kind: "culture", time: "", duration: "",
+        id: a.id, ref: a.ref ?? refOf("attr", a.id), lat: a.lat, lng: a.lng,
+        nameEn: a.name_en, image: a.image_url, website: a.website,
+        tagline: a.tagline_he, description: a.description_he, bestTime: a.best_time_he,
+        wiki: wikiUrl(a.info_sources), dress: a.dress_he, cost: a.cost_level,
+        cat: a.category, sub: a.subcategory, anchor: true,
+      });
+      scheduled.add(a.id);
+    }
     const explicit = (body.selection || streetStops.length || areaMemberIds.length || opts?.surfaceIds)
       ? detailRows.filter((a) => surfaceIds.has(a.id) && !scheduled.has(a.id))
       : [];

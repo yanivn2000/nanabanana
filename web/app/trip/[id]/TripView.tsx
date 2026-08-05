@@ -30,6 +30,7 @@ function stayHe(d?: string): string | null {
 import { googleMapsUrl, googleMapsPin, googleMapsNearby, googleDirUrl, formatDistance, estimateLeg, haversineKm, travelMinutes, durationHe, round30, DEFAULT_WALK_PREF, type Leg } from "@/lib/geo";
 import { stopColor } from "@/lib/labels";
 import { entryExit, type LatLng } from "@/lib/access";
+import { isRealAttraction } from "@/lib/place";
 import { orderFromDepot } from "@/lib/cluster";
 import { bigImage, hiResImage, catLabel, catColor, countryFlag } from "@/lib/labels";
 import { useNavTitle } from "@/components/NavTitle";
@@ -615,6 +616,9 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
     if (!itinerary) return;
     const needsFix = (d: { stops: Stop[] }) => {
       if (!d.stops.some(isDinnerSlot)) return true;
+      // An UNTIMED stop needs the clock too — the server appends mandatory ❤ picks
+      // (and manual adds land) without a time, and they must not render blank.
+      if (d.stops.some((s) => s.id != null && isRealAttraction(s.id) && !s.time)) return true;
       const t = d.stops
         .map((s) => { if (!s.time) return null; const [h, m] = s.time.split(":").map(Number); return (h || 0) * 60 + (m || 0); })
         .filter((x): x is number => x != null);

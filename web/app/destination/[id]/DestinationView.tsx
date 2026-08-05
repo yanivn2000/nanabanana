@@ -725,18 +725,24 @@ export function DestinationView({
   // default that makes every trip identical.
   // Picked places count attractions + explicitly-picked streets (a street is a stop).
   const pickedCount = yesCount + streetPicks.size;
-  const canBuild = editorial ? (pickedCount >= buildCapacity) : (manual ? yesCount >= MANUAL_MIN : readyToBuild);
-  // Floor of places needed before the build unlocks (for the CTA count + tooltip).
-  const needToBuild = editorial ? buildCapacity : manual ? MANUAL_MIN : 0;
-  // CTA suffix: while short of the floor, show progress (2/20); once buildable,
-  // show the count of places chosen so far — "בנו לי טיול (21)".
-  const buildCountSuffix = !canBuild && needToBuild > 0
-    ? ` · ${pickedCount}/${needToBuild}`
-    : pickedCount > 0 ? ` (${pickedCount})` : "";
-  const buildTitle = canBuild ? ""
-    : editorial ? `בחרו עוד ${Math.max(0, needToBuild - pickedCount)} מקומות לטיול (${pickedCount}/${needToBuild})`
-    : manual ? `סמנו לפחות ${MANUAL_MIN} מקומות (סימנתם ${yesCount})`
-    : !audience ? "קודם בחרו בשביל מי הטיול" : "";
+  // The build is ALWAYS available: picking is a refinement, not a toll gate. What
+  // you ❤ is guaranteed into the itinerary (never the bank) and the system completes
+  // the rest of the days from the city's must-sees. Guided still needs an audience —
+  // that's a "who is this for", not a quota.
+  const canBuild = editorial || manual ? true : readyToBuild;
+  // How many more places the system will add on top of the picks (days × pace).
+  const willAutoFill = Math.max(0, buildCapacity - pickedCount);
+  // CTA suffix: just how many places YOU chose — never a quota like "0/20".
+  const buildCountSuffix = pickedCount > 0 ? ` (${pickedCount})` : "";
+  // Hebrew reads badly with a bare "1 המקומות" — say it in the singular.
+  const pickedHe = pickedCount === 1 ? "המקום שסימנתם נכנס" : `${pickedCount} המקומות שסימנתם נכנסים`;
+  const buildTitle = !canBuild
+    ? (!audience ? "קודם בחרו בשביל מי הטיול" : "")
+    : pickedCount === 0
+      ? `נבנה לכם טיול מלא מאתרי החובה של העיר — סמנו ♥ מה שחשוב לכם וזה ייכנס בוודאות`
+      : willAutoFill > 0
+        ? `${pickedHe} ליומן, והמערכת תשלים עוד כ־${willAutoFill}`
+        : `${pickedHe} ליומן`;
   // Hearts are interactive only when picking makes sense: always in manual, and in
   // guided ONLY after the system has something to pre-mark (audience + a topic).
   // Editorial makes hearts the primary selection (♥ on tabs / neighbourhoods / cards),
@@ -1211,7 +1217,7 @@ export function DestinationView({
               {/* explainer for the ♥ flow — lives INSIDE the 80% column so it aligns with
                   the tabs and doesn't stretch the full page width. */}
               <p className="mb-0.5 rounded-[13px] bg-[var(--accent-soft)] px-4 py-3 text-[14.5px] font-medium leading-relaxed text-[var(--text)] shadow-[var(--shadow)]">
-                סמנו ב־<span className="inline-flex translate-y-0.5 items-center font-semibold text-[var(--accent-ink)]"><Heart size={14} fill="currentColor" /></span> את המקומות שתרצו בטיול — אתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> מסומנים בכוכב כהמלצה, אבל אתם בוחרים מה נכנס. בחרו לפחות <b>{buildCapacity}</b> ({buildDays} ימים × הקצב), ואז “בנו לי טיול”.
+                סמנו ב־<span className="inline-flex translate-y-0.5 items-center font-semibold text-[var(--accent-ink)]"><Heart size={14} fill="currentColor" /></span> את המקומות שחשובים לכם — <b>כל מה שתסמנו ייכנס ליומן המסע</b>, ואת שאר הימים המערכת תשלים לבד מאתרי החובה <span className="text-[var(--accent-ink)]">⭐</span> של העיר. אפשר לסמן אחד, עשרים, או כלום — וללחוץ “בנו לי טיול” בכל רגע.
               </p>
               {/* categories as ONE dropdown (mobile) instead of a scattered pill wall */}
               {(() => {
@@ -2135,7 +2141,17 @@ export function DestinationView({
       {/* MOBILE build CTA — a half-width floating button, always present (even at the
           top), sitting just above the app's bottom nav so "build" is one tap away. */}
       {showBrowse && (
-        <div className="fixed inset-x-0 bottom-[72px] z-40 flex justify-center px-4 lg:hidden">
+        <div className="fixed inset-x-0 bottom-[72px] z-40 flex flex-col items-center gap-1.5 px-4 lg:hidden">
+          {/* the promise, where a tooltip can't reach: what you ♥ is in, we do the rest */}
+          {canBuild && (
+            <span className="rounded-full bg-[var(--surface)]/95 px-3 py-1 text-[11.5px] font-medium text-[var(--text-2)] shadow-[var(--shadow)] backdrop-blur">
+              {pickedCount === 0
+                ? "נבנה טיול מלא — או סמנו ♥ ונכניס בוודאות"
+                : willAutoFill > 0
+                  ? `${pickedHe} · נשלים עוד ~${willAutoFill}`
+                  : `${pickedHe} ליומן`}
+            </span>
+          )}
           <span className={`inline-flex w-1/2 min-w-[200px] rounded-full ${canBuild ? "pulse-attn-accent" : ""}`}>
             <button onClick={() => openBuild()} disabled={!canBuild} title={buildTitle}
               className="flex w-full items-center justify-center gap-1.5 rounded-full px-4 py-3 text-[14px] font-semibold text-white shadow-[0_6px_20px_rgba(198,79,38,0.4)] transition disabled:cursor-not-allowed"

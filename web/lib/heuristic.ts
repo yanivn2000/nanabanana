@@ -43,6 +43,9 @@ export type BuildOpts = {
   // the best few unscheduled ones are force-inserted into their nearest day so a
   // chosen theme is never absent just because its venues aren't centrally located.
   guaranteeIds?: Set<number>;
+  // The traveller's explicit ❤ picks — MANDATORY stops. Every one of them is
+  // placed in a day (never left to the bank), whatever the geography.
+  mustIncludeIds?: Set<number>;
 };
 const isAvoided = (a: Attraction, avoid?: string[]) => !!avoid?.some((t) => stopMatchesType(a, t));
 // Drop stops beyond the per-day cap of a type (keeps the earlier = higher-value ones).
@@ -297,6 +300,27 @@ export function buildHeuristicItinerary(
       if (bestD < 0 || bestKm > 8) continue;   // too far from any day → leave in the bank (needs a day-trip)
       if (capped[bestD].length >= perDay + 2) continue;   // don't bloat a day
       capped[bestD].push(a); usedIds.add(a.id); budget--;
+    }
+  }
+
+  // MANDATORY picks — the places the traveller explicitly chose. Promise to the
+  // user: every ❤ lands IN the itinerary, never in the bank. So unlike the themed
+  // guarantee above this pass has NO budget, NO distance limit and NO day-size cap:
+  // whatever survived the clusterer's trimming is force-placed into its nearest
+  // day (a genuinely remote pick joins the day it's closest to, which is where the
+  // traveller would drive to it anyway). Runs last so nothing downstream drops it.
+  const mustIds = opts?.mustIncludeIds;
+  if (mustIds?.size) {
+    for (const a of pool) {
+      if (!mustIds.has(a.id) || usedIds.has(a.id)) continue;
+      if (!(Number.isFinite(a.lat) && Number.isFinite(a.lng))) continue;
+      let bestD = -1, bestKm = Infinity;
+      capped.forEach((day, di) => {
+        const km = day.length ? nearAnyKm(a, day) : 0;   // an empty day takes it outright
+        if (km < bestKm) { bestKm = km; bestD = di; }
+      });
+      if (bestD < 0) bestD = 0;
+      capped[bestD].push(a); usedIds.add(a.id);
     }
   }
 
