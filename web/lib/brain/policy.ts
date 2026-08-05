@@ -68,7 +68,10 @@ export function reachPenalty(distKm: number, metro: boolean): number {
 export const PACE_STOPS: Record<Audience, number> = { families: 5, adults: 5 };
 
 // Walking between a day's stops (minutes) — comfort band before we flag it.
-export const DAY_WALK = { ideal: 45, flag: 95 };
+// Walking band (minutes of ACTUAL walking — long legs ride the metro/car and are
+// excluded upstream). flag = ~10km at ~16.3 min/km: under that, walking is simply
+// what travellers do; only genuinely punishing foot-days get flagged.
+export const DAY_WALK = { ideal: 60, flag: 165 };
 
 // Critic dimension weights (sum ≈ 1). Tuned from editor feedback over time.
 export const WEIGHTS: Record<string, number> = {

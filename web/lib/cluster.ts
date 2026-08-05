@@ -85,19 +85,22 @@ export function dayWalkMinutes(day: Attraction[]): number {
   return sum;
 }
 
-// Leg-aware day distances for the critic. On a CAR day only short hops are walked
-// (park → walk the site cluster → drive on); long legs are drives, not "hours of
-// walking". Returns walking (min + km, walkable legs only on car days) and the
-// driven km so the critic can report each honestly.
-export function dayLegStats(day: Attraction[], car = false, walkableKm = 1.3):
-  { walkMin: number; walkKm: number; driveKm: number } {
-  let walkMin = 0, walkKm = 0, driveKm = 0;
+// Leg-aware day distances for the critic. Only short hops are WALKED — a long leg
+// rides: the car on a car day, the metro in a city (nobody walks 12km across
+// London; that's a tube ride). Returns actual walking (min + km) and the ridden
+// km so the critic reports each honestly. Walkable threshold: with a car you
+// drive anything beyond a parking-hop (~1.3km); on transit you'll walk a bit
+// further before it beats waiting for a train (~2km).
+export function dayLegStats(day: Attraction[], car = false, walkableKm?: number):
+  { walkMin: number; walkKm: number; rideKm: number } {
+  const maxWalk = walkableKm ?? (car ? 1.3 : 2.0);
+  let walkMin = 0, walkKm = 0, rideKm = 0;
   for (let i = 0; i < day.length - 1; i++) {
     const km = gapKm(day[i], day[i + 1]);
-    if (car && km > walkableKm) driveKm += km;
+    if (km > maxWalk) rideKm += km;
     else { walkKm += km; walkMin += walkBetween(day[i], day[i + 1]); }
   }
-  return { walkMin, walkKm, driveKm };
+  return { walkMin, walkKm, rideKm };
 }
 
 // Drop "same place" stops within a day — two things < ~90m apart are one visit

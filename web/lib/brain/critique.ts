@@ -55,11 +55,11 @@ export function critiqueTrip(
     let sum = 0;
     days.forEach((d, i) => {
       const car = !!ctx.dayMeta?.[i]?.car;
-      const { walkMin: w, walkKm, driveKm } = dayLegStats(d, car);
+      const { walkMin: w, walkKm, rideKm } = dayLegStats(d, car);
       // 100 at ideal, linearly down to 0 at 2×flag.
       sum += clamp(100 - Math.max(0, w - dayWalkIdeal) / (2 * dayWalkFlag - dayWalkIdeal) * 100);
       if (w > dayWalkFlag) issues.push({ dim: "walkability", severity: "warn", day: i + 1,
-        msg: `יום ${i + 1}: ${Math.round(w)} דק׳ הליכה (${walkKm.toFixed(1)} ק״מ${car && driveKm > 0 ? ` + ${driveKm.toFixed(0)} ק״מ נסיעה` : ""}) — יותר מדי` });
+        msg: `יום ${i + 1}: ${Math.round(w)} דק׳ הליכה (${walkKm.toFixed(1)} ק״מ${rideKm > 0 ? ` + ${rideKm.toFixed(0)} ק״מ ${car ? "נסיעה" : "במטרו"}` : ""}) — יותר מדי` });
     });
     dims.walkability = days.length ? Math.round(sum / days.length) : 0;
   }
@@ -139,11 +139,14 @@ export function critiqueTrip(
   //    over-penalised the former).
   {
     const dwell = R?.dwell ?? DWELL_DEFAULT;
-    // Day time = dwell + walking + DRIVING (car legs at ~45 km/h + parking), so a
-    // one-beach car day with an hour's drive isn't scored as an empty day.
+    // Day time = dwell + walking + RIDING (car ~45 km/h + parking; metro ~22 km/h
+    // door-to-door), so a one-beach car day or a cross-town metro hop isn't
+    // scored as an empty/short day.
     const times = days.map((d, i) => {
-      const { walkMin, driveKm } = dayLegStats(d, !!ctx.dayMeta?.[i]?.car);
-      return d.reduce((s, a) => s + dwellMinutes(a, dwell), 0) + walkMin + (driveKm / 45) * 60 + (driveKm > 0 ? 8 : 0);
+      const car = !!ctx.dayMeta?.[i]?.car;
+      const { walkMin, rideKm } = dayLegStats(d, car);
+      return d.reduce((s, a) => s + dwellMinutes(a, dwell), 0) + walkMin +
+        (rideKm / (car ? 45 : 22)) * 60 + (car && rideKm > 0 ? 8 : 0);
     });
     const mean = times.reduce((s, n) => s + n, 0) / Math.max(1, times.length);
     const std = Math.sqrt(times.reduce((s, n) => s + (n - mean) ** 2, 0) / Math.max(1, times.length));
