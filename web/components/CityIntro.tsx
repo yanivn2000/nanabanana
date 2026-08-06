@@ -15,7 +15,7 @@ export function CityIntro({ city, country, flag, slug, communityCount, mustSee, 
     streets ? `${streets} רחובות מומלצים` : null,
   ].filter(Boolean).join(" ו־");
   return (
-    <header className="mx-auto max-w-6xl px-5 pt-5 lg:px-8">
+    <header className="mx-auto max-w-6xl px-5 pb-5 pt-5 lg:px-8">
       <nav aria-label="פירורי לחם" className="flex items-center gap-1.5 text-[13px] text-[var(--text-2)]">
         <Link href="/" className="inline-flex items-center gap-1 hover:text-[var(--brand-ink)]">
           <ChevronRight size={13} /> בית
