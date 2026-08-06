@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useProfile, profileSummary, useTrips, MONTHS_HE, type Trip } from "@/lib/store";
+import { shareOrigin } from "@/lib/site";
 import { MapPin, Trash2, Sparkles, BedDouble, ExternalLink, Link2, Check } from "lucide-react";
 import { SuitcaseArt } from "@/components/Illustrations";
 import { CityPoster } from "@/components/CityPoster";
@@ -35,7 +36,7 @@ export default function TripsPage() {
   const shown = onlyShared ? trips.filter((t) => t.shared) : trips;
 
   const copyLink = async (slug: string) => {
-    const url = `${typeof window !== "undefined" ? window.location.origin : ""}/t/${slug}`;
+    const url = `${shareOrigin()}/t/${slug}`;
     try { await navigator.clipboard.writeText(url); setCopied(slug); setTimeout(() => setCopied((c) => (c === slug ? null : c)), 1600); } catch { /* clipboard blocked */ }
   };
 

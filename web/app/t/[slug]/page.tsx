@@ -56,22 +56,33 @@ export async function generateMetadata({
   const trip = await getSharedTrip(slug);
   if (!trip) return { title: "Yalle" };
   const stops = trip.itinerary.days.reduce((n, d) => n + d.stops.length, 0);
+  const days = trip.itinerary.days.length;
+  const city = trip.city_he || trip.city;
+  // The long-tail query is "טיול לאמסטרדם ללא ילדים 4 ימים" — the days and the
+  // audience ARE in the row, and they were reaching only the description. Every
+  // Amsterdam trip therefore shared one title and competed with itself and with
+  // the city page. The title says who and how long now.
+  const audience = trip.composition?.includes("ילד") ? "עם ילדים"
+    : trip.composition ? "לזוגות" : null;
+  const headline = city
+    ? [`טיול ל${city}`, `${days} ימים`, audience].filter(Boolean).join(" · ")
+    : trip.title;
   const desc = [
-    `${trip.itinerary.days.length} ימים`,
+    `מסלול ${days} ימים ב${city ?? ""}`.trim(),
     `${stops} עצירות`,
     trip.composition ?? undefined,
-    "תוכנית יום-אחר-יום עם מפה",
+    "יום־אחר־יום עם שעות, מפה והפסקות אוכל. אפשר לקחת אותו ולשנות לעצמכם, בחינם.",
   ].filter(Boolean).join(" · ");
   return {
     alternates: { canonical: canonical(`/t/${slug}`) },
-    title: `${trip.title} · Yalle`,
+    title: `${headline} | Yalle`,
     description: desc,
     openGraph: {
-      title: trip.title,
+      title: headline,
       description: desc,
       type: "article",
       locale: "he_IL",
     },
-    twitter: { card: "summary_large_image", title: trip.title, description: desc },
+    twitter: { card: "summary_large_image", title: headline, description: desc },
   };
 }

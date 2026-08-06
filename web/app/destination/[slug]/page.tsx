@@ -118,6 +118,7 @@ export default async function DestinationPage({
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />
       <CityIntro city={city} country={dest.country_he || dest.country} flag={countryFlag(dest.country)}
+        slug={dest.slug} communityCount={communityCount}
         mustSee={mustSeeList.length} total={attractions.length}
         areas={areas.length} streets={streets.length} />
       <DestinationView

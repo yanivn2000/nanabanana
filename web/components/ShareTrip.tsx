@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Share2, Copy, Check, Loader2, X, Trash2, MessageCircle, Send, LogIn, ExternalLink } from "lucide-react";
 import type { Trip, FamilyProfile } from "@/lib/store";
 import { useSessionUser } from "@/lib/auth";
+import { shareOrigin } from "@/lib/site";
 
 // lucide dropped its brand glyphs — inline the Facebook "f"
 function Facebook({ size = 18, className }: { size?: number; className?: string }) {
@@ -34,7 +35,7 @@ export function ShareTrip({ trip, profile, onShared }: {
   const registered = !!user && (user as { is_anonymous?: boolean }).is_anonymous !== true;
 
   if (!trip.itinerary) return null;
-  const url = trip.shared ? `${typeof window !== "undefined" ? window.location.origin : ""}/t/${trip.shared.slug}` : null;
+  const url = trip.shared ? `${shareOrigin()}/t/${trip.shared.slug}` : null;
   const shareText = `${trip.title} — תוכנית יום-אחר-יום עם מפה:\n${url}`;
 
   function composition(): string {
