@@ -118,6 +118,10 @@ const stopWorth = (a: Attraction) =>
 export function dropSamePlace(day: Attraction[], minMeters = 90): Attraction[] {
   const kept: Attraction[] = [];
   for (const a of day) {
+    // A curated sub-attraction is never an accidental duplicate: the Parthenon and
+    // the Erechtheion sit 40m apart and are both the point of going up. Only the
+    // proximity heuristic is being skipped here — the editor already decided.
+    if (a.parent_id != null) { kept.push(a); continue; }
     if (!Number.isFinite(a.lat) || !Number.isFinite(a.lng)) { kept.push(a); continue; }
     const i = kept.findIndex((k) => Number.isFinite(k.lat) && Number.isFinite(k.lng) &&
       haversineKm(a.lat as number, a.lng as number, k.lat as number, k.lng as number) * 1000 < minMeters);
@@ -140,8 +144,10 @@ const normName = (a: Attraction) => (a.name_he || a.name_en || "")
 export function dedupeAcrossDays(days: Attraction[][], minMeters = 120): Attraction[][] {
   const kept: { a: Attraction; d: number; i: number; n: string }[] = [];
   const out: Attraction[][] = days.map(() => []);
+  // siblings of one complex are deliberate, never cross-day duplicates
   days.forEach((day, di) => {
     for (const a of day) {
+      if (a.parent_id != null) { out[di].push(a); continue; }   // curated sibling, not a dup
       if (!Number.isFinite(a.lat) || !Number.isFinite(a.lng)) { out[di].push(a); continue; }
       const nm = normName(a);
       const hit = kept.find((k) => {

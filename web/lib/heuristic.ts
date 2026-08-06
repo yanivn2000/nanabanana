@@ -293,8 +293,40 @@ export function buildHeuristicItinerary(
   // caller passes the mode's budget via opts.dayMinutes; perDay stays only as a
   // runaway guard so time is what actually binds.
   const dayMinutes = opts?.dayMinutes ?? perDay * 84;
-  const { days: clustered } = clusterIntoDays(pool, days, { walkPref, dayMinutes, perDay, seedGroups,
+  // PARENT + CHILDREN travel as ONE stop through the day-builder. A sub-attraction
+  // (the Sistine inside the Vatican, the arena inside the Colosseum) is not a
+  // separate visit you can schedule on another day — it is what you see once you
+  // are inside. Collapsing them here is what finally fixes the split: the clusterer
+  // budgets the whole visit as one, so the day can never be cut through the middle
+  // of it. They are expanded back, in place, right after clustering.
+  const inPool = new Set(pool.map((a) => a.id));
+  const kidsOf = new Map<number, Attraction[]>();
+  // Only collapse when the PARENT itself made the pool — otherwise its children
+  // would vanish from the build entirely. A parent whose child is a must-see is
+  // promoted in the data, so this is a safety net, not the normal path.
+  for (const a of pool) if (a.parent_id != null && inPool.has(a.parent_id)) {
+    const arr = kidsOf.get(a.parent_id); arr ? arr.push(a) : kidsOf.set(a.parent_id, [a]);
+  }
+  const isChild = (a: Attraction) => a.parent_id != null && kidsOf.has(a.parent_id);
+  const clusterPool = kidsOf.size
+    ? pool.filter((a) => !isChild(a)).map((a) => {
+        const kids = kidsOf.get(a.id);
+        if (!kids?.length) return a;
+        // the parent carries the whole visit's dwell so the day budget stays honest
+        const total = (a.passby_minutes ?? dwellMinutes(a, opts?.dwell ?? DWELL_DEFAULT))
+          + kids.reduce((s, k) => s + dwellMinutes(k, opts?.dwell ?? DWELL_DEFAULT), 0);
+        return { ...a, visit_minutes: total };
+      })
+    : pool;
+
+  const { days: clustered0 } = clusterIntoDays(clusterPool, days, { walkPref, dayMinutes, perDay, seedGroups,
     freeMax: opts?.freeGemMaxPerDay, freeDetour: opts?.freeGemDetourMin, dwell, center: opts?.center });
+  const clustered = kidsOf.size
+    ? clustered0.map((day) => day.flatMap((a) => {
+        const kids = kidsOf.get(a.id);
+        return kids?.length ? [pool.find((p) => p.id === a.id) ?? a, ...kids] : [a];
+      }))
+    : clustered0;
 
   // Per-day techniques: drop same-place dups + cap types (e.g. ≤2 museums/day), then
   // BACKFILL each thinned day back toward the pace from nearby unused worthy stops —
@@ -367,7 +399,7 @@ export function buildHeuristicItinerary(
     const fill = (maxKm: number) => {
       while (picks.length < perDay && estMinutes() < dayMinutes) {
         const cand = pool
-          .filter((a) => !usedIds.has(a.id))
+          .filter((a) => !usedIds.has(a.id) && !isChild(a))
           .map((a) => ({ a, d: nearAnyKm(a, picks) }))
           .filter((x) => x.d <= maxKm && underCap(x.a) && !isDup(x.a, picks))
           .sort((x, y) => x.d - y.d)[0];
@@ -421,6 +453,30 @@ export function buildHeuristicItinerary(
       });
       if (bestD < 0) bestD = 0;
       capped[bestD].push(a); usedIds.add(a.id);
+    }
+  }
+
+  // FINAL RECONCILIATION — a child ends the build on its parent's day, always.
+  // Every pass between here and the collapse (the type cap, the cohesion split, the
+  // backfill) can still evict a stop on its own merits, and a sub-attraction evicted
+  // alone is nonsense: you cannot skip the Temple of Athena Nike but climb the
+  // Acropolis, or bank the Pergamon while visiting Museum Island. No geometry here —
+  // just "put it back where its parent is", which is what the editor declared.
+  if (kidsOf.size) {
+    const dayOfParent = new Map<number, number>();
+    capped.forEach((day, di) => day.forEach((a) => { if (kidsOf.has(a.id)) dayOfParent.set(a.id, di); }));
+    if (dayOfParent.size) {
+      const placed = new Set(capped.flat().map((a) => a.id));
+      for (const [pid, di] of dayOfParent) {
+        for (const kid of kidsOf.get(pid) ?? []) {
+          if (placed.has(kid.id)) {
+            const at = capped.findIndex((d) => d.some((x) => x.id === kid.id));
+            if (at === di || at < 0) continue;
+            capped[at] = capped[at].filter((x) => x.id !== kid.id);
+          }
+          capped[di].push(kid); placed.add(kid.id); usedIds.add(kid.id);
+        }
+      }
     }
   }
 

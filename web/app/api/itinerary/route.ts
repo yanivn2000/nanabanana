@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds, approvedStreetsForCity } from "@/lib/db";
+import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, childrenOfParents, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds, approvedStreetsForCity } from "@/lib/db";
 import { annotateDaysWithAreas } from "@/lib/cluster";
 import type { Attraction, Destination } from "@/lib/db";
 import { refOf, synthId, isRealAttraction } from "@/lib/place";
@@ -396,6 +396,14 @@ export async function POST(req: NextRequest) {
     for (const s of allStreets) if (s.area_id != null && chosenAreaIds.includes(s.area_id) && !have.has(s.id)) { have.add(s.id); add.push(s); }
     streetRows.push(...add);
   }
+  // A parent in the pool drags its sub-attractions in, whatever their own rank —
+  // otherwise half a complex is simply missing from the trip.
+  {
+    const parentIds = attractions.filter((a) => a.parent_id == null).map((a) => a.id);
+    const have = new Set(attractions.map((a) => a.id));
+    const kids = (await childrenOfParents(parentIds)).filter((k) => !have.has(k.id));
+    if (kids.length) attractions.push(...kids);
+  }
   const streetStops = streetRows.map(streetAsStop);
   // Interest-governed reservation (single-city, no explicit selection): guarantee
   // the city's key must-sees (~1 hero/day) AND ≥K stops per chosen interest survive
@@ -498,6 +506,16 @@ export async function POST(req: NextRequest) {
     reservedIds = new Set(frontIds);
   }
   const buildList = [...streetStops, ...(sel ? [...sel.anchors, ...sel.fillers] : orderedFill)];
+  // Sub-attractions ride in on their PARENT's rank, never their own. Adding them to
+  // the candidate pool isn't enough — buildList is the ranked cut, and the Sistine
+  // or the Pergamon would be trimmed out from under the complex they belong to.
+  {
+    const inList = new Set(buildList.map((a) => a.id));
+    for (const a of attractions) {
+      if (a.parent_id == null || inList.has(a.id) || !inList.has(a.parent_id)) continue;
+      buildList.push(a); inList.add(a.id);
+    }
+  }
   // Only tag tiers when there's a real anchor set — otherwise every stop would
   // read "אם יש זמן" (e.g. a click-through selection with no picks / no must-sees).
   const anchorIds = sel && sel.anchors.length ? sel.anchorIds : undefined;

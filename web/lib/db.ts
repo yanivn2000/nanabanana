@@ -78,6 +78,11 @@ export type Attraction = {
   // Explicit dwell override in minutes. DB attractions never set this; synthetic
   // stops (a recommended street) carry their own curated dwell here.
   visit_minutes?: number | null;
+  // Visit-mode layer: a sub-attraction lives INSIDE its parent (the Sistine inside
+  // the Vatican, the arena inside the Colosseum) and travels with it; passby_minutes
+  // is what the parent costs when you only look from outside.
+  parent_id?: number | null;
+  passby_minutes?: number | null;
   // A LINEAR stop (a recommended street) carries its two endpoints, so the route
   // can arrive at the near end and leave from the far one — the walk along the
   // street itself is dwell, not travel.
@@ -114,7 +119,8 @@ export type AudienceBonus = { families?: number; couples?: number; friends?: num
 const ATTR_COLS = `id, name_he, name_en, lat, lng, category, subcategory,
   indoor_outdoor, family_score, tips_he, website, duration_minutes,
   image_url, tagline_he, best_season, best_time_he, time_of_day, dress_he, cost_level, must_see,
-  description_he, taste_tags, audience_fit, admin_bonus, info_sources`;
+  description_he, taste_tags, audience_fit, admin_bonus, info_sources,
+  parent_id, passby_minutes`;
 
 export type Destination = {
   id: number;
@@ -269,6 +275,18 @@ export async function attractionsByIds(ids: number[]): Promise<Attraction[]> {
   if (!ids.length) return [];
   return query<Attraction>(
     `SELECT ${ATTR_COLS_EFF} FROM attractions a ${EDITOR_JOIN} WHERE a.id = ANY($1)`, [ids]);
+}
+
+// Sub-attractions of the given parents. A parent that made the build pool must
+// bring its children with it — the Sistine is not a separate candidate competing
+// on rank, it is what "the Vatican" contains, and it must never be ranked out
+// from under its parent.
+export async function childrenOfParents(parentIds: number[]): Promise<Attraction[]> {
+  if (!parentIds.length) return [];
+  return query<Attraction>(
+    `SELECT ${ATTR_COLS_EFF} FROM attractions a ${EDITOR_JOIN}
+      WHERE a.parent_id = ANY($1) AND a.quality_keep IS DISTINCT FROM 0
+        AND (a.is_duplicate IS NULL OR a.is_duplicate = 0)`, [parentIds]);
 }
 
 export async function attractionsForMap(destinationId: number, limit = 200): Promise<Attraction[]> {
