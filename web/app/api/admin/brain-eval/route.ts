@@ -69,7 +69,8 @@ export async function POST(req: NextRequest) {
         seed: id, varietyJitter: rules.varietyJitter,
         ...(!isFamily && eveningSpots.length ? { eveningSpots, eveningStartMin: rules.eveningStart } : {}),
         ...(!isFamily && nightIcons.length ? { nightIcons, nightIconMax: rules.nightPassbyMax,
-          nightIconKm: rules.nightPassbyKm, nightIconMinutes: rules.nightPassbyMinutes } : {}) };
+          nightIconKm: rules.nightPassbyKm, nightIconMinutes: rules.nightPassbyMinutes } : {}) ,
+        eveningMaxStops: rules.eveningMaxStops, eveningHardEnd: rules.eveningHardEnd };
       // Build via the REAL consumer engine so the eval reflects exactly what a
       // traveller gets (dwell model, dedup, car day-trips) — one source of truth.
       // The CANONICAL trip mirrors the consumer's best-of-N policy deterministically:
@@ -112,7 +113,31 @@ export async function POST(req: NextRequest) {
       const { it: itinerary, rich: richDays, meta: dayMeta, crit } = variants[ci];
       const seedScores: number[] = seedsN > 1 ? variants.map((v) => v.crit.score) : [];
       annotateDaysWithAreas(itinerary.days, areas, center);
-      const quality: Quality | undefined = b.quality ? qualityCheck(richDays, audience, rules, { cityMustCount,
+      // Measure the evening off the built clock: how many stops start after
+      // dinner, when the last one starts, what is shut at that hour, and whether
+      // one evening spot carries too many nights.
+      const startMin = (tm?: string) => {
+        if (!tm || tm.length < 4) return null;
+        const [h, m] = tm.split(":").map(Number);
+        return Number.isFinite(h) ? (h || 0) * 60 + (m || 0) : null;
+      };
+      const real = (d: (typeof itinerary.days)[number]) => d.stops.filter((s) => s.kind !== "food" && s.kind !== "rest");
+      const evNames = new Map<string, number>();
+      for (const d of itinerary.days)
+        for (const s of real(d)) {
+          const m = startMin(s.time);
+          if (m != null && m >= 19 * 60 + 30) evNames.set(s.name, (evNames.get(s.name) ?? 0) + 1);
+        }
+      const evening = {
+        afterDinner: itinerary.days.map((d) => real(d).filter((s) => (startMin(s.time) ?? 0) >= 19 * 60 + 30).length),
+        lastStart: itinerary.days.map((d) => {
+          const ms = real(d).map((s) => startMin(s.time)).filter((m): m is number => m != null);
+          return ms.length ? Math.max(...ms) : null;
+        }),
+        lateWrong: dayMeta.map((m) => m.lateWrong ?? []),
+        repeats: [...evNames].map(([name, n]) => ({ name, n })),
+      };
+      const quality: Quality | undefined = b.quality ? qualityCheck(richDays, audience, rules, { cityMustCount, evening,
         ...(eveningSpots.length ? { eveningEnds: dayMeta.map((m) => m.eveningEnd) } : {}) }) : undefined;
       builtIds[audience] = new Set(richDays.flat().map((a) => a.id));
       report.push({

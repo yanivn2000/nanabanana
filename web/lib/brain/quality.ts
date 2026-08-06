@@ -29,7 +29,10 @@ export function qualityCheck(
   // eveningEnds[i]: day i of the BUILT itinerary ends at an evening street/square
   // (computed by the caller from the full stop list — richDays can't see synthetic
   // street stops). Present only when the city has a curated evening layer.
-  ctx: { cityMustCount: number; eveningEnds?: boolean[] }
+  // The evening is checked from the BUILT itinerary (richDays has no synthetic
+  // street stops and no clock), so the caller measures it and passes it in.
+  ctx: { cityMustCount: number; eveningEnds?: boolean[];
+    evening?: { afterDinner: number[]; lastStart: (number | null)[]; lateWrong: string[][]; repeats: { name: string; n: number }[] } }
 ): Quality {
   const conformance: QualityFinding[] = [];
   const fun: string[] = [];
@@ -60,6 +63,33 @@ export function qualityCheck(
       ? { ok: false, msg: `ימים בלי סיום-ערב (🌙): ${missing.map((n) => `יום ${n}`).join(", ")}` }
       : { ok: true, msg: "כל יום מסתיים במקום-ערב (🌙)" });
   }
+  // ---- the evening as its own lens ------------------------------------------
+  // The owner reads this section to answer one question: would I be happy with
+  // how these evenings turned out? Everything here is measured on the clock of
+  // the built trip, not on the pool.
+  const ev = ctx.evening;
+  if (ev) {
+    const hardEndHe = `${String(Math.floor(rules.eveningHardEnd / 60)).padStart(2, "0")}:${String(rules.eveningHardEnd % 60).padStart(2, "0")}`;
+    const over = ev.afterDinner.map((n, i) => ({ n, i })).filter((x) => x.n > rules.eveningMaxStops);
+    conformance.push(over.length
+      ? { ok: false, msg: `יותר מ-${rules.eveningMaxStops} עצירות אחרי ארוחת הערב: ${over.map((x) => `יום ${x.i + 1} (${x.n})`).join(", ")}` }
+      : { ok: true, msg: `עד ${rules.eveningMaxStops} עצירות אחרי ארוחת הערב` });
+    const late = ev.lastStart.map((m, i) => ({ m, i })).filter((x) => x.m != null && x.m >= rules.eveningHardEnd);
+    conformance.push(late.length
+      ? { ok: false, msg: `ימים שנמשכים אחרי ${hardEndHe}: ${late.map((x) => `יום ${x.i + 1} (${String(Math.floor((x.m as number) / 60)).padStart(2, "0")}:${String((x.m as number) % 60).padStart(2, "0")})`).join(", ")}` }
+      : { ok: true, msg: `אף יום לא נמשך אחרי ${hardEndHe}` });
+    const shut = ev.lateWrong.map((names, i) => ({ names, i })).filter((x) => x.names.length);
+    conformance.push(shut.length
+      ? { ok: false, msg: `מקומות סגורים בשעה שנקבעה להם: ${shut.map((x) => `יום ${x.i + 1} — ${x.names.join(", ")}`).join(" · ")}` }
+      : { ok: true, msg: "אין מקום סגור בשעות הערב" });
+    const rep = ev.repeats.filter((r) => r.n > 2);
+    if (rep.length) conformance.push({ ok: false, msg: `מקום-ערב שחוזר יותר מפעמיים: ${rep.map((r) => `${r.name} (${r.n})`).join(", ")}` });
+    // fun lens: an evening that is only a walk-past is thin
+    const noEvening = ev.afterDinner.filter((n) => n === 0).length;
+    if (audience !== "families" && noEvening && ctx.eveningEnds)
+      fun.push(`ב-${noEvening} ${noEvening === 1 ? "יום" : "ימים"} אין שום דבר אחרי ארוחת הערב — הערב נגמר עם הקינוח`);
+  }
+
   const weakFit = flat.filter((a) => audienceFitScore(a.audience_fit, audience) < rules.minAudienceFit).length;
   if (flat.length && weakFit > flat.length / 2)
     conformance.push({ ok: false, msg: `רוב העצירות (${weakFit}/${flat.length}) בהתאמה נמוכה ל${audience === "families" ? "משפחות" : "מבוגרים"}` });

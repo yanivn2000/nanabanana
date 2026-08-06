@@ -101,6 +101,16 @@ export const RULE_KINDS: Record<string, { title: string; help: string; he: (p: R
     params: [{ key: "start", type: "time", label: "לא לפני" }],
     applies: "builder — after-dinner evening slot (couples)",
   },
+  evening_cap: {
+    title: "כמה אפשר אחרי ארוחת הערב",
+    help: "הערב לא נמתח בלי סוף. אחרי ארוחת הערב נכנסות לכל היותר N עצירות — בדרך כלל רחוב-ערב אחד, ולפניו אולי אייקון מואר ל'רק עוברים' — והיום לא נמשך אחרי השעה שנקבעה. מי שרוצה עוד ערב מוסיף אותו בעצמו בדף הטיול; המנוע לא ישלח אתכם אחרי חצות.",
+    he: (p) => `אחרי ארוחת ערב: עד ${p.max || 2} עצירות, והיום נגמר עד ${p.end || "23:30"}`,
+    params: [
+      { key: "max", type: "number", label: "מקסימום עצירות אחרי ארוחת ערב" },
+      { key: "end", type: "time", label: "היום לא נמשך אחרי" },
+    ],
+    applies: "builder + trip page — evening length",
+  },
   night_passby: {
     title: "אייקון מואר — רק עוברים בלילה",
     help: "יש מקומות שסגורים בערב אבל מרהיבים דווקא אז: הקולוסיאום מואר, גשר, כיפה, שער ניצחון. במקום להשמיט אותם מהערב, היום יכול להסתיים ב'רק עוברים' — עצירת צילום קצרה מבחוץ, בלי כניסה. נכנס רק כשהיום נגמר ממש לידו (ורחוב-הערב הקרוב רחוק יותר), ולכל היותר פעם אחת בטיול כדי שיישאר מיוחד. פועל על מקומות שסומנו כ'אייקון לילה' בטבלת האטרקציות.",
@@ -241,7 +251,7 @@ export const GROUP_ORDER = ["קהל וסינון", "תחושת-יום", "מבנ�
 export const KIND_GROUP: Record<string, (typeof GROUP_ORDER)[number]> = {
   pace_stops: "קהל וסינון", max_type_per_day: "קהל וסינון", active_anchor_required: "קהל וסינון",
   day_ender_last: "קהל וסינון", season_filter: "קהל וסינון", avoid_category: "קהל וסינון",
-  day_window: "תחושת-יום", lunch: "תחושת-יום", visit_minutes: "תחושת-יום", evening_slot: "תחושת-יום", night_passby: "תחושת-יום",
+  day_window: "תחושת-יום", lunch: "תחושת-יום", visit_minutes: "תחושת-יום", evening_slot: "תחושת-יום", night_passby: "תחושת-יום", evening_cap: "תחושת-יום",
   daytrip_threshold: "מבנה-הטיול", daytrip_budget: "מבנה-הטיול", daytrip_max_stops: "מבנה-הטיול",
   free_gems: "מבנה-הטיול", same_place_km: "מבנה-הטיול", variety_jitter: "מבנה-הטיול", build_candidates: "מבנה-הטיול",
   quality_bar: "כיול-הביקורת", dimension_weight: "כיול-הביקורת", min_must_see: "כיול-הביקורת",
@@ -271,6 +281,9 @@ export type BrainRules = {
   eveningStart: number;   // evening_slot — earliest clock for the couples evening slot
   // night_passby — a floodlit landmark that is SHUT but worth a photo stop.
   nightPassbyMax: number; nightPassbyKm: number; nightPassbyMinutes: number;
+  // evening_cap — how much evening the engine will plan on its own.
+  eveningMaxStops: number;   // stops starting at/after dinner
+  eveningHardEnd: number;    // minutes; nothing starts at/after this
   dwell: DwellCfg;   // visit_minutes technique — dwell per stop bucket
   // Tier-2 structure (from daytrip_* / free_gems / same_place_km).
   daytripThresholdKm: number;
@@ -308,6 +321,7 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
     avoid: { families: [...AUDIENCE_PREFS.families.avoid], adults: [...AUDIENCE_PREFS.adults.avoid] },
     dayStartMin: 9 * 60 + 30, lunchAfterMin: 12 * 60, lunchMinutes: 60, eveningStart: 21 * 60, dwell: { ...DWELL_DEFAULT },
     nightPassbyMax: 1, nightPassbyKm: 0.8, nightPassbyMinutes: 20,
+    eveningMaxStops: 2, eveningHardEnd: 23 * 60 + 30,
     daytripThresholdKm: 18, daytripPerDays: 2, daytripMaxStops: 5, samePlaceMeters: 90, varietyJitter: 5, buildCandidates: 5, candidateTolerance: 2, freeGemMaxPerDay: 3, freeGemDetourMin: 4,
     weights: { ...WEIGHTS }, qualityBar: QUALITY_BAR, minMustSee: THRESHOLDS.minMustSeePerTrip,
     minAudienceFit: THRESHOLDS.minAudienceFit, maxSameTypeRun: THRESHOLDS.maxSameTypeRun,
@@ -339,6 +353,10 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
       }
       case "day_window": rules.dayStartMin = timeToMin(q.start, rules.dayStartMin); break;
       case "evening_slot": rules.eveningStart = timeToMin(q.start, rules.eveningStart); break;
+      case "evening_cap":
+        if (q.max != null) rules.eveningMaxStops = Number(q.max);
+        rules.eveningHardEnd = timeToMin(q.end, rules.eveningHardEnd);
+        break;
       case "night_passby":
         if (q.max != null) rules.nightPassbyMax = Number(q.max);
         if (q.km != null) rules.nightPassbyKm = Number(q.km);

@@ -227,11 +227,34 @@ function retimeStops(stops: Stop[], passby?: Set<number>): Stop[] {
 // night. Nothing is lost: the caller puts every evicted stop back in the bank, so
 // it is one drag away from a day with room. Runs to a fixed point, because
 // removing the 21:30 stop can pull the 22:00 one back into daylight.
-function evictLateShut(stops: Stop[], passby?: Set<number>): { stops: Stop[]; evicted: Stop[] } {
+function evictLateShut(
+  stops: Stop[], passby?: Set<number>, cap?: { maxStops: number; hardEndMin: number },
+): { stops: Stop[]; evicted: Stop[] } {
+  const maxStops = cap?.maxStops ?? 2;
+  const hardEnd = cap?.hardEndMin ?? 23 * 60 + 30;
+  const startMin = (s: Stop) => {
+    if (!s.time) return -1;
+    const [h, m] = s.time.split(":").map(Number);
+    return Number.isFinite(h) ? (h || 0) * 60 + (m || 0) : -1;
+  };
+  // Which stop must go, if any — worst first. Order matters: a shut place is
+  // wrong at any hour past closing, an over-long evening is only wrong at the
+  // tail, so the LAST evening stop is the one that leaves.
+  const offender = (day: Stop[]): number => {
+    const shut = day.findIndex((s) => wrongAtNight(s));
+    if (shut !== -1) return shut;
+    const past = day.findIndex((s) => s.kind !== "food" && s.kind !== "rest" && startMin(s) >= hardEnd);
+    if (past !== -1) return past;
+    // evening_cap: at most maxStops starting at/after dinner. The traveller may
+    // add a third by hand; the engine and its re-times may not.
+    const evening = day.map((s, i) => ({ s, i }))
+      .filter((x) => x.s.kind !== "food" && x.s.kind !== "rest" && startMin(x.s) >= DINNER_AT_MIN);
+    return evening.length > maxStops ? evening[evening.length - 1].i : -1;
+  };
   const evicted: Stop[] = [];
   let cur = stops;
-  for (let pass = 0; pass < 6; pass++) {
-    const i = cur.findIndex((s) => wrongAtNight(s));
+  for (let pass = 0; pass < 8; pass++) {
+    const i = offender(cur);
     if (i === -1) break;
     evicted.push(cur[i]);
     cur = retimeStops(cur.filter((_, j) => j !== i), passby);
@@ -733,7 +756,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
     // the bank — see docs/logic/repeat-visits.md's sibling rule in traits.ts.
     const evicted: Stop[] = [];
     it.days.forEach((d, i) => {
-      const r = evictLateShut(d.stops, passbySet);
+      const r = evictLateShut(d.stops, passbySet, itinerary.eveningCap);
       it.days[i].stops = r.stops;
       evicted.push(...r.evicted);
     });

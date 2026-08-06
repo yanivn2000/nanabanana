@@ -121,6 +121,10 @@ export type Itinerary = {
   title: string;
   subtitle: string;
   days: Day[];
+  // The evening_cap technique's values, carried so the trip page enforces exactly
+  // what the engine did instead of guessing. Absent on trips saved before it —
+  // the page falls back to the same defaults.
+  eveningCap?: { maxStops: number; hardEndMin: number };
 };
 
 export type FamilyProfile = {

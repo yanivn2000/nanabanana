@@ -58,6 +58,9 @@ export type BuildOpts = {
   // at the end of a day, and only when the day ends right beside one.
   nightIcons?: Attraction[];
   nightIconMax?: number; nightIconKm?: number; nightIconMinutes?: number;
+  // evening_cap technique — how much evening the engine plans by itself.
+  eveningMaxStops?: number;   // stops starting at/after DINNER_AT_MIN
+  eveningHardEnd?: number;    // minutes; nothing starts at/after this
   eveningStartMin?: number;   // evening_slot technique — earliest evening-slot clock
   // Build variety (variety_jitter technique): same parameters should not produce
   // the SAME trip every time. seed drives a deterministic PRNG (same seed → same
@@ -150,7 +153,8 @@ const KIND_FROM_CAT: Record<string, StopKind> = {
 const DAY_START_MIN = 9 * 60 + 30;   // 09:30
 const LUNCH_AFTER_MIN = 12 * 60;     // drop the meal break at the first stop past 12:00
 const EVENING_AT_MIN = 21 * 60;
-const LATE_LIMIT_MIN = 20 * 60 + 30;   // past here only evening-appropriate stops      // evening street/square slot — after the 19:30+90 dinner
+const LATE_LIMIT_MIN = 20 * 60 + 30;   // past here only evening-appropriate stops
+const DINNER_AT_MIN = 19 * 60 + 30;    // "after dinner" starts here (matches the trip page)      // evening street/square slot — after the 19:30+90 dinner
 const LUNCH_MIN = 60;
 const fmtClock = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 // Time between stops — walk vs transit, shared with the editor via geo.travelMinutes.
@@ -516,6 +520,10 @@ export function buildHeuristicItinerary(
     const lunchLen = opts?.lunchMinutes ?? LUNCH_MIN;
     let clock = round30(startMin);
     let lunchDone = false;
+    // evening_cap: counted per DAY, not per trip.
+    const evMaxStops = opts?.eveningMaxStops ?? 2;
+    const evHardEnd = opts?.eveningHardEnd ?? 23 * 60 + 30;
+    let evCount = 0;
     const ends = resolveEnds(picks);
     picks.forEach((a, i) => {
       if (!lunchDone && i > 0 && clock >= lunchAfter) {
@@ -530,6 +538,15 @@ export function buildHeuristicItinerary(
       // option, it is a mistake — the day simply ends here and the rest of the
       // picks fall to the bank, where the traveller can move them to another day.
       if (arr >= LATE_LIMIT_MIN && isWrongAfterDark(a)) return;
+      // The evening does not stretch: at most eveningMaxStops after dinner, and
+      // nothing starts after the hard end. Anyone who wants a third late stop adds
+      // it themselves on the trip page — the engine will not send a family out
+      // past midnight (evening_cap technique).
+      if (arr >= evHardEnd) return;
+      if (arr >= DINNER_AT_MIN) {
+        if (evCount >= evMaxStops) return;
+        evCount++;
+      }
       stops.push({
         name: a.name_he || a.name_en,
         kind: kindOf(a),
@@ -564,9 +581,10 @@ export function buildHeuristicItinerary(
         .filter((v) => !usedNight.has(v.id) && !isWrongAfterDark(v))
         .map((v) => ({ v, km: haversineKm(last.lat as number, last.lng as number, v.lat as number, v.lng as number) }))
         .sort((x, y) => x.km - y.km)[0];
-      if (cand) {
+      if (cand && evCount < evMaxStops) {
         usedNight.add(cand.v.id);
         nightPlaced = true;
+        evCount++;
         const v = cand.v;
         const nightClock = Math.max(round30(clock) + 60, 20 * 60 + 30);   // after the day, ≥ 20:30
         stops.push({
@@ -612,7 +630,7 @@ export function buildHeuristicItinerary(
       // A day that somehow still overran past ~22:00 gets NO evening slot (a 01:30
       // stop is nonsense) — the Brain's eveningEnd check then flags that day, which
       // is the right signal: fix the day, don't decorate it.
-      if (iconCand && round30(clock) + 60 + iconMinutes <= 22 * 60 + 30) {
+      if (iconCand && evCount < evMaxStops && round30(clock) + 60 + iconMinutes <= 22 * 60 + 30) {
         usedIcons.add(iconCand.v.id);
         iconsLeft -= 1;
         const v = iconCand.v;
@@ -624,10 +642,11 @@ export function buildHeuristicItinerary(
           id: v.id, lat: v.lat, lng: v.lng, image: v.image_url, tagline: v.tagline_he,
           timeOfDay: "any", passby: true,
         });
+        evCount++;
         // the evening street now follows the icon, not the last daytime pick
         clock = iconClock + iconMinutes;
       }
-      if (cand && round30(clock) + (iconCand ? 15 : 60) <= 22 * 60 + 30) {
+      if (cand && evCount < evMaxStops && round30(clock) + (iconCand ? 15 : 60) <= 22 * 60 + 30) {
         evUses.set(cand.v.id, (evUses.get(cand.v.id) ?? 0) + 1);
         const v = cand.v;
         const evClock = Math.max(round30(clock) + (iconCand ? 15 : 60), opts?.eveningStartMin ?? EVENING_AT_MIN);
@@ -661,6 +680,8 @@ export function buildHeuristicItinerary(
   return {
     title: `טיול ב${city}`,
     subtitle: `${days} ימים · ${country}`,
+    // carried to the trip page so an edit there obeys the same evening cap
+    eveningCap: { maxStops: opts?.eveningMaxStops ?? 2, hardEndMin: opts?.eveningHardEnd ?? 23 * 60 + 30 },
     days: dayList,
   };
 }
@@ -714,6 +735,8 @@ export function buildCarBaseItinerary(
   return {
     title: `טיול ב${city}`,
     subtitle: `${allDays.length} ימים · ${country} · טיול ברכב שכור · ${effTripDays} ${effTripDays === 1 ? "יום מחוץ לעיר" : "ימים מחוץ לעיר"}`,
+    // carried to the trip page so an edit there obeys the same evening cap
+    eveningCap: { maxStops: opts?.eveningMaxStops ?? 2, hardEndMin: opts?.eveningHardEnd ?? 23 * 60 + 30 },
     days: allDays,
   };
 }

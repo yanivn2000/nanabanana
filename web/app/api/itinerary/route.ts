@@ -588,7 +588,8 @@ export async function POST(req: NextRequest) {
     seed, varietyJitter: rules.varietyJitter,
     ...(eveningSpots.length ? { eveningSpots, eveningStartMin: rules.eveningStart } : {}),
     ...(nightIcons.length ? { nightIcons, nightIconMax: rules.nightPassbyMax,
-      nightIconKm: rules.nightPassbyKm, nightIconMinutes: rules.nightPassbyMinutes } : {}) };
+      nightIconKm: rules.nightPassbyKm, nightIconMinutes: rules.nightPassbyMinutes } : {}) ,
+    eveningMaxStops: rules.eveningMaxStops, eveningHardEnd: rules.eveningHardEnd };
   // Best-of-N lottery-among-the-best (build_candidates technique): build N seeded
   // variants, score each with the Brain's critic, and serve a RANDOM variant from
   // those within `tolerance` points of the best — nobody gets the lottery's weak
