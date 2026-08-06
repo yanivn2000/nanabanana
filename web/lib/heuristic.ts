@@ -409,6 +409,7 @@ export function buildHeuristicItinerary(
   }
 
   const usedNight = new Set<number>();   // chosen nightlife venues already placed as an evening slot
+  const evUses = new Map<number, number>();   // evening-street uses this trip (cap: 2)
   const dayList = capped.map((pickFinal, d) => {
     // Order each day by PROXIMITY (NN + 2-opt) after cap+backfill, then ORIENT the
     // whole route so morning-leaning stops fall earlier and evening / day-ender ones
@@ -490,12 +491,17 @@ export function buildHeuristicItinerary(
     // sourced from the editor-curated evening layer, not from OSM bar rows.
     if (!nightPlaced && opts?.eveningSpots?.length && picks.length) {
       const last = picks[picks.length - 1];
-      // Prefer a spot no other day used; when the city has fewer evening spots
-      // than the trip has days, REUSE the nearest one — every no-kids day must
-      // still end at an evening place (revisiting ליידספליין twice beats ending
-      // a day with nothing).
-      const evPool = opts.eveningSpots.filter((v) => !usedIds.has(v.id));
-      const evFresh = evPool.filter((v) => !usedNight.has(v.id));
+      // Reuse policy: a spot may repeat, but at most TWICE per trip — one evening
+      // street five nights in a row reads as a bug, not a recommendation. Days left
+      // uncovered are flagged by the Brain's eveningEnd check, which is the honest
+      // signal to curate more spots. A candidate also must not sit where the day
+      // already was (≥250m from every scheduled stop) — "ending" at a street you
+      // toured at noon (הונגדה) is a repeat, not an evening plan.
+      const evPool = opts.eveningSpots.filter((v) =>
+        !usedIds.has(v.id) && (evUses.get(v.id) ?? 0) < 2 &&
+        picks.every((p) => !(Number.isFinite(p.lat) && Number.isFinite(p.lng)) ||
+          haversineKm(p.lat as number, p.lng as number, v.lat as number, v.lng as number) > 0.25));
+      const evFresh = evPool.filter((v) => !(evUses.get(v.id) ?? 0));
       const cand = (evFresh.length ? evFresh : evPool)
         .map((v) => ({ v, km: haversineKm(last.lat as number, last.lng as number, v.lat as number, v.lng as number) }))
         .sort((x, y) => x.km - y.km)[0];
@@ -503,7 +509,7 @@ export function buildHeuristicItinerary(
       // stop is nonsense) — the Brain's eveningEnd check then flags that day, which
       // is the right signal: fix the day, don't decorate it.
       if (cand && round30(clock) + 60 <= 22 * 60 + 30) {
-        usedNight.add(cand.v.id);
+        evUses.set(cand.v.id, (evUses.get(cand.v.id) ?? 0) + 1);
         const v = cand.v;
         const evClock = Math.max(round30(clock) + 60, opts?.eveningStartMin ?? EVENING_AT_MIN);
         stops.push({
