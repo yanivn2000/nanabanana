@@ -19,7 +19,7 @@ import type { Attraction } from "./db";
 import type { Day } from "./trip-types";
 import { haversineKm, walkMinutes } from "./geo";
 import { gapKm, entryExit, type LatLng } from "./access";
-import { DWELL_DEFAULT, dwellMinutes, type DwellCfg } from "./brain/traits";
+import { DWELL_DEFAULT, countVisits, dwellMinutes, type DwellCfg } from "./brain/traits";
 
 // A neighbourhood, trimmed to what day-labelling needs.
 export type AreaLite = {
@@ -292,9 +292,67 @@ function isDuplicate(x: Attraction, stops: Attraction[]): boolean {
 
 export type ClusterResult = { days: Attraction[][]; leftOut: Attraction[] };
 
+// A day of one stop is not a day. It happens in thin cities — Heraklion puts
+// Knossos on its own because it sits apart from the old town, Paphos strands the
+// water park — and the traveller reads it as the planner giving up. Fold the thin
+// day into the day whose centre is nearest, then split the combined set back in
+// two along its longest axis: the count of days is preserved (the traveller asked
+// for three), the geography holds, and neither half is left with one stop.
+//
+// Deliberately conservative: only days below MIN_STOPS move, only into a neighbour
+// close enough to be the same trip, and a day that cannot be helped is left alone
+// for the Brain to flag.
+const MIN_STOPS = 2;          // fallback:thin_day
+const MERGE_MAX_KM = 40;      // fallback:thin_day — beyond this the two days are different places
+function centroid(day: Attraction[]) {
+  const pts = day.filter((a) => Number.isFinite(a.lat) && Number.isFinite(a.lng));
+  if (!pts.length) return null;
+  return { lat: pts.reduce((s, a) => s + (a.lat as number), 0) / pts.length,
+           lng: pts.reduce((s, a) => s + (a.lng as number), 0) / pts.length };
+}
+export function rebalanceThinDays(daysIn: Attraction[][], min = MIN_STOPS, mergeKm = MERGE_MAX_KM): Attraction[][] {
+  if (daysIn.length < 2) return daysIn;
+  let days = daysIn.map((d) => d.slice());
+  for (let pass = 0; pass < daysIn.length; pass++) {
+    const thin = days.findIndex((d) => countVisits(d) < min);
+    if (thin === -1) break;
+    const c0 = centroid(days[thin]);
+    if (!c0) break;
+    // nearest OTHER day that has a stop to spare
+    let best = -1, bestKm = Infinity;
+    days.forEach((d, i) => {
+      if (i === thin || countVisits(d) <= min) return;
+      const c = centroid(d);
+      if (!c) return;
+      const km = haversineKm(c0.lat, c0.lng, c.lat, c.lng);
+      if (km < bestKm) { bestKm = km; best = i; }
+    });
+    if (best === -1 || bestKm > mergeKm) break;
+    const merged = [...days[thin], ...days[best]];
+    const [a, b] = splitInTwo(merged);
+    if (countVisits(a) < min || countVisits(b) < min) break;   // no better arrangement
+    days[thin] = orderPath(a);
+    days[best] = orderPath(b);
+  }
+  return days;
+}
+// Split a set of stops in two along its widest axis, at the median — a cheap,
+// deterministic 1-D k-means that keeps each half geographically coherent.
+function splitInTwo(stops: Attraction[]): [Attraction[], Attraction[]] {
+  const pts = stops.filter((a) => Number.isFinite(a.lat) && Number.isFinite(a.lng));
+  if (pts.length < 2) return [stops, []];
+  const lats = pts.map((a) => a.lat as number), lngs = pts.map((a) => a.lng as number);
+  const spreadLat = Math.max(...lats) - Math.min(...lats);
+  const spreadLng = Math.max(...lngs) - Math.min(...lngs);
+  const key = (a: Attraction) => (spreadLat >= spreadLng ? (a.lat as number) : (a.lng as number));
+  const sorted = pts.slice().sort((x, y) => key(x) - key(y));
+  const half = Math.round(sorted.length / 2);
+  return [sorted.slice(0, half), sorted.slice(half)];
+}
+
 export function clusterIntoDays(
   poolIn: Attraction[], days: number,
-  opts: { walkPref?: number; dayMinutes?: number; perDay?: number; seedGroups?: number[][]; freeMax?: number; freeDetour?: number; sameMeters?: number; dwell?: DwellCfg; center?: { lat: number; lng: number } } = {}
+  opts: { walkPref?: number; dayMinutes?: number; perDay?: number; seedGroups?: number[][]; freeMax?: number; freeDetour?: number; sameMeters?: number; dwell?: DwellCfg; center?: { lat: number; lng: number }; minDayStops?: number; thinMergeKm?: number } = {}
 ): ClusterResult {
   const dwell = opts.dwell ?? DWELL_DEFAULT;
   // usable = has coords, de-duped by name; input order IS the value ranking.
@@ -443,5 +501,6 @@ export function clusterIntoDays(
   // trip (name-exact dedup above misses "Louvre pyramid" vs "The Louvre's pyramid").
   const deduped = dedupeAcrossDays(ordered, opts.sameMeters ?? 120).filter((d) => d.length > 0);
   const leftOut = pool.filter((a) => !placed.has(a.id));
-  return { days: deduped, leftOut };
+  const balanced = rebalanceThinDays(deduped, opts.minDayStops, opts.thinMergeKm);
+  return { days: balanced, leftOut };
 }

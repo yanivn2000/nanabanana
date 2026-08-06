@@ -70,7 +70,8 @@ export async function POST(req: NextRequest) {
         ...(!isFamily && eveningSpots.length ? { eveningSpots, eveningStartMin: rules.eveningStart } : {}),
         ...(!isFamily && nightIcons.length ? { nightIcons, nightIconMax: rules.nightPassbyMax,
           nightIconKm: rules.nightPassbyKm, nightIconMinutes: rules.nightPassbyMinutes } : {}) ,
-        eveningMaxStops: rules.eveningMaxStops, eveningHardEnd: rules.eveningHardEnd };
+        eveningMaxStops: rules.eveningMaxStops, eveningHardEnd: rules.eveningHardEnd,
+        minDayStops: rules.minDayStops, thinMergeKm: rules.thinMergeKm };
       // Build via the REAL consumer engine so the eval reflects exactly what a
       // traveller gets (dwell model, dedup, car day-trips) — one source of truth.
       // The CANONICAL trip mirrors the consumer's best-of-N policy deterministically:

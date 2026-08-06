@@ -59,6 +59,8 @@ export type BuildOpts = {
   nightIcons?: Attraction[];
   nightIconMax?: number; nightIconKm?: number; nightIconMinutes?: number;
   // evening_cap technique — how much evening the engine plans by itself.
+  // thin_day technique — the smallest a day may be before it is rebalanced.
+  minDayStops?: number; thinMergeKm?: number;
   eveningMaxStops?: number;   // stops starting at/after DINNER_AT_MIN
   eveningHardEnd?: number;    // minutes; nothing starts at/after this
   eveningStartMin?: number;   // evening_slot technique — earliest evening-slot clock
@@ -339,7 +341,8 @@ export function buildHeuristicItinerary(
     : pool;
 
   const { days: clustered0 } = clusterIntoDays(clusterPool, days, { walkPref, dayMinutes, perDay, seedGroups,
-    freeMax: opts?.freeGemMaxPerDay, freeDetour: opts?.freeGemDetourMin, dwell, center: opts?.center });
+    freeMax: opts?.freeGemMaxPerDay, freeDetour: opts?.freeGemDetourMin, dwell, center: opts?.center,
+    minDayStops: opts?.minDayStops, thinMergeKm: opts?.thinMergeKm });
   const clustered = kidsOf.size
     ? clustered0.map((day) => day.flatMap((a) => {
         const kids = kidsOf.get(a.id);
