@@ -10,7 +10,7 @@ import { clusterIntoDays, dayWalkMinutes, dropSamePlace, orderPath } from "./clu
 import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget } from "./daytrips";
 import { durationHe, haversineKm, round30, travelMinutes as travelMinutesKm } from "./geo";
 import { entryExit, type LatLng } from "./access";
-import { DWELL_DEFAULT, dwellMinutes, isInSeason, orientDay, stopMatchesType, type DwellCfg } from "./brain/traits";
+import { DWELL_DEFAULT, dwellMinutes, isInSeason, isWrongAfterDark, orientDay, stopMatchesType, type DwellCfg } from "./brain/traits";
 
 // Resolved technique flags the builder honours (from brain_principles via
 // resolveBrainRules; all optional → defaults preserve prior behaviour).
@@ -145,7 +145,8 @@ const KIND_FROM_CAT: Record<string, StopKind> = {
 
 const DAY_START_MIN = 9 * 60 + 30;   // 09:30
 const LUNCH_AFTER_MIN = 12 * 60;     // drop the meal break at the first stop past 12:00
-const EVENING_AT_MIN = 21 * 60;      // evening street/square slot — after the 19:30+90 dinner
+const EVENING_AT_MIN = 21 * 60;
+const LATE_LIMIT_MIN = 20 * 60 + 30;   // past here only evening-appropriate stops      // evening street/square slot — after the 19:30+90 dinner
 const LUNCH_MIN = 60;
 const fmtClock = (min: number) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 // Time between stops — walk vs transit, shared with the editor via geo.travelMinutes.
@@ -512,6 +513,10 @@ export function buildHeuristicItinerary(
       }
       // snap each arrival to the nearest half hour → clean :00/:30 slots
       const arr = round30(clock);
+      // A museum, market, memorial or park scheduled past closing is not a late
+      // option, it is a mistake — the day simply ends here and the rest of the
+      // picks fall to the bank, where the traveller can move them to another day.
+      if (arr >= LATE_LIMIT_MIN && isWrongAfterDark(a)) return;
       stops.push({
         name: a.name_he || a.name_en,
         kind: kindOf(a),

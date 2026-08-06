@@ -78,6 +78,14 @@ export const isMemorial = (a: Attraction) =>
 // day (Paphos) or a toy-store morning (FAO שוורץ/נינטנדו in NY). Deliberately
 // narrow: zoos, aquariums and cable cars are NOT here — couples genuinely go.
 const KIDS_ANCHOR_RX = /water ?park|theme ?park|amusement park|luna ?park|toy ?store|fao schwarz|nintendo|kidzania|legoland|לונה פארק|פארק מים|פארק שעשועים|חנות צעצועים/i;
+// After dark a market, a museum, a memorial or an out-of-town park is shut — and
+// a memorial at 21:30 is wrong even when it is open. Evening streets, squares,
+// promenades, bridges, viewpoints and nightlife are what those hours are for.
+const NIGHT_WRONG_RX = /market|שוק|bazaar|museum|מוזיאון|gallery|גלריה|memorial|אנדרט|הנצחה|השואה|holocaust|zoo|גן ?חיות|aquarium|אקווריום|garden|בוטני|botanic|park|פארק|castle|טירה|palace|ארמון|cathedral|קתדרל|church|כנסיי|synagogue|בית הכנסת|archaeolog|ארכיאולוג|cemetery|בית הקברות|experience|חוויית/i;
+const EVENING_OK_RX = /square|כיכר|street|רחוב|promenade|טיילת|bridge|גשר|viewpoint|תצפית|nightlife|\bbar\b|בר |pub|פאב|club|מועדון|רובע|פליין|plein/i;
+export const isWrongAfterDark = (a: Attraction) =>
+  NIGHT_WRONG_RX.test(blob(a)) && !EVENING_OK_RX.test(blob(a));
+
 export const isKidsAnchor = (a: Attraction) =>
   a.subcategory === "water_park" || a.subcategory === "theme_park" || KIDS_ANCHOR_RX.test(blob(a));
 

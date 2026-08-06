@@ -5,6 +5,7 @@ import { annotateDaysWithAreas } from "@/lib/cluster";
 import { buildCarBaseItinerary, buildHeuristicItinerary, streetAsStop } from "@/lib/heuristic";
 import { qualityCheck, type Quality } from "@/lib/brain/quality";
 import { critiqueTrip, type Issue } from "@/lib/brain/critique";
+import { isWrongAfterDark } from "@/lib/brain/traits";
 import { haversineKm } from "@/lib/geo";
 import { BRAIN_VERSION, poolValue, reachPenalty, type Audience } from "@/lib/brain/policy";
 
@@ -85,7 +86,15 @@ export async function POST(req: NextRequest) {
         const meta = it.days.map((d) => {
           const real = d.stops.filter((st) => st.id != null);
           const lastId = real.length ? real[real.length - 1].id : null;
-          return { car: carBase || !!d.dayTrip, eveningEnd: lastId != null && eveningIds.has(lastId) };
+          // names of stops scheduled past 20:30 that are shut at that hour
+          const lateWrong = d.stops.filter((st) => {
+            if (!st.time || st.id == null) return false;
+            const [hh, mm] = st.time.split(":").map(Number);
+            if ((hh || 0) * 60 + (mm || 0) < 20 * 60 + 30) return false;
+            const at = byId.get(st.id);
+            return !!at && isWrongAfterDark(at);
+          }).map((st) => st.name);
+          return { car: carBase || !!d.dayTrip, eveningEnd: lastId != null && eveningIds.has(lastId), lateWrong };
         });
         const critV = critiqueTrip(rich, audience, { cityMustCount, rules, dayMeta: meta, eveningCity: eveningSpots.length > 0 });
         return { it, rich, meta, crit: critV };

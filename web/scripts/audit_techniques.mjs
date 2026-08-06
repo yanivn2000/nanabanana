@@ -14,6 +14,7 @@ const FILES = [
 const KNOWN = {
   DAY_START_MIN: "fallback:day_window", LUNCH_AFTER_MIN: "fallback:lunch", LUNCH_MIN: "fallback:lunch",
   EVENING_AT_MIN: "fallback:evening_slot",
+  LATE_LIMIT_MIN: "engine (after-dark cutoff)",
   STRETCH_M: "engine (long-street trim span)",
   SITE_COMPLEX_KM: "engine (one-visit site radius)",
   SAME_VISIT_KM: "engine (one-visit site radius)",

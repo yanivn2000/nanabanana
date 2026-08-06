@@ -90,6 +90,21 @@ const isDinnerSlot = (s: Stop) => s.kind === "food" && (s.name === "ארוחת �
 // of a look-from-outside — and the parent drops to its passby duration, so a short
 // visit actually frees time instead of deleting a must-see.
 const isParentOf = (p: Stop, s: Stop) => s.parentId != null && p.id === s.parentId;
+
+// Places that make no sense after dark — they are shut, or the visit itself only
+// works by daylight. A market at 22:00, a Holocaust memorial at 21:30 or a park
+// outside town at 23:30 are not "late options", they are mistakes. Evening streets,
+// squares, promenades, bridges and nightlife are exactly what the hours are for.
+const NIGHT_WRONG_RX = /market|שוק|bazaar|museum|מוזיאון|gallery|גלריה|memorial|אנדרט|הנצחה|השואה|holocaust|zoo|גן ?חיות|aquarium|אקווריום|garden|הגן ה|botanic|בוטני|park|פארק|נשמורת|castle|טירה|palace|ארמון|cathedral|קתדרל|church|כנסיי|synagogue|בית הכנסת|archaeolog|ארכיאולוג|cemetery|בית הקברות|experience|חוויית|tour|סיור/i;
+const EVENING_OK_RX = /square|כיכר|street|רחוב|promenade|טיילת|bridge|גשר|viewpoint|תצפית|nightlife|bar|בר |pub|פאב|club|מועדון|רובע|פליין|plein/i;
+const LATE_MIN = 20 * 60 + 30;   // past here a normal sight is closed
+function wrongAtNight(s: Stop): boolean {
+  if (!s.time || s.kind === "food" || s.kind === "rest") return false;
+  const [h, m] = s.time.split(":").map(Number);
+  if (!Number.isFinite(h) || (h || 0) * 60 + (m || 0) < LATE_MIN) return false;
+  const blob = `${s.name} ${s.sub ?? ""} ${s.cat ?? ""}`;
+  return NIGHT_WRONG_RX.test(blob) && !EVENING_OK_RX.test(blob);
+}
 // A tip must not contradict the stop's actual slot: "הגיעו מוקדם בבוקר" under a
 // 21:00 פיאצה נבונה reads as a mistake, not advice. Time-of-day advice that
 // disagrees with the scheduled hour is hidden (the place itself is fine at either
@@ -1077,7 +1092,18 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
       return best;
     };
     // 1) from the bank
-    const bankPick = near((trip?.leftOut ?? []).filter((l) => l.lat != null && l.lng != null));
+    // "More attractions" must not hand the traveller a shut museum: once the day has
+    // run past the closing hour, only evening-appropriate places are offered.
+    const dayIsLate = (day?.stops ?? []).some((s) => {
+      if (!s.time) return false; const [h, m] = s.time.split(":").map(Number);
+      return (h || 0) * 60 + (m || 0) >= LATE_MIN - 60;
+    });
+    const nightOk = <T extends { name_he?: string | null; name_en?: string; category?: string }>(x: T) => {
+      if (!dayIsLate) return true;
+      const blob = `${x.name_he ?? ""} ${x.name_en ?? ""} ${x.category ?? ""}`;
+      return !NIGHT_WRONG_RX.test(blob) || EVENING_OK_RX.test(blob);
+    };
+    const bankPick = near((trip?.leftOut ?? []).filter((l) => l.lat != null && l.lng != null && nightOk(l)));
     if (bankPick) { insertBankAt(curIdx, bestInsertIndex(day?.stops ?? [], bankPick.lat as number, bankPick.lng as number), bankPick.id); return; }
     // 2) top up from the profile-fitting pool (server)
     setBusy("revise"); setError(null);
@@ -1086,7 +1112,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
       const res = await fetch("/api/itinerary", { method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify({ mode: "suggest", city, usedIds: used, taste: deriveTaste(tripProfile), isFamily: tripProfile.kids.length > 0 }) });
       const data = await res.json().catch(() => null);
-      const cand = near((data?.suggestions ?? []) as { id: number; lat?: number | null; lng?: number | null; category: string; name_he: string | null; name_en: string; image_url?: string | null; tagline_he?: string | null; tips_he?: string | null }[]);
+      const cand = near(((data?.suggestions ?? []) as { id: number; lat?: number | null; lng?: number | null; category: string; name_he: string | null; name_en: string; image_url?: string | null; tagline_he?: string | null; tips_he?: string | null }[]).filter(nightOk));
       if (cand) insertAttraction(curIdx, bestInsertIndex(day?.stops ?? [], cand.lat as number, cand.lng as number), cand);
       else setError("לא נמצאו אטרקציות נוספות מתאימות באזור");
     } catch { setError("שגיאת רשת"); } finally { setBusy(null); }
@@ -1757,6 +1783,12 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                         </span>
                         {/* delete for real stops + user-added breaks (dinner/rest); only
                             the auto lunch break is non-deletable (it's re-added on re-time) */}
+                        {wrongAtNight(s) && (
+                          <span title="המקום כנראה סגור בשעה זו — גררו אותו מוקדם יותר ביום, או החליפו במקום-ערב"
+                            className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-[12px] font-medium text-[var(--accent-ink,#8a3d2a)]">
+                            ⚠️ כנראה סגור בשעה זו
+                          </span>
+                        )}
                         {kidCount > 0 && (
                           <button
                             onPointerDown={(e) => e.stopPropagation()}

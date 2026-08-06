@@ -8,7 +8,7 @@
 import type { Attraction } from "../db";
 import { dayLegStats } from "../cluster";
 import { AUDIENCE_PREFS, DAY_WALK, PACE_STOPS, QUALITY_BAR, THRESHOLDS, WEIGHTS, audienceFitScore, type Audience } from "./policy";
-import { DWELL_DEFAULT, dwellMinutes, isActiveAnchor, isSoftFun, stopMatchesType } from "./traits";
+import { DWELL_DEFAULT, dwellMinutes, isActiveAnchor, isSoftFun, isWrongAfterDark, stopMatchesType } from "./traits";
 import type { BrainRules } from "./rules";
 
 export type Issue = { dim: string; severity: "critical" | "warn"; msg: string; day?: number };
@@ -32,7 +32,7 @@ export function critiqueTrip(
   // dayMeta.eveningEnd: the built day's LAST real stop is an evening street/square
   // (or the traveller's own nightlife pick). eveningCity: the city has a curated
   // evening layer at all — without it the check stays silent (nothing to demand).
-  ctx: { cityMustCount: number; rules?: BrainRules; dayMeta?: { car?: boolean; eveningEnd?: boolean }[]; eveningCity?: boolean }
+  ctx: { cityMustCount: number; rules?: BrainRules; dayMeta?: { car?: boolean; eveningEnd?: boolean; lateWrong?: string[] }[]; eveningCity?: boolean }
 ): Critique {
   const prefs = AUDIENCE_PREFS[audience];
   const all = days.flat();
@@ -91,6 +91,16 @@ export function critiqueTrip(
       if (d.length <= 2 && mins < 300)
         issues.push({ dim: "thinDay", severity: "warn", day: i + 1,
           msg: `יום ${i + 1} דל — ${d.length} עצירות (~${Math.round(mins / 60)} שע׳) בלי עוגן גדול; כדאי להשלים או למזג` });
+    });
+  }
+
+  // 1d) a stop that is SHUT at the hour it was scheduled. dayMeta carries the built
+  // times because richDays (attractions) has no clock of its own.
+  if (ctx.dayMeta?.some((m) => m.lateWrong?.length)) {
+    ctx.dayMeta.forEach((m, i) => {
+      for (const nm of m.lateWrong ?? [])
+        issues.push({ dim: "hours", severity: "critical", day: i + 1,
+          msg: `יום ${i + 1}: ${nm} מתוזמן אחרי 20:30 — כנראה סגור בשעה זו` });
     });
   }
 
