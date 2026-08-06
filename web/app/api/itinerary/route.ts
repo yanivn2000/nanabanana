@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, childrenOfParents, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds, approvedStreetsForCity, nightPassbyForCity } from "@/lib/db";
 import { annotateDaysWithAreas } from "@/lib/cluster";
 import type { Attraction, Destination } from "@/lib/db";
-import { refOf, synthId, isRealAttraction } from "@/lib/place";
+import { refOf, synthId, isRealAttraction, idKind } from "@/lib/place";
 import { wikiUrl, mergeCat } from "@/lib/labels";
 import {
   aiConfigured,
@@ -170,8 +170,10 @@ function partitionBySelection(
 // an "אם יש זמן" filler so the trip page can show the two tiers.
 function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set<number>, scheduled?: Set<number>): Itinerary {
   const exact = new Map<string, Attraction>();
+  const byId = new Map<number, Attraction>();
   const list: { a: Attraction; n: string }[] = [];
   for (const a of attractions) {
+    byId.set(a.id, a);
     for (const n of [a.name_he, a.name_en]) {
       const k = n ? normName(n) : "";
       if (k) { exact.set(k, a); list.push({ a, n: k }); }
@@ -182,8 +184,18 @@ function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set
       if (s.manual) continue;   // traveller-added place — keep as-is, never re-match to the pool
       const key = normName(s.name);
       if (!key) continue;
-      let a = exact.get(key);
-      if (!a) {
+      // A stop that already knows its own id IS that place — match by id, never
+      // by name. The substring fallback below is for stops that arrive without
+      // one (a saved module), and it is loose enough to be dangerous: it gave
+      // "תצפית גשר קארל והטירה" the id of "גשר קארל" (the name contains it) and
+      // "קובנט גארדן" the id of "שוק קובנט גארדן", so two distinct places became
+      // one everywhere downstream — map pin, bank, dedupe, usedIds.
+      let a = s.id != null ? byId.get(s.id) : undefined;
+      // A street/zone stop is a place in its own right: the builder already gave
+      // it a synthetic id, image, tagline and geometry. Nothing to re-match.
+      if (!a && s.id != null && idKind(s.id) !== "attr") continue;
+      if (!a) a = exact.get(key);
+      if (!a && s.id == null) {
         a = list.find((x) => x.n.length >= 4 && (key.includes(x.n) || x.n.includes(key)))?.a;
       }
       if (a) {

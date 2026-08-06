@@ -141,6 +141,8 @@ export function dropSamePlace(day: Attraction[], minMeters = 90): Attraction[] {
 // "Park St James") collapse to the same key.
 const normName = (a: Attraction) => (a.name_he || a.name_en || "")
   .toLowerCase().replace(/^ה/, "").split(/\s+/).filter(Boolean).sort().join(" ");
+// Cross-day half of "one place, one slot per trip" (docs/logic/repeat-visits.md):
+// catches the same place mapped at two OSM nodes, which usedIds cannot see.
 export function dedupeAcrossDays(days: Attraction[][], minMeters = 120): Attraction[][] {
   const kept: { a: Attraction; d: number; i: number; n: string }[] = [];
   const out: Attraction[][] = days.map(() => []);

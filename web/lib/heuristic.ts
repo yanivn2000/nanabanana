@@ -343,6 +343,10 @@ export function buildHeuristicItinerary(
   // Backfill stays local (3.5km) on a normal day; a still-thin far cluster (a
   // Richmond/Kew half-day) escalates to 7km so it fills toward the pace too.
   const FILL_KM = 3.5, FILL_KM_FAR = 7;
+  // ONE PLACE, ONE SLOT PER TRIP. Every attraction picked anywhere in the trip
+  // lands here and is never picked again — see docs/logic/repeat-visits.md for
+  // the full rule, the two exceptions (evening streets ×2, night icons ×1) and
+  // why the traveller can still add a repeat by hand on the trip page.
   const usedIds = new Set<number>();
   const capped = clustered.map((picksRaw) => {
     const picks = capTypePerDay(dropSamePlace(picksRaw, opts?.samePlaceMeters), caps);

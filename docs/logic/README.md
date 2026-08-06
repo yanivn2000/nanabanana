@@ -51,6 +51,7 @@ Same pattern for `audience` (see `audience-fit.md`) and `matching`.
 | [day-clustering.md](./day-clustering.md) | proximity day-clustering (route-first) + free gems | `web/lib/cluster.ts` |
 | [neighborhoods.md](./neighborhoods.md) (discovery half) | k-means area discovery + day annotation | `web/lib/cluster.ts`, `web/scripts/areas_*` |
 | [brain.md](./brain.md) | the deterministic trip engine + self-critic + editor-calibrated policy | `web/lib/brain/`, `/api/admin/brain-eval` |
+| [repeat-visits.md](./repeat-visits.md) | why one place gets one slot per trip, and the two exceptions | `web/lib/heuristic.ts`, `web/lib/cluster.ts` |
 
 ## Keeping it current
 When we refine a rule (e.g. "iconic must-sees score high for every audience"),
