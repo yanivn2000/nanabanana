@@ -8,7 +8,7 @@
 import type { Attraction } from "../db";
 import { dayLegStats } from "../cluster";
 import { AUDIENCE_PREFS, DAY_WALK, PACE_STOPS, QUALITY_BAR, THRESHOLDS, WEIGHTS, audienceFitScore, type Audience } from "./policy";
-import { DWELL_DEFAULT, dwellMinutes, isActiveAnchor, isSoftFun, isWrongAfterDark, stopMatchesType } from "./traits";
+import { DWELL_DEFAULT, dwellMinutes, isActiveAnchor, isSoftFun, countVisits, isWrongAfterDark, stopMatchesType } from "./traits";
 import type { BrainRules } from "./rules";
 
 export type Issue = { dim: string; severity: "critical" | "warn"; msg: string; day?: number };
@@ -144,7 +144,7 @@ export function critiqueTrip(
     // max-type-per-day technique (e.g. ≤2 museums/day) — flag any day over the cap.
     for (const cap of ctx.rules?.maxTypePerDay ?? []) {
       days.forEach((d, i) => {
-        const n = d.filter((a) => stopMatchesType(a, cap.type)).length;
+        const n = countVisits(d.filter((a) => stopMatchesType(a, cap.type)));
         if (n > cap.max) issues.push({ dim: "variety", severity: "warn", day: i + 1, msg: `יום ${i + 1}: ${n} ${cap.type} — מעל המקסימום (${cap.max})` });
       });
     }
@@ -162,7 +162,10 @@ export function critiqueTrip(
       // length quietly tripled.
       let start = 0;
       const flush = (end: number) => {
-        const run = end - start;
+        // A curated complex is ONE experience, however many stops it takes: the
+        // Acropolis is not "8 cultural stops in a row", the Vatican is not four
+        // museums. Count visits, not rows.
+        const run = countVisits(d.slice(start, end));
         if (run < maxSameRun) return;
         penalty += 12 + (run - maxSameRun) * 6;   // longer run = worse, but once
         issues.push({ dim: "variety", severity: "warn", day: i + 1,

@@ -77,7 +77,7 @@ export const isMemorial = (a: Attraction) =>
 // 'adults avoid kids_anchor' technique so a couples trip never gets a lone-waterpark
 // day (Paphos) or a toy-store morning (FAO שוורץ/נינטנדו in NY). Deliberately
 // narrow: zoos, aquariums and cable cars are NOT here — couples genuinely go.
-const KIDS_ANCHOR_RX = /water ?park|theme ?park|amusement park|luna ?park|toy ?store|fao schwarz|nintendo|kidzania|legoland|לונה פארק|פארק מים|פארק שעשועים|חנות צעצועים/i;
+const KIDS_ANCHOR_RX = /water ?park|theme ?park|amusement park|luna ?park|toy ?store|fao schwarz|nintendo|kidzania|legoland|children'?s museum|kids museum|machmit|לונה פארק|פארק מים|פארק שעשועים|חנות צעצועים|מוזיאון ילדים|מוזיאון הילדים|לילדים/i;
 // After dark a market, a museum, a memorial or an out-of-town park is shut — and
 // a memorial at 21:30 is wrong even when it is open. Evening streets, squares,
 // promenades, bridges, viewpoints and nightlife are what those hours are for.
@@ -92,6 +92,15 @@ export const isWrongAfterDark = (a: Attraction) => {
 };
 // Shut by mid-afternoon: valid before ~15:00 and nowhere near the evening.
 export const isMorningOnly = (a: Attraction) => a.time_of_day === "morning";
+
+// How many VISITS a set of stops really is. The Vatican's four museum rows, the
+// Prague Jewish Museum's synagogues and the Acropolis' temples are each ONE
+// ticket and one experience — counting the rows made the critic report "4 museums
+// in a day" and "a run of 8 cultural stops" for trips that are neither. A curated
+// sub-attraction (parent_id) folds into its parent; everything else counts once.
+export function countVisits(stops: { id: number; parent_id?: number | null }[]): number {
+  return new Set(stops.map((a) => a.parent_id ?? a.id)).size;
+}
 
 export const isKidsAnchor = (a: Attraction) =>
   a.subcategory === "water_park" || a.subcategory === "theme_park" || KIDS_ANCHOR_RX.test(blob(a));

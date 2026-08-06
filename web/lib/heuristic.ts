@@ -119,10 +119,20 @@ export function streetAsStop(s: Street): Attraction {
 const isAvoided = (a: Attraction, avoid?: string[]) => !!avoid?.some((t) => stopMatchesType(a, t));
 // Two stops of the same type this close are one visit, not two — the Vatican
 // Museums, its Pinacoteca and the Raphael Rooms are halls behind a single ticket.
-const SAME_VISIT_KM = 0.35;
-const sameVisit = (a: Attraction, b: Attraction) =>
-  Number.isFinite(a.lat) && Number.isFinite(b.lat) &&
-  haversineKm(a.lat as number, a.lng as number, b.lat as number, b.lng as number) <= SAME_VISIT_KM;
+// "Same visit" is now a CURATED fact (attractions.parent_id), not a guess from
+// distance. The 350 m proxy predated the complex layer and was too generous: it
+// waved through Frankfurt's Museumsufer, Tirana's museum row and Boston's — all
+// separate tickets that happen to stand next to each other — so a "≤2 museums a
+// day" rule quietly produced days of three and four. Distance survives only as a
+// tight fallback for a complex nobody has curated yet.
+const SAME_VISIT_KM = 0.12;
+const sameVisit = (a: Attraction, b: Attraction) => {
+  const pa = a.parent_id ?? a.id, pb = b.parent_id ?? b.id;
+  if (pa === pb) return true;                       // curated: one complex, one visit
+  if (a.parent_id != null || b.parent_id != null) return false;   // curated apart
+  return Number.isFinite(a.lat) && Number.isFinite(b.lat) &&
+    haversineKm(a.lat as number, a.lng as number, b.lat as number, b.lng as number) <= SAME_VISIT_KM;
+};
 // Drop stops beyond the per-day cap of a type (keeps the earlier = higher-value
 // ones). "≤2 museums a day" means two separate museum VISITS: further halls of a
 // complex already counted are free, or the cap evicts half the Vatican and the
@@ -607,10 +617,16 @@ export function buildHeuristicItinerary(
       // signal to curate more spots. A candidate also must not sit where the day
       // already was (≥250m from every scheduled stop) — "ending" at a street you
       // toured at noon (הונגדה) is a repeat, not an evening plan.
-      const evPool = opts.eveningSpots.filter((v) =>
-        !usedIds.has(v.id) && (evUses.get(v.id) ?? 0) < 2 &&
+      const evAll = opts.eveningSpots.filter((v) => !usedIds.has(v.id) && (evUses.get(v.id) ?? 0) < 2);
+      // Prefer an evening spot the day has not already walked through. But when
+      // that leaves nothing, take the near one anyway: on Mykonos every curated
+      // evening spot is in Chora, and the rule was costing those days an evening
+      // entirely. These entries are evening-framed by name ("ונציה הקטנה (ערב)",
+      // "טחנות הרוח בשקיעה") — the same place after dark is a different visit.
+      const away = evAll.filter((v) =>
         picks.every((p) => !(Number.isFinite(p.lat) && Number.isFinite(p.lng)) ||
           haversineKm(p.lat as number, p.lng as number, v.lat as number, v.lng as number) > 0.25));
+      const evPool = away.length ? away : evAll;
       const evFresh = evPool.filter((v) => !(evUses.get(v.id) ?? 0));
       const cand = (evFresh.length ? evFresh : evPool)
         .map((v) => ({ v, km: haversineKm(last.lat as number, last.lng as number, v.lat as number, v.lng as number) }))

@@ -7,7 +7,7 @@
 import type { Attraction } from "../db";
 import { audienceFitScore, type Audience } from "./policy";
 import type { BrainRules } from "./rules";
-import { isActiveAnchor, isSoftFun, stopMatchesType } from "./traits";
+import { countVisits, isActiveAnchor, isSoftFun, stopMatchesType } from "./traits";
 
 const expType = (a: Attraction) => a.audience_fit?.type || a.category;
 const nameOf = (a: Attraction) => a.name_he || a.name_en;
@@ -41,7 +41,9 @@ export function qualityCheck(
 
   // ---- 1) CONFORMANCE — trip vs the enabled techniques -----------------------
   for (const cap of rules.maxTypePerDay) {
-    const bad = days.map((d, i) => ({ n: d.filter((a) => stopMatchesType(a, cap.type)).length, i }))
+    // countVisits, not row count: a curated complex (the Vatican's four museums,
+    // Prague's Jewish Museum and its synagogues) is one ticket and one visit.
+    const bad = days.map((d, i) => ({ n: countVisits(d.filter((a) => stopMatchesType(a, cap.type))), i }))
       .filter((x) => x.n > cap.max).map((x) => `יום ${x.i + 1} (${x.n})`);
     conformance.push(bad.length
       ? { ok: false, msg: `חריגה ממקסימום ${cap.max} ${cap.type} ליום: ${bad.join(", ")}` }
