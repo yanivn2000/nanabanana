@@ -198,6 +198,10 @@ function attachDetails(it: Itinerary, attractions: Attraction[], anchorIds?: Set
         s.dress = a.dress_he; s.cost = a.cost_level;
         s.cat = a.category; s.sub = a.subcategory;
         s.parentId = a.parent_id ?? null; s.passbyMinutes = a.passby_minutes ?? null;
+        // Only fill it in — the builder already set the right value, and the
+        // name match above is fuzzy enough to hit "שוק קובנט גארדן" from the
+        // curated evening street "קובנט גארדן".
+        if (s.timeOfDay == null) s.timeOfDay = a.time_of_day ?? null;
         s.ref = a.ref ?? refOf("attr", a.id);
         if (a.path && !s.path) s.path = a.path;
         if (anchorIds) s.anchor = anchorIds.has(a.id);
@@ -603,7 +607,7 @@ export async function POST(req: NextRequest) {
     servedPick = { seed: pick.s, score: pick.score };
     return pick.it;
   };
-  const detailOf = (a: Attraction) => ({ id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category, lat: a.lat, lng: a.lng, tagline_he: a.tagline_he, tips_he: a.tips_he, best_time_he: a.best_time_he, dress_he: a.dress_he, cost_level: a.cost_level, website: a.website, must_see: a.must_see, parent_id: a.parent_id, passby_minutes: a.passby_minutes });
+  const detailOf = (a: Attraction) => ({ id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category, lat: a.lat, lng: a.lng, tagline_he: a.tagline_he, tips_he: a.tips_he, best_time_he: a.best_time_he, dress_he: a.dress_he, cost_level: a.cost_level, website: a.website, must_see: a.must_see, parent_id: a.parent_id, passby_minutes: a.passby_minutes, time_of_day: a.time_of_day });
   // `opts.list` overrides the match list (neighbourhood builds pass the full area
   // pool so every area member resolves); `opts.surfaceIds`/`detailRows` say which
   // un-scheduled places land in "לא נכנסו ליומן" (default: the traveller's "כן").

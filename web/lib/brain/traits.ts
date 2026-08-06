@@ -83,8 +83,15 @@ const KIDS_ANCHOR_RX = /water ?park|theme ?park|amusement park|luna ?park|toy ?s
 // promenades, bridges, viewpoints and nightlife are what those hours are for.
 const NIGHT_WRONG_RX = /market|שוק|bazaar|museum|מוזיאון|gallery|גלריה|memorial|אנדרט|הנצחה|השואה|holocaust|zoo|גן ?חיות|aquarium|אקווריום|garden|בוטני|botanic|park|פארק|castle|טירה|palace|ארמון|cathedral|קתדרל|church|כנסיי|synagogue|בית הכנסת|archaeolog|ארכיאולוג|cemetery|בית הקברות|experience|חוויית/i;
 const EVENING_OK_RX = /square|כיכר|street|רחוב|promenade|טיילת|bridge|גשר|viewpoint|תצפית|nightlife|\bbar\b|בר |pub|פאב|club|מועדון|רובע|פליין|plein/i;
-export const isWrongAfterDark = (a: Attraction) =>
-  NIGHT_WRONG_RX.test(blob(a)) && !EVENING_OK_RX.test(blob(a));
+export const isWrongAfterDark = (a: Attraction) => {
+  // attractions.time_of_day is the real answer — the name is only a guess.
+  const tod = a.time_of_day;
+  if (tod === "any" || tod === "evening") return false;
+  if (tod === "day" || tod === "morning") return true;
+  return NIGHT_WRONG_RX.test(blob(a)) && !EVENING_OK_RX.test(blob(a));
+};
+// Shut by mid-afternoon: valid before ~15:00 and nowhere near the evening.
+export const isMorningOnly = (a: Attraction) => a.time_of_day === "morning";
 
 export const isKidsAnchor = (a: Attraction) =>
   a.subcategory === "water_park" || a.subcategory === "theme_park" || KIDS_ANCHOR_RX.test(blob(a));
@@ -135,8 +142,15 @@ const MORNING_RX = /זריחה|עלות השחר|טרם עלות השחר|שוק
 // Bare "ערב" is avoided (it also matches מערב=west); require an evening word form.
 const EVENING_RX = /שקיעה|בערב|לערב|בשעות הערב|שעות הערב|בין הערביים|בלילה|חיי לילה|מועדון|ברים|פאב|נייטלייף|שוק לילה|sunset|\bevening\b|\bnight\b|nightlife|night market/i;
 export type TimeBucket = "morning" | "any" | "evening";
-export function bestTimeBucket(a: { best_time_he?: string | null; tips_he?: string | null; time_of_day?: string | null }): TimeBucket {
-  if (a.time_of_day === "morning" || a.time_of_day === "evening" || a.time_of_day === "any") return a.time_of_day;  // editor override
+export function bestTimeBucket(a: { best_time_he?: string | null; tips_he?: string | null; time_of_day?: string | null; time_of_day_src?: string | null }): TimeBucket {
+  // Only an EDITOR value short-circuits the text. time_of_day is filled for
+  // every attraction now, and it answers "is this a valid slot", not "when is
+  // this nicest" — letting the auto value win here would flatten the ordering
+  // (every open-air place would read "any" and lose its sunrise/sunset hint).
+  if (a.time_of_day_src === "editor" &&
+      (a.time_of_day === "morning" || a.time_of_day === "evening" || a.time_of_day === "any")) return a.time_of_day;
+  // Shut by mid-afternoon is a real constraint, whoever derived it.
+  if (a.time_of_day === "morning") return "morning";
   const t = `${a.best_time_he ?? ""} ${a.tips_he ?? ""}`.toLowerCase();
   const m = MORNING_RX.test(t), e = EVENING_RX.test(t);
   if (m && !e) return "morning";

@@ -62,6 +62,7 @@ export type Stop = {
   // `passby` — the traveller's choice, default undefined = they go in.
   parentId?: number | null;
   passbyMinutes?: number | null;
+  timeOfDay?: string | null;
   passby?: boolean;
   fullDuration?: string;   // the visit duration to restore when leaving passby mode
   // A street stop's full polyline → drawn as a LINE on the map (not just a pin).

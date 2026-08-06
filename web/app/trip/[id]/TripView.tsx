@@ -102,6 +102,10 @@ function wrongAtNight(s: Stop): boolean {
   if (!s.time || s.kind === "food" || s.kind === "rest") return false;
   const [h, m] = s.time.split(":").map(Number);
   if (!Number.isFinite(h) || (h || 0) * 60 + (m || 0) < LATE_MIN) return false;
+  // The DB knows; the name is only the fallback for stops saved before the
+  // time_of_day column was filled.
+  if (s.timeOfDay === "any" || s.timeOfDay === "evening") return false;
+  if (s.timeOfDay === "day" || s.timeOfDay === "morning") return true;
   const blob = `${s.name} ${s.sub ?? ""} ${s.cat ?? ""}`;
   return NIGHT_WRONG_RX.test(blob) && !EVENING_OK_RX.test(blob);
 }
@@ -1098,7 +1102,9 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
       if (!s.time) return false; const [h, m] = s.time.split(":").map(Number);
       return (h || 0) * 60 + (m || 0) >= LATE_MIN - 60;
     });
-    const nightOk = <T extends { name_he?: string | null; name_en?: string; category?: string }>(x: T) => {
+    const nightOk = <T extends { name_he?: string | null; name_en?: string; category?: string; time_of_day?: string | null }>(x: T) => {
+      if (x.time_of_day === "any" || x.time_of_day === "evening") return true;
+      if (x.time_of_day === "day" || x.time_of_day === "morning") return false;
       if (!dayIsLate) return true;
       const blob = `${x.name_he ?? ""} ${x.name_en ?? ""} ${x.category ?? ""}`;
       return !NIGHT_WRONG_RX.test(blob) || EVENING_OK_RX.test(blob);

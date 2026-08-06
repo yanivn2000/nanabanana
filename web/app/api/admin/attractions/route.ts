@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   if (b.action === "time_of_day") {
     if (typeof b.attraction_id !== "number") return NextResponse.json({ error: "bad_request" }, { status: 400 });
     const v = b.value;
-    if (v !== null && v !== "morning" && v !== "evening" && v !== "any") return NextResponse.json({ error: "bad_value" }, { status: 400 });
+    if (v !== null && v !== "morning" && v !== "evening" && v !== "any" && v !== "day") return NextResponse.json({ error: "bad_value" }, { status: 400 });
     await setAttractionTimeOfDay(b.attraction_id, v);
     return NextResponse.json({ ok: true });
   }

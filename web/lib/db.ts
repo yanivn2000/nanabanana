@@ -96,7 +96,14 @@ export type Attraction = {
   tagline_he: string | null;
   best_season: string | null;
   best_time_he: string | null;
-  time_of_day: string | null;   // editor override for day-ordering: morning|evening|any|null(auto)
+  // Which slots of the day this place is a VALID stop in: 'any' | 'day' |
+  // 'morning' | 'evening'. Filled for every attraction by
+  // scripts/classify_time_of_day.py from the opening hours, the enriched
+  // best_time_he and the kind of place; an editor value (time_of_day_src =
+  // 'editor') is never overwritten. Unknown reads as 'day' on purpose — a
+  // place has to earn the right to be offered after dark.
+  time_of_day: string | null;
+  time_of_day_src: string | null;   // editor | hours | best_time | kind
   dress_he: string | null;
   cost_level: number | null;
   must_see: number | null;      // EFFECTIVE: editor rank='must' (curated) else OSM
@@ -120,7 +127,7 @@ const ATTR_COLS = `id, name_he, name_en, lat, lng, category, subcategory,
   indoor_outdoor, family_score, tips_he, website, duration_minutes,
   image_url, tagline_he, best_season, best_time_he, time_of_day, dress_he, cost_level, must_see,
   description_he, taste_tags, audience_fit, admin_bonus, info_sources,
-  parent_id, passby_minutes`;
+  parent_id, passby_minutes, time_of_day, time_of_day_src`;
 
 export type Destination = {
   id: number;
@@ -424,8 +431,12 @@ export type AdminAttractionRow = {
   audience_fit: AudienceFit | null; admin_bonus: AudienceBonus | null;
   notable: boolean; family_score: number | null; traveler_count: number;
   best_time_he: string | null; tips_he: string | null;   // for the "when to arrive" chip
-  time_of_day: string | null;                            // editor override (morning|evening|any|null)
+  time_of_day: string | null; time_of_day_src: string | null;
 };
+
+// Which slots of the day a place is a valid stop in. 'day' is the safe default
+// for anything we have not established works after dark.
+export type TimeOfDay = "any" | "day" | "morning" | "evening" | null;
 
 // Every shown attraction for a city with its scoring signals — the admin sees
 // exactly what drives the consensus, and can add a manual per-audience bonus.
@@ -434,7 +445,7 @@ export async function adminAttractionsForCity(destinationId: number): Promise<Ad
     `SELECT a.id, a.name_he, a.name_en, a.category,
             ${EFF_MUST} AS must_see, ep.rank AS editor_rank, ep.kids AS editor_kids,
             a.audience_fit, a.admin_bonus, ${NOTABLE} AS notable, a.family_score,
-            a.best_time_he, a.tips_he, a.time_of_day,
+            a.best_time_he, a.tips_he, a.time_of_day, a.time_of_day_src,
             COALESCE((SELECT COUNT(DISTINCT source_id) FROM insights i
                        WHERE i.attraction_id = a.id AND i.destination_id = $1 AND i.status='approved'), 0)::int AS traveler_count
        FROM attractions a ${EDITOR_JOIN}
@@ -451,8 +462,12 @@ export async function adminAttractionsForCity(destinationId: number): Promise<Ad
 }
 
 // Editor override for "when to arrive". null clears it (back to auto-derive).
-export async function setAttractionTimeOfDay(attractionId: number, value: "morning" | "evening" | "any" | null): Promise<void> {
-  await query(`UPDATE attractions SET time_of_day = $2 WHERE id = $1`, [attractionId, value]);
+export async function setAttractionTimeOfDay(attractionId: number, value: TimeOfDay): Promise<void> {
+  // Stamping the source is what protects the choice: the backfill script skips
+  // every row whose time_of_day_src is 'editor'. Clearing it (null) hands the
+  // row back to the script.
+  await query(`UPDATE attractions SET time_of_day = $2, time_of_day_src = $3 WHERE id = $1`,
+    [attractionId, value, value == null ? null : "editor"]);
 }
 
 export async function setAdminBonus(attractionId: number, bonus: AudienceBonus): Promise<void> {

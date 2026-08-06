@@ -102,7 +102,7 @@ export function streetAsStop(s: Street): Attraction {
     category: "attraction", subcategory: "street", indoor_outdoor: null,
     family_score: null, tips_he: s.vibe_he, website: null, duration_minutes: null,
     visit_minutes: s.dwell_min ?? 45, image_url: s.image_url ?? null, tagline_he: s.best_for_he,
-    best_season: null, best_time_he: null, time_of_day: null, dress_he: null,
+    best_season: null, best_time_he: null, time_of_day: "any", time_of_day_src: "kind", dress_he: null,
     cost_level: null, must_see: 1, osm_must_see: null, editor_rank: null,
     editor_kids: null, description_he: null, taste_tags: null, audience_fit: null,
     admin_bonus: null, notable: false, info_sources: null,
@@ -526,7 +526,7 @@ export function buildHeuristicItinerary(
         note: a.tips_he || descriptor(a),
         // carry coords/id so between-stop travel legs + map pins work without
         // depending on a later attachDetails pass (e.g. saved modules).
-        id: a.id, lat: a.lat, lng: a.lng, image: a.image_url, tagline: a.tagline_he,
+        id: a.id, lat: a.lat, lng: a.lng, image: a.image_url, tagline: a.tagline_he, timeOfDay: a.time_of_day ?? null,
         ...(a.path ? { path: a.path } : {}),
       });
       clock = arr + dwellMinutes(a, dwell);
@@ -546,7 +546,9 @@ export function buildHeuristicItinerary(
     if (nightVenues.length && picks.length) {
       const last = picks[picks.length - 1];
       const cand = nightVenues
-        .filter((v) => !usedNight.has(v.id))
+        // A "nightlife" row that the data says is a daytime place (a market
+        // hall, a food court) is not a night stop, whatever OSM tagged it.
+        .filter((v) => !usedNight.has(v.id) && !isWrongAfterDark(v))
         .map((v) => ({ v, km: haversineKm(last.lat as number, last.lng as number, v.lat as number, v.lng as number) }))
         .sort((x, y) => x.km - y.km)[0];
       if (cand) {
@@ -557,7 +559,7 @@ export function buildHeuristicItinerary(
         stops.push({
           name: v.name_he || v.name_en, kind: kindOf(v), time: fmtClock(nightClock),
           duration: durationHe(dwellMinutes(v, dwell)), note: v.tips_he || descriptor(v),
-          id: v.id, lat: v.lat, lng: v.lng, image: v.image_url, tagline: v.tagline_he,
+          id: v.id, lat: v.lat, lng: v.lng, image: v.image_url, tagline: v.tagline_he, timeOfDay: v.time_of_day ?? "any",
         });
       }
     }
@@ -593,6 +595,9 @@ export function buildHeuristicItinerary(
           name: v.name_he || v.name_en, kind: kindOf(v), time: fmtClock(evClock),
           duration: durationHe(dwellMinutes(v, dwell)), note: v.tips_he || descriptor(v),
           id: v.id, lat: v.lat, lng: v.lng, image: v.image_url, tagline: v.tagline_he,
+          // A curated evening spot is valid after dark by construction — say so
+          // on the stop, so nothing downstream re-decides it from the name.
+          timeOfDay: v.time_of_day ?? "any",
           ...(v.path ? { path: v.path } : {}),
         });
       }

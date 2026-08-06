@@ -3,30 +3,39 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Loader2, ChevronDown } from "lucide-react";
 import type { AdminDestination, AdminAttractionRow } from "@/lib/db";
-import { bestTimeBucket } from "@/lib/brain/traits";
 
-// "When to arrive" chip — what the day-ordering engine derives from best_time_he/tips.
+// WHEN IS THIS A VALID STOP — attractions.time_of_day. This is the marker the
+// builder obeys: a "day" place is never offered after 20:30. Filled for every
+// attraction by scripts/classify_time_of_day.py; the editor can overrule it,
+// and an editor value is never overwritten by a later run of the script.
 const TIME_CHIP: Record<string, { label: string; bg: string; fg: string }> = {
   morning: { label: "🌅 בוקר", bg: "#fef3c7", fg: "#92400e" },
+  day: { label: "☀️ שעות היום", bg: "#fef9c3", fg: "#854d0e" },
   evening: { label: "🌆 ערב", bg: "#e0e7ff", fg: "#3730a3" },
-  any: { label: "🕒 גמיש", bg: "var(--surface)", fg: "var(--text-3)" },
+  any: { label: "🕒 בוקר עד לילה", bg: "var(--surface)", fg: "var(--text-3)" },
 };
-// Editor cycle for the override: אוטומטי (null) → בוקר → ערב → גמיש → אוטומטי.
-const TIME_CYCLE: (("morning" | "evening" | "any") | null)[] = [null, "morning", "evening", "any"];
+// Editor cycle: אוטומטי (null → the script decides) → שעות היום → בוקר עד לילה
+// → בוקר → ערב → אוטומטי.
+const TIME_CYCLE: (("morning" | "day" | "evening" | "any") | null)[] = [null, "day", "any", "morning", "evening"];
 const nextTime = (cur: string | null) => TIME_CYCLE[(TIME_CYCLE.indexOf((cur ?? null) as never) + 1) % TIME_CYCLE.length];
+const SRC_HE: Record<string, string> = {
+  editor: "✎ עורך", hours: "🕰️ שעות פתיחה", best_time: "📝 תוכן", kind: "סוג מקום",
+};
 function TimeOfDay({ r, onCycle, saving }: { r: AdminAttractionRow; onCycle: () => void; saving: boolean }) {
-  const b = bestTimeBucket(r);
-  const override = r.time_of_day === "morning" || r.time_of_day === "evening" || r.time_of_day === "any";
-  const c = TIME_CHIP[b];
+  // No stored value → the engine reads it as "day" (a place must earn the right
+  // to be offered after dark), so show what will actually happen.
+  const val = r.time_of_day ?? "day";
+  const byEditor = r.time_of_day_src === "editor";
+  const c = TIME_CHIP[val] ?? TIME_CHIP.day;
   return (
     <span role="button" tabIndex={0}
       onClick={(e) => { e.stopPropagation(); if (!saving) onCycle(); }}
       onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); if (!saving) onCycle(); } }}
-      title="מתי להגיע — לחצו לשנות (אוטומטי → בוקר → ערב → גמיש). מזין את סדר היום."
+      title="באילו שעות זה מקום תקין לביקור — לחצו לשנות. מקום 'שעות היום' לא ישובץ אחרי 20:30."
       className="mt-0.5 inline-flex cursor-pointer items-center gap-1 text-[11px]">
       <span className="rounded px-1 py-0.5 text-[10px] font-medium"
-        style={{ background: c.bg, color: c.fg, border: `1px solid ${override ? c.fg : "transparent"}` }}>{saving ? "…" : c.label}</span>
-      <span className="text-[10px] text-[var(--text-3)]">{override ? "✎ עורך" : "אוטו"}</span>
+        style={{ background: c.bg, color: c.fg, border: `1px solid ${byEditor ? c.fg : "transparent"}` }}>{saving ? "…" : c.label}</span>
+      <span className="text-[10px] text-[var(--text-3)]">{SRC_HE[r.time_of_day_src ?? ""] ?? "אוטו"}</span>
       {r.best_time_he && <span className="truncate text-[var(--text-3)]" style={{ maxWidth: 180 }}>{r.best_time_he}</span>}
     </span>
   );
@@ -76,7 +85,7 @@ export function AttractionsTable({ destinations }: { destinations: AdminDestinat
     if (timeSaving) return;
     const value = nextTime(r.time_of_day);
     setTimeSaving(r.id);
-    setRows((s) => s.map((x) => (x.id === r.id ? { ...x, time_of_day: value } : x)));
+    setRows((s) => s.map((x) => (x.id === r.id ? { ...x, time_of_day: value, time_of_day_src: value == null ? null : "editor" } : x)));
     try {
       await fetch("/api/admin/attractions", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "time_of_day", attraction_id: r.id, value }) });
