@@ -16,6 +16,7 @@ type Trip = {
   cityId: number; city: string; cityEn: string; country: string;
   audience: "families" | "adults"; days: number;
   score: number; needsWork: boolean; stops: number;
+  seedScores?: number[];
   dims: Record<string, number>;
   issues: { dim: string; severity: "critical" | "warn"; msg: string; day?: number }[];
   itinerary: Itinerary;
@@ -66,17 +67,17 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
 
   const key = (t: Trip) => `${t.cityId}:${t.audience}`;
 
-  async function run(quality = false) {
-    quality ? setQChecking(true) : setLoading(true);
+  async function run(quality = false, seeds?: number) {
+    quality || seeds ? setQChecking(true) : setLoading(true);
     if (quality) setQReport(null);
     try {
       const res = await fetch("/api/admin/brain-eval", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ days, cities: allCities ? destinations.map((d) => d.id) : cityId ? [cityId] : undefined, quality }),
+        body: JSON.stringify({ days, cities: allCities ? destinations.map((d) => d.id) : cityId ? [cityId] : undefined, quality, ...(seeds ? { seeds } : {}) }),
       });
       if (res.ok) { const j = await res.json(); setData(j); if (quality && j.qualityReport) setQReport(j.qualityReport); }
       else if (!quality) setData(null);
-    } finally { quality ? setQChecking(false) : setLoading(false); }
+    } finally { quality || seeds ? setQChecking(false) : setLoading(false); }
   }
 
   // Open the Brain's exact trip as a real trip page (map + walking legs + areas) —
@@ -109,6 +110,11 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
         <button onClick={() => run(false)} disabled={loading || qChecking}
           className="flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-1.5 text-[13.5px] font-medium text-white disabled:opacity-60">
           {loading ? <Loader2 size={14} className="animate-spin" /> : "🧠"} הרץ בדיקה עצמית
+        </button>
+        <button onClick={() => run(false, 5)} disabled={loading || qChecking}
+          title="בונה כל עיר×קהל עם 5 זרעי-גיוון שונים ומציג את טווח הציונים — טווח צר = ההגרלה בריאה; רחב = השכבה האמצעית דקה מדי"
+          className="flex items-center gap-1.5 rounded-full border-[1.5px] border-[var(--brand)] px-4 py-1.5 text-[13.5px] font-medium text-[var(--brand-ink)] disabled:opacity-60">
+          {qChecking ? <Loader2 size={14} className="animate-spin" /> : "🎲"} בדיקת עומק (5 זרעים)
         </button>
         <button onClick={() => run(true)} disabled={loading || qChecking}
           title="המוח בונה טיולים ובודק אותם מול הטכניקות + מבחן-הנאה, ומפיק דוח לצ'אט"
@@ -155,6 +161,12 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
                     <MapIcon size={12} /> דף טיול
                   </button>
                   <span className="grid size-10 place-items-center rounded-full text-[15px] font-bold text-white" style={{ background: scoreColor(t.score) }}>{t.score}</span>
+                  {t.seedScores && t.seedScores.length > 1 && (() => {
+                    const mn = Math.min(...t.seedScores), mx = Math.max(...t.seedScores);
+                    const wide = mx - mn > 5;
+                    return <span className={`rounded-full px-2 py-0.5 text-[11.5px] font-semibold ${wide ? "bg-[var(--accent-soft)] text-[var(--accent-ink,#8a3d2a)]" : "bg-[var(--brand-soft)] text-[var(--brand-ink)]"}`}
+                      title={`ציוני 5 הזרעים: ${t.seedScores.join(", ")}`}>🎲 {mn}–{mx}{wide ? " ⚠️" : ""}</span>;
+                  })()}
                 </div>
               </div>
 

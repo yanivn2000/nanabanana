@@ -22,6 +22,10 @@ export async function POST(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
   const days: number = b.days ?? 3;
   const month: number = b.month ?? 7;   // season for the eval (default: summer / July)
+  // Deep check (בדיקת עומק): re-build each city×audience with N different variety
+  // seeds and report the SCORE RANGE — a narrow range means the lottery is healthy,
+  // a wide one means the city's middle layer is thin enough for luck to matter.
+  const seedsN = Math.min(Math.max(Number(b.seeds) || 1, 1), 7);
   const dests = await listDestinations();
   const cityIds: number[] = Array.isArray(b.cities) && b.cities.length
     ? b.cities : dests.slice(0, 6).map((d) => d.id);
@@ -57,11 +61,30 @@ export async function POST(req: NextRequest) {
         samePlaceMeters: rules.samePlaceMeters, freeGemMaxPerDay: rules.freeGemMaxPerDay, freeGemDetourMin: rules.freeGemDetourMin,
         // FIXED per-city seed: the eval must be reproducible run-to-run, and both
         // audiences must share a seed or the variety layer would fake audience
-        // differentiation and blind the identity check.
+        // differentiation and blind the identity check. (Deep mode overrides seed
+        // per iteration below — still a fixed, reproducible list.)
         seed: id, varietyJitter: rules.varietyJitter,
         ...(!isFamily && eveningSpots.length ? { eveningSpots, eveningStartMin: rules.eveningStart } : {}) };
       // Build via the REAL consumer engine so the eval reflects exactly what a
       // traveller gets (dwell model, dedup, car day-trips) — one source of truth.
+      // Deep mode: extra builds on a fixed seed ladder; only their scores are kept.
+      const seedLadder = Array.from({ length: seedsN }, (_, i) => id + i * 101);
+      const seedScores: number[] = [];
+      for (let si = 1; si < seedLadder.length; si++) {
+        const opts2 = { ...buildOpts, seed: seedLadder[si] };
+        const it2 = carBase
+          ? buildCarBaseItinerary(dest.city, dest.country, days, pool, center, isFamily, pace, 3, opts2)
+          : buildHeuristicItinerary(dest.city, dest.country, days, pool, isFamily, pace, 3, undefined, opts2);
+        const byId2 = new Map(attractions.map((a) => [a.id, a]));
+        const rich2: Attraction[][] = it2.days.map((d) =>
+          d.stops.map((s) => (s.id != null ? byId2.get(s.id) : undefined)).filter((a): a is Attraction => !!a));
+        const meta2 = it2.days.map((d) => {
+          const real = d.stops.filter((s) => s.id != null);
+          const lastId = real.length ? real[real.length - 1].id : null;
+          return { car: carBase || !!d.dayTrip, eveningEnd: lastId != null && eveningIds.has(lastId) };
+        });
+        seedScores.push(critiqueTrip(rich2, audience, { cityMustCount, rules, dayMeta: meta2, eveningCity: eveningSpots.length > 0 }).score);
+      }
       const itinerary = carBase
         ? buildCarBaseItinerary(dest.city, dest.country, days, pool, center, isFamily, pace, 3, buildOpts)
         : buildHeuristicItinerary(dest.city, dest.country, days, pool, isFamily, pace, 3, undefined, buildOpts);
@@ -85,6 +108,7 @@ export async function POST(req: NextRequest) {
       builtIds[audience] = new Set(richDays.flat().map((a) => a.id));
       report.push({
         cityId: id, city: dest.city_he || dest.city, cityEn: dest.city, country: dest.country, audience, days,
+        ...(seedScores.length ? { seedScores: [crit.score, ...seedScores] } : {}),
         score: crit.score, needsWork: crit.needsWork, stops: crit.stops,
         dims: crit.dims, issues: crit.issues, itinerary, quality,
         daysNames: richDays.map((d) => d.map((a) => ({ name: a.name_he || a.name_en, must: a.must_see === 1, cat: a.category }))),
