@@ -20,6 +20,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const description = `מסלולים אמיתיים ל${city} שמטיילים בנו ושיתפו — יום־אחר־יום, עם מפה וזמנים. אפשר לקחת מסלול מוכן ולשנות אותו לעצמכם, בחינם.`;
   return {
     title, description,
+    // An empty gallery is a real page for a visitor who followed a link, but it
+    // is nothing for a searcher — keep it out of the index until it has content.
+    ...(trips.length === 0 ? { robots: { index: false, follow: true } } : {}),
     alternates: { canonical: canonical(`/destination/${dest.id}/trips`) },
     openGraph: { title, description, type: "website", locale: "he_IL", url: canonical(`/destination/${dest.id}/trips`) },
   };

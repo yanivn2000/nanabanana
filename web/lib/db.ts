@@ -923,6 +923,16 @@ export async function listPublicSharedTripSlugs(): Promise<{ slug: string; updat
     `SELECT slug, updated_at FROM shared_trips WHERE hidden = false ORDER BY updated_at DESC LIMIT 5000`);
 }
 
+// Which cities actually HAVE a shared trip. The sitemap listed a gallery page for
+// all 65 destinations while only 4 had any content — 61 empty pages offered to
+// Google, which is thin content on a two-day-old domain.
+export async function destinationsWithSharedTrips(): Promise<number[]> {
+  const rows = await query<{ destination_id: number }>(
+    `SELECT DISTINCT destination_id FROM shared_trips
+      WHERE hidden = false AND destination_id IS NOT NULL`);
+  return rows.map((r) => r.destination_id);
+}
+
 // --- Moderation (P4) ---------------------------------------------------------
 // Anyone can flag a comment or a shared trip; a report just bumps a counter
 // (idempotency isn't critical here — the counter is a triage signal, not a vote).
