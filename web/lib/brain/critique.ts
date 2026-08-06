@@ -146,11 +146,22 @@ export function critiqueTrip(
   {
     let penalty = 0;
     days.forEach((d, i) => {
-      let run = 1;
+      // Report each MAXIMAL run once. The old loop fired on every step past the
+      // threshold, so one run of 5 produced three lines (3, 4, 5) and was
+      // penalised three times over — noise in the report and a score the run
+      // length quietly tripled.
+      let start = 0;
+      const flush = (end: number) => {
+        const run = end - start;
+        if (run < maxSameRun) return;
+        penalty += 12 + (run - maxSameRun) * 6;   // longer run = worse, but once
+        issues.push({ dim: "variety", severity: "warn", day: i + 1,
+          msg: `יום ${i + 1}: רצף של ${run} מאותו סוג חוויה (${expType(d[start])})` });
+      };
       for (let k = 1; k < d.length; k++) {
-        if (expType(d[k]) === expType(d[k - 1])) { run++; if (run >= maxSameRun) { penalty += 12; issues.push({ dim: "variety", severity: "warn", day: i + 1, msg: `יום ${i + 1}: רצף של ${run} מאותו סוג חוויה (${expType(d[k])})` }); } }
-        else run = 1;
+        if (expType(d[k]) !== expType(d[k - 1])) { flush(k); start = k; }
       }
+      flush(d.length);
     });
     const distinctTypes = new Set(all.map(expType)).size;
     dims.variety = clamp(55 + distinctTypes * 12 - penalty);
