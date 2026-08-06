@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       const s = byCity.get((r.city || "").toLowerCase());
       if (!s) return null;
       return {
-        id: s.id, city_he: s.city_he, city: s.city,
+        id: s.id, slug: s.slug, city_he: s.city_he, city: s.city,
         country_he: s.country_he, country: s.country, total: s.total,
         reason: r.reason, highlights: r.highlights || highlightsOf(s),
       };

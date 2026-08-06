@@ -1262,7 +1262,7 @@ export function DestinationView({
                 </button>
               )}
               {communityCount > 0 && (
-                <Link href={`/destination/${dest.id}/trips`}
+                <Link href={`/destination/${dest.slug}/trips`}
                   className="flex items-center justify-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-3 py-1.5 text-[12.5px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
                   ❤️ {communityCount} טיולים
                 </Link>
@@ -1353,7 +1353,7 @@ export function DestinationView({
           </button>
         )}
         {communityCount > 0 && (
-          <Link href={`/destination/${dest.id}/trips`}
+          <Link href={`/destination/${dest.slug}/trips`}
             className="flex items-center justify-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-3 py-2 text-[12.5px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
             ❤️ {communityCount} טיולים
           </Link>
@@ -1469,7 +1469,7 @@ export function DestinationView({
                     </button>
                   )}
                   {communityCount > 0 && (
-                    <Link href={`/destination/${dest.id}/trips`}
+                    <Link href={`/destination/${dest.slug}/trips`}
                       className="inline-flex items-center gap-1 rounded-full border border-[#ff5a5f]/40 bg-[#ff5a5f]/8 px-2 py-0.5 text-[11.5px] font-medium text-[#d63d42] transition hover:bg-[#ff5a5f]/15">
                       ❤️ {communityCount} טיולים של מטיילים
                     </Link>

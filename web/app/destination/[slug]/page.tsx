@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getDestination, attractionsForMap, insightsForDestination, countSharedTripsForDestination, headlineAreasForCity, approvedStreetsForCity, type Insight } from "@/lib/db";
+import { getDestinationBySlug, attractionsForMap, insightsForDestination, countSharedTripsForDestination, headlineAreasForCity, approvedStreetsForCity, type Insight } from "@/lib/db";
 import { breadcrumbs, canonical, cityDescription, cityTitle, jsonLd } from "@/lib/seo";
 import { passesForCity, passCovers } from "@/lib/passes";
 import { isEditor } from "@/lib/admin";
@@ -13,9 +13,9 @@ export const dynamic = "force-dynamic";
 // Every city page had been inheriting the site-wide title, so all 65 of them
 // competed in search as the same page. This gives each one the words an Israeli
 // actually types — "טיול ל…" plus the city — and real numbers from the DB.
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-  const { id } = await params;
-  const dest = await getDestination(Number(id)).catch(() => null);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const dest = await getDestinationBySlug(slug).catch(() => null);
   if (!dest) return {};
   const city = dest.city_he || dest.city;
   const [attrs, areas, streets] = await Promise.all([
@@ -29,10 +29,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const image = attrs.find((a) => a.must_see === 1 && a.image_url)?.image_url ?? undefined;
   return {
     title, description,
-    alternates: { canonical: canonical(`/destination/${dest.id}`) },
+    alternates: { canonical: canonical(`/destination/${dest.slug}`) },
     openGraph: {
       title, description, type: "website", locale: "he_IL",
-      url: canonical(`/destination/${dest.id}`),
+      url: canonical(`/destination/${dest.slug}`),
       ...(image ? { images: [{ url: image }] } : {}),
     },
   };
@@ -42,17 +42,17 @@ export default async function DestinationPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
   searchParams: Promise<{ [k: string]: string | string[] | undefined }>;
 }) {
-  const { id } = await params;
+  const { slug } = await params;
   const sp = await searchParams;
   // Editorial is now the DEFAULT city view (hero + photo-card tabs). The old flat
-  // list is still reachable at /destination/<id>?v=classic (or ?v=list) for rollback.
+  // list is still reachable at /destination/<slug>?v=classic (or ?v=list) for rollback.
   const vRaw = Array.isArray(sp.v) ? sp.v[0] : sp.v;
   const v = String(vRaw ?? "").trim().replace(/\/+$/, "").toLowerCase();
   const editorial = !(v === "classic" || v === "list" || v === "off");
-  const dest = await getDestination(Number(id));
+  const dest = await getDestinationBySlug(slug);
   if (!dest) notFound();
   const [attractions, allInsights, editor, communityCount, areas, streets] = await Promise.all([
     attractionsForMap(dest.id, 2000),   // load the whole city (rows are light); the list paginates client-side
@@ -96,13 +96,13 @@ export default async function DestinationPage({
   // headline sights. The page's own content is built on the client, which a
   // crawler reads too late — this arrives in the HTML.
   const ld = [
-    breadcrumbs([{ name: "בית", path: "/" }, { name: city, path: `/destination/${dest.id}` }]),
+    breadcrumbs([{ name: "בית", path: "/" }, { name: city, path: `/destination/${dest.slug}` }]),
     {
       "@context": "https://schema.org",
       "@type": "TouristDestination",
       name: city,
       alternateName: dest.city,
-      url: canonical(`/destination/${dest.id}`),
+      url: canonical(`/destination/${dest.slug}`),
       ...(dest.country_he || dest.country ? { addressCountry: dest.country_he || dest.country } : {}),
       ...(dest.lat != null && dest.lng != null
         ? { geo: { "@type": "GeoCoordinates", latitude: dest.lat, longitude: dest.lng } } : {}),
@@ -127,7 +127,7 @@ export default async function DestinationPage({
       />
     </>
   );
-  // Feature flag: /destination/<id>?v=editorial renders the same view inside an
+  // Feature flag: /destination/<slug>?v=editorial renders the same view inside an
   // .editorial-scope wrapper (re-skin via scoped tokens/CSS). Default is untouched.
   return editorial ? <div className="editorial-scope">{view}</div> : view;
 }

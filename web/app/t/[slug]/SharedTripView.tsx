@@ -133,7 +133,7 @@ export function SharedTripView({ trip, comments: initialComments }: {
             <Heart size={15} className={liked ? "fill-[#ff5a5f]" : ""} /> אהבתי{likes > 0 ? ` · ${likes}` : ""}
           </button>
           {trip.destination_id && (
-            <Link href={`/destination/${trip.destination_id}`}
+            <Link href={`/destination/${trip.dest_slug}`}
               className="flex items-center gap-2 rounded-full border border-[var(--brand)] bg-[var(--surface)] px-5 py-2.5 text-[14.5px] font-medium text-[var(--brand-ink)]">
               <Sparkles size={15} /> בנו טיול משלכם ל{trip.city_he || trip.city}
             </Link>

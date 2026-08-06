@@ -135,6 +135,9 @@ const ATTR_COLS = `id, name_he, name_en, lat, lng, category, subcategory,
 
 export type Destination = {
   id: number;
+  // The URL identity — "london", "new-york". A number told a visitor nothing
+  // and told a search result nothing either, so the public routes key on this.
+  slug: string;
   city: string;
   country: string;
   city_he: string | null;
@@ -152,7 +155,7 @@ const SHOWN = `(a.quality_keep = 1 OR a.quality_keep IS NULL)
 // Notability signal: mapped in OSM with a Wikipedia/Wikidata entry.
 const NOTABLE = `(info_sources IS NOT NULL AND info_sources::text NOT IN ('[]', 'null'))`;
 
-const DEST_SELECT = `SELECT dest.id, dest.city, dest.country, dest.city_he,
+const DEST_SELECT = `SELECT dest.id, dest.slug, dest.city, dest.country, dest.city_he,
          dest.country_he, dest.lat, dest.lng, dest.mobility,
          count(a.id) FILTER (WHERE ${SHOWN})::int AS attraction_count
   FROM destinations dest
@@ -160,7 +163,7 @@ const DEST_SELECT = `SELECT dest.id, dest.city, dest.country, dest.city_he,
 
 export async function listDestinations(): Promise<Destination[]> {
   // `hidden` cities are kept out of the public catalogue (home page, sitemap) —
-  // their own /destination/[id] page still works, so existing trips and links
+  // their own /destination/<slug> page still works, so existing trips and links
   // never break. Toggled per city from the admin.
   return query<Destination>(
     `${DEST_SELECT} WHERE NOT dest.hidden GROUP BY dest.id ORDER BY attraction_count DESC`
@@ -170,6 +173,16 @@ export async function listDestinations(): Promise<Destination[]> {
 export async function getDestination(id: number): Promise<Destination | null> {
   const rows = await query<Destination>(
     `${DEST_SELECT} WHERE dest.id = $1 GROUP BY dest.id`, [id]
+  );
+  return rows[0] ?? null;
+}
+
+// The public lookup. Slugs are the URL identity; ids stay internal (the build
+// API, the admin, every foreign key) because they never change and a city can be
+// renamed.
+export async function getDestinationBySlug(slug: string): Promise<Destination | null> {
+  const rows = await query<Destination>(
+    `${DEST_SELECT} WHERE dest.slug = $1 GROUP BY dest.id`, [slug]
   );
   return rows[0] ?? null;
 }
@@ -352,7 +365,7 @@ export async function setEditorRating(
 
 // Per-destination "what it offers" summary — feeds the destination recommender.
 export type DestinationSummary = {
-  id: number; city: string; country: string;
+  id: number; slug: string; city: string; country: string;
   city_he: string | null; country_he: string | null;
   total: number; nature: number; museum: number; historic: number;
   food: number; shopping: number; water_park: number; theme_park: number;
@@ -361,7 +374,7 @@ export type DestinationSummary = {
 
 export async function destinationSummaries(): Promise<DestinationSummary[]> {
   return query<DestinationSummary>(
-    `SELECT d.id, d.city, d.country, d.city_he, d.country_he,
+    `SELECT d.id, d.slug, d.city, d.country, d.city_he, d.country_he,
         count(a.id)::int AS total,
         count(*) FILTER (WHERE a.category='nature')::int   AS nature,
         count(*) FILTER (WHERE a.category='museum')::int   AS museum,
@@ -606,7 +619,7 @@ export async function updateAttractionContent(id: number, f: {
 }
 
 export type AdminDestination = {
-  id: number; city: string; country: string; region: string | null;
+  id: number; slug: string; city: string; country: string; region: string | null;
   city_he: string | null; country_he: string | null;
   lat: number; lng: number; description_he: string | null;
   best_months: number[] | null; israeli_popularity_score: number | null;
@@ -620,7 +633,7 @@ export type AdminDestination = {
 // Every destination with its full record + content-health stats for the admin.
 export async function adminDestinations(): Promise<AdminDestination[]> {
   return query<AdminDestination>(
-    `SELECT d.id, d.city, d.country, d.region, d.city_he, d.country_he, d.lat, d.lng,
+    `SELECT d.id, d.slug, d.city, d.country, d.region, d.city_he, d.country_he, d.lat, d.lng,
             d.description_he, d.best_months, d.israeli_popularity_score,
             d.timezone, d.currency, d.language, d.mobility, d.ingest_radius_km, d.hidden, d.transit_synced_at,
             (SELECT count(*)::int FROM attraction_edges e WHERE e.destination_id = d.id) AS edge_count,
@@ -834,6 +847,7 @@ export type SharedTrip = {
   composition: string | null; pace: string | null;
   itinerary: Itinerary; views: number; likes: number; remix_of: string | null;
   created_at: string; updated_at: string;
+  dest_slug?: string | null;   // joined, for linking back to the city page
 };
 
 export type TripComment = {
@@ -886,7 +900,11 @@ export async function publishSharedTrip(t: {
 
 export async function getSharedTrip(slug: string): Promise<SharedTrip | null> {
   // hidden = taken down by a moderator → 404 for the public.
-  const rows = await query<SharedTrip>(`SELECT * FROM shared_trips WHERE slug = $1 AND hidden = false`, [slug]);
+  // dest_slug rides along so the "back to the city" link can be a real URL.
+  const rows = await query<SharedTrip>(
+    `SELECT t.*, d.slug AS dest_slug FROM shared_trips t
+       LEFT JOIN destinations d ON d.id = t.destination_id
+      WHERE t.slug = $1 AND t.hidden = false`, [slug]);
   return rows[0] ?? null;
 }
 

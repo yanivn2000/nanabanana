@@ -72,7 +72,7 @@ export function ExploreList({ destinations, summaries = [] }: {
                 {items.map((d) => (
                   <Link
                     key={d.id}
-                    href={`/destination/${d.id}`}
+                    href={`/destination/${d.slug}`}
                     className="group relative block aspect-[3/2] overflow-hidden rounded-[var(--radius-card)] shadow-[var(--shadow)]"
                   >
                     <div className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.04]">

@@ -25,12 +25,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   for (const d of dests) {
-    entries.push({ url: `${SITE_URL}/destination/${d.id}`, lastModified: now, changeFrequency: "weekly", priority: 0.8 });
+    entries.push({ url: `${SITE_URL}/destination/${d.slug}`, lastModified: now, changeFrequency: "weekly", priority: 0.8 });
     // Only a gallery that has something in it. An empty "מסלולים של מטיילים"
     // page is a promise the site cannot keep yet, and offering 61 of them to a
     // brand-new domain is the fastest way to be read as a thin site.
     if (hasTrips.has(d.id)) {
-      entries.push({ url: `${SITE_URL}/destination/${d.id}/trips`, lastModified: now, changeFrequency: "weekly", priority: 0.6 });
+      entries.push({ url: `${SITE_URL}/destination/${d.slug}/trips`, lastModified: now, changeFrequency: "weekly", priority: 0.6 });
     }
   }
 

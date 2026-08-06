@@ -6,7 +6,7 @@ import { ChevronRight, Sparkles, Loader2, MapPin, ArrowLeft, Users } from "lucid
 import { useProfile, profileText, profileSummary, MONTHS_HE } from "@/lib/store";
 
 type Reco = {
-  id: number; city: string; city_he: string | null;
+  id: number; slug: string; city: string; city_he: string | null;
   country: string; country_he: string | null; total: number;
   reason: string; highlights: string;
 };
@@ -79,7 +79,7 @@ export default function RecommendPage() {
         <div className="mt-6 flex flex-col gap-3">
           {recos.length === 0 && <p className="text-center text-[15px] text-[var(--text-3)]">לא נמצאו המלצות.</p>}
           {recos.map((r, i) => (
-            <Link key={r.id} href={`/destination/${r.id}`}
+            <Link key={r.id} href={`/destination/${r.slug}`}
               className="rise block rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow)]">
               <div className="flex items-start gap-3">
                 <div className="grid size-11 shrink-0 place-items-center rounded-[var(--radius-sm)] bg-[var(--accent-soft)] text-[var(--accent-ink)] font-bold">

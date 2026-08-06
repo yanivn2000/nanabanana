@@ -15,8 +15,10 @@ function persistLiked(s: Set<string>) {
   try { localStorage.setItem(LIKES_KEY, JSON.stringify([...s])); } catch {}
 }
 
-export function CommunityTripsGrid({ destId, cityHe, trips }: {
-  destId: number; cityHe: string; trips: SharedTripCard[];
+// destSlug is the public URL identity; destId stays for CityPoster, which keys
+// its image cache on the numeric id.
+export function CommunityTripsGrid({ destId, destSlug, cityHe, trips }: {
+  destId: number; destSlug: string; cityHe: string; trips: SharedTripCard[];
 }) {
   const [liked, setLiked] = useState<Set<string>>(likedSet);
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>(
@@ -47,7 +49,7 @@ export function CommunityTripsGrid({ destId, cityHe, trips }: {
         <p className="mx-auto mt-1.5 max-w-md text-[13.5px] text-[var(--text-2)]">
           בנו את הטיול הראשון — וכשתשתפו אותו, הוא יופיע כאן לכל הקהילה.
         </p>
-        <Link href={`/destination/${destId}`}
+        <Link href={`/destination/${destSlug}`}
           className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-5 py-2.5 text-[14px] font-medium text-white">
           <Sparkles size={15} /> בנו טיול ל{cityHe}
         </Link>

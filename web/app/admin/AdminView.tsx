@@ -158,7 +158,7 @@ function CityRow({ d }: { d: AdminDestination }) {
             ))}
           </div>
           <div className="mt-3 flex items-center justify-between">
-            <Link href={`/destination/${d.id}`} className="flex items-center gap-1 text-[13px] text-[var(--brand-ink)]">
+            <Link href={`/destination/${d.slug}`} className="flex items-center gap-1 text-[13px] text-[var(--brand-ink)]">
               <ExternalLink size={13} /> פתחו את דף העיר (עריכת אטרקציות במצב עורך)
             </Link>
             <button onClick={save} disabled={state === "saving"}
