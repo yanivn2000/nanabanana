@@ -56,6 +56,14 @@ export type Stop = {
   id?: number;
   // Canonical cross-kind identity: "attr:123" | "street:4" | "zone:12".
   ref?: string;
+  // Visit-mode layer. A sub-attraction stop carries its parent's id: the trip page
+  // nests it under the parent and folds it away in "just passing" mode. The parent
+  // carries passbyMinutes (what the stop costs when you only look from outside) and
+  // `passby` — the traveller's choice, default undefined = they go in.
+  parentId?: number | null;
+  passbyMinutes?: number | null;
+  passby?: boolean;
+  fullDuration?: string;   // the visit duration to restore when leaving passby mode
   // A street stop's full polyline → drawn as a LINE on the map (not just a pin).
   path?: [number, number][];
   // Two-tier day (Explore build): true = day anchor (a chosen "כן"/must-see),

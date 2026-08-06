@@ -85,6 +85,11 @@ const DINNER_AT_MIN = 19 * 60 + 30, DINNER_MIN = 90;
 // (Stop.meal carries the slot name). Used to decide whether to auto-insert the slot.
 const isLunchSlot = (s: Stop) => s.kind === "food" && (s.name === "הפסקת צהריים" || s.meal === "הפסקת צהריים");
 const isDinnerSlot = (s: Stop) => s.kind === "food" && (s.name === "ארוחת ערב" || s.meal === "ארוחת ערב");
+// Visit mode: a parent stop can be visited (default) or only passed by. In passby
+// mode its sub-attractions fold away — they stay in the trip, they just aren't part
+// of a look-from-outside — and the parent drops to its passby duration, so a short
+// visit actually frees time instead of deleting a must-see.
+const isParentOf = (p: Stop, s: Stop) => s.parentId != null && p.id === s.parentId;
 // A tip must not contradict the stop's actual slot: "הגיעו מוקדם בבוקר" under a
 // 21:00 פיאצה נבונה reads as a mistake, not advice. Time-of-day advice that
 // disagrees with the scheduled hour is hidden (the place itself is fine at either
@@ -115,7 +120,7 @@ const durToMin = (d?: string): number => {
   if (d.includes("כשעה")) return 60;
   return 90;
 };
-function retimeStops(stops: Stop[]): Stop[] {
+function retimeStops(stops: Stop[], passby?: Set<number>): Stop[] {
   // If the day already has a meal break, treat it as a REAL, user-placed stop: keep
   // it wherever it sits in the order (so a stop dragged above/below it stays there)
   // and just recompute times. Only a day with NO meal gets one auto-inserted at noon.
@@ -149,6 +154,9 @@ function retimeStops(stops: Stop[]): Stop[] {
   const out: Stop[] = [];
   let clock = round30(DAY_START_MIN), lunchDone = hasLunch, dinnerDone = hasDinner;
   seq.forEach((s, i) => {
+    // A folded sub-attraction (parent in "just passing" mode) keeps its slot in the
+    // trip but costs no time — that is the whole point of the short visit.
+    if (s.parentId != null && passby?.has(s.parentId)) { out.push({ ...s, time: "", duration: "" }); return; }
     if (!lunchDone && i > 0 && clock >= LUNCH_AFTER_MIN) {
       const t = round30(clock);
       out.push({ name: "הפסקת צהריים", kind: "food", time: fmtClock(t), duration: durationHe(LUNCH_MIN), note: "מסעדה מקומית באזור" });
@@ -159,7 +167,9 @@ function retimeStops(stops: Stop[]): Stop[] {
       out.push({ name: "ארוחת ערב", kind: "food", time: fmtClock(t), duration: durationHe(DINNER_MIN), note: "מסעדה מקומית באזור" });
       clock = t + DINNER_MIN; dinnerDone = true;
     }
-    const dw = durToMin(s.duration);   // honours edited / added-break durations
+    // a parent in "just passing" mode costs its curated passby time, not the visit
+    const dw = s.id != null && passby?.has(s.id) && s.passbyMinutes != null
+      ? s.passbyMinutes : durToMin(s.duration);
     const arr = round30(clock);
     out.push({ ...s, time: fmtClock(arr), duration: durationHe(dw) });
     clock = arr + dw;
@@ -301,6 +311,9 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
 
   const trip = trips.find((t) => t.id === tripId);
   const itinerary = trip?.itinerary ?? null;
+  // Parent attractions the traveller chose to only pass by (visit-mode layer).
+  const passbyIds = trip?.passbyIds ?? [];
+  const passbySet = new Set(passbyIds);
   // A car_base build marks EVERY day carBase — surface it as a trip-level fact
   // ("this is a rental-car trip"), not something the traveller must infer from
   // the day-trip banners alone (Salzburg/Crete are car trips throughout).
@@ -635,7 +648,10 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
       if (!d.stops.some(isDinnerSlot)) return true;
       // An UNTIMED stop needs the clock too — the server appends mandatory ❤ picks
       // (and manual adds land) without a time, and they must not render blank.
-      if (d.stops.some((s) => s.id != null && isRealAttraction(s.id) && !s.time)) return true;
+      // A FOLDED sub-attraction is deliberately untimed (its parent is in "just
+      // passing" mode) — excluding it here is what stops the re-time effect from
+      // firing forever on a trip that has one.
+      if (d.stops.some((s) => s.id != null && isRealAttraction(s.id) && !s.time && !(s.parentId != null && passbySet.has(s.parentId)))) return true;
       const t = d.stops
         .map((s) => { if (!s.time) return null; const [h, m] = s.time.split(":").map(Number); return (h || 0) * 60 + (m || 0); })
         .filter((x): x is number => x != null);
@@ -745,6 +761,25 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
   };
   // Day → bank: drop a stop onto the bank — remove it from the day, re-time, and
   // add it to the left-out list so it can be dragged back into any day.
+  // Flip a parent stop between 🎟 entering and 🚶 passing by. Sub-attractions keep
+  // their place in the trip and only fold; the parent's duration switches to its
+  // curated passby time, and the day re-times so the freed hours are real.
+  // Flip a parent between 🎟 entering and 🚶 just passing. The choice lives on the
+  // TRIP (passbyIds), never inside the itinerary — a re-time or a details refetch
+  // would wipe a flag stored on a stop. Sub-attractions fold (they stay in the
+  // trip, they just cost nothing while folded) and the day re-times, so the freed
+  // hours are real rather than cosmetic.
+  const toggleVisitMode = (di: number, si: number) => {
+    if (!itinerary) return;
+    const s0 = itinerary.days[di].stops[si];
+    if (!s0 || s0.id == null) return;
+    const next = new Set(passbySet);
+    next.has(s0.id) ? next.delete(s0.id) : next.add(s0.id);
+    const it: Itinerary = JSON.parse(JSON.stringify(itinerary));
+    it.days.forEach((d, i) => { it.days[i].stops = retimeStops(d.stops, next); });
+    update(tripId, { itinerary: it, passbyIds: [...next] });
+  };
+
   const moveStopToBank = (di: number, si: number) => {
     if (!itinerary) return;
     const s = itinerary.days[di].stops[si];
@@ -1680,6 +1715,11 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 // uniform 3-up grid, no full-width strips. isFilledMeal only tags the card
                 // with WHICH meal it fills.
                 const isFilledMeal = editorial && !!s.meal;
+                // Visit mode: a folded sub-attraction is hidden from the day (its
+                // parent shows how many are folded); a parent that HAS children
+                // gets the 🎟/🚶 switch.
+                if (s.parentId != null && passbySet.has(s.parentId)) return null;
+                const kidCount = s.id != null ? day.stops.filter((k) => isParentOf(s, k)).length : 0;
                 return (
                   <div key={si} ref={(el) => { stopRefs.current[si] = el; }}
                        data-drop-idx={si}
@@ -1717,6 +1757,17 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                         </span>
                         {/* delete for real stops + user-added breaks (dinner/rest); only
                             the auto lunch break is non-deletable (it's re-added on re-time) */}
+                        {kidCount > 0 && (
+                          <button
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => { e.stopPropagation(); toggleVisitMode(curIdx, si); }}
+                            title={s.id != null && passbySet.has(s.id) ? `נכנסים — מחזיר ${kidCount} חלקים ואת זמן הביקור המלא` : `רק עוברים — מקפל ${kidCount} חלקים ומפנה זמן`}
+                            className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-medium transition ${
+                              s.id != null && passbySet.has(s.id) ? "bg-[var(--surface-2)] text-[var(--text-2)] hover:bg-[var(--brand-soft)] hover:text-[var(--brand-ink)]"
+                                       : "bg-[var(--brand-soft)] text-[var(--brand-ink)] hover:bg-[var(--brand)] hover:text-white"}`}>
+                            {s.id != null && passbySet.has(s.id) ? `🚶 רק עוברים · ${kidCount} מקופלים` : `🎟 נכנסים · ${kidCount} חלקים`}
+                          </button>
+                        )}
                         {s.name !== "הפסקת צהריים" && s.name !== "ארוחת ערב" && (
                           <button
                             onClick={(e) => { e.stopPropagation(); deleteStop(curIdx, si); }}

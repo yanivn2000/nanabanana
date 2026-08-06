@@ -158,6 +158,10 @@ export type Segment = {
 };
 
 export type Trip = {
+  // Visit mode per parent attraction: ids the traveller chose to only pass by.
+  // Lives on the TRIP, not inside the itinerary, so a re-time or a details refetch
+  // can never wipe it — it is a preference, not itinerary data.
+  passbyIds?: number[];
   id: string;
   title: string;
   mode: TripMode;
