@@ -100,6 +100,9 @@ const EVENING_OK_RX = /square|כיכר|street|רחוב|promenade|טיילת|brid
 const LATE_MIN = 20 * 60 + 30;   // past here a normal sight is closed
 function wrongAtNight(s: Stop): boolean {
   if (!s.time || s.kind === "food" || s.kind === "rest") return false;
+  // A planned pass-by of a floodlit icon is not a mistake — the note already
+  // says the place is shut and we are only looking at it from outside.
+  if (s.passby) return false;
   const [h, m] = s.time.split(":").map(Number);
   if (!Number.isFinite(h) || (h || 0) * 60 + (m || 0) < LATE_MIN) return false;
   // The DB knows; the name is only the fallback for stops saved before the
@@ -1789,6 +1792,12 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                         </span>
                         {/* delete for real stops + user-added breaks (dinner/rest); only
                             the auto lunch break is non-deletable (it's re-added on re-time) */}
+                        {s.passby && s.timeOfDay === "any" && s.note?.startsWith("רק מבחוץ") && (
+                          <span title="המקום סגור בשעה זו — עוצרים לצילום מבחוץ, בלי כניסה"
+                            className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--surface-2,#f1efe9)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-2)]">
+                            🌃 רק מבחוץ
+                          </span>
+                        )}
                         {wrongAtNight(s) && (
                           <span title="המקום כנראה סגור בשעה זו — גררו אותו מוקדם יותר ביום, או החליפו במקום-ערב"
                             className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-[12px] font-medium text-[var(--accent-ink,#8a3d2a)]">

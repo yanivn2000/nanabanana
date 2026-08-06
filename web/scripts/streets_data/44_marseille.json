@@ -1,0 +1,4 @@
+{"destination_id":44,"city":"Marseille","streets":[
+{"name_local":"La Canebière","name_en":"La Canebière","name_he":"לה קאנֶבּייר","kind":"street","best_for_he":"השדרה הראשית ההיסטורית","vibe_he":"השדרה המפורסמת והראשית של מרסיי היורדת אל הנמל הישן — בנייני המאה ה-19, בתי קפה, שווקים ותיאטראות, עורק החיים של העיר.","dwell_min":35,"approx_lat":43.2967,"approx_lng":5.3810},
+{"name_local":"Cours Julien","name_en":"Cours Julien","name_he":"קור ז'וליאן","kind":"cluster","best_for_he":"רובע אמנות רחוב ובוהמה","vibe_he":"כיכר ורחובות של אמנות רחוב צבעונית, חנויות אינדי, ברים ומסעדות — הרובע הבוהמייני והיצירתי התוסס של מרסיי.","dwell_min":45,"approx_lat":43.2942,"approx_lng":5.3860}
+]}

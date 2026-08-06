@@ -104,6 +104,10 @@ export type Attraction = {
   // place has to earn the right to be offered after dark.
   time_of_day: string | null;
   time_of_day_src: string | null;   // editor | hours | best_time | kind
+  // Shut after dark, but the lit exterior is worth walking past — the Colosseum,
+  // the Eiffel Tower, a floodlit dome. Hand-curated (scripts/seed_night_passby.py);
+  // never a memorial. Only ever scheduled at night as a PASS-BY, never a visit.
+  night_passby?: boolean | null;
   dress_he: string | null;
   cost_level: number | null;
   must_see: number | null;      // EFFECTIVE: editor rank='must' (curated) else OSM
@@ -127,7 +131,7 @@ const ATTR_COLS = `id, name_he, name_en, lat, lng, category, subcategory,
   indoor_outdoor, family_score, tips_he, website, duration_minutes,
   image_url, tagline_he, best_season, best_time_he, time_of_day, dress_he, cost_level, must_see,
   description_he, taste_tags, audience_fit, admin_bonus, info_sources,
-  parent_id, passby_minutes, time_of_day, time_of_day_src`;
+  parent_id, passby_minutes, time_of_day, time_of_day_src, night_passby`;
 
 export type Destination = {
   id: number;
@@ -288,6 +292,16 @@ export async function attractionsByIds(ids: number[]): Promise<Attraction[]> {
 // bring its children with it — the Sistine is not a separate candidate competing
 // on rank, it is what "the Vatican" contains, and it must never be ranked out
 // from under its parent.
+// The floodlit icons of a city — a shut-but-photogenic exterior the evening slot
+// may fall back to when the day ends right beside one.
+export async function nightPassbyForCity(destinationId: number): Promise<Attraction[]> {
+  return query<Attraction>(
+    `SELECT ${ATTR_COLS_EFF} FROM attractions a ${EDITOR_JOIN}
+      WHERE a.destination_id = $1 AND a.night_passby
+        AND a.quality_keep IS DISTINCT FROM 0
+        AND (a.is_duplicate IS NULL OR a.is_duplicate = 0)`, [destinationId]);
+}
+
 export async function childrenOfParents(parentIds: number[]): Promise<Attraction[]> {
   if (!parentIds.length) return [];
   return query<Attraction>(

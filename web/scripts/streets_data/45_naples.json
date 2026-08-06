@@ -1,0 +1,5 @@
+{"destination_id":45,"city":"Naples","streets":[
+{"name_local":"Via San Gregorio Armeno","name_en":"Via San Gregorio Armeno","name_he":"ויה סן גרגוריו ארמנו","kind":"street","best_for_he":"רחוב מצגות חג המולד","vibe_he":"הסמטה המפורסמת של אומני ה'פרספה' — סדנאות ודוכנים של דמויות מצגות חג המולד בעבודת יד לאורך כל השנה, אחד מסמלי נאפולי העתיקה.","dwell_min":30,"approx_lat":40.8497,"approx_lng":14.2585},
+{"name_local":"Via Toledo","name_en":"Via Toledo","name_he":"ויה טולדו","kind":"street","best_for_he":"רחוב הקניות הראשי","vibe_he":"רחוב הקניות הראשי והתוסס של נאפולי, מהעתיקים באירופה — חנויות, פיצריות ופסטה, תחנת המטרו האמנותית טולדו ורובע הקוורטיירי הספרדי הצמוד.","dwell_min":40,"approx_lat":40.8420,"approx_lng":14.2490},
+{"name_local":"Via dei Tribunali","name_en":"Via dei Tribunali","name_he":"ויה דיי טריבונאלי","kind":"street","best_for_he":"הדקומאנוס העתיק והפיצה","vibe_he":"הרחוב הישר החוצה את הלב ההיסטורי לאורך ציר רומי עתיק — פיצריות אגדיות, כנסיות בארוקיות ואווירת נאפולי האותנטית.","dwell_min":45,"approx_lat":40.8510,"approx_lng":14.2560}
+]}

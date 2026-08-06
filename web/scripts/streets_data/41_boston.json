@@ -1,0 +1,5 @@
+{"destination_id":41,"city":"Boston","streets":[
+{"name_local":"Newbury Street","name_en":"Newbury Street","name_he":"רחוב ניוברי","kind":"street","best_for_he":"רחוב הקניות של בק ביי","vibe_he":"רחוב הקניות האלגנטי של בוסטון — בתי אבן חום מהמאה ה-19 ובהם בוטיקים, גלריות ובתי קפה, שדרת ראווה קלאסית.","dwell_min":45,"approx_lat":42.3496,"approx_lng":-71.0810},
+{"name_local":"Charles Street","name_en":"Charles Street","name_he":"רחוב צ'ארלס (ביקון היל)","kind":"street","best_for_he":"סמטאות ביקון היל","vibe_he":"הרחוב הראשי של ביקון היל ההיסטורי — פנסי גז, מרצפות אדומות, חנויות עתיקות ובתי קפה, השכונה המצולמת בבוסטון.","dwell_min":35,"approx_lat":42.3585,"approx_lng":-71.0707},
+{"name_local":"Hanover Street","name_en":"Hanover Street","name_he":"רחוב הנובר (נורת' אנד)","kind":"street","best_for_he":"הרובע האיטלקי","vibe_he":"עורק הרובע האיטלקי של בוסטון — טרטוריות, מאפיות קנולי מפורסמות ואווירה ים-תיכונית תוססת, לאורך שביל החירות.","dwell_min":40,"approx_lat":42.3638,"approx_lng":-71.0542}
+]}

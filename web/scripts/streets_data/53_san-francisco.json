@@ -1,0 +1,5 @@
+{"destination_id":53,"city":"San Francisco","streets":[
+{"name_local":"Haight Street","name_en":"Haight Street","name_he":"רחוב הייט","kind":"street","best_for_he":"רובע ההיפים ההיסטורי","vibe_he":"עורק שכונת הייט-אשבורי, ערש תרבות ההיפים של שנות ה-60 — חנויות תקליטים ווינטג', בתי ויקטוריאני צבעוניים ואווירה בוהמיינית.","dwell_min":40,"approx_lat":37.7699,"approx_lng":-122.4469},
+{"name_local":"Grant Avenue","name_en":"Grant Avenue","name_he":"שדרת גרנט (צ'יינה טאון)","kind":"street","best_for_he":"צ'יינה טאון ההיסטורי","vibe_he":"הרחוב הראשי של צ'יינה טאון העתיקה באמריקה — שער הדרקון, פנסים אדומים, חנויות תה ועשבים ומסעדות דים סאם.","dwell_min":40,"approx_lat":37.7920,"approx_lng":-122.4059},
+{"name_local":"Castro Street","name_en":"Castro Street","name_he":"רחוב קסטרו","kind":"street","best_for_he":"רובע הגאווה ההיסטורי","vibe_he":"לב רובע הקסטרו — מרכז הקהילה הגאה בעולם, דגלי קשת, תיאטרון קסטרו ההיסטורי ובָּרים, אווירה חוגגת וצבעונית.","dwell_min":35,"approx_lat":37.7609,"approx_lng":-122.4350}
+]}

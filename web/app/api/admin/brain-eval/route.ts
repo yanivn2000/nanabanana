@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { editorEmail } from "@/lib/admin";
-import { listDestinations, topAttractions, areasForDestination, brainRulesForDest, approvedStreetsForCity, type Attraction } from "@/lib/db";
+import { listDestinations, topAttractions, areasForDestination, brainRulesForDest, approvedStreetsForCity, nightPassbyForCity, type Attraction } from "@/lib/db";
 import { annotateDaysWithAreas } from "@/lib/cluster";
 import { buildCarBaseItinerary, buildHeuristicItinerary, streetAsStop } from "@/lib/heuristic";
 import { qualityCheck, type Quality } from "@/lib/brain/quality";
@@ -43,6 +43,8 @@ export async function POST(req: NextRequest) {
     // WITH it, exactly like the consumer route, and then checks every day ends there.
     const eveningSpots = (await approvedStreetsForCity(id)).filter((s) => s.evening).map(streetAsStop);
     const eveningIds = new Set(eveningSpots.map((s) => s.id));
+    // Floodlit-but-shut icons — the eval must see the same pass-by stops prod does.
+    const nightIcons = rules.nightPassbyMax > 0 ? await nightPassbyForCity(id) : [];
     // For the audience-identity check: the built stop-id set per audience.
     const builtIds: Partial<Record<Audience, Set<number>>> = {};
     for (const audience of AUDIENCES) {
@@ -65,7 +67,9 @@ export async function POST(req: NextRequest) {
         // differentiation and blind the identity check. (Deep mode overrides seed
         // per iteration below — still a fixed, reproducible list.)
         seed: id, varietyJitter: rules.varietyJitter,
-        ...(!isFamily && eveningSpots.length ? { eveningSpots, eveningStartMin: rules.eveningStart } : {}) };
+        ...(!isFamily && eveningSpots.length ? { eveningSpots, eveningStartMin: rules.eveningStart } : {}),
+        ...(!isFamily && nightIcons.length ? { nightIcons, nightIconMax: rules.nightPassbyMax,
+          nightIconKm: rules.nightPassbyKm, nightIconMinutes: rules.nightPassbyMinutes } : {}) };
       // Build via the REAL consumer engine so the eval reflects exactly what a
       // traveller gets (dwell model, dedup, car day-trips) — one source of truth.
       // The CANONICAL trip mirrors the consumer's best-of-N policy deterministically:
@@ -91,6 +95,9 @@ export async function POST(req: NextRequest) {
             if (!st.time || st.id == null) return false;
             const [hh, mm] = st.time.split(":").map(Number);
             if ((hh || 0) * 60 + (mm || 0) < 20 * 60 + 30) return false;
+            // A deliberate pass-by of a floodlit icon is not a mistake — the
+            // stop says so, and the traveller is told the place is shut.
+            if (st.passby) return false;
             const at = byId.get(st.id);
             return !!at && isWrongAfterDark(at);
           }).map((st) => st.name);

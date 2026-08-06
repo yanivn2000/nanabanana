@@ -54,6 +54,10 @@ export type BuildOpts = {
   // no-kids trip each day ends with the nearest unused one as a soft after-dinner
   // slot. The route only passes these for couples, in cities that have them.
   eveningSpots?: Attraction[];
+  // Floodlit-but-shut icons (attractions.night_passby). Used only as a PASS-BY
+  // at the end of a day, and only when the day ends right beside one.
+  nightIcons?: Attraction[];
+  nightIconMax?: number; nightIconKm?: number; nightIconMinutes?: number;
   eveningStartMin?: number;   // evening_slot technique — earliest evening-slot clock
   // Build variety (variety_jitter technique): same parameters should not produce
   // the SAME trip every time. seed drives a deterministic PRNG (same seed → same
@@ -482,7 +486,12 @@ export function buildHeuristicItinerary(
   }
 
   const usedNight = new Set<number>();   // chosen nightlife venues already placed as an evening slot
-  const evUses = new Map<number, number>();   // evening-street uses this trip (cap: 2)
+  const evUses = new Map<number, number>();
+  // Night-icon budget for the whole trip (technique night_passby).
+  const usedIcons = new Set<number>();
+  let iconsLeft = opts?.nightIconMax ?? 1;
+  const iconKm = opts?.nightIconKm ?? 0.8;
+  const iconMinutes = opts?.nightIconMinutes ?? 20;   // evening-street uses this trip (cap: 2)
   const dayList = capped.map((pickFinal, d) => {
     // Order each day by PROXIMITY (NN + 2-opt) after cap+backfill, then ORIENT the
     // whole route so morning-leaning stops fall earlier and evening / day-ender ones
@@ -584,13 +593,40 @@ export function buildHeuristicItinerary(
       const cand = (evFresh.length ? evFresh : evPool)
         .map((v) => ({ v, km: haversineKm(last.lat as number, last.lng as number, v.lat as number, v.lng as number) }))
         .sort((x, y) => x.km - y.km)[0];
+      // A floodlit icon right where the day ended — the Colosseum lit up, the
+      // dome above the square. It goes BEFORE the evening street, not instead of
+      // it: twenty minutes of photographs from outside, then on to the square for
+      // the actual evening, so the day still ENDS at an evening spot. A pass-by,
+      // never a visit (the place is shut), and once per trip so it stays a
+      // highlight rather than a habit.
+      const iconCand = iconsLeft > 0 ? (opts?.nightIcons ?? [])
+        .filter((v) => !usedIds.has(v.id) && !usedIcons.has(v.id) &&
+          Number.isFinite(v.lat) && Number.isFinite(v.lng))
+        .map((v) => ({ v, km: haversineKm(last.lat as number, last.lng as number, v.lat as number, v.lng as number) }))
+        .filter((x) => x.km <= iconKm)
+        .sort((x, y) => x.km - y.km)[0] : undefined;
       // A day that somehow still overran past ~22:00 gets NO evening slot (a 01:30
       // stop is nonsense) — the Brain's eveningEnd check then flags that day, which
       // is the right signal: fix the day, don't decorate it.
-      if (cand && round30(clock) + 60 <= 22 * 60 + 30) {
+      if (iconCand && round30(clock) + 60 + iconMinutes <= 22 * 60 + 30) {
+        usedIcons.add(iconCand.v.id);
+        iconsLeft -= 1;
+        const v = iconCand.v;
+        const iconClock = Math.max(round30(clock) + 60, opts?.eveningStartMin ?? EVENING_AT_MIN);
+        stops.push({
+          name: v.name_he || v.name_en, kind: kindOf(v), time: fmtClock(iconClock),
+          duration: durationHe(iconMinutes),
+          note: "רק מבחוץ — המקום סגור בשעה זו, אבל מואר ומרהיב לצילום.",
+          id: v.id, lat: v.lat, lng: v.lng, image: v.image_url, tagline: v.tagline_he,
+          timeOfDay: "any", passby: true,
+        });
+        // the evening street now follows the icon, not the last daytime pick
+        clock = iconClock + iconMinutes;
+      }
+      if (cand && round30(clock) + (iconCand ? 15 : 60) <= 22 * 60 + 30) {
         evUses.set(cand.v.id, (evUses.get(cand.v.id) ?? 0) + 1);
         const v = cand.v;
-        const evClock = Math.max(round30(clock) + 60, opts?.eveningStartMin ?? EVENING_AT_MIN);
+        const evClock = Math.max(round30(clock) + (iconCand ? 15 : 60), opts?.eveningStartMin ?? EVENING_AT_MIN);
         stops.push({
           name: v.name_he || v.name_en, kind: kindOf(v), time: fmtClock(evClock),
           duration: durationHe(dwellMinutes(v, dwell)), note: v.tips_he || descriptor(v),

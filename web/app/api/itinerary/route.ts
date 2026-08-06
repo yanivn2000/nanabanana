@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, childrenOfParents, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds, approvedStreetsForCity } from "@/lib/db";
+import { listDestinations, topAttractions, insightsForDestination, attractionsByIds, childrenOfParents, recordWalkEdges, areasForDestination, brainRulesForDest, streetsByIds, approvedStreetsForCity, nightPassbyForCity } from "@/lib/db";
 import { annotateDaysWithAreas } from "@/lib/cluster";
 import type { Attraction, Destination } from "@/lib/db";
 import { refOf, synthId, isRealAttraction } from "@/lib/place";
@@ -564,6 +564,9 @@ export async function POST(req: NextRequest) {
         .filter((s) => s.evening && !streetRows.some((r) => r.id === s.id))
         .map(streetAsStop)
     : [];
+  // The floodlit-but-shut icons (night_passby technique) — same audience rule as
+  // the evening slot: an after-dinner walk is a couples/friends thing.
+  const nightIcons = !isFamily && rules.nightPassbyMax > 0 ? await nightPassbyForCity(dest.id) : [];
   // Variety: every build gets a fresh seed (or an explicit body.seed for exact
   // reproduction), so two couples with identical settings — or the same traveller
   // pressing 'בנה מחדש' — get genuinely different mid-tier picks.
@@ -571,7 +574,9 @@ export async function POST(req: NextRequest) {
   const buildOpts = { ...optsFor(dest, rules), reservedIds, guaranteeIds: pickGuarantee,
     mustIncludeIds: mustInclude, dayMinutes: pace.minutes,
     seed, varietyJitter: rules.varietyJitter,
-    ...(eveningSpots.length ? { eveningSpots, eveningStartMin: rules.eveningStart } : {}) };
+    ...(eveningSpots.length ? { eveningSpots, eveningStartMin: rules.eveningStart } : {}),
+    ...(nightIcons.length ? { nightIcons, nightIconMax: rules.nightPassbyMax,
+      nightIconKm: rules.nightPassbyKm, nightIconMinutes: rules.nightPassbyMinutes } : {}) };
   // Best-of-N lottery-among-the-best (build_candidates technique): build N seeded
   // variants, score each with the Brain's critic, and serve a RANDOM variant from
   // those within `tolerance` points of the best — nobody gets the lottery's weak
