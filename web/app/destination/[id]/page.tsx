@@ -1,10 +1,42 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getDestination, attractionsForMap, insightsForDestination, countSharedTripsForDestination, headlineAreasForCity, approvedStreetsForCity, type Insight } from "@/lib/db";
+import { breadcrumbs, canonical, cityDescription, cityTitle, jsonLd } from "@/lib/seo";
 import { passesForCity, passCovers } from "@/lib/passes";
 import { isEditor } from "@/lib/admin";
 import { DestinationView } from "./DestinationView";
+import { CityIntro } from "@/components/CityIntro";
+import { countryFlag } from "@/lib/labels";
 
 export const dynamic = "force-dynamic";
+
+// Every city page had been inheriting the site-wide title, so all 65 of them
+// competed in search as the same page. This gives each one the words an Israeli
+// actually types — "טיול ל…" plus the city — and real numbers from the DB.
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const dest = await getDestination(Number(id)).catch(() => null);
+  if (!dest) return {};
+  const city = dest.city_he || dest.city;
+  const [attrs, areas, streets] = await Promise.all([
+    attractionsForMap(dest.id, 2000).catch(() => []),
+    headlineAreasForCity(dest.id).catch(() => []),
+    approvedStreetsForCity(dest.id).catch(() => []),
+  ]);
+  const mustSee = attrs.filter((a) => a.must_see === 1).length;
+  const title = cityTitle(city);
+  const description = cityDescription(city, { mustSee, total: attrs.length, areas: areas.length, streets: streets.length });
+  const image = attrs.find((a) => a.must_see === 1 && a.image_url)?.image_url ?? undefined;
+  return {
+    title, description,
+    alternates: { canonical: canonical(`/destination/${dest.id}`) },
+    openGraph: {
+      title, description, type: "website", locale: "he_IL",
+      url: canonical(`/destination/${dest.id}`),
+      ...(image ? { images: [{ url: image }] } : {}),
+    },
+  };
+}
 
 export default async function DestinationPage({
   params,
@@ -58,12 +90,42 @@ export default async function DestinationPage({
     .filter((a) => passes.some((p) => passCovers(p, a.name_en, a.name_he)))
     .map((a) => a.id);
 
+  const city = dest.city_he || dest.city;
+  const mustSeeList = attractions.filter((a) => a.must_see === 1);
+  // Structured data, server-rendered: what the city is, where it sits, and its
+  // headline sights. The page's own content is built on the client, which a
+  // crawler reads too late — this arrives in the HTML.
+  const ld = [
+    breadcrumbs([{ name: "בית", path: "/" }, { name: city, path: `/destination/${dest.id}` }]),
+    {
+      "@context": "https://schema.org",
+      "@type": "TouristDestination",
+      name: city,
+      alternateName: dest.city,
+      url: canonical(`/destination/${dest.id}`),
+      ...(dest.country_he || dest.country ? { addressCountry: dest.country_he || dest.country } : {}),
+      ...(dest.lat != null && dest.lng != null
+        ? { geo: { "@type": "GeoCoordinates", latitude: dest.lat, longitude: dest.lng } } : {}),
+      includesAttraction: mustSeeList.slice(0, 15).map((a) => ({
+        "@type": "TouristAttraction",
+        name: a.name_he || a.name_en,
+        ...(a.image_url ? { image: a.image_url } : {}),
+      })),
+    },
+  ];
+
   const view = (
-    <DestinationView
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />
+      <CityIntro city={city} country={dest.country_he || dest.country} flag={countryFlag(dest.country)}
+        mustSee={mustSeeList.length} total={attractions.length}
+        areas={areas.length} streets={streets.length} />
+      <DestinationView
       dest={dest} attractions={attractions} insights={insights} placeGroups={placeGroups}
       passes={passes} coveredIds={coveredIds} isEditor={editor} communityCount={communityCount}
       areas={areas} streets={streets} editorial={editorial}
-    />
+      />
+    </>
   );
   // Feature flag: /destination/<id>?v=editorial renders the same view inside an
   // .editorial-scope wrapper (re-skin via scoped tokens/CSS). Default is untouched.

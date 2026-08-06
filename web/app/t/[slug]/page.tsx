@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getSharedTrip, bumpSharedTripViews, getTripComments } from "@/lib/db";
+import { canonical, jsonLd } from "@/lib/seo";
 import { SharedTripView } from "./SharedTripView";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,33 @@ export default async function SharedTripPage({
   if (!trip) notFound();
   await bumpSharedTripViews(slug); // simple social proof
   const comments = await getTripComments(trip.id);
-  return <SharedTripView trip={trip} comments={comments} />;
+  // A shared trip IS an itinerary — say so in the markup. schema.org/TouristTrip
+  // with the days as sub-trips is what lets a result show as a real itinerary
+  // rather than an anonymous page.
+  const ld = {
+    "@context": "https://schema.org",
+    "@type": "TouristTrip",
+    name: trip.title,
+    url: canonical(`/t/${slug}`),
+    inLanguage: "he-IL",
+    ...(trip.composition ? { touristType: trip.composition } : {}),
+    ...(trip.city_he || trip.city
+      ? { arrivalLocation: { "@type": "City", name: trip.city_he || trip.city } } : {}),
+    itinerary: trip.itinerary.days.map((d, i) => ({
+      "@type": "ItemList",
+      name: d.label || `יום ${i + 1}`,
+      numberOfItems: d.stops.length,
+      itemListElement: d.stops.slice(0, 12).map((s, j) => ({
+        "@type": "ListItem", position: j + 1, name: s.name,
+      })),
+    })),
+  };
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(ld)} />
+      <SharedTripView trip={trip} comments={comments} />
+    </>
+  );
 }
 
 export async function generateMetadata({
@@ -36,6 +63,7 @@ export async function generateMetadata({
     "תוכנית יום-אחר-יום עם מפה",
   ].filter(Boolean).join(" · ");
   return {
+    alternates: { canonical: canonical(`/t/${slug}`) },
     title: `${trip.title} · Yalle`,
     description: desc,
     openGraph: {

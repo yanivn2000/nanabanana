@@ -2,9 +2,28 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getDestination, listSharedTripsForDestination } from "@/lib/db";
+import type { Metadata } from "next";
 import { CommunityTripsGrid } from "./CommunityTripsGrid";
+import { canonical } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+// "מסלולי טיול ל…" is its own search — people look for a ready itinerary before
+// they look for a planner. This page is the answer, so it gets its own title.
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const dest = await getDestination(Number(id)).catch(() => null);
+  if (!dest) return {};
+  const city = dest.city_he || dest.city;
+  const trips = await listSharedTripsForDestination(dest.id).catch(() => []);
+  const title = `מסלולי טיול ל${city} — ${trips.length ? `${trips.length} מסלולים` : "מסלולים"} של מטיילים | Yalle`;
+  const description = `מסלולים אמיתיים ל${city} שמטיילים בנו ושיתפו — יום־אחר־יום, עם מפה וזמנים. אפשר לקחת מסלול מוכן ולשנות אותו לעצמכם, בחינם.`;
+  return {
+    title, description,
+    alternates: { canonical: canonical(`/destination/${dest.id}/trips`) },
+    openGraph: { title, description, type: "website", locale: "he_IL", url: canonical(`/destination/${dest.id}/trips`) },
+  };
+}
 
 // The per-city community gallery — every trip travelers shared for this city,
 // ranked by likes. "קחו טיול מוכן" = one-click remix from a card.

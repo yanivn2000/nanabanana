@@ -7,6 +7,7 @@ import { NavTitleProvider } from "@/components/NavTitle";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Analytics } from "@vercel/analytics/next";
 import { SITE_URL } from "@/lib/site";
+import { jsonLd, siteJsonLd } from "@/lib/seo";
 
 const assistant = Assistant({
   variable: "--font-assistant",
@@ -33,9 +34,15 @@ const frankRuhl = Frank_Ruhl_Libre({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL), // resolves OG/canonical relative URLs for SEO
-  title: "Yalle · תבנה לי טיול",
+  // A template so every page keeps the brand without repeating it by hand, and a
+  // home title built from what an Israeli searches: the act, not the product name.
+  title: {
+    default: "Yalle · בונה לכם מסלול טיול בעברית — חינם",
+    template: "%s",
+  },
   description:
-    "תבנה לי טיול — האפליקציה שבונה לכם את הטיול המשפחתי המושלם, בעברית, מותאם למשפחה שלכם.",
+    "בוחרים יעד, מסמנים מה מעניין, ומקבלים מסלול טיול יום־אחר־יום בעברית — עם זמנים, מפה והפסקות אוכל. 65 יעדים, מותאם למשפחות, לזוגות ולחברים. בחינם, בלי הרשמה.",
+  alternates: { canonical: "/" },
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Yalle" },
 };
@@ -53,6 +60,7 @@ export default function RootLayout({
   return (
     <html lang="he" dir="rtl" className={`${assistant.variable} ${fredoka.variable} ${frankRuhl.variable} h-full antialiased`}>
       <body className="min-h-full">
+        <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(siteJsonLd())} />
         <NavTitleProvider>
           <TopNav />
           {children}
