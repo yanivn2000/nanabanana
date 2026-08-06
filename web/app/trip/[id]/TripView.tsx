@@ -221,6 +221,24 @@ function retimeStops(stops: Stop[], passby?: Set<number>): Stop[] {
   return out;
 }
 
+// Take out of the day any stop the clock has pushed past closing time. The engine
+// never schedules one; this closes the other two doors — a trip built before that
+// guard, and an edit (drag, add, remove) that pushed an afternoon stop into the
+// night. Nothing is lost: the caller puts every evicted stop back in the bank, so
+// it is one drag away from a day with room. Runs to a fixed point, because
+// removing the 21:30 stop can pull the 22:00 one back into daylight.
+function evictLateShut(stops: Stop[], passby?: Set<number>): { stops: Stop[]; evicted: Stop[] } {
+  const evicted: Stop[] = [];
+  let cur = stops;
+  for (let pass = 0; pass < 6; pass++) {
+    const i = cur.findIndex((s) => wrongAtNight(s));
+    if (i === -1) break;
+    evicted.push(cur[i]);
+    cur = retimeStops(cur.filter((_, j) => j !== i), passby);
+  }
+  return { stops: cur, evicted };
+}
+
 const ICONS = {
   mountain: Mountain, utensils: Utensils, landmark: Landmark,
   coffee: Coffee, "shopping-bag": ShoppingBag,
@@ -258,6 +276,9 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
   const { hotels } = useHotels();
   const [busy, setBusy] = useState<null | "generate" | "revise">(null);
   const [error, setError] = useState<string | null>(null);
+  // A neutral "we changed something for you" line — used when a day edit pushed a
+  // place past its closing time and we moved it to the bank rather than leave it.
+  const [notice, setNotice] = useState<string | null>(null);
   // Unified drag (pointer-based → works with mouse AND touch): a stop dragged within
   // the day (kind:"stop") OR a left-out pick dragged in from the bank (kind:"bank").
   // Drop onto a stop row inserts there / reorders; drop onto the bank sends a stop out.
@@ -707,9 +728,31 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
     if (!itinerary) return;
     const it: Itinerary = JSON.parse(JSON.stringify(itinerary));
     fn(it);
+    // Whatever the edit was, no day may end up sending the traveller somewhere
+    // that is shut. Anything pushed past closing time leaves the day and waits in
+    // the bank — see docs/logic/repeat-visits.md's sibling rule in traits.ts.
+    const evicted: Stop[] = [];
+    it.days.forEach((d, i) => {
+      const r = evictLateShut(d.stops, passbySet);
+      it.days[i].stops = r.stops;
+      evicted.push(...r.evicted);
+    });
     it.days = it.days.filter((d) => d.stops.length > 0);
     it.days.forEach((d, i) => { d.label = `יום ${i + 1}`; });
-    update(tripId, { itinerary: it });
+    const patch: Parameters<typeof update>[1] = { itinerary: it };
+    const fresh = evicted.filter((s) => s.id != null && !(trip?.leftOut ?? []).some((l) => l.id === s.id));
+    if (fresh.length) {
+      // same entry shape moveStopToBank builds, so the bank renders it identically
+      const entries = fresh.map((s) => ({ id: s.id as number, name_he: s.name, name_en: s.nameEn ?? s.name,
+        lat: s.lat ?? null, lng: s.lng ?? null, image_url: s.image ?? null,
+        category: s.manual ? (s.cat ?? "other") : (KIND_TO_CAT[s.kind] ?? "attraction"),
+        tagline_he: s.tagline ?? null, ...(s.manual ? { manual: true } : {}) }));
+      patch.leftOut = [...entries as NonNullable<NonNullable<typeof trip>["leftOut"]>, ...(trip?.leftOut ?? [])];
+      setNotice(fresh.length === 1
+        ? `${fresh[0].name} סגור בשעה הזו — העברנו אותו לבנק`
+        : `${fresh.length} מקומות סגורים בשעה הזו הועברו לבנק`);
+    }
+    update(tripId, patch);
   }
   // Move the whole day earlier/later in the trip order (swap with its neighbour),
   // and keep the pager on the day the user is moving.
@@ -1620,6 +1663,12 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
           {error}
         </div>
       )}
+      {notice && (
+        <div className="mx-5 mt-4 flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-[var(--surface-2,#f1efe9)] px-4 py-3 text-[14px] text-[var(--text-2)] lg:mx-0">
+          <span>🌙 {notice}</span>
+          <button type="button" onClick={() => setNotice(null)} className="shrink-0 text-[13px] underline">סגירה</button>
+        </div>
+      )}
 
       {/* pre-build state — everything's ready but the itinerary isn't built yet
           (e.g. arriving from "new trip · by hotel"). A clear CTA instead of a
@@ -1799,10 +1848,17 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                           </span>
                         )}
                         {wrongAtNight(s) && (
-                          <span title="המקום כנראה סגור בשעה זו — גררו אותו מוקדם יותר ביום, או החליפו במקום-ערב"
-                            className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-[12px] font-medium text-[var(--accent-ink,#8a3d2a)]">
-                            ⚠️ כנראה סגור בשעה זו
-                          </span>
+                          // The day has no earlier evening-friendly stop to swap with
+                          // (re-timing already tries that), so the only honest fix is
+                          // to take it out of the day — one click, and it waits in the
+                          // bank for a day with room.
+                          <button type="button"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => { e.stopPropagation(); moveStopToBank(curIdx, si); }}
+                            title="המקום כנראה סגור בשעה זו — לחצו כדי להעביר אותו לבנק, ומשם ליום אחר"
+                            className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--accent-soft)] px-2.5 py-1 text-[12px] font-medium text-[var(--accent-ink,#8a3d2a)] hover:opacity-80">
+                            ⚠️ כנראה סגור — העבירו לבנק
+                          </button>
                         )}
                         {kidCount > 0 && (
                           <button
