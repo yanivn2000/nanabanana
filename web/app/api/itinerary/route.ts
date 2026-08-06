@@ -19,6 +19,7 @@ import { paceBudget } from "@/lib/trip-types";
 import { rankByTaste, tasteEmphasis } from "@/lib/taste";
 import { haversineKm, estimateLeg } from "@/lib/geo";
 import { reachPenalty } from "@/lib/brain/policy";
+import { critiqueTrip } from "@/lib/brain/critique";
 import type { Itinerary as ItineraryT } from "@/lib/trip-types";
 
 // Record the walking bridges between consecutive located stops of a built trip,
@@ -548,10 +549,41 @@ export async function POST(req: NextRequest) {
     mustIncludeIds: mustInclude, dayMinutes: pace.minutes,
     seed, varietyJitter: rules.varietyJitter,
     ...(eveningSpots.length ? { eveningSpots, eveningStartMin: rules.eveningStart } : {}) };
-  const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary =>
-    d.mobility === "car_base"
-      ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp, buildOpts)
-      : buildHeuristicItinerary(d.city, d.country, ndays, list, fam, pd, wp, undefined, buildOpts);
+  // Best-of-N lottery-among-the-best (build_candidates technique): build N seeded
+  // variants, score each with the Brain's critic, and serve a RANDOM variant from
+  // those within `tolerance` points of the best — nobody gets the lottery's weak
+  // draw, yet two identical requests still get different (equally good) trips.
+  // An explicit body.seed bypasses the lottery: exact single-build reproduction.
+  let servedPick: { seed: number; score: number } | null = null;
+  const heuristicFor = (d: Destination, ndays: number, list: Attraction[], fam: boolean, pd: number, wp: number): Itinerary => {
+    const single = (o: typeof buildOpts): Itinerary =>
+      d.mobility === "car_base"
+        ? buildCarBaseItinerary(d.city, d.country, ndays, list, { lat: d.lat, lng: d.lng }, fam, pd, wp, o)
+        : buildHeuristicItinerary(d.city, d.country, ndays, list, fam, pd, wp, undefined, o);
+    const N = typeof body.seed === "number" ? 1 : Math.max(1, rules.buildCandidates);
+    if (N <= 1) return single(buildOpts);
+    const byId = new Map(attractions.map((a) => [a.id, a]));
+    const evIds = new Set(eveningSpots.map((s) => s.id));
+    const cityMustCount = attractions.filter((a) => a.must_see === 1).length;
+    const scored = Array.from({ length: N }, (_, i) => (seed + i * 101) >>> 0).map((s) => {
+      const it = single({ ...buildOpts, seed: s });
+      const rich: Attraction[][] = it.days.map((dd) =>
+        dd.stops.map((st) => (st.id != null ? byId.get(st.id) : undefined)).filter((a): a is Attraction => !!a));
+      const meta = it.days.map((dd) => {
+        const real = dd.stops.filter((st) => st.id != null);
+        const lastId = real.length ? real[real.length - 1].id : null;
+        return { car: d.mobility === "car_base" || !!dd.dayTrip, eveningEnd: lastId != null && evIds.has(lastId) };
+      });
+      const score = critiqueTrip(rich, fam ? "families" : "adults",
+        { cityMustCount, rules, dayMeta: meta, eveningCity: evIds.size > 0 }).score;
+      return { it, score, s };
+    });
+    const best = Math.max(...scored.map((x) => x.score));
+    const top = scored.filter((x) => x.score >= best - rules.candidateTolerance);
+    const pick = top[Math.floor(Math.random() * top.length)];
+    servedPick = { seed: pick.s, score: pick.score };
+    return pick.it;
+  };
   const detailOf = (a: Attraction) => ({ id: a.id, name_he: a.name_he, name_en: a.name_en, image_url: a.image_url, category: a.category, lat: a.lat, lng: a.lng, tagline_he: a.tagline_he, tips_he: a.tips_he, best_time_he: a.best_time_he, dress_he: a.dress_he, cost_level: a.cost_level, website: a.website, must_see: a.must_see });
   // `opts.list` overrides the match list (neighbourhood builds pass the full area
   // pool so every area member resolves); `opts.surfaceIds`/`detailRows` say which
@@ -636,7 +668,8 @@ export async function POST(req: NextRequest) {
       ...bankMusts.map(detailOf),
       ...bankRest.map(detailOf),
     ].slice(0, bankCap);
-    return NextResponse.json({ itinerary: withDetails, ...(engine ? { engine } : {}), leftOut, origin });
+    return NextResponse.json({ itinerary: withDetails, ...(engine ? { engine } : {}), leftOut, origin,
+      ...(servedPick ? { seed: (servedPick as { seed: number; score: number }).seed, brainScore: (servedPick as { seed: number; score: number }).score } : {}) });
   };
 
   // Attach DB details to an existing itinerary — no AI, so it works without

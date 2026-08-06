@@ -67,48 +67,41 @@ export async function POST(req: NextRequest) {
         ...(!isFamily && eveningSpots.length ? { eveningSpots, eveningStartMin: rules.eveningStart } : {}) };
       // Build via the REAL consumer engine so the eval reflects exactly what a
       // traveller gets (dwell model, dedup, car day-trips) — one source of truth.
-      // Deep mode: extra builds on a fixed seed ladder; only their scores are kept.
-      const seedLadder = Array.from({ length: seedsN }, (_, i) => id + i * 101);
-      const seedScores: number[] = [];
-      for (let si = 1; si < seedLadder.length; si++) {
-        const opts2 = { ...buildOpts, seed: seedLadder[si] };
-        const it2 = carBase
-          ? buildCarBaseItinerary(dest.city, dest.country, days, pool, center, isFamily, pace, 3, opts2)
-          : buildHeuristicItinerary(dest.city, dest.country, days, pool, isFamily, pace, 3, undefined, opts2);
-        const byId2 = new Map(attractions.map((a) => [a.id, a]));
-        const rich2: Attraction[][] = it2.days.map((d) =>
-          d.stops.map((s) => (s.id != null ? byId2.get(s.id) : undefined)).filter((a): a is Attraction => !!a));
-        const meta2 = it2.days.map((d) => {
-          const real = d.stops.filter((s) => s.id != null);
+      // The CANONICAL trip mirrors the consumer's best-of-N policy deterministically:
+      // build the whole fixed seed ladder, score everything, and report the BEST of
+      // the first `buildCandidates` (ties → lowest index — no randomness in the
+      // eval). Deep mode (b.seeds) just extends the ladder for the range display.
+      const byId = new Map(attractions.map((a) => [a.id, a]));
+      const ladderN = Math.max(seedsN, Math.max(1, rules.buildCandidates));
+      const variants = Array.from({ length: ladderN }, (_, i) => id + i * 101).map((s) => {
+        const o = { ...buildOpts, seed: s };
+        const it = carBase
+          ? buildCarBaseItinerary(dest.city, dest.country, days, pool, center, isFamily, pace, 3, o)
+          : buildHeuristicItinerary(dest.city, dest.country, days, pool, isFamily, pace, 3, undefined, o);
+        const rich: Attraction[][] = it.days.map((d) =>
+          d.stops.map((st) => (st.id != null ? byId.get(st.id) : undefined)).filter((a): a is Attraction => !!a));
+        // Car-awareness for the critic: a car_base trip drives every day, a dayTrip
+        // in any city; eveningEnd reads the BUILT stops (street ids are synthetic).
+        const meta = it.days.map((d) => {
+          const real = d.stops.filter((st) => st.id != null);
           const lastId = real.length ? real[real.length - 1].id : null;
           return { car: carBase || !!d.dayTrip, eveningEnd: lastId != null && eveningIds.has(lastId) };
         });
-        seedScores.push(critiqueTrip(rich2, audience, { cityMustCount, rules, dayMeta: meta2, eveningCity: eveningSpots.length > 0 }).score);
-      }
-      const itinerary = carBase
-        ? buildCarBaseItinerary(dest.city, dest.country, days, pool, center, isFamily, pace, 3, buildOpts)
-        : buildHeuristicItinerary(dest.city, dest.country, days, pool, isFamily, pace, 3, undefined, buildOpts);
-      annotateDaysWithAreas(itinerary.days, areas, center);
-      // Reconstruct rich days (Attraction[][]) from the built trip → feed critique + quality.
-      const byId = new Map(attractions.map((a) => [a.id, a]));
-      const richDays: Attraction[][] = itinerary.days.map((d) =>
-        d.stops.map((s) => (s.id != null ? byId.get(s.id) : undefined)).filter((a): a is Attraction => !!a));
-      // Car-awareness for the critic: on a car_base trip EVERY day is driven; a
-      // dayTrip is driven in any city. Long legs then read as נסיעה, not הליכה.
-      // eveningEnd is read off the BUILT stop list (street stops are synthetic, so
-      // richDays can't see them): the day's last real stop is an evening street.
-      const dayMeta = itinerary.days.map((d) => {
-        const real = d.stops.filter((s) => s.id != null);
-        const lastId = real.length ? real[real.length - 1].id : null;
-        return { car: carBase || !!d.dayTrip, eveningEnd: lastId != null && eveningIds.has(lastId) };
+        const critV = critiqueTrip(rich, audience, { cityMustCount, rules, dayMeta: meta, eveningCity: eveningSpots.length > 0 });
+        return { it, rich, meta, crit: critV };
       });
-      const crit = critiqueTrip(richDays, audience, { cityMustCount, rules, dayMeta, eveningCity: eveningSpots.length > 0 });
+      let ci = 0;
+      for (let i = 1; i < Math.min(Math.max(1, rules.buildCandidates), variants.length); i++)
+        if (variants[i].crit.score > variants[ci].crit.score) ci = i;
+      const { it: itinerary, rich: richDays, meta: dayMeta, crit } = variants[ci];
+      const seedScores: number[] = seedsN > 1 ? variants.map((v) => v.crit.score) : [];
+      annotateDaysWithAreas(itinerary.days, areas, center);
       const quality: Quality | undefined = b.quality ? qualityCheck(richDays, audience, rules, { cityMustCount,
         ...(eveningSpots.length ? { eveningEnds: dayMeta.map((m) => m.eveningEnd) } : {}) }) : undefined;
       builtIds[audience] = new Set(richDays.flat().map((a) => a.id));
       report.push({
         cityId: id, city: dest.city_he || dest.city, cityEn: dest.city, country: dest.country, audience, days,
-        ...(seedScores.length ? { seedScores: [crit.score, ...seedScores] } : {}),
+        ...(seedScores.length ? { seedScores } : {}),
         score: crit.score, needsWork: crit.needsWork, stops: crit.stops,
         dims: crit.dims, issues: crit.issues, itinerary, quality,
         daysNames: richDays.map((d) => d.map((a) => ({ name: a.name_he || a.name_en, must: a.must_see === 1, cat: a.category }))),

@@ -149,6 +149,13 @@ export const RULE_KINDS: Record<string, { title: string; help: string; he: (p: R
     params: [{ key: "strength", type: "number", label: "חלון (מיקומים)" }],
     applies: "builder pool order (seeded, reproducible)",
   },
+  build_candidates: {
+    title: "הגרלה בין הטובים",
+    help: "בכל בנייה המנוע מייצר N וריאציות (זרעי-גיוון שונים), מנקד כל אחת בציון המוח, ומגיש וריאציה אקראית מבין אלה שבטווח X נקודות מהטובה ביותר. כך אף לקוח לא מקבל את הווריאציה החלשה של ההגרלה, ושני לקוחות עם אותם פרמטרים עדיין מקבלים טיולים שונים. 1 = כבוי (בנייה בודדת); טולרנס 0 = תמיד הטובה ביותר (בלי גיוון).",
+    he: (p) => `בונה ${p.count ?? 5} וריאציות ומגריל מבין אלה שעד ${p.tolerance ?? 2} נק׳ מהשיא`,
+    params: [{ key: "count", type: "number", label: "וריאציות" }, { key: "tolerance", type: "number", label: "טולרנס (נק׳)" }],
+    applies: "builder — best-of-N lottery, scored by the critic",
+  },
   same_place_km: {
     title: "מרחק \"אותו מקום\"",
     help: "המרחק (במטרים) שמתחתיו שתי עצירות נחשבות לאותו מקום ולא יופיעו פעמיים באותו יום — למשל מבצר והגבעה שהוא יושב עליה, או אגם והמזח שלו. מונע כפילות; המוח שומר את בעל-הערך מבין השניים.",
@@ -225,7 +232,7 @@ export const KIND_GROUP: Record<string, (typeof GROUP_ORDER)[number]> = {
   day_ender_last: "קהל וסינון", season_filter: "קהל וסינון", avoid_category: "קהל וסינון",
   day_window: "תחושת-יום", lunch: "תחושת-יום", visit_minutes: "תחושת-יום", evening_slot: "תחושת-יום",
   daytrip_threshold: "מבנה-הטיול", daytrip_budget: "מבנה-הטיול", daytrip_max_stops: "מבנה-הטיול",
-  free_gems: "מבנה-הטיול", same_place_km: "מבנה-הטיול", variety_jitter: "מבנה-הטיול",
+  free_gems: "מבנה-הטיול", same_place_km: "מבנה-הטיול", variety_jitter: "מבנה-הטיול", build_candidates: "מבנה-הטיול",
   quality_bar: "כיול-הביקורת", dimension_weight: "כיול-הביקורת", min_must_see: "כיול-הביקורת",
   min_audience_fit: "כיול-הביקורת", max_same_type_run: "כיול-הביקורת", day_walk_band: "כיול-הביקורת",
   custom: "הערות",
@@ -258,6 +265,8 @@ export type BrainRules = {
   daytripMaxStops: number;
   samePlaceMeters: number;
   varietyJitter: number;   // variety_jitter — rank window for build-to-build variety (0=off)
+  buildCandidates: number;    // build_candidates — variants per build (1=off)
+  candidateTolerance: number; // build_candidates — serve a random variant within this of the best
   freeGemMaxPerDay: number;
   freeGemDetourMin: number;
   // Tier-3 critic calibration (from quality_bar / dimension_weight / min_* / day_walk_band).
@@ -285,7 +294,7 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
     seasonFilter: false,
     avoid: { families: [...AUDIENCE_PREFS.families.avoid], adults: [...AUDIENCE_PREFS.adults.avoid] },
     dayStartMin: 9 * 60 + 30, lunchAfterMin: 12 * 60, lunchMinutes: 60, eveningStart: 21 * 60, dwell: { ...DWELL_DEFAULT },
-    daytripThresholdKm: 18, daytripPerDays: 2, daytripMaxStops: 5, samePlaceMeters: 90, varietyJitter: 5, freeGemMaxPerDay: 3, freeGemDetourMin: 4,
+    daytripThresholdKm: 18, daytripPerDays: 2, daytripMaxStops: 5, samePlaceMeters: 90, varietyJitter: 5, buildCandidates: 5, candidateTolerance: 2, freeGemMaxPerDay: 3, freeGemDetourMin: 4,
     weights: { ...WEIGHTS }, qualityBar: QUALITY_BAR, minMustSee: THRESHOLDS.minMustSeePerTrip,
     minAudienceFit: THRESHOLDS.minAudienceFit, maxSameTypeRun: THRESHOLDS.maxSameTypeRun,
     dayWalkIdeal: DAY_WALK.ideal, dayWalkFlag: DAY_WALK.flag,
@@ -333,6 +342,10 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
         break;
       case "same_place_km": if (q.meters != null) rules.samePlaceMeters = Number(q.meters); break;
       case "variety_jitter": if (q.strength != null) rules.varietyJitter = Number(q.strength); break;
+      case "build_candidates":
+        if (q.count != null) rules.buildCandidates = Number(q.count);
+        if (q.tolerance != null) rules.candidateTolerance = Number(q.tolerance);
+        break;
       case "quality_bar": if (q.score != null) rules.qualityBar = Number(q.score); break;
       case "dimension_weight": if (q.dimension && q.weight != null) rules.weights[String(q.dimension)] = Number(q.weight); break;
       case "min_must_see": if (q.count != null) rules.minMustSee = Number(q.count); break;
