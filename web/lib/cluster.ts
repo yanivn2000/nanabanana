@@ -57,6 +57,12 @@ export function annotateDaysWithAreas(
   }
 }
 
+// One SITE COMPLEX: consecutive stops this close are parts of a single visit and
+// must not be split across days. The overflow allowances bound how far a day may
+// stretch to finish one.
+const SITE_COMPLEX_KM = 0.35;
+const COMPLEX_MAX_EXTRA = 3;     // stops beyond the pace, to finish a complex
+const COMPLEX_MAX_MIN = 150;     // minutes beyond the day budget, to finish a complex
 const FREE_DETOUR = 4;          // minutes off-path a "free gem" may sit (B)
 const FREE_MAX_PER_DAY = 3;     // don't drown a day in minor gems
 
@@ -337,8 +343,19 @@ export function clusterIntoDays(
     for (const x of tour) {
       let leg = cur.length ? walkBetween(cur[cur.length - 1], x) : 0;
       if (cur.length && (cur.length >= perDay || time + visitMin(x, dwell) + leg > budget)) {
+        // Don't cut the day INSIDE one site complex. Consecutive tour stops this
+        // close are parts of a single visit — the Vatican Museums, the Sistine
+        // Chapel and the Raphael Rooms are one ticket through one building — and a
+        // cut there sends the traveller back through the same gate another day. The
+        // day may overflow to finish the complex, bounded so it can't run away.
+        const prev = cur[cur.length - 1];
+        const sameComplex = Number.isFinite(prev.lat) && Number.isFinite(x.lat) &&
+          haversineKm(prev.lat as number, prev.lng as number, x.lat as number, x.lng as number) <= SITE_COMPLEX_KM;
+        const canOverflow = cur.length < perDay + COMPLEX_MAX_EXTRA && time < budget + COMPLEX_MAX_MIN;
+        if (!(sameComplex && canOverflow)) {
         if (groups.length < days - 1) { groups.push({ stops: cur, time }); cur = []; time = 0; leg = 0; }
         else break;   // last day at capacity — remaining tour stops go to the bank
+        }
       }
       cur.push(x); placed.add(x.id); time += visitMin(x, dwell) + (cur.length > 1 ? leg : 0);
     }

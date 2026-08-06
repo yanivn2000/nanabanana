@@ -110,13 +110,29 @@ export function streetAsStop(s: Street): Attraction {
 }
 
 const isAvoided = (a: Attraction, avoid?: string[]) => !!avoid?.some((t) => stopMatchesType(a, t));
-// Drop stops beyond the per-day cap of a type (keeps the earlier = higher-value ones).
+// Two stops of the same type this close are one visit, not two — the Vatican
+// Museums, its Pinacoteca and the Raphael Rooms are halls behind a single ticket.
+const SAME_VISIT_KM = 0.35;
+const sameVisit = (a: Attraction, b: Attraction) =>
+  Number.isFinite(a.lat) && Number.isFinite(b.lat) &&
+  haversineKm(a.lat as number, a.lng as number, b.lat as number, b.lng as number) <= SAME_VISIT_KM;
+// Drop stops beyond the per-day cap of a type (keeps the earlier = higher-value
+// ones). "≤2 museums a day" means two separate museum VISITS: further halls of a
+// complex already counted are free, or the cap evicts half the Vatican and the
+// backfill scatters it onto other days.
 function capTypePerDay(day: Attraction[], caps?: { type: string; max: number }[]): Attraction[] {
   if (!caps?.length) return day;
   const counts: Record<string, number> = {};
+  const keptOf: Record<string, Attraction[]> = {};
   return day.filter((a) => {
     let drop = false;
-    for (const cap of caps) if (stopMatchesType(a, cap.type)) { counts[cap.type] = (counts[cap.type] ?? 0) + 1; if (counts[cap.type] > cap.max) drop = true; }
+    for (const cap of caps) {
+      if (!stopMatchesType(a, cap.type)) continue;
+      const kept = keptOf[cap.type] ?? (keptOf[cap.type] = []);
+      if (kept.some((k) => sameVisit(a, k))) { kept.push(a); continue; }   // same complex — free
+      counts[cap.type] = (counts[cap.type] ?? 0) + 1;
+      if (counts[cap.type] > cap.max) drop = true; else kept.push(a);
+    }
     return !drop;
   });
 }
