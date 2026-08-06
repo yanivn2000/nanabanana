@@ -157,6 +157,14 @@ export async function POST(req: NextRequest) {
       L.push("  מבחן ההנאה:");
       if (r.quality.fun.length) r.quality.fun.forEach((f) => L.push(`    ⚠️ ${f}`));
       else L.push("    ✓ לא נמצאו דגלי-שעמום (שיפוט ההנאה האמיתי — בצ'אט).");
+      // The critic's flags (thin days, walkability, balance…) — everything the 🧠
+      // table shows on the row. eveningEnd + audienceIdentity are skipped here
+      // because the conformance section above already carries them as ✗ lines.
+      const flags = r.issues.filter((i) => i.dim !== "eveningEnd" && i.dim !== "audienceIdentity");
+      if (flags.length) {
+        L.push("  דגלי המוח:");
+        flags.forEach((i) => L.push(`    ${i.severity === "critical" ? "🔴" : "⚠️"} ${i.msg}`));
+      }
       if (r.quality.suggestions.length) { L.push("  תובנות לשיפור:"); r.quality.suggestions.forEach((s) => L.push(`    • ${s}`)); }
     }
     L.push("", "─".repeat(34),
@@ -168,6 +176,7 @@ export async function POST(req: NextRequest) {
 
 type ReportRow = {
   city: string; audience: string; score: number;
+  issues: { dim: string; severity: "critical" | "warn"; msg: string; day?: number }[];
   itinerary: { days: { label: string; dayTrip?: unknown; stops: { name: string; kind: string }[] }[] };
   quality?: Quality;
 };
