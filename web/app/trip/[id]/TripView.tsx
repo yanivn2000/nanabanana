@@ -484,16 +484,14 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
   const dayTopRef = useRef<HTMLDivElement | null>(null);
   const gotoDay = (i: number) => {
     setDayIdx(i); setExpanded(null); setActive(null);
-    // An instant explicit scrollTo, not scrollIntoView — the owner's word was
-    // "יקפוץ", and in testing scrollIntoView lost a fight with the browser's
-    // scroll anchoring during the day-content swap (the window drifted +263px
-    // instead of jumping). Computing the target ourselves sidesteps both that
-    // and the hidden-tab rAF freeze. 80ms lets the switched day finish layout.
-    setTimeout(() => {
-      const el = dayTopRef.current;
-      if (!el) return;
-      window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + window.scrollY - 72));
-    }, 80);
+    // All the way to the top — owner: "תעלה עד למעלה - שיראו את התיאור של היום
+    // באופן מלא". Landing on the opener's offset left its title half-hidden
+    // under the sticky tabs bar; the top shows the trip header, the day tabs
+    // and the full chapter opener in one view. Explicit scrollTo (not
+    // scrollIntoView) because scroll anchoring fought the jump in testing, and
+    // a timer (not rAF) because rAF never fires in a hidden tab. 80ms lets the
+    // switched day finish layout.
+    setTimeout(() => window.scrollTo(0, 0), 80);
   };
   // AI labels carry the day's theme ("יום 2 — פארק רטירו…") — chips show only
   // the short "יום N"; the full title lives in the day header below.
