@@ -283,10 +283,20 @@ export async function POST(req: NextRequest) {
   // Load guard for EVERY build, AI or not. "Free" heuristic builds are free in
   // dollars, not in compute: each one pulls the city pool and scores 5 candidate
   // itineraries, and with AI off for launch the old aiConfigured() condition
-  // left this endpoint entirely unthrottled. 40/hour is far beyond any real
-  // person planning trips and far below a scraper.
-  if (body.mode === "generate" || body.mode === "revise") {
-    const buildLimited = await rateLimit(req, "build", 40, 3600);
+  // left this endpoint entirely unthrottled. Two windows, both owner-set
+  // ("תוריד ל 20 ו 50 ביום שלא יגנבו לנו דאטה"): 20/hour absorbs a real planning
+  // session with re-builds to spare, and 50/day is the scraper wall — a full
+  // build returns an itinerary plus the ranked bank, which is exactly the
+  // curated data someone would farm. Note: only generate/revise. The cheap
+  // trip-page modes (arrange, suggest, details) stay unthrottled so editing a
+  // day never hits a wall.
+  // A request with NO mode falls through to a full generate — that default is
+  // what a naive scraper sends, so it must be inside the throttle, not outside
+  // it. Only the explicitly-cheap trip-page modes are exempt.
+  const CHEAP_MODES = new Set(["details", "arrange", "suggest"]);
+  if (!CHEAP_MODES.has(body.mode as string)) {
+    const buildLimited = await rateLimit(req, "build", 20, 3600)
+      ?? await rateLimit(req, "build-daily", 50, 86_400);
     if (buildLimited) return buildLimited;
   }
   // Cost guard — only the AI-spending modes (details/heuristic are free).

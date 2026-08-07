@@ -223,3 +223,8 @@ body {
   box-shadow: var(--shadow);
 }
 .leaflet-tooltip.street-label::before { display: none; } /* hide the arrow */
+
+/* Day switches on the trip page replace most of the document; the browser's
+   scroll anchoring then "helpfully" drags the viewport to follow old content,
+   fighting the deliberate jump-to-day-top. We always position explicitly. */
+body { overflow-anchor: none; }

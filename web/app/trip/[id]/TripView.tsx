@@ -478,6 +478,23 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
   // Trip calendar dates (from the earliest hotel check-in). Enables live mode:
   // only when today falls inside the trip do "today"/"tomorrow" mean anything.
   const dayLabels = itinerary?.days.map((d, i) => d.label || `יום ${i + 1}`) ?? [];
+  // Switching a day keeps the scroll position by default, which read as "nothing
+  // happened" in user testing — you were left mid-list of the PREVIOUS day. Every
+  // day switch now lands on the day's opening (the big numeral + title).
+  const dayTopRef = useRef<HTMLDivElement | null>(null);
+  const gotoDay = (i: number) => {
+    setDayIdx(i); setExpanded(null); setActive(null);
+    // An instant explicit scrollTo, not scrollIntoView — the owner's word was
+    // "יקפוץ", and in testing scrollIntoView lost a fight with the browser's
+    // scroll anchoring during the day-content swap (the window drifted +263px
+    // instead of jumping). Computing the target ourselves sidesteps both that
+    // and the hidden-tab rAF freeze. 80ms lets the switched day finish layout.
+    setTimeout(() => {
+      const el = dayTopRef.current;
+      if (!el) return;
+      window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + window.scrollY - 72));
+    }, 80);
+  };
   // AI labels carry the day's theme ("יום 2 — פארק רטירו…") — chips show only
   // the short "יום N"; the full title lives in the day header below.
   const shortDay = (i: number) =>
@@ -1551,21 +1568,31 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                 // Editorial "table of contents": each day as a titled chapter entry
                 // with the neighbourhood as its subtitle and an active accent rule.
                 return (
-                  <button key={i} onClick={() => { setDayIdx(i); setExpanded(null); setActive(null); }}
-                    className="flex shrink-0 flex-col items-start gap-1 rounded-t-[10px] border-b-[3px] px-4 py-2.5 text-start transition"
+                  // Owner, from user testing: the days did not stand out. Each tab
+                  // now leads with a big numeral badge; the active day is a filled
+                  // block, not a wash.
+                  <button key={i} onClick={() => gotoDay(i)}
+                    className="flex shrink-0 items-center gap-2.5 rounded-t-[12px] border-b-[3px] px-4 py-3 text-start transition"
                     style={{ borderColor: on ? "var(--accent)" : "transparent",
                              background: on ? "var(--accent-soft)" : "transparent" }}>
-                    <span className="serif font-bold leading-none" style={{ color: on ? "var(--text)" : "var(--text-3)", fontSize: on ? 17 : 15 }}>
-                      יום {i + 1}{today ? " · היום" : ""}
+                    <span className="serif grid size-9 shrink-0 place-items-center rounded-[10px] text-[19px] font-extrabold leading-none [font-variant-numeric:tabular-nums]"
+                      style={on ? { background: "var(--accent)", color: "#fff" }
+                                : { background: "var(--surface-2)", color: "var(--text-3)" }}>
+                      {i + 1}
                     </span>
-                    <span className="text-[12.5px] leading-none" style={{ color: on ? "var(--accent-ink)" : "var(--text-3)", fontWeight: on ? 600 : 400 }}>
-                      {d.area || `${d.stops.length} עצירות`}
+                    <span className="flex flex-col gap-1">
+                      <span className="serif font-bold leading-none" style={{ color: on ? "var(--text)" : "var(--text-2)", fontSize: on ? 18 : 15.5 }}>
+                        יום {i + 1}{today ? " · היום" : ""}
+                      </span>
+                      <span className="text-[12.5px] leading-none" style={{ color: on ? "var(--accent-ink)" : "var(--text-3)", fontWeight: on ? 600 : 400 }}>
+                        {d.area || `${d.stops.length} עצירות`}
+                      </span>
                     </span>
                   </button>
                 );
               }
               return (
-                <button key={i} onClick={() => { setDayIdx(i); setExpanded(null); setActive(null); }}
+                <button key={i} onClick={() => gotoDay(i)}
                   className="flex shrink-0 items-center gap-1.5 rounded-full border-[1.5px] px-3 py-1 text-[13px] font-medium transition"
                   style={{ background: on ? "var(--brand)" : "var(--surface)",
                            color: on ? "#fff" : "var(--text-2)",
@@ -1645,7 +1672,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
           numeral, the neighbourhood as the chapter title, the day's rationale as a
           one-line intro. (Real day.title/intro come later; area/why are the stopgap.) */}
       {editorial && itinerary && day && (
-        <div className="mt-7 flex items-start gap-5 px-5 lg:gap-6 lg:px-8">
+        <div ref={dayTopRef} className="mt-7 flex scroll-mt-16 items-start gap-5 px-5 lg:gap-6 lg:scroll-mt-20 lg:px-8">
           <div className="shrink-0">
             <div className="serif text-[56px] font-extrabold leading-[0.8] tracking-tight text-[var(--accent)] [font-variant-numeric:tabular-nums] lg:text-[76px]">{String(curIdx + 1).padStart(2, "0")}</div>
             <div className="mt-2 h-[3px] w-9 rounded-full bg-[var(--accent)] lg:w-12" />
