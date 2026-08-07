@@ -739,6 +739,42 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId, itinerary]);
 
+  // Same sweep mutate() runs after an edit, but on the trip AS LOADED. Without
+  // this it only fired when the traveller touched something, so a trip built
+  // before the after-dark guard — or one re-timed by the effect above — kept
+  // showing a museum at 21:00 with a warning nobody had asked for. If we know
+  // the place is shut we take it out; we do not wait to be prompted.
+  // Converges: the sweep removes every offender in one pass, so the next run
+  // finds none and stops.
+  useEffect(() => {
+    if (!itinerary) return;
+    const evicted: Stop[] = [];
+    const it: Itinerary = JSON.parse(JSON.stringify(itinerary));
+    it.days.forEach((d, i) => {
+      const r = evictLateShut(d.stops, passbySet, itinerary.eveningCap);
+      it.days[i].stops = r.stops;
+      evicted.push(...r.evicted);
+    });
+    if (!evicted.length) return;
+    it.days = it.days.filter((d) => d.stops.length > 0);
+    it.days.forEach((d, i) => { d.label = `יום ${i + 1}`; });
+    const fresh = evicted.filter((s) => s.id != null && !(trip?.leftOut ?? []).some((l) => l.id === s.id));
+    const patch: Parameters<typeof update>[1] = { itinerary: it };
+    if (fresh.length) {
+      patch.leftOut = [...fresh.map((s) => ({
+        id: s.id as number, name_he: s.name, name_en: s.nameEn ?? s.name,
+        lat: s.lat ?? null, lng: s.lng ?? null, image_url: s.image ?? null,
+        category: s.manual ? (s.cat ?? "other") : (KIND_TO_CAT[s.kind] ?? "attraction"),
+        tagline_he: s.tagline ?? null, ...(s.manual ? { manual: true } : {}),
+      })) as NonNullable<NonNullable<typeof trip>["leftOut"]>, ...(trip?.leftOut ?? [])];
+      setNotice(fresh.length === 1
+        ? `${fresh[0].name} סגור בשעה הזו — העברנו אותו לבנק`
+        : `${fresh.length} מקומות סגורים בשעה הזו הועברו לבנק`);
+    }
+    update(tripId, patch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripId, itinerary, passbySet]);
+
   // Left-out markers to show on the map: only picks within a walkable/short-transit
   // reach of the CURRENT day's stops — a far pick (Kew) isn't a sensible add to a
   // central day, so it shouldn't clutter the map for that day.
