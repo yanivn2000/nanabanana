@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { recordEvent } from "@/lib/db";
+import { rateLimit } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,11 @@ export const dynamic = "force-dynamic";
 const ALLOWED = new Set(["city_view", "build_started", "build_done", "search_miss", "trip_shared"]);
 const MAX_PROP_LEN = 120;
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // A metrics sink is a classic flood target. Real users emit a handful of
+  // events a minute; anything past this is noise we would rather drop.
+  const limited = await rateLimit(req, "ev", 240, 3600).catch(() => null);
+  if (limited) return NextResponse.json({ ok: true });   // drop silently, never error
   try {
     const b = await req.json().catch(() => null);
     const name = typeof b?.name === "string" ? b.name : "";

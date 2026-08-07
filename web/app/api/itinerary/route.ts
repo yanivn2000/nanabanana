@@ -280,6 +280,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "bad json" }, { status: 400 });
   }
 
+  // Load guard for EVERY build, AI or not. "Free" heuristic builds are free in
+  // dollars, not in compute: each one pulls the city pool and scores 5 candidate
+  // itineraries, and with AI off for launch the old aiConfigured() condition
+  // left this endpoint entirely unthrottled. 40/hour is far beyond any real
+  // person planning trips and far below a scraper.
+  if (body.mode === "generate" || body.mode === "revise") {
+    const buildLimited = await rateLimit(req, "build", 40, 3600);
+    if (buildLimited) return buildLimited;
+  }
   // Cost guard — only the AI-spending modes (details/heuristic are free).
   if ((body.mode === "generate" || body.mode === "revise") && aiConfigured()) {
     const ipLimited = await rateLimit(req, "itinerary", AI_PER_IP_HOURLY, 3600);
