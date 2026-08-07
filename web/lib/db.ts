@@ -951,6 +951,67 @@ export async function destinationsWithSharedTrips(): Promise<number[]> {
   return rows.map((r) => r.destination_id);
 }
 
+// --- Product analytics -------------------------------------------------------
+// First-party, four event names, no personal data. See lib/track.ts for why
+// these four and not more.
+export async function recordEvent(e: {
+  name: string; props: Record<string, unknown>; clientId: string | null; path: string | null;
+}): Promise<void> {
+  await query(
+    `INSERT INTO events (name, props, client_id, path) VALUES ($1, $2, $3, $4)`,
+    [e.name, JSON.stringify(e.props), e.clientId, e.path]);
+}
+
+export type UsageStats = {
+  funnel: { cityViews: number; buildsStarted: number; buildsDone: number; shares: number };
+  topCities: { slug: string; views: number; builds: number }[];
+  misses: { q: string; n: number; last: string }[];
+  buildShape: { days: { days: number; n: number }[]; kids: { kids: boolean; n: number }[] };
+  daily: { day: string; views: number; builds: number }[];
+};
+
+// Everything the admin's "what are people doing" tab shows, in one round trip.
+// `days` bounds every query so the tab stays fast as the table grows.
+export async function usageStats(days = 30): Promise<UsageStats> {
+  const since = `now() - interval '${Math.max(1, Math.min(365, Math.round(days)))} days'`;
+  const [counts, cities, misses, byDays, byKids, daily] = await Promise.all([
+    query<{ name: string; n: number }>(
+      `SELECT name, count(*)::int AS n FROM events WHERE created_at > ${since} GROUP BY name`),
+    query<{ slug: string; views: number; builds: number }>(
+      `SELECT props->>'slug' AS slug,
+              count(*) FILTER (WHERE name = 'city_view')::int AS views,
+              count(*) FILTER (WHERE name = 'build_done')::int AS builds
+         FROM events WHERE created_at > ${since} AND props->>'slug' IS NOT NULL
+        GROUP BY 1 ORDER BY views DESC, builds DESC LIMIT 20`),
+    query<{ q: string; n: number; last: string }>(
+      `SELECT lower(props->>'q') AS q, count(*)::int AS n, max(created_at)::text AS last
+         FROM events WHERE name = 'search_miss' AND created_at > ${since}
+          AND coalesce(props->>'q', '') <> ''
+        GROUP BY 1 ORDER BY n DESC LIMIT 25`),
+    query<{ days: number; n: number }>(
+      `SELECT (props->>'days')::int AS days, count(*)::int AS n
+         FROM events WHERE name = 'build_done' AND created_at > ${since}
+          AND props->>'days' ~ '^[0-9]+$'
+        GROUP BY 1 ORDER BY 1`),
+    query<{ kids: boolean; n: number }>(
+      `SELECT (props->>'kids')::boolean AS kids, count(*)::int AS n
+         FROM events WHERE name = 'build_started' AND created_at > ${since}
+          AND props->>'kids' IN ('true','false')
+        GROUP BY 1`),
+    query<{ day: string; views: number; builds: number }>(
+      `SELECT to_char(created_at, 'YYYY-MM-DD') AS day,
+              count(*) FILTER (WHERE name = 'city_view')::int AS views,
+              count(*) FILTER (WHERE name = 'build_done')::int AS builds
+         FROM events WHERE created_at > ${since} GROUP BY 1 ORDER BY 1`),
+  ]);
+  const n = (k: string) => counts.find((c) => c.name === k)?.n ?? 0;
+  return {
+    funnel: { cityViews: n("city_view"), buildsStarted: n("build_started"),
+      buildsDone: n("build_done"), shares: n("trip_shared") },
+    topCities: cities, misses, buildShape: { days: byDays, kids: byKids }, daily,
+  };
+}
+
 // --- Moderation (P4) ---------------------------------------------------------
 // Anyone can flag a comment or a shared trip; a report just bumps a counter
 // (idempotency isn't critical here — the counter is a triage signal, not a vote).

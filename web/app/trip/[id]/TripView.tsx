@@ -38,6 +38,7 @@ import { KIND_META } from "@/lib/sample";
 import type { Itinerary, Stop } from "@/lib/trip-types";
 import type { Attraction } from "@/lib/db";
 import { useTrips, useProfile, useHotels, profileText, profileSummary, MONTHS_HE, datesToInfo } from "@/lib/store";
+import { track } from "@/lib/track";
 import { deriveTaste } from "@/lib/taste";
 import { ProfileEditor } from "@/components/ProfileEditor";
 import { ShareTrip } from "@/components/ShareTrip";
@@ -530,6 +531,14 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
       // `leftOut` comes back only on a selection build; keep the last value on
       // revise. `engine` records whether this is the free heuristic or the AI
       // upgrade (no engine field on AI success → "ai").
+      // A build that actually produced an itinerary — the far end of the funnel.
+      if (mode === "generate") {
+        track("build_done", {
+          city: trip?.city ?? city ?? "",
+          days: data.itinerary?.days?.length ?? 0,
+          stops: (data.itinerary?.days ?? []).reduce((n: number, d: { stops: unknown[] }) => n + (d.stops?.length ?? 0), 0),
+        });
+      }
       update(tripId, { itinerary: data.itinerary, engine: data.engine ?? "ai",
         // keep the "X ימים" label in sync with what was actually built (a
         // neighbourhood build sets its own day count = areas + extra days).

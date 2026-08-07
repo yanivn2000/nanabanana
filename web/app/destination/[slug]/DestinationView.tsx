@@ -22,6 +22,7 @@ import { descriptor, catColor, bigImage, hiResImage, mergeCat, countryFlag, wiki
 import { passUrl, type Pass } from "@/lib/passes";
 import { useRouter } from "next/navigation";
 import { useProfile, useTrips, useCitySelection, type Choice } from "@/lib/store";
+import { track } from "@/lib/track";
 import { useNavTitle } from "@/components/NavTitle";
 
 // distance slider index → per-trip dailyDriveHours (same scale as the old flow)
@@ -589,6 +590,10 @@ export function DestinationView({
   }, [streets, query]);
   // Open the build modal seeded with the traveler's saved pace (as a per-day count).
   const openBuild = () => { setBuildOpen(true); };
+  // What people DO: this page being seen, and a build actually starting from it.
+  // The pair is the funnel — a city with many views and few builds is a page
+  // that is not converting, and no other source can tell us that.
+  useEffect(() => { track("city_view", { slug: dest.slug }); }, [dest.slug]);
   const PAGE = 200;
   const [visibleCount, setVisibleCount] = useState(PAGE);
   // Editorial city browse: the long flat list is split into tabs — "שכונות" (with a
@@ -1013,6 +1018,10 @@ export function DestinationView({
       ...(yesFinal.length || noFinal.length ? { selection: { yes: yesFinal, no: noFinal } } : {}),
       ...(chosenAreaGroups.length ? { areaGroups: chosenAreaGroups, areaIds: chosenAreaIds } : {}),
       ...(streetPicks.size ? { streetIds: [...streetPicks] } : {}),
+    });
+    track("build_started", {
+      slug: dest.slug, days: buildDays, kids: (profile.kids?.length ?? 0) > 0,
+      picks: yesFinal.length, areas: chosenAreaGroups.length, streets: streetPicks.size,
     });
     router.push(`/trip/${trip.id}?build=1`);
   }

@@ -7,6 +7,7 @@ import { Share2, Copy, Check, Loader2, X, Trash2, MessageCircle, Send, LogIn, Ex
 import type { Trip, FamilyProfile } from "@/lib/store";
 import { useSessionUser } from "@/lib/auth";
 import { shareOrigin } from "@/lib/site";
+import { track } from "@/lib/track";
 
 // lucide dropped its brand glyphs — inline the Facebook "f"
 function Facebook({ size = 18, className }: { size?: number; className?: string }) {
@@ -91,7 +92,11 @@ export function ShareTrip({ trip, profile, onShared }: {
 
   async function copy() {
     if (!url) return;
-    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch {}
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true); setTimeout(() => setCopied(false), 1800);
+      track("trip_shared", { slug: trip.shared?.slug ?? "", city: trip.cityHe ?? trip.city ?? "" });
+    } catch {}
   }
 
   return (

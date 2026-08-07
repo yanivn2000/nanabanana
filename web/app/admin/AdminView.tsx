@@ -8,6 +8,7 @@ import { AttractionsTable } from "./AttractionsTable";
 import { AreasTable } from "./AreasTable";
 import { StreetsTable } from "./StreetsTable";
 import { TripsTable } from "./TripsTable";
+import { UsagePanel } from "./UsagePanel";
 import { GraphTable } from "./GraphTable";
 import { BrainEval } from "./BrainEval";
 import { PrinciplesTable } from "./PrinciplesTable";
@@ -26,6 +27,7 @@ const TABS = [
   { key: "insights", label: "📥 תובנות" },
   { key: "moderation", label: "🚩 מודרציה" },
   { key: "content", label: "🖼️ תוכן" },
+  { key: "usage", label: "📈 מה אנשים עושים" },
   { key: "trips", label: "🧳 טיולי משתמשים" },
   { key: "feedback", label: "💬 פידבק" },
   { key: "posters", label: "🖼️ פוסטרים" },
@@ -288,6 +290,7 @@ export function AdminView({ destinations, feedback, email, version }: {
 
       {tab === "content" && <ContentGaps />}
 
+      {tab === "usage" && <UsagePanel />}
       {tab === "trips" && <TripsTable />}
 
       {tab === "feedback" && (

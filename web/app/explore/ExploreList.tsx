@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Search, Landmark, Building2, Trees, UtensilsCrossed, ShoppingBag,
@@ -9,6 +9,7 @@ import {
 import { CityPoster } from "@/components/CityPoster";
 import type { Destination, DestinationSummary } from "@/lib/db";
 import { regionOf, REGION_ORDER } from "@/lib/labels";
+import { track } from "@/lib/track";
 
 // The strongest attraction categories in a city → 1-2 chips of real signal shown
 // on the card (beyond name / country / count). Ordered by count, count>0 only.
@@ -37,6 +38,22 @@ export function ExploreList({ destinations, summaries = [] }: {
 }) {
   const [q, setQ] = useState("");
   const byId = useMemo(() => new Map(summaries.map((s) => [s.id, s])), [summaries]);
+
+  // A search that matched NOTHING is the most actionable signal the site has:
+  // it is a person telling us which destination to add next. Debounced so a word
+  // typed letter by letter is one event, not seven, and only for a query long
+  // enough to be a real place name.
+  useEffect(() => {
+    const term = q.trim();
+    if (term.length < 3) return;
+    const id = setTimeout(() => {
+      const hit = destinations.some((d) =>
+        `${d.city} ${d.country} ${d.city_he ?? ""} ${d.country_he ?? ""}`
+          .toLowerCase().includes(term.toLowerCase()));
+      if (!hit) track("search_miss", { q: term });
+    }, 1200);
+    return () => clearTimeout(id);
+  }, [q, destinations]);
 
   const filtered = destinations.filter((d) =>
     `${d.city} ${d.country} ${d.city_he ?? ""} ${d.country_he ?? ""}`
