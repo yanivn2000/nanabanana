@@ -481,7 +481,6 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
   // Switching a day keeps the scroll position by default, which read as "nothing
   // happened" in user testing — you were left mid-list of the PREVIOUS day. Every
   // day switch now lands on the day's opening (the big numeral + title).
-  const dayTopRef = useRef<HTMLDivElement | null>(null);
   const gotoDay = (i: number) => {
     setDayIdx(i); setExpanded(null); setActive(null);
     // All the way to the top — owner: "תעלה עד למעלה - שיראו את התיאור של היום
@@ -1570,19 +1569,19 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                   // now leads with a big numeral badge; the active day is a filled
                   // block, not a wash.
                   <button key={i} onClick={() => gotoDay(i)}
-                    className="flex shrink-0 items-center gap-2.5 rounded-t-[12px] border-b-[3px] px-4 py-3 text-start transition"
+                    className="flex shrink-0 items-center gap-3 rounded-t-[12px] border-b-[3px] px-5 py-3.5 text-start transition"
                     style={{ borderColor: on ? "var(--accent)" : "transparent",
                              background: on ? "var(--accent-soft)" : "transparent" }}>
-                    <span className="serif grid size-9 shrink-0 place-items-center rounded-[10px] text-[19px] font-extrabold leading-none [font-variant-numeric:tabular-nums]"
+                    <span className="serif grid size-12 shrink-0 place-items-center rounded-[12px] text-[26px] font-extrabold leading-none [font-variant-numeric:tabular-nums]"
                       style={on ? { background: "var(--accent)", color: "#fff" }
                                 : { background: "var(--surface-2)", color: "var(--text-3)" }}>
                       {i + 1}
                     </span>
-                    <span className="flex flex-col gap-1">
-                      <span className="serif font-bold leading-none" style={{ color: on ? "var(--text)" : "var(--text-2)", fontSize: on ? 18 : 15.5 }}>
+                    <span className="flex flex-col gap-1.5">
+                      <span className="serif font-bold leading-none" style={{ color: on ? "var(--text)" : "var(--text-2)", fontSize: on ? 22 : 17 }}>
                         יום {i + 1}{today ? " · היום" : ""}
                       </span>
-                      <span className="text-[12.5px] leading-none" style={{ color: on ? "var(--accent-ink)" : "var(--text-3)", fontWeight: on ? 600 : 400 }}>
+                      <span className="leading-none" style={{ color: on ? "var(--accent-ink)" : "var(--text-3)", fontWeight: on ? 700 : 400, fontSize: on ? 15 : 13 }}>
                         {d.area || `${d.stops.length} עצירות`}
                       </span>
                     </span>
@@ -1613,6 +1612,11 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
             </button>
           )}
         </div>
+      )}
+      {/* the active day's one-line rationale — lives WITH the tabs (owner: no
+          second day-header below, the enlarged tabs carry the info) */}
+      {editorial && itinerary && day?.why && (
+        <p className="px-5 pt-3 text-[14.5px] leading-relaxed text-[var(--text-2)] lg:px-8">{day.why}</p>
       )}
 
       {/* remixed-trip loop: this trip was copied from a community share, so nudge
@@ -1666,22 +1670,6 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
         </div>
       )}
 
-      {/* Editorial chapter opener — the day reads as a magazine chapter: an oversized
-          numeral, the neighbourhood as the chapter title, the day's rationale as a
-          one-line intro. (Real day.title/intro come later; area/why are the stopgap.) */}
-      {editorial && itinerary && day && (
-        <div ref={dayTopRef} className="mt-7 flex scroll-mt-16 items-start gap-5 px-5 lg:gap-6 lg:scroll-mt-20 lg:px-8">
-          <div className="shrink-0">
-            <div className="serif text-[56px] font-extrabold leading-[0.8] tracking-tight text-[var(--accent)] [font-variant-numeric:tabular-nums] lg:text-[76px]">{String(curIdx + 1).padStart(2, "0")}</div>
-            <div className="mt-2 h-[3px] w-9 rounded-full bg-[var(--accent)] lg:w-12" />
-          </div>
-          <div className="pt-1.5">
-            <p className="eyebrow" style={{ color: "var(--brand-ink)" }}>יום {curIdx + 1}{allDays.length > 1 ? ` · מתוך ${allDays.length}` : ""}</p>
-            <h2 className="serif mt-1 text-[28px] font-bold leading-[1.04] [text-wrap:balance] lg:text-[40px]">{day.area || dayLabels[curIdx]}</h2>
-            {day.why && <p className="mt-2.5 max-w-[58ch] text-[15.5px] leading-relaxed text-[var(--text-2)]">{day.why}</p>}
-          </div>
-        </div>
-      )}
 
       {/* row 3 — day summary (thin strip, no card): day label + edit + stats,
           and an on-demand "why?" toggle (no big AI explanation block). Editorial:
@@ -2296,12 +2284,10 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
             <div data-drop-bank
               className="mt-3 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-4 transition-colors"
               style={overBank ? { borderColor: "var(--brand)", boxShadow: "inset 0 0 0 2px var(--brand)" } : undefined}>
-              <p className="serif text-[15px] font-bold text-[var(--text)]">בנק המקומות · {(trip?.leftOut ?? []).filter((l) => !l.manual).length}</p>
-              <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--text-2)]">
-                {drag?.kind === "stop"
-                  ? "שחררו כאן כדי להוציא את העצירה מהיומן."
-                  : "הבחירות שלכם שלא נכנסו ליומן — ואחריהן אתרי חובה נוספים מומלצים (⭐). לחצו \"הוסף ליום זה\" (או גררו כרטיס אל היום) — או גררו עצירה לכאן כדי להוציא."}
-              </p>
+              <h2 className="serif text-[24px] font-bold leading-tight text-[var(--text)] lg:text-[28px]">בנק המקומות</h2>
+              {drag?.kind === "stop" && (
+                <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--text-2)]">שחררו כאן כדי להוציא את העצירה מהיומן.</p>
+              )}
 
               {/* "add any place" search — the bank is only the ranked leftOut; this reaches the
                   whole city so a traveller can add a specific place they remembered (no rebuild).
@@ -2548,7 +2534,7 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
                     )}
                     {suggested.length > 0 && (
                       <div className="mt-3">
-                        <p className="mb-1.5 text-[13px] font-bold text-[var(--text-2)]">אטרקציות חובה נוספות שאולי יעניינו אותך · {suggested.length}</p>
+                        <h3 className="serif mb-2 text-[19px] font-bold leading-tight text-[var(--text)]">אטרקציות חובה נוספות שאולי יעניינו אותך · {suggested.length}</h3>
                         {bankGroup(suggested)}
                       </div>
                     )}
