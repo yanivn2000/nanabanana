@@ -39,6 +39,9 @@ export async function POST(req: NextRequest) {
     if (!dest) continue;
     const attractions = await topAttractions(id, 150);
     const cityMustCount = attractions.filter((a) => a.must_see === 1).length;
+    // How many experience types this city can possibly offer — the ceiling the
+    // diversity check is measured against (see quality.ts).
+    const poolTypes = new Set(attractions.map((a) => a.audience_fit?.type || a.category).filter(Boolean)).size;
     const areas = await areasForDestination(id);
     const rules = await brainRulesForDest(id);   // the Brain's techniques for this city
     // The curated evening layer (streets.evening) — the eval builds couples trips
@@ -168,7 +171,7 @@ export async function POST(req: NextRequest) {
         lateWrong: dayMeta.map((m) => m.lateWrong ?? []),
         repeats: [...evNames].map(([name, n]) => ({ name, n })),
       };
-      const quality: Quality | undefined = b.quality ? qualityCheck(richDays, audience, rules, { cityMustCount, evening,
+      const quality: Quality | undefined = b.quality ? qualityCheck(richDays, audience, rules, { cityMustCount, poolTypes, evening,
         ...(eveningSpots.length ? { eveningEnds: dayMeta.map((m) => m.eveningEnd) } : {}) }) : undefined;
       builtIds[audience] = new Set(richDays.flat().map((a) => a.id));
       report.push({

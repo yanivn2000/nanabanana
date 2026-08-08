@@ -31,7 +31,7 @@ export function qualityCheck(
   // street stops). Present only when the city has a curated evening layer.
   // The evening is checked from the BUILT itinerary (richDays has no synthetic
   // street stops and no clock), so the caller measures it and passes it in.
-  ctx: { cityMustCount: number; eveningEnds?: boolean[];
+  ctx: { cityMustCount: number; poolTypes?: number; eveningEnds?: boolean[];
     evening?: { afterDinner: number[]; lastStart: (number | null)[]; lateWrong: string[][]; repeats: { name: string; n: number }[] } }
 ): Quality {
   const conformance: QualityFinding[] = [];
@@ -92,15 +92,48 @@ export function qualityCheck(
       fun.push(`ב-${noEvening} ${noEvening === 1 ? "יום" : "ימים"} אין שום דבר אחרי ארוחת הערב — הערב נגמר עם הקינוח`);
   }
 
+  // One place, one day. Prague's build put three enclosures of the SAME zoo on two
+  // different days — the family would have crossed to Troja twice and paid twice.
+  // The data fix (parent_id + is_component) removed that case; this makes sure the
+  // class of bug can never come back quietly, for any curated complex.
+  const dayOfVisit = new Map<number, number[]>();
+  days.forEach((d, i) => {
+    for (const key of new Set(d.map((a) => a.parent_id ?? a.id))) {
+      const at = dayOfVisit.get(key); at ? at.push(i + 1) : dayOfVisit.set(key, [i + 1]);
+    }
+  });
+  const split = [...dayOfVisit.entries()].filter(([, ds]) => ds.length > 1)
+    .map(([key, ds]) => {
+      // Name the VENUE, not whichever enclosure happened to come first.
+      const row = flat.find((a) => a.id === key) ?? flat.find((a) => (a.parent_id ?? a.id) === key)!;
+      return `${nameOf(row)} (ימים ${ds.join(", ")})`;
+    });
+  if (split.length)
+    conformance.push({ ok: false, msg: `אותו מקום מפוצל בין ימים — כרטיס אחד, נסיעה כפולה: ${split.join(" · ")}` });
+
   const weakFit = flat.filter((a) => audienceFitScore(a.audience_fit, audience) < rules.minAudienceFit).length;
   if (flat.length && weakFit > flat.length / 2)
     conformance.push({ ok: false, msg: `רוב העצירות (${weakFit}/${flat.length}) בהתאמה נמוכה ל${audience === "families" ? "משפחות" : "מבוגרים"}` });
 
   // ---- 2) FUN — does it sound enjoyable? -------------------------------------
+  // Experience diversity, judged against what the CITY HAS — not an absolute.
+  // The old test was `types < days + 1`, so a 4-day trip needed 5 distinct types.
+  // Ten cities in the DB (Dubai, Marseille, Mykonos, Hanoi…) contain only 4 types
+  // in their entire pool: they failed this every single run, with an "insight"
+  // telling the engine to stream in types that do not exist. A check that can
+  // never be satisfied is noise, and noise teaches the editor to skip the section.
+  // So: compare to the achievable ceiling, and name the right culprit — the
+  // engine when it left variety on the table, the CONTENT when there is none.
   const types = new Set(flat.map(expType));
-  if (flat.length && types.size < Math.max(3, days.length + 1)) {
-    fun.push(`גיוון-חוויה נמוך — רק ${types.size} סוגי-חוויה בכל הטיול. עלול להרגיש חד-גוני.`);
+  const ceiling = Math.min(ctx.poolTypes ?? 99, Math.max(3, days.length + 1));
+  if (flat.length && types.size < ceiling) {
+    fun.push(`גיוון-חוויה נמוך — ${types.size} סוגי-חוויה בטיול, מתוך ${ctx.poolTypes ?? "?"} שקיימים בעיר.`);
     suggestions.add("להחמיר max_type_per_day או להזרים יותר סוגי-חוויה (טבע/אוכל/פעילות) לימים.");
+  } else if (flat.length && ctx.poolTypes != null && ctx.poolTypes <= 4 && types.size >= ctx.poolTypes) {
+    // Not an engine failure — it used everything there was. Still worth saying:
+    // the trip WILL feel samey, and only content can fix it.
+    fun.push(`המוח מיצה את מה שיש (${types.size}/${ctx.poolTypes} סוגי-חוויה בעיר) — הגיוון חסום בתוכן, לא במנוע.`);
+    suggestions.add("פער תוכן: לעיר הזו חסרים סוגי-חוויה (אוכל/פעילות/חמד) — להעשיר את המאגר.");
   }
   const needsAnchor = rules.activeAnchorAudiences.includes(audience);
   days.forEach((d, i) => {
