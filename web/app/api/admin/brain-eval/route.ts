@@ -3,6 +3,8 @@ import { editorEmail } from "@/lib/admin";
 import { listDestinations, topAttractions, areasForDestination, brainRulesForDest, approvedStreetsForCity, nightPassbyForCity, type Attraction } from "@/lib/db";
 import { annotateDaysWithAreas } from "@/lib/cluster";
 import { buildCarBaseItinerary, buildHeuristicItinerary, streetAsStop } from "@/lib/heuristic";
+import { CONTROL_PROBES, controlPenalty, controlVerdicts, globalControlVerdicts, type ControlResult } from "@/lib/brain/controls";
+import { rankByTaste } from "@/lib/taste";
 import { qualityCheck, type Quality } from "@/lib/brain/quality";
 import { critiqueTrip, type Issue } from "@/lib/brain/critique";
 import { isWrongAfterDark } from "@/lib/brain/traits";
@@ -112,6 +114,34 @@ export async function POST(req: NextRequest) {
       for (let i = 1; i < Math.min(Math.max(1, rules.buildCandidates), variants.length); i++)
         if (variants[i].crit.score > variants[ci].crit.score) ci = i;
       const { it: itinerary, rich: richDays, meta: dayMeta, crit } = variants[ci];
+      // DOES THE CONTROL DO ANYTHING? Re-build this exact city on the SAME seed
+      // with one input changed, and compare stop lists. A control that changes
+      // nothing is a promise the product is not keeping — the distance slider
+      // looked like a working feature for weeks. See lib/brain/controls.ts.
+      const controlBase = variants[ci].it;
+      const controls = controlVerdicts(controlBase, CONTROL_PROBES.map((probe) => {
+        if (probe.mobility && (probe.mobility === "car_base") !== carBase) {
+          return { probe, itinerary: null };   // cannot bite here — not a failure
+        }
+        const v = probe.variant as Record<string, unknown>;
+        // Everything below mirrors the canonical build EXACTLY except the one
+        // input under test, including the seed — that is what makes a difference
+        // attributable to the control rather than to the lottery.
+        const o = { ...buildOpts, seed: id + ci * 101,
+          ...(v.maxDriveMin ? { maxDriveMin: v.maxDriveMin as number } : {}) };
+        const fam = v.flipAudience ? !isFamily : isFamily;          // flip, don't restate
+        const pc = typeof v.paceStops === "number" ? v.paceStops : pace;
+        const wp = typeof v.walkPref === "number" ? v.walkPref : 3;
+        // taste has no path through buildOpts — it shapes the POOL, exactly as the
+        // consumer route does with rankByTaste.
+        const p2 = v.taste
+          ? rankByTaste(attractions, v.taste as Record<string, number>, 90, fam, [], audience)
+          : pool;
+        const it2 = carBase
+          ? buildCarBaseItinerary(dest.city, dest.country, days, p2, center, fam, pc, wp, o)
+          : buildHeuristicItinerary(dest.city, dest.country, days, p2, fam, pc, wp, undefined, o);
+        return { probe, itinerary: it2 };
+      }));
       const seedScores: number[] = seedsN > 1 ? variants.map((v) => v.crit.score) : [];
       annotateDaysWithAreas(itinerary.days, areas, center);
       // Measure the evening off the built clock: how many stops start after
@@ -144,7 +174,7 @@ export async function POST(req: NextRequest) {
       report.push({
         cityId: id, city: dest.city_he || dest.city, cityEn: dest.city, country: dest.country, audience, days,
         ...(seedScores.length ? { seedScores } : {}),
-        score: crit.score, needsWork: crit.needsWork, stops: crit.stops,
+        controls, score: crit.score, needsWork: crit.needsWork, stops: crit.stops,
         dims: crit.dims, issues: crit.issues, itinerary, quality,
         daysNames: richDays.map((d) => d.map((a) => ({ name: a.name_he || a.name_en, must: a.must_see === 1, cat: a.category }))),
       });
@@ -175,12 +205,26 @@ export async function POST(req: NextRequest) {
       }
     }
   }
+  // A dead control is a flaw in EVERY trip, so it is priced into every trip's
+  // score — the average the editor watches drops until it is fixed. Judged
+  // globally (see globalControlVerdicts) and applied uniformly, so no single
+  // thin city is punished for a wiring problem it did not cause.
+  const controlsGlobal = globalControlVerdicts(
+    report.map((r) => (r as { controls?: ControlResult[] }).controls ?? []));
+  const ctrlPenalty = controlPenalty(controlsGlobal);
+  if (ctrlPenalty > 0) {
+    for (const r of report as { score: number; needsWork: boolean }[]) {
+      r.score = Math.max(0, r.score - ctrlPenalty);
+      r.needsWork = true;
+    }
+  }
   // summary
   const scores = report.map((r) => (r as { score: number }).score);
   const summary = {
     version: BRAIN_VERSION, trips: report.length,
     avgScore: scores.length ? Math.round(scores.reduce((s, n) => s + n, 0) / scores.length) : 0,
     needWork: report.filter((r) => (r as { needsWork: boolean }).needsWork).length,
+    controls: controlsGlobal, controlPenalty: ctrlPenalty,
   };
   // Free-text quality report — the editor pastes this into chat for deep judgment + fixes.
   let qualityReport: string | undefined;
@@ -209,6 +253,16 @@ export async function POST(req: NextRequest) {
       }
       if (r.quality.suggestions.length) { L.push("  תובנות לשיפור:"); r.quality.suggestions.forEach((s) => L.push(`    • ${s}`)); }
     }
+    // The controls verdict, once, at the end — it is a property of the ENGINE,
+    // not of any one city.
+    L.push("", "🎛️ בוררים — האם הם באמת משנים את הטיול?",
+      "   (אותה עיר, אותו זרע, שדה אחד שונה. בורר שלא משנה כלום הוא הבטחה שלא מקיימים.)");
+    for (const c of controlsGlobal) {
+      L.push(c.skipped ? `   — ${c.he}: לא נבדק בערים שנסרקו`
+        : c.live ? `   ✓ ${c.he}`
+        : `   ❌ ${c.he} — ${c.why}`);
+    }
+    if (ctrlPenalty > 0) L.push(`   ↳ ${ctrlPenalty} נקודות ירדו מכל טיול בסריקה הזו.`);
     L.push("", "─".repeat(34),
       "הדבק דוח זה בצ'אט ל-Claude Code: (1) לשפוט האם הטיולים באמת מהנים (מעבר לבדיקה הדטרמיניסטית), (2) לגזור שיפורי-טכניקות/מנוע ולבצע.");
     qualityReport = L.join("\n");

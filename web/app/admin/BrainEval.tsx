@@ -22,7 +22,9 @@ type Trip = {
   itinerary: Itinerary;
   daysNames: { name: string; must: boolean; cat: string }[][];
 };
-type Report = { summary: { version: string; trips: number; avgScore: number; needWork: number }; report: Trip[] };
+type ControlRow = { key: string; he: string; live: boolean; why: string; skipped?: boolean };
+type Report = { summary: { version: string; trips: number; avgScore: number; needWork: number;
+  controls?: ControlRow[]; controlPenalty?: number }; report: Trip[] };
 
 const AUD_HE: Record<string, string> = { families: "👨‍👩‍👧 עם ילדים", adults: "🧑‍🤝‍🧑 בלי ילדים" };
 const DIM_HE: Record<string, string> = {
@@ -145,6 +147,33 @@ export function BrainEval({ destinations }: { destinations: AdminDestination[] }
           <span>· {data.summary.needWork} דורשים שיפור</span>
         </div>
       )}
+
+      {/* Controls verdict — a property of the ENGINE, so it sits above the city
+          cards rather than inside one. A control the traveller can see must
+          change the trip; the distance slider looked like a feature for weeks
+          while reaching nothing. */}
+      {data?.summary.controls?.length ? (
+        <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-3">
+          <div className="mb-1.5 flex flex-wrap items-baseline gap-2">
+            <span className="text-[13.5px] font-bold">🎛️ בוררים — משנים את הטיול בפועל?</span>
+            <span className="text-[12px] text-[var(--text-3)]">אותה עיר, אותו זרע, שדה אחד שונה</span>
+            {!!data.summary.controlPenalty && (
+              <span className="rounded-full bg-[var(--amber-soft)] px-2 py-0.5 text-[12px] font-medium text-[var(--amber)]">
+                −{data.summary.controlPenalty} נק׳ מכל טיול
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px]">
+            {data.summary.controls.map((c) => (
+              <span key={c.key} title={c.live ? "" : c.why}
+                style={{ color: c.skipped ? "var(--text-3)" : c.live ? "var(--text-2)" : "var(--terra, #c8654a)",
+                         fontWeight: c.live || c.skipped ? 400 : 700 }}>
+                {c.skipped ? "—" : c.live ? "✓" : "❌"} {c.he}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-3 lg:grid-cols-2">
         {data?.report.map((t) => {
