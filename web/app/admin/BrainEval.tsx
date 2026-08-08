@@ -22,7 +22,7 @@ type Trip = {
   itinerary: Itinerary;
   daysNames: { name: string; must: boolean; cat: string }[][];
 };
-type ControlRow = { key: string; he: string; live: boolean; why: string; skipped?: boolean };
+type ControlRow = { key: string; he: string; live: boolean; why: string; skipped?: boolean; tried?: number };
 type Report = { summary: { version: string; trips: number; avgScore: number; needWork: number;
   controls?: ControlRow[]; controlPenalty?: number }; report: Trip[] };
 

@@ -43,7 +43,14 @@ export const CONTROL_PROBES: ControlProbe[] = [
     why: "מי שביקש 'ממש קרוב' לא אמור לקבל נסיעה של שעתיים" },
 ];
 
-export type ControlResult = { key: string; he: string; live: boolean; why: string; skipped?: boolean };
+export type ControlResult = { key: string; he: string; live: boolean; why: string; skipped?: boolean;
+  /** How many builds actually probed this control (global verdict only). */ tried?: number };
+
+// A verdict needs evidence. A one-city scan of a thin destination can leave a
+// perfectly wired control with nothing to move — scanning Lefkada alone once
+// charged the full 18-point penalty and dropped it 86 → 68. Below this many
+// probed builds the answer is "not enough evidence", never "dead".
+const MIN_EVIDENCE = 4;   // 2 cities × 2 audiences
 
 /** A build's identity for comparison: the ordered stop names of every day. */
 export const tripSignature = (it: Itinerary): string =>
@@ -72,12 +79,15 @@ export function globalControlVerdicts(rows: ControlResult[][]): ControlResult[] 
   for (const row of rows) {
     for (const c of row) {
       const prev = byKey.get(c.key);
-      if (!prev) { byKey.set(c.key, { ...c }); continue; }
+      if (!prev) { byKey.set(c.key, { ...c, tried: c.skipped ? 0 : 1 }); continue; }
       // live anywhere → live; skipped everywhere → skipped
       if (c.live) prev.live = true;
-      if (!c.skipped) prev.skipped = false;
+      if (!c.skipped) { prev.skipped = false; prev.tried = (prev.tried ?? 0) + 1; }
     }
   }
+  // Not enough probes to convict — report it as unproven, and charge nothing.
+  for (const c of byKey.values())
+    if (!c.live && (c.tried ?? 0) < MIN_EVIDENCE) c.skipped = true;
   return [...byKey.values()];
 }
 

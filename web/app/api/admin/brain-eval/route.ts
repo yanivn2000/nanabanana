@@ -261,7 +261,7 @@ export async function POST(req: NextRequest) {
     L.push("", "🎛️ בוררים — האם הם באמת משנים את הטיול?",
       "   (אותה עיר, אותו זרע, שדה אחד שונה. בורר שלא משנה כלום הוא הבטחה שלא מקיימים.)");
     for (const c of controlsGlobal) {
-      L.push(c.skipped ? `   — ${c.he}: לא נבדק בערים שנסרקו`
+      L.push(c.skipped ? `   — ${c.he}: ${c.tried ? `נבדק ב-${c.tried} בניות בלבד — לא מספיק כדי לקבוע` : "לא נבדק בערים שנסרקו"}`
         : c.live ? `   ✓ ${c.he}`
         : `   ❌ ${c.he} — ${c.why}`);
     }
