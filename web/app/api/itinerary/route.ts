@@ -54,6 +54,9 @@ export const maxDuration = 120;
 //  - per-IP hourly: stops one abuser looping the builder.
 //  - global daily: a hard circuit-breaker so a runaway can't exceed a known
 //    daily spend. At 70% we log a warning (real alerting is P6/Sentry).
+// How many usable places a day of trip needs before the pool is considered
+// sufficient. Below days × this, topAttractions tops up with tier-2 fillers.
+const POOL_PER_DAY = 7;
 const AI_PER_IP_HOURLY = Number(process.env.AI_PER_IP_HOURLY ?? 15);
 const AI_DAILY_CAP = Number(process.env.AI_DAILY_CAP ?? 500);
 
@@ -339,7 +342,9 @@ export async function POST(req: NextRequest) {
   // Base pool = top 150; then fold in the traveler's exact picks AND the members of
   // any chosen neighbourhoods (even ones ranked below 150) so a chosen place / area
   // member is always a real build candidate.
-  const base = await topAttractions(dest.id, 150);
+  // minPool: what THIS trip needs (~7 usable places a day). Below it, the pool
+  // is topped up with tier-2 fillers — see topAttractions.
+  const base = await topAttractions(dest.id, 150, (body.days ?? 4) * POOL_PER_DAY);
   const pickIds = body.selection ? [...body.selection.yes] : [];
   const picks = pickIds.length ? await attractionsByIds(pickIds) : [];
   // Layer 2 (additive areas): the members of chosen neighbourhoods. They no longer
@@ -768,7 +773,7 @@ export async function POST(req: NextRequest) {
     const segAttrs = await Promise.all(
       segs.map(async (x) => ({
         ...x,
-        attractions: rankByTaste(await topAttractions(x.dest.id, 150), body.taste, 90, isFamily, [], audience),
+        attractions: rankByTaste(await topAttractions(x.dest.id, 150, (x.days ?? 1) * POOL_PER_DAY), body.taste, 90, isFamily, [], audience),
         insights: await insightsForDestination(x.dest.id),
         // each segment's OWN Brain techniques (avoids/dwell/lunch/centre)
         opts: optsFor(x.dest, await brainRulesForDest(x.dest.id)),

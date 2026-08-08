@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   for (const id of cityIds) {
     const dest = dests.find((d) => d.id === id);
     if (!dest) continue;
-    const attractions = await topAttractions(id, 150);
+    const attractions = await topAttractions(id, 150, days * 7);
     const cityMustCount = attractions.filter((a) => a.must_see === 1).length;
     // How many experience types this city can possibly offer — the ceiling the
     // diversity check is measured against (see quality.ts).

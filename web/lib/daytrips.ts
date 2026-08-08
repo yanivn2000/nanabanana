@@ -20,6 +20,7 @@ const CLUSTER_KM = 14;        // places within this of a seed form one day-trip 
 const MAX_STOPS_PER_TRIP = 5; // a full day out includes a few nearby stops
 
 const worth = (a: Attraction) =>
+  (a.pool_tier === 2 ? -2000 : 0) +          // fillers never anchor a day out
   (a.must_see === 1 ? 1000 : 0) +
   Math.max(a.audience_fit?.families ?? 0, a.audience_fit?.couples ?? 0, a.audience_fit?.friends ?? 0);
 
@@ -67,15 +68,31 @@ export function clusterDayTrips(
     // order: anchor first, then nearest-neighbour walk within the far area; drop
     // "same place" stops (a lake and its own dock/viewpoint), then orient so an
     // evening / day-ender stop leans late without tearing the proximity path.
-    const ordered = orientDay(dropSamePlace(orderFromAnchor(members, seed), opts.sameMeters)).slice(0, maxStops);
+    // The anchor is the REASON this day out exists, so it must survive the trim.
+    // It did not: Crete's Elafonissi day came back as five unnamed beaches with
+    // no Elafonissi in it — orientDay moves a day-ender late, and slice() then
+    // cut the anchor off the front. Invisible until tier-2 fillers swelled
+    // clusters past maxStops; the day was named for a place it no longer visited.
+    const path = orientDay(dropSamePlace(orderFromAnchor(members, seed), opts.sameMeters));
+    let ordered = path.slice(0, maxStops);
+    if (!ordered.some((s) => s.id === seed.id)) {
+      const rest = path.filter((s) => s.id !== seed.id && hasCoords(s)).slice(0, maxStops - 1);
+      ordered = orientDay(orderFromAnchor([seed, ...rest as (typeof seed)[]], seed));
+    }
     const lat = ordered.reduce((s, a) => s + a.lat!, 0) / ordered.length;
     const lng = ordered.reduce((s, a) => s + a.lng!, 0) / ordered.length;
     const driveKm = Math.round(haversineKm(center.lat, center.lng, lat, lng));
     clusters.push({ stops: ordered, lat, lng, driveKm, driveMin: driveMin(driveKm), anchor: seed });
   }
-  // rank day-trips by the worth they deliver (anchor pull + supporting stops)
-  return clusters.sort((a, b) =>
-    (worth(b.anchor) + b.stops.length) - (worth(a.anchor) + a.stops.length));
+  // Rank day-trips by the worth they deliver: the anchor's pull, plus the number
+  // of REAL supporting stops. Counting tier-2 fillers here cost Crete its
+  // Elafonissi day — five unnamed beaches on the Gramvousa peninsula formed a
+  // 5-stop cluster that out-ranked Elafonissi's 2-stop one purely on size, and
+  // the trip spent two of its four days on the same headland. A filler may pad a
+  // day out; it may not be the reason a day out is chosen.
+  const pull = (c: DayTripCluster) =>
+    worth(c.anchor) + c.stops.filter((s) => s.pool_tier !== 2).length;
+  return clusters.sort((a, b) => pull(b) - pull(a));
 }
 
 // Nearest-neighbour order starting at the anchor (a tight route within the area).

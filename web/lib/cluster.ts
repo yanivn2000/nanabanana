@@ -113,6 +113,7 @@ export function dayLegStats(day: Attraction[], car = false, walkableKm?: number)
 // (a landmark and its own hill/square/garden, e.g. Hohensalzburg + Festungsberg).
 // Keeps the more valuable of the pair so the fortress wins over the hill.
 const stopWorth = (a: Attraction) =>
+  (a.pool_tier === 2 ? -2000 : 0) +          // fillers rank below everything real
   (a.must_see === 1 ? 1000 : 0) +
   Math.max(a.audience_fit?.families ?? 0, a.audience_fit?.couples ?? 0, a.audience_fit?.friends ?? 0);
 export function dropSamePlace(day: Attraction[], minMeters = 90): Attraction[] {

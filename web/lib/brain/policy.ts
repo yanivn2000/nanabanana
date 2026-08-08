@@ -39,7 +39,7 @@ export function audienceFitScore(
 // a minor must-see, which is how a day earns TEXTURE (not five landmarks in a row).
 // Texture categories get a small lift toward that.
 export function poolValue(
-  a: { must_see?: number | null; audience_fit?: { families?: number; couples?: number; friends?: number } | null; category?: string | null; subcategory?: string | null },
+  a: { must_see?: number | null; audience_fit?: { families?: number; couples?: number; friends?: number } | null; category?: string | null; subcategory?: string | null; pool_tier?: 1 | 2 },
   aud: Audience
 ): number {
   const fit = audienceFitScore(a.audience_fit, aud);
@@ -49,7 +49,8 @@ export function poolValue(
   // Parks are NOT boosted (a city has plenty and many are already must-see, so a
   // boost floods whole days with scattered parks).
   const texture = cat === "food" || cat === "shopping" || /market|שוק|neighbou?rhood|quarter|שכונה|רובע/i.test(sub) ? 25 : 0;
-  return must + fit + texture;
+  // A tier-2 filler is only ever a gap-filler — it sorts below every real place.
+  return must + fit + texture - (a.pool_tier === 2 ? 500 : 0);
 }
 
 // Reachability penalty for METRO cities: a stop far from the centre drags a whole

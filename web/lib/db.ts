@@ -82,6 +82,8 @@ export type Attraction = {
   // the Vatican, the arena inside the Colosseum) and travels with it; passby_minutes
   // is what the parent costs when you only look from outside.
   parent_id?: number | null;
+  /** 2 = filler admitted only because the city had too little tier-1 content. */
+  pool_tier?: 1 | 2;
   passby_minutes?: number | null;
   // A LINEAR stop (a recommended street) carries its two endpoints, so the route
   // can arrive at the near end and leave from the far one — the walk along the
@@ -229,10 +231,10 @@ export async function searchAttractions(destinationId: number, q: string, limit 
   );
 }
 
-export async function topAttractions(destinationId: number, limit = 40): Promise<Attraction[]> {
+export async function topAttractions(destinationId: number, limit = 40, minPool = 0): Promise<Attraction[]> {
   // The builder's auto pool. Uses the editor's effective must-see and EXCLUDES
   // editor-rejected places (rank='no') so a demoted tourist trap never anchors.
-  return query<Attraction>(
+  const tier1 = await query<Attraction>(
     `SELECT ${ATTR_COLS_EFF}
        FROM attractions a ${EDITOR_JOIN}
        WHERE a.destination_id = $1
@@ -254,6 +256,56 @@ export async function topAttractions(destinationId: number, limit = 40): Promise
        LIMIT $2`,
     [destinationId, limit]
   );
+  // SECOND TIER — for cities that simply do not have many must-sees.
+  //
+  // Owner: "מה לעשות שיש ערים שאין הרבה אתרי חובה… אז במקומם יכנסו אתרים שהם לא
+  // חובה אבל על הדרך… זו העיר. אי אפשר להפוך כל עיר לפריז ואמסטרדם."
+  //
+  // The bottleneck was never the must-see count — it was the description gate
+  // above. Crete has 419 shown places and 38 with a description; Dubai's whole
+  // pool was 16 rows. Everything else was invisible to the builder, so its days
+  // ran out of material and the Brain flagged them thin, run after run.
+  //
+  // This tops the pool up with places that have a Hebrew name and a Hebrew
+  // one-liner (tagline_he) but no full description yet — real beaches, Venetian
+  // fortresses, caves — ordered by audience fit so the best arrive first.
+  //
+  // It runs ONLY when tier 1 cannot cover what the trip needs (minPool, set by
+  // the caller from the number of days) and fills just up to that need. An
+  // earlier cut tied it to the query limit instead, on the assumption that a
+  // healthy city returns a full 150 — it does not. Vienna's tier 1 is 58 rows
+  // and Krakow's is 29, so fillers flooded almost every city and cost 3-5 points
+  // in places that were fine. Cities that clear the need stay byte-identical,
+  // which matters: Vienna's undescribed rows are exactly the noise the gate
+  // exists for (a condom museum, a snow-globe museum, a Marian column).
+  // Appended AFTER tier 1, since for the builder input order IS the ranking, and
+  // proximity is still enforced downstream: a tier-2 place only lands in a day
+  // if it is on that day's way (clustering, free gems, the thin-day top-up).
+  if (tier1.length >= Math.min(minPool, limit)) return tier1;
+  const tier2 = await query<Attraction>(
+    `SELECT ${ATTR_COLS_EFF}
+       FROM attractions a ${EDITOR_JOIN}
+       WHERE a.destination_id = $1
+         AND (a.quality_keep = 1 OR a.quality_keep IS NULL)
+         AND (a.is_duplicate IS NULL OR a.is_duplicate = 0)
+         AND (a.is_component IS NULL OR a.is_component = 0)
+         AND (ep.rank IS NULL OR ep.rank <> 'no')
+         AND COALESCE(${EFF_MUST}, 0) <> 1 AND (ep.rank IS NULL OR ep.rank <> 'maybe')
+         AND (a.description_he IS NULL OR char_length(a.description_he) < 40)
+         AND a.name_he IS NOT NULL AND char_length(COALESCE(a.tagline_he, '')) >= 8
+         AND a.lat IS NOT NULL
+       ORDER BY (a.audience_fit IS NOT NULL) DESC,
+                GREATEST(COALESCE((a.audience_fit->>'families')::int, 0),
+                         COALESCE((a.audience_fit->>'couples')::int, 0)) DESC,
+                (a.image_url IS NOT NULL) DESC, ${NOTABLE} DESC, a.name_en
+       LIMIT $2`,
+    [destinationId, Math.min(minPool, limit) - tier1.length]
+  );
+  // Marked, because a filler must FILL and never OUT-RANK. Unmarked, Crete's
+  // day-trip clustering preferred five anonymous beaches over Elafonissi purely
+  // on cluster size, and the trip lost a headline day. Every value function
+  // (poolValue, stopWorth, the day-trip worth) reads this and sorts tier 2 last.
+  return [...tier1, ...tier2.map((a) => ({ ...a, pool_tier: 2 as const }))];
 }
 
 // Interest-matching venues BEYOND the base pool. Thin interests (nightlife, niche
