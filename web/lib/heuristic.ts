@@ -60,7 +60,7 @@ export type BuildOpts = {
   nightIconMax?: number; nightIconKm?: number; nightIconMinutes?: number;
   // evening_cap technique — how much evening the engine plans by itself.
   // thin_day technique — the smallest a day may be before it is rebalanced.
-  minDayStops?: number; thinMergeKm?: number;
+  minDayStops?: number; thinMergeKm?: number; thinSpareKm?: number; thinSpareKmCar?: number; thinMinMinutes?: number;
   // The traveller's "מרחק נסיעה ליום" cap, in minutes ONE WAY. A day-trip
   // cluster beyond it is not offered.
   maxDriveMin?: number;
@@ -345,7 +345,7 @@ export function buildHeuristicItinerary(
 
   const { days: clustered0 } = clusterIntoDays(clusterPool, days, { walkPref, dayMinutes, perDay, seedGroups,
     freeMax: opts?.freeGemMaxPerDay, freeDetour: opts?.freeGemDetourMin, dwell, center: opts?.center,
-    minDayStops: opts?.minDayStops, thinMergeKm: opts?.thinMergeKm });
+    minDayStops: opts?.minDayStops, thinMergeKm: opts?.thinMergeKm, thinSpareKm: opts?.thinSpareKm, thinMinMinutes: opts?.thinMinMinutes });
   const clustered = kidsOf.size
     ? clustered0.map((day) => day.flatMap((a) => {
         const kids = kidsOf.get(a.id);
@@ -756,7 +756,10 @@ export function buildCarBaseItinerary(
       : plain;
   }
 
-  const cityItin = buildHeuristicItinerary(city, country, cityDays, inCity, isFamily, perDay, walkPref, undefined, opts);
+  // A car-base traveller has a car, so a thin city day may reach farther for its
+  // top-up than a walking city allows (technique thin_day.spare_km_car).
+  const cityItin = buildHeuristicItinerary(city, country, cityDays, inCity, isFamily, perDay, walkPref, undefined,
+    { ...opts, thinSpareKm: opts?.thinSpareKmCar ?? opts?.thinSpareKm });
   // The allotment (cityDays) is an ASSUMPTION — a thin in-city pool (a base town
   // like Crete/Lefkada with ~8 urban stops) packs into fewer real days. Two
   // consequences handled here:

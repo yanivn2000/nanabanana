@@ -609,7 +609,7 @@ export async function POST(req: NextRequest) {
     ...(nightIcons.length ? { nightIcons, nightIconMax: rules.nightPassbyMax,
       nightIconKm: rules.nightPassbyKm, nightIconMinutes: rules.nightPassbyMinutes } : {}) ,
     eveningMaxStops: rules.eveningMaxStops, eveningHardEnd: rules.eveningHardEnd,
-    minDayStops: rules.minDayStops, thinMergeKm: rules.thinMergeKm,
+    minDayStops: rules.minDayStops, thinMergeKm: rules.thinMergeKm, thinSpareKm: rules.thinSpareKm, thinSpareKmCar: rules.thinSpareKmCar, thinMinMinutes: rules.thinMinMinutes,
     ...(Number.isFinite(body.driveHours) && (body.driveHours as number) > 0
       ? { maxDriveMin: Math.round((body.driveHours as number) * 60) } : {}) };
   // Best-of-N lottery-among-the-best (build_candidates technique): build N seeded

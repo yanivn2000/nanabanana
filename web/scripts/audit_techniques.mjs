@@ -16,6 +16,7 @@ const KNOWN = {
   EVENING_AT_MIN: "fallback:evening_slot",
   LATE_LIMIT_MIN: "engine (after-dark cutoff)",
   MIN_STOPS: "fallback:thin_day", MERGE_MAX_KM: "fallback:thin_day",
+  MIN_DAY_MINUTES: "fallback:thin_day",
   DINNER_AT_MIN: "engine (when 'after dinner' starts — mirrors the trip page)",
   STRETCH_M: "engine (long-street trim span)",
   SITE_COMPLEX_KM: "engine (one-visit site radius)",

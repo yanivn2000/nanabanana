@@ -3,7 +3,7 @@ import { editorEmail } from "@/lib/admin";
 import { listDestinations, topAttractions, areasForDestination, brainRulesForDest, approvedStreetsForCity, nightPassbyForCity, type Attraction } from "@/lib/db";
 import { annotateDaysWithAreas } from "@/lib/cluster";
 import { buildCarBaseItinerary, buildHeuristicItinerary, streetAsStop } from "@/lib/heuristic";
-import { CONTROL_PROBES, controlPenalty, controlVerdicts, globalControlVerdicts, type ControlResult } from "@/lib/brain/controls";
+import { CONTROL_POOL_MIN, CONTROL_PROBES, controlPenalty, controlVerdicts, globalControlVerdicts, type ControlResult } from "@/lib/brain/controls";
 import { rankByTaste } from "@/lib/taste";
 import { qualityCheck, type Quality } from "@/lib/brain/quality";
 import { critiqueTrip, type Issue } from "@/lib/brain/critique";
@@ -76,7 +76,9 @@ export async function POST(req: NextRequest) {
         ...(!isFamily && nightIcons.length ? { nightIcons, nightIconMax: rules.nightPassbyMax,
           nightIconKm: rules.nightPassbyKm, nightIconMinutes: rules.nightPassbyMinutes } : {}) ,
         eveningMaxStops: rules.eveningMaxStops, eveningHardEnd: rules.eveningHardEnd,
-        minDayStops: rules.minDayStops, thinMergeKm: rules.thinMergeKm };
+        minDayStops: rules.minDayStops, thinMergeKm: rules.thinMergeKm,
+        thinSpareKm: rules.thinSpareKm, thinSpareKmCar: rules.thinSpareKmCar,
+        thinMinMinutes: rules.thinMinMinutes };
       // Build via the REAL consumer engine so the eval reflects exactly what a
       // traveller gets (dwell model, dedup, car day-trips) — one source of truth.
       // The CANONICAL trip mirrors the consumer's best-of-N policy deterministically:
@@ -122,8 +124,14 @@ export async function POST(req: NextRequest) {
       // nothing is a promise the product is not keeping — the distance slider
       // looked like a working feature for weeks. See lib/brain/controls.ts.
       const controlBase = variants[ci].it;
+      // A thin city cannot answer the question. With ~30 worthy places every
+      // control re-ranks to the same handful of stops, so "nothing moved" says
+      // something about the CONTENT, not the wiring — Crete + Thessaloniki alone
+      // once convicted walkPref and taste and took 6 points off both cities.
+      // Under this bar the probe reports "inconclusive" and costs nothing.
+      const thinCity = pool.length < CONTROL_POOL_MIN;
       const controls = controlVerdicts(controlBase, CONTROL_PROBES.map((probe) => {
-        if (probe.mobility && (probe.mobility === "car_base") !== carBase) {
+        if (thinCity || (probe.mobility && (probe.mobility === "car_base") !== carBase)) {
           return { probe, itinerary: null };   // cannot bite here — not a failure
         }
         const v = probe.variant as Record<string, unknown>;

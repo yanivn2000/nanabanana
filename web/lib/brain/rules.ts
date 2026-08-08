@@ -297,6 +297,10 @@ export type BrainRules = {
   eveningHardEnd: number;    // minutes; nothing starts at/after this
   // thin_day — the smallest a day may be before it is rebalanced.
   minDayStops: number; thinMergeKm: number;
+  // How far a thin day may reach into the unused pool to top itself up: a walking
+  // radius in a metro city, a short drive in a car-base town (Heraklion's aquarium
+  // is 20 km down the coast — 25 minutes with the car the traveller already has).
+  thinSpareKm: number; thinSpareKmCar: number; thinMinMinutes: number;
   dwell: DwellCfg;   // visit_minutes technique — dwell per stop bucket
   // Tier-2 structure (from daytrip_* / free_gems / same_place_km).
   daytripThresholdKm: number;
@@ -335,7 +339,7 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
     dayStartMin: 9 * 60 + 30, lunchAfterMin: 12 * 60, lunchMinutes: 60, eveningStart: 21 * 60, dwell: { ...DWELL_DEFAULT },
     nightPassbyMax: 1, nightPassbyKm: 0.8, nightPassbyMinutes: 20,
     eveningMaxStops: 2, eveningHardEnd: 23 * 60 + 30,
-    minDayStops: 2, thinMergeKm: 40,
+    minDayStops: 2, thinMergeKm: 40, thinSpareKm: 8, thinSpareKmCar: 25, thinMinMinutes: 240,
     daytripThresholdKm: 18, daytripPerDays: 2, daytripMaxStops: 5, samePlaceMeters: 90, varietyJitter: 5, buildCandidates: 5, candidateTolerance: 2, freeGemMaxPerDay: 3, freeGemDetourMin: 4,
     weights: { ...WEIGHTS }, qualityBar: QUALITY_BAR, minMustSee: THRESHOLDS.minMustSeePerTrip,
     minAudienceFit: THRESHOLDS.minAudienceFit, maxSameTypeRun: THRESHOLDS.maxSameTypeRun,
@@ -370,6 +374,9 @@ export function resolveBrainRules(principles: Principle[], destId?: number | nul
       case "thin_day":
         if (q.min != null) rules.minDayStops = Number(q.min);
         if (q.km != null) rules.thinMergeKm = Number(q.km);
+        if (q.spare_km != null) rules.thinSpareKm = Number(q.spare_km);
+        if (q.spare_km_car != null) rules.thinSpareKmCar = Number(q.spare_km_car);
+        if (q.min_minutes != null) rules.thinMinMinutes = Number(q.min_minutes);
         break;
       case "evening_cap":
         if (q.max != null) rules.eveningMaxStops = Number(q.max);

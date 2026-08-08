@@ -52,6 +52,11 @@ export type ControlResult = { key: string; he: string; live: boolean; why: strin
 // probed builds the answer is "not enough evidence", never "dead".
 const MIN_EVIDENCE = 4;   // 2 cities × 2 audiences
 
+// A city needs this many worthy places before a control has room to change
+// anything. Below it, every probe returns the same trip no matter what you ask
+// for — that is a content fact, not a wiring fact.
+export const CONTROL_POOL_MIN = 45;
+
 /** A build's identity for comparison: the ordered stop names of every day. */
 export const tripSignature = (it: Itinerary): string =>
   it.days.map((d) => d.stops.filter((s) => s.id != null).map((s) => s.name).join("|")).join("//");

@@ -304,35 +304,82 @@ export type ClusterResult = { days: Attraction[][]; leftOut: Attraction[] };
 // for the Brain to flag.
 const MIN_STOPS = 2;          // fallback:thin_day
 const MERGE_MAX_KM = 40;      // fallback:thin_day — beyond this the two days are different places
+const MIN_DAY_MINUTES = 240;  // fallback:thin_day — a day of visits shorter than this is half a day
 function centroid(day: Attraction[]) {
   const pts = day.filter((a) => Number.isFinite(a.lat) && Number.isFinite(a.lng));
   if (!pts.length) return null;
   return { lat: pts.reduce((s, a) => s + (a.lat as number), 0) / pts.length,
            lng: pts.reduce((s, a) => s + (a.lng as number), 0) / pts.length };
 }
-export function rebalanceThinDays(daysIn: Attraction[][], min = MIN_STOPS, mergeKm = MERGE_MAX_KM): Attraction[][] {
+// When the re-split cannot help, TOP UP instead. Crete's couples day was "ארמון
+// קנוסוס · חדר הכס בקנוסוס" — one ticket, ~2 hours, and the day ended. Splitting
+// Heraklion + Knossos in two just reproduced the same two groups (they are 5 km
+// apart, which IS the widest axis), so the old code hit "no better arrangement"
+// and left the day at two hours. The pool always has unused places; the day just
+// never asked for them.
+function topUpDay(day: Attraction[], spare: Attraction[], used: Set<number>,
+                  maxKm: number, budget: number, dwell: DwellCfg, min: number,
+                  minMinutes: number): boolean {
+  const c = centroid(day);
+  if (!c) return false;
+  let t = day.reduce((s, a) => s + visitMin(a, dwell), 0);
+  const near = spare
+    .filter((a) => !used.has(a.id) && Number.isFinite(a.lat) && Number.isFinite(a.lng))
+    .map((a) => ({ a, km: haversineKm(c.lat, c.lng, a.lat as number, a.lng as number) }))
+    .filter((x) => x.km <= maxKm)
+    // best-first, then nearest — a thin day should gain the strongest place that
+    // is genuinely on the same side of town, not merely the closest filler.
+    .sort((x, y) => stopWorth(y.a) - stopWorth(x.a) || x.km - y.km);
+  let added = false;
+  for (const { a } of near) {
+    if (t >= budget || (countVisits(day) > min && t >= minMinutes)) break;
+    day.push(a); used.add(a.id); t += visitMin(a, dwell); added = true;
+  }
+  return added;
+}
+
+export function rebalanceThinDays(daysIn: Attraction[][], min = MIN_STOPS, mergeKm = MERGE_MAX_KM,
+  spare: Attraction[] = [], spareKm = 8, budget = Infinity, dwell: DwellCfg = DWELL_DEFAULT,
+  minMinutes = MIN_DAY_MINUTES): Attraction[][] {
   if (daysIn.length < 2) return daysIn;
-  let days = daysIn.map((d) => d.slice());
+  const days = daysIn.map((d) => d.slice());
+  const used = new Set<number>(days.flat().map((a) => a.id));
+  // The flag and the fixer used to disagree: the Brain called a day thin at
+  // "≤2 stops and under 5 hours", while this only acted below 2 VISITS. So every
+  // two-stop, two-hour day (Crete's Knossos, Marseille's day 3, Dubai's day 3 —
+  // 18 of them across the thin cities) was reported and never repaired. A day is
+  // thin here if it is short on visits OR short on the clock.
+  const isThin = (d: Attraction[]) => countVisits(d) < min
+    || (countVisits(d) <= min && d.reduce((s, a) => s + visitMin(a, dwell), 0) < minMinutes);
   for (let pass = 0; pass < daysIn.length; pass++) {
-    const thin = days.findIndex((d) => countVisits(d) < min);
+    const thin = days.findIndex(isThin);
     if (thin === -1) break;
     const c0 = centroid(days[thin]);
     if (!c0) break;
     // nearest OTHER day that has a stop to spare
     let best = -1, bestKm = Infinity;
     days.forEach((d, i) => {
-      if (i === thin || countVisits(d) <= min) return;
+      if (i === thin || isThin(d) || countVisits(d) <= min) return;
       const c = centroid(d);
       if (!c) return;
       const km = haversineKm(c0.lat, c0.lng, c.lat, c.lng);
       if (km < bestKm) { bestKm = km; best = i; }
     });
-    if (best === -1 || bestKm > mergeKm) break;
-    const merged = [...days[thin], ...days[best]];
-    const [a, b] = splitInTwo(merged);
-    if (countVisits(a) < min || countVisits(b) < min) break;   // no better arrangement
-    days[thin] = orderPath(a);
-    days[best] = orderPath(b);
+    // Try the re-split first (it keeps the day count and the geography); fall
+    // back to topping the day up from the pool. Only if BOTH fail is the day
+    // left alone for the Brain to flag.
+    let fixed = false;
+    if (best !== -1 && bestKm <= mergeKm) {
+      const [a, b] = splitInTwo([...days[thin], ...days[best]]);
+      if (!isThin(a) && !isThin(b)) {
+        days[thin] = orderPath(a); days[best] = orderPath(b); fixed = true;
+      }
+    }
+    if (!fixed) {
+      const d = days[thin].slice();
+      if (!topUpDay(d, spare, used, spareKm, budget, dwell, min, minMinutes)) break;
+      days[thin] = orderPath(d);
+    }
   }
   return days;
 }
@@ -352,7 +399,7 @@ function splitInTwo(stops: Attraction[]): [Attraction[], Attraction[]] {
 
 export function clusterIntoDays(
   poolIn: Attraction[], days: number,
-  opts: { walkPref?: number; dayMinutes?: number; perDay?: number; seedGroups?: number[][]; freeMax?: number; freeDetour?: number; sameMeters?: number; dwell?: DwellCfg; center?: { lat: number; lng: number }; minDayStops?: number; thinMergeKm?: number } = {}
+  opts: { walkPref?: number; dayMinutes?: number; perDay?: number; seedGroups?: number[][]; freeMax?: number; freeDetour?: number; sameMeters?: number; dwell?: DwellCfg; center?: { lat: number; lng: number }; minDayStops?: number; thinMergeKm?: number; thinSpareKm?: number; thinMinMinutes?: number } = {}
 ): ClusterResult {
   const dwell = opts.dwell ?? DWELL_DEFAULT;
   // usable = has coords, de-duped by name; input order IS the value ranking.
@@ -500,7 +547,12 @@ export function clusterIntoDays(
   // Final safety net: collapse same-place / one-complex fragments across the whole
   // trip (name-exact dedup above misses "Louvre pyramid" vs "The Louvre's pyramid").
   const deduped = dedupeAcrossDays(ordered, opts.sameMeters ?? 120).filter((d) => d.length > 0);
-  const leftOut = pool.filter((a) => !placed.has(a.id));
-  const balanced = rebalanceThinDays(deduped, opts.minDayStops, opts.thinMergeKm);
-  return { days: balanced, leftOut };
+  const spare = pool.filter((a) => !placed.has(a.id));
+  const balanced = rebalanceThinDays(deduped, opts.minDayStops, opts.thinMergeKm,
+    spare, opts.thinSpareKm, budget, dwell, opts.thinMinMinutes);
+  // AFTER the rebalance, not before: a place pulled into a thin day must leave
+  // the bank, or it would be offered twice — once on the itinerary and once as
+  // "didn't make it in".
+  const scheduled = new Set(balanced.flat().map((a) => a.id));
+  return { days: balanced, leftOut: spare.filter((a) => !scheduled.has(a.id)) };
 }
