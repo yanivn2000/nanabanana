@@ -531,7 +531,13 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ city, profileText: profileText(tripProfile),
           taste: deriveTaste(tripProfile), isFamily: tripProfile.kids.length > 0,
-          pace: tripProfile.pace, walkPref: tripProfile.walkPref, areaGroups: trip?.areaGroups, areaIds: trip?.areaIds, ...payload }),
+          pace: tripProfile.pace, walkPref: tripProfile.walkPref,
+          // "מרחק נסיעה ליום" — the traveller's own cap on how far a car day-trip
+          // may go. It had only ever reached the AI prompt, so with AI off the
+          // slider did nothing: picking "ממש קרוב" still produced a 34-minute
+          // drive to Schafberg.
+          driveHours: tripProfile.dailyDriveHours,
+          areaGroups: trip?.areaGroups, areaIds: trip?.areaIds, ...payload }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data) {

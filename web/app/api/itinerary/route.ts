@@ -231,6 +231,7 @@ export async function POST(req: NextRequest) {
     days?: number;
     month?: number;
     profileText?: string;
+    driveHours?: number;   // cap for car day-trips (the distance slider)
     hotels?: TripHotel[];
     current?: Itinerary;
     instruction?: string;
@@ -609,7 +610,9 @@ export async function POST(req: NextRequest) {
     ...(nightIcons.length ? { nightIcons, nightIconMax: rules.nightPassbyMax,
       nightIconKm: rules.nightPassbyKm, nightIconMinutes: rules.nightPassbyMinutes } : {}) ,
     eveningMaxStops: rules.eveningMaxStops, eveningHardEnd: rules.eveningHardEnd,
-    minDayStops: rules.minDayStops, thinMergeKm: rules.thinMergeKm };
+    minDayStops: rules.minDayStops, thinMergeKm: rules.thinMergeKm,
+    ...(Number.isFinite(body.driveHours) && (body.driveHours as number) > 0
+      ? { maxDriveMin: Math.round((body.driveHours as number) * 60) } : {}) };
   // Best-of-N lottery-among-the-best (build_candidates technique): build N seeded
   // variants, score each with the Brain's critic, and serve a RANDOM variant from
   // those within `tolerance` points of the best — nobody gets the lottery's weak

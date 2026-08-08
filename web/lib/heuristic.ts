@@ -61,6 +61,9 @@ export type BuildOpts = {
   // evening_cap technique — how much evening the engine plans by itself.
   // thin_day technique — the smallest a day may be before it is rebalanced.
   minDayStops?: number; thinMergeKm?: number;
+  // The traveller's "מרחק נסיעה ליום" cap, in minutes ONE WAY. A day-trip
+  // cluster beyond it is not offered.
+  maxDriveMin?: number;
   eveningMaxStops?: number;   // stops starting at/after DINNER_AT_MIN
   eveningHardEnd?: number;    // minutes; nothing starts at/after this
   eveningStartMin?: number;   // evening_slot technique — earliest evening-slot clock
@@ -698,7 +701,10 @@ export function buildHeuristicItinerary(
 
   return {
     title: `טיול ב${city}`,
-    subtitle: `${days} ימים · ${country}`,
+    // The count must be what was BUILT, not what was asked for: a thin city pool
+    // yields fewer days, and promising "4 ימים" above a 2-day trip is a lie the
+    // traveller sees immediately.
+    subtitle: `${dayList.length} ימים · ${country}`,
     // carried to the trip page so an edit there obeys the same evening cap
     eveningCap: { maxStops: opts?.eveningMaxStops ?? 2, hardEndMin: opts?.eveningHardEnd ?? 23 * 60 + 30 },
     days: dayList,
@@ -725,12 +731,30 @@ export function buildCarBaseItinerary(
     .filter((a) => opts?.seasonFilter === false || isInSeason(a, opts?.month))
     .filter((a) => !isAvoided(a, opts?.avoidCats));
   const { inCity, far } = splitByReach(eligible, center, opts?.daytripThresholdKm);
-  const clusters = clusterDayTrips(far, center, { maxStops: opts?.daytripMaxStops, sameMeters: opts?.samePlaceMeters });
+  const clustersAll = clusterDayTrips(far, center, { maxStops: opts?.daytripMaxStops, sameMeters: opts?.samePlaceMeters });
+  // Respect the distance slider: a traveller who said "ממש קרוב" (30 min) must
+  // not be sent 34 minutes out. If NOTHING fits the cap we simply build fewer
+  // car days — the city days absorb them — rather than overriding the answer
+  // they gave us.
+  const clusters = opts?.maxDriveMin
+    ? clustersAll.filter((c) => c.driveMin <= (opts.maxDriveMin as number))
+    : clustersAll;
+  // How many worthy day-trips the cap removed — so the trip can SAY why it came
+  // back shorter, instead of looking broken. "There is nothing worth a day
+  // within 30 minutes of Heraklion" is an answer; a silent 2-day trip is not.
+  const cappedOut = clustersAll.length - clusters.length;
   const tripDays = dayTripBudget(days, clusters.length, opts?.daytripPerDays);
   const cityDays = days - tripDays;
 
-  // No worthy far clusters (or too few days) → ordinary in-city build.
-  if (tripDays < 1) return buildHeuristicItinerary(city, country, days, inCity, isFamily, perDay, walkPref, undefined, opts);
+  // No worthy far clusters (or too few days) → ordinary in-city build. When the
+  // traveller's own distance cap is what emptied the list, say so — otherwise a
+  // car-base town silently returns a short city-only trip and looks broken.
+  if (tripDays < 1) {
+    const plain = buildHeuristicItinerary(city, country, days, inCity, isFamily, perDay, walkPref, undefined, opts);
+    return cappedOut > 0
+      ? { ...plain, subtitle: `${plain.subtitle} · ${cappedOut} ${cappedOut === 1 ? "יעד" : "יעדים"} מעבר למרחק הנסיעה שבחרתם` }
+      : plain;
+  }
 
   const cityItin = buildHeuristicItinerary(city, country, cityDays, inCity, isFamily, perDay, walkPref, undefined, opts);
   // The allotment (cityDays) is an ASSUMPTION — a thin in-city pool (a base town
@@ -807,7 +831,10 @@ export function buildCarBaseItinerary(
   const allDays = [...cityItin.days, ...keptTripDays].map((d, i) => ({ ...d, label: `יום ${i + 1}`, carBase: true }));
   return {
     title: `טיול ב${city}`,
-    subtitle: `${allDays.length} ימים · ${country} · טיול ברכב שכור · ${keptTripDays.length} ${keptTripDays.length === 1 ? "יום מחוץ לעיר" : "ימים מחוץ לעיר"}`,
+    subtitle: `${allDays.length} ימים · ${country} · טיול ברכב שכור · ${keptTripDays.length} ${keptTripDays.length === 1 ? "יום מחוץ לעיר" : "ימים מחוץ לעיר"}`
+      + (cappedOut > 0 && allDays.length < days
+        ? ` · ${cappedOut} ${cappedOut === 1 ? "יעד" : "יעדים"} מעבר למרחק הנסיעה שבחרתם`
+        : ""),
     // carried to the trip page so an edit there obeys the same evening cap
     eveningCap: { maxStops: opts?.eveningMaxStops ?? 2, hardEndMin: opts?.eveningHardEnd ?? 23 * 60 + 30 },
     days: allDays,
