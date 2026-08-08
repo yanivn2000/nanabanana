@@ -99,6 +99,46 @@ const KIND_FROM_CAT: Record<string, StopKind> = {
 // Turn one cluster into a full day-trip Day (car leg + its stops). Uses the same
 // sequential clock as in-city days (respecting the day_window / visit_default
 // techniques via `sched`), offset by the drive out — no fixed slots.
+// A one-stop day trip is not a day (the owner's Salzburg day 4 was Schafberg
+// alone with 24 places waiting in the bank). Before giving a thin cluster a
+// whole day, widen it twice, geography permitting:
+//   1. ON THE WAY — unused far attractions whose detour off the center→anchor
+//      drive is small. A car day absorbs these for free.
+//   2. Around the anchor at a car-day radius (a car reaches in 15 minutes what
+//      a walking day never would).
+// Deliberately NOT filling to the cap when the day is already ≥min: this rescues
+// broken days, it does not stuff good ones.
+export function widenThinCluster(
+  cl: DayTripCluster, unused: Attraction[], center: { lat: number; lng: number },
+  min = 2, maxStops = MAX_STOPS_PER_TRIP,
+): DayTripCluster {
+  if (cl.stops.length >= min) return cl;
+  const have = new Set(cl.stops.map((s) => s.id));
+  const anchor = cl.anchor;
+  const direct = haversineKm(center.lat, center.lng, anchor.lat as number, anchor.lng as number);
+  const cands = unused
+    .filter((a) => !have.has(a.id) && hasCoords(a))
+    .map((a) => {
+      const legOut = haversineKm(center.lat, center.lng, a.lat as number, a.lng as number);
+      const legOn = haversineKm(a.lat as number, a.lng as number, anchor.lat as number, anchor.lng as number);
+      return { a, detourKm: legOut + legOn - direct, nearKm: legOn };
+    })
+    // Car-day geometry: a 20km detour is ~15 minutes behind the wheel, and a
+    // second site 25km from the anchor is still one comfortable outing. Tighter
+    // thresholds left Brasov's Bucegi day at one stop with Dino Park sitting in
+    // the bank 25km away.
+    .filter((x) => x.detourKm <= 20 || x.nearKm <= 25)
+    .sort((x, y) => (worth(y.a) - worth(x.a)) || (x.nearKm - y.nearKm));
+  const extra = cands.slice(0, maxStops - cl.stops.length).map((x) => x.a);
+  if (!extra.length) return cl;
+  const members = [...cl.stops, ...extra] as (Attraction & { lat: number; lng: number })[];
+  const ordered = orientDay(orderFromAnchor(members, anchor)).slice(0, maxStops);
+  const lat = ordered.reduce((s, a) => s + (a.lat as number), 0) / ordered.length;
+  const lng = ordered.reduce((s, a) => s + (a.lng as number), 0) / ordered.length;
+  const driveKm = Math.round(haversineKm(center.lat, center.lng, lat, lng));
+  return { ...cl, stops: ordered, lat, lng, driveKm, driveMin: driveMin(driveKm) };
+}
+
 export function dayTripToDay(
   cl: DayTripCluster, base: string, dayNum: number, isFamily: boolean,
   sched: { dayStartMin?: number; dwell?: DwellCfg } = {}

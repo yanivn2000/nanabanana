@@ -7,7 +7,7 @@ import { refOf, synthId } from "./place";
 import { descriptor } from "./labels";
 import { familyFit } from "./taste";
 import { clusterIntoDays, dayWalkMinutes, dropSamePlace, orderPath } from "./cluster";
-import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget } from "./daytrips";
+import { splitByReach, clusterDayTrips, dayTripToDay, dayTripBudget, widenThinCluster } from "./daytrips";
 import { durationHe, haversineKm, round30, travelMinutes as travelMinutesKm } from "./geo";
 import { entryExit, type LatLng } from "./access";
 import { DWELL_DEFAULT, dwellMinutes, isInSeason, isWrongAfterDark, orientDay, stopMatchesType, type DwellCfg } from "./brain/traits";
@@ -743,17 +743,71 @@ export function buildCarBaseItinerary(
   const actualCityDays = cityItin.days.length;
   const freed = Math.max(0, cityDays - actualCityDays);
   const effTripDays = Math.min(clusters.length, tripDays + freed);
-  const tripDayObjs = clusters.slice(0, effTripDays).map((cl, i) =>
-    dayTripToDay(cl, city, actualCityDays + i + 1, isFamily, { dayStartMin: opts?.dayStartMin, dwell: opts?.dwell ?? DWELL_DEFAULT }));
+  // A one-stop day out is not a day (Salzburg day 4 = Schafberg alone, 24 places
+  // in the bank). Two rescues, in order:
+  //   1. widen the thin cluster with unused far places on the way / near the
+  //      anchor — the drive absorbs them for free;
+  //   2. still thin → come back and finish the day IN the city, from the same
+  //      pool the bank draws on.
+  const minDay = opts?.minDayStops ?? 2;
+  const chosen = clusters.slice(0, effTripDays);
+  const inChosen = new Set(chosen.flatMap((c) => c.stops.map((s) => s.id)));
+  const farUnused = far.filter((a) => !inChosen.has(a.id));
+  const cityScheduled = new Set(cityItin.days.flatMap((d) => d.stops.map((s) => s.id)).filter((x): x is number => x != null));
+  const cityUnused = inCity.filter((a) => !cityScheduled.has(a.id) && Number.isFinite(a.lat) && Number.isFinite(a.lng))
+    .sort((a, b) => ((b.must_see === 1 ? 1000 : 0) - (a.must_see === 1 ? 1000 : 0)));
+  const tripDayObjs = chosen.map((cl, i) => {
+    const wide = widenThinCluster(cl, farUnused, center, minDay, opts?.daytripMaxStops);
+    wide.stops.forEach((s) => inChosen.add(s.id));
+    const day = dayTripToDay(wide, city, actualCityDays + i + 1, isFamily, { dayStartMin: opts?.dayStartMin, dwell: opts?.dwell ?? DWELL_DEFAULT });
+    const real = day.stops.filter((s) => s.id != null);
+    if (real.length >= minDay || !cityUnused.length) return day;
+    // Back to the city for the afternoon. Clock resumes after the return drive;
+    // nothing starts after dark (the same after-dark rule as everywhere else).
+    const last = day.stops[day.stops.length - 1];
+    const [lh, lm] = (last?.time ?? "13:00").split(":").map(Number);
+    let clock = (lh || 13) * 60 + (lm || 0) + 60 + wide.driveMin;   // last dwell + drive back
+    const dwell = opts?.dwell ?? DWELL_DEFAULT;
+    while (real.length + 0 < minDay + 1 && cityUnused.length) {
+      const a = cityUnused.shift()!;
+      const arr = Math.ceil(clock / 30) * 30;
+      if (arr >= LATE_LIMIT_MIN && isWrongAfterDark(a)) continue;
+      if (arr >= (opts?.eveningHardEnd ?? 23 * 60 + 30)) break;
+      day.stops.push({
+        name: a.name_he || a.name_en, kind: kindOf(a), time: fmtClock(arr),
+        duration: durationHe(dwellMinutes(a, dwell)), note: a.tips_he || a.tagline_he || undefined,
+        id: a.id, lat: a.lat, lng: a.lng, image: a.image_url, tagline: a.tagline_he,
+        timeOfDay: a.time_of_day ?? null,
+      });
+      real.push(day.stops[day.stops.length - 1]);
+      clock = arr + dwellMinutes(a, dwell) + 15;
+      cityScheduled.add(a.id);
+    }
+    if (day.stops.length > (wide.stops.length)) {
+      day.why = `${day.why} אחרי הצהריים חוזרים לעיר וממשיכים לטייל בה.`;
+    }
+    return day;
+  });
 
+  // Last resort: a trip day that is STILL one stop after both rescues does not
+  // deserve a whole day — drop it and let the trip run shorter; the place stays
+  // in the bank one drag away. Only a traveller's OWN pick protects the day
+  // (owner: "לזרוק אתר חובה כזה זה הכי חמור") — reservedIds are the engine's own
+  // interest reservations, and shielding those let Brasov keep serving a one-stop
+  // Bucegi day the engine had merely reserved for itself.
+  const protectedIds = new Set([...(opts?.guaranteeIds ?? []), ...(opts?.mustIncludeIds ?? [])]);
+  const keptTripDays = tripDayObjs.filter((d) => {
+    const real = d.stops.filter((s) => s.id != null);
+    return real.length >= 2 || real.some((s) => protectedIds.has(s.id as number));
+  });
   // A car_base trip is a rental-car trip throughout: mark every day so between-stop
   // legs read as driving, not public transit. Re-label sequentially as a final
   // guard — even when no extra cluster exists the trip is merely shorter, never
   // gap-numbered.
-  const allDays = [...cityItin.days, ...tripDayObjs].map((d, i) => ({ ...d, label: `יום ${i + 1}`, carBase: true }));
+  const allDays = [...cityItin.days, ...keptTripDays].map((d, i) => ({ ...d, label: `יום ${i + 1}`, carBase: true }));
   return {
     title: `טיול ב${city}`,
-    subtitle: `${allDays.length} ימים · ${country} · טיול ברכב שכור · ${effTripDays} ${effTripDays === 1 ? "יום מחוץ לעיר" : "ימים מחוץ לעיר"}`,
+    subtitle: `${allDays.length} ימים · ${country} · טיול ברכב שכור · ${keptTripDays.length} ${keptTripDays.length === 1 ? "יום מחוץ לעיר" : "ימים מחוץ לעיר"}`,
     // carried to the trip page so an edit there obeys the same evening cap
     eveningCap: { maxStops: opts?.eveningMaxStops ?? 2, hardEndMin: opts?.eveningHardEnd ?? 23 * 60 + 30 },
     days: allDays,
