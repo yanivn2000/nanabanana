@@ -121,6 +121,10 @@ export function ProfileEditor({ value: p, onChange: save }: {
       </section>
       <section>
         <label className="mb-2 block text-[15px] font-medium">תקציב</label>
+        {/* Honest label: the deterministic builder does not price a trip, so this
+            only tunes wording/AI. Until it shapes the itinerary, do not imply it
+            does. (Audit 2026-08-08 — see docs/logic/build-inputs.md.) */}
+        <p className="mb-2 text-[12.5px] text-[var(--text-3)]">משמש לניסוח והמלצות — לא משנה את בחירת האטרקציות.</p>
         <Seg value={p.budget} options={BUDGETS} onChange={(v) => save({ ...p, budget: v })} />
       </section>
 

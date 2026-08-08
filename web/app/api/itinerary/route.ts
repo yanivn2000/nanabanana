@@ -247,7 +247,6 @@ export async function POST(req: NextRequest) {
     taste?: Record<string, number>;
     // Chosen interest chip keys (GOVERNING_INTERESTS) — enable the coarse category
     // fallback in ranking (for untagged places) and the theme reservation below.
-    interests?: string[];
     // Who the trip is for ("adults" = couples/friends) — folds audience_fit into the
     // ranking so the build is audience-appropriate without a frozen curated selection.
     audience?: "families" | "adults";

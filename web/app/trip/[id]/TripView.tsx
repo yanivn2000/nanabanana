@@ -583,7 +583,6 @@ export function TripView({ tripId, editorial = false }: { tripId: string; editor
     month: trip?.month,
     selection: trip?.selection,   // Explore build: anchors-first, "אם יש זמן" fillers (F1)
     streetIds: trip?.streetIds,   // picked streets — scheduled as stops with their own dwell
-    interests: trip?.interests,   // chosen interest chips → govern the pick (coarse fallback + reservation)
     audience: trip?.audience,     // who → audience_fit ranking (replaces the frozen curated selection)
     hotels: tripHotels.map((h) => ({ name: h.name, city: h.city, lat: h.lat, lng: h.lng })),
     ...(trip?.segments && trip.segments.length > 1
